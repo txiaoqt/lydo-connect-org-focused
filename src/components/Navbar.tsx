@@ -27,7 +27,6 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">
           {navItems.map((item) => (
             <Link
@@ -45,13 +44,14 @@ const Navbar = () => {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm">
-            Sign In
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/signin">Sign In</Link>
           </Button>
-          <Button size="sm">Get Started</Button>
+          <Button size="sm" asChild>
+            <Link to="/signup">Get Started</Link>
+          </Button>
         </div>
 
-        {/* Mobile toggle */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="md:hidden p-2 text-foreground"
@@ -60,7 +60,6 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-card border-b border-border px-4 pb-4">
           {navItems.map((item) => (
@@ -78,8 +77,12 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="flex gap-2 mt-3 px-4">
-            <Button variant="ghost" size="sm" className="flex-1">Sign In</Button>
-            <Button size="sm" className="flex-1">Get Started</Button>
+            <Button variant="ghost" size="sm" className="flex-1" asChild>
+              <Link to="/signin">Sign In</Link>
+            </Button>
+            <Button size="sm" className="flex-1" asChild>
+              <Link to="/signup">Get Started</Link>
+            </Button>
           </div>
         </div>
       )}
