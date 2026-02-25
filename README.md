@@ -1,73 +1,106 @@
-# Welcome to your Lovable project
+# LYDO Connect — Youth Engagement Management System
 
-## Project info
+A modern web application for the Municipality of San Mateo, Rizal to centralize youth programs, events, and scholarships.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Programs Management**: Browse and manage youth development programs
+- **Events Calendar**: View and register for community events
+- **Scholarships Portal**: Access scholarship opportunities and application processes
+- **User Authentication**: Secure sign-in and registration system
+- **Responsive Design**: Works seamlessly across all devices
 
-There are several ways of editing your application.
+## Technologies Used
 
-**Use Lovable**
+- **Frontend**: React 18 with TypeScript
+- **Styling**: Tailwind CSS with ShadCN UI components
+- **Routing**: React Router DOM
+- **State Management**: TanStack Query for data fetching
+- **Build Tool**: Vite
+- **Development**: SWC for fast compilation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js (version 18 or higher)
+- npm or yarn package manager
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd youth-connect-hub
+   ```
 
-Follow these steps:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+4. Open your browser and navigate to `http://localhost:8080`
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Available Scripts
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run build:vercel` - Build optimized for Vercel deployment
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run test` - Run tests
+
+### Vercel Deployment
+
+This project is optimized for Vercel deployment:
+
+1. **Deploy to Vercel**: Click the button below to deploy directly to Vercel
+   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/youth-connect-hub)
+
+2. **Manual Deployment**:
+   ```bash
+   # Install Vercel CLI
+   npm install -g vercel
+   
+   # Deploy to Vercel
+   vercel
+   
+   # Deploy to production
+   vercel --prod
+   ```
+
+3. **Environment Variables**: Configure any required environment variables in the Vercel dashboard under Settings > Environment Variables.
+
+**Vercel Configuration**:
+- Uses `vercel.json` for routing and build configuration
+- Optimized build settings in `vite.config.ts`
+- Automatic React Router support with proper fallback routing
+
+## Project Structure
+
+```
+src/
+├── components/     # Reusable UI components
+├── pages/         # Page components
+├── hooks/         # Custom React hooks
+├── lib/          # Utility functions
+└── App.tsx       # Main application component
 ```
 
-**Edit a file directly in GitHub**
+## Contributing
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+We welcome contributions! Please follow these steps:
 
-**Use GitHub Codespaces**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## License
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+This project is licensed under the MIT License.
