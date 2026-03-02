@@ -1,9 +1,12 @@
 import { Search, Filter, Calendar, MapPin, Clock } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const allEvents = [
   { title: "Youth Leadership Summit 2026", sector: "LYDO", description: "A three-day intensive leadership development program for aspiring youth leaders.", date: "March 15-17, 2026", time: "8:00 AM - 5:00 PM", location: "San Mateo Town Hall", status: "upcoming" },
@@ -17,11 +20,27 @@ const allEvents = [
 const Events = () => {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   const filtered = allEvents.filter((e) => {
     const matchSearch = e.title.toLowerCase().includes(search.toLowerCase());
     return matchSearch && e.status === tab;
   });
+
+  const handleRegister = (eventTitle: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to register for events.",
+      });
+      navigate("/signin");
+      return;
+    }
+
+    navigate("/events/register", { state: { eventTitle } });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,7 +81,11 @@ const Events = () => {
                       <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {event.time}</span>
                       <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>
                     </div>
-                    {event.status === "upcoming" && <Button size="sm" className="w-full">Register Now</Button>}
+                    {event.status === "upcoming" && (
+                      <Button size="sm" className="w-full" onClick={() => handleRegister(event.title)}>
+                        Register Now
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

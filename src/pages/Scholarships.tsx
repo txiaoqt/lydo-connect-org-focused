@@ -1,26 +1,45 @@
 import { Search, Filter, GraduationCap, Calendar, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const allScholarships = [
-  { title: "San Mateo Educational Grant", provider: "SMREAU", description: "Financial assistance for deserving college students residing in San Mateo, Rizal.", deadline: "April 30, 2026", amount: "₱10,000/semester", eligibility: "College students, San Mateo resident", status: "open" },
-  { title: "SK Academic Excellence Award", provider: "LYDO", description: "Merit-based scholarship for top-performing youth in academics and leadership.", deadline: "May 15, 2026", amount: "₱15,000/year", eligibility: "High school or college, top 10%", status: "open" },
-  { title: "YDAC Advocacy Scholarship", provider: "YDAC", description: "Support for youth actively involved in community advocacy and volunteer work.", deadline: "June 1, 2026", amount: "₱8,000/semester", eligibility: "Active YDAC member", status: "open" },
-  { title: "Digital Skills Training Grant", provider: "LYDC", description: "Covers training costs for youth enrolling in approved digital skills programs.", deadline: "March 31, 2026", amount: "₱5,000", eligibility: "Ages 15-30, San Mateo resident", status: "closed" },
-  { title: "Youth Leadership Fund", provider: "LYDO", description: "Financial support for youth attending national leadership conferences and summits.", deadline: "Feb 28, 2026", amount: "Up to ₱20,000", eligibility: "SK officials or youth leaders", status: "closed" },
+  { title: "San Mateo Educational Grant", provider: "SMREAU", description: "Financial assistance for deserving college students residing in San Mateo, Rizal.", deadline: "April 30, 2026", amount: "PHP 10,000/semester", eligibility: "College students, San Mateo resident", status: "open" },
+  { title: "SK Academic Excellence Award", provider: "LYDO", description: "Merit-based scholarship for top-performing youth in academics and leadership.", deadline: "May 15, 2026", amount: "PHP 15,000/year", eligibility: "High school or college, top 10%", status: "open" },
+  { title: "YDAC Advocacy Scholarship", provider: "YDAC", description: "Support for youth actively involved in community advocacy and volunteer work.", deadline: "June 1, 2026", amount: "PHP 8,000/semester", eligibility: "Active YDAC member", status: "open" },
+  { title: "Digital Skills Training Grant", provider: "LYDC", description: "Covers training costs for youth enrolling in approved digital skills programs.", deadline: "March 31, 2026", amount: "PHP 5,000", eligibility: "Ages 15-30, San Mateo resident", status: "closed" },
+  { title: "Youth Leadership Fund", provider: "LYDO", description: "Financial support for youth attending national leadership conferences and summits.", deadline: "Feb 28, 2026", amount: "Up to PHP 20,000", eligibility: "SK officials or youth leaders", status: "closed" },
 ];
 
 const Scholarships = () => {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"open" | "closed">("open");
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   const filtered = allScholarships.filter((s) => {
     const matchSearch = s.title.toLowerCase().includes(search.toLowerCase());
     return matchSearch && s.status === tab;
   });
+
+  const handleApply = (scholarshipTitle: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to apply for scholarships.",
+      });
+      navigate("/signin");
+      return;
+    }
+
+    navigate("/scholarships/apply", { state: { scholarshipTitle } });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,7 +83,7 @@ const Scholarships = () => {
                       <p className="text-xs">Eligibility: {s.eligibility}</p>
                     </div>
                     {s.status === "open" && (
-                      <Button size="sm" className="w-full">
+                      <Button size="sm" className="w-full" onClick={() => handleApply(s.title)}>
                         Apply Now <ArrowRight className="ml-1 h-3.5 w-3.5" />
                       </Button>
                     )}

@@ -1,4 +1,5 @@
 import { Calendar, MapPin } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ProgramCardProps {
@@ -17,6 +18,8 @@ const typeColors: Record<string, string> = {
 };
 
 const ProgramCard = ({ title, sector, description, date, location, type }: ProgramCardProps) => {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <div className="bg-card rounded-xl border border-border card-shadow hover:card-shadow-hover transition-all duration-300 overflow-hidden group">
       <div className="p-6">
@@ -29,7 +32,7 @@ const ProgramCard = ({ title, sector, description, date, location, type }: Progr
         <h3 className="font-heading font-semibold text-foreground text-lg mb-2 group-hover:text-primary transition-colors">
           {title}
         </h3>
-        <p className="text-muted-foreground text-sm mb-4 leading-relaxed line-clamp-2">{description}</p>
+        <p className={`text-muted-foreground text-sm mb-4 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>{description}</p>
         <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
           {date && (
             <span className="flex items-center gap-1">
@@ -42,8 +45,14 @@ const ProgramCard = ({ title, sector, description, date, location, type }: Progr
             </span>
           )}
         </div>
-        <Button variant="outline" size="sm" className="w-full">
-          Learn More
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? "Show Less" : "Learn More"}
         </Button>
       </div>
     </div>

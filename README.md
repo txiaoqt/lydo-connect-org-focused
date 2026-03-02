@@ -15,6 +15,7 @@ A modern web application for the Municipality of San Mateo, Rizal to centralize 
 - **Frontend**: React 18 with TypeScript
 - **Styling**: Tailwind CSS with ShadCN UI components
 - **Routing**: React Router DOM
+- **Build Tool**: Vite
 - **State Management**: TanStack Query for data fetching
 - **Build Tool**: Vite
 - **Development**: SWC for fast compilation

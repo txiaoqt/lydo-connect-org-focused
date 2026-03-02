@@ -7,6 +7,7 @@ import FeatureCard from "@/components/FeatureCard";
 import ProgramCard from "@/components/ProgramCard";
 import StatCard from "@/components/StatCard";
 import heroImage from "@/assets/hero-image.png";
+import { useAuth } from "@/hooks/use-auth";
 
 const features = [
   { icon: Search, title: "Centralized Portal", description: "One platform for all youth programs, events, and scholarships across LYDO sectors." },
@@ -25,6 +26,8 @@ const samplePrograms = [
 ];
 
 const Index = () => {
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -46,7 +49,7 @@ const Index = () => {
                 Empowering Youth,{" "}<span className="text-gradient">One Connection</span>{" "}at a Time
               </h1>
               <p className="text-lg text-secondary-foreground/70 max-w-lg mb-8 leading-relaxed">
-                LYDO Connect is your centralized portal for youth programs, events, scholarships, and advocacy groups — all in one place.
+                LYDO Connect is your centralized portal for youth programs, events, scholarships, and advocacy groups - all in one place.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="hero" size="lg" asChild>
@@ -146,11 +149,21 @@ const Index = () => {
         </div>
         <div className="container mx-auto px-4 text-center relative z-10">
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-secondary-foreground mb-4">Ready to Get Involved?</h2>
-          <p className="text-secondary-foreground/70 max-w-lg mx-auto mb-8 leading-relaxed">Join thousands of youth in San Mateo making a difference. Sign up now and start your journey with LYDO Connect.</p>
+          <p className="text-secondary-foreground/70 max-w-lg mx-auto mb-8 leading-relaxed">
+            {isAuthenticated
+              ? "You are signed in. Explore programs, events, and scholarships available for youth in San Mateo."
+              : "Join thousands of youth in San Mateo making a difference. Sign up now and start your journey with LYDO Connect."}
+          </p>
           <div className="flex justify-center gap-3 flex-wrap">
-            <Button variant="hero" size="lg" asChild>
-              <Link to="/signup">Create Account <ArrowRight className="ml-1 h-4 w-4" /></Link>
-            </Button>
+            {isAuthenticated ? (
+              <Button variant="hero" size="lg" asChild>
+                <Link to="/programs">Explore Programs <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              </Button>
+            ) : (
+              <Button variant="hero" size="lg" asChild>
+                <Link to="/signup">Create Account <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              </Button>
+            )}
             <Button variant="heroOutline" size="lg" asChild>
               <Link to="/about">Contact LYDO</Link>
             </Button>

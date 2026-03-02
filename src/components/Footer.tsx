@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Footer = () => {
+  const { toast } = useToast();
+
   return (
     <footer className="hero-gradient text-secondary-foreground">
       <div className="container mx-auto px-4 py-16">
@@ -44,18 +47,44 @@ const Footer = () => {
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
               <li>Municipality of San Mateo</li>
               <li>Rizal, Philippines</li>
-              <li>lydo@sanmateo.gov.ph</li>
+              <li>
+                <a href="mailto:lydo@sanmateo.gov.ph" className="hover:text-primary transition-colors">
+                  lydo@sanmateo.gov.ph
+                </a>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-secondary-foreground/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-secondary-foreground/50">
-            © 2026 LYDO Connect — Municipality of San Mateo, Rizal. Compliant with RA 10742.
+            (c) 2026 LYDO Connect - Municipality of San Mateo, Rizal. Compliant with RA 10742.
           </p>
           <div className="flex gap-6 text-xs text-secondary-foreground/50">
-            <span className="hover:text-secondary-foreground/80 cursor-pointer transition-colors">Privacy Policy</span>
-            <span className="hover:text-secondary-foreground/80 cursor-pointer transition-colors">Terms of Service</span>
+            <button
+              type="button"
+              className="hover:text-secondary-foreground/80 transition-colors"
+              onClick={() =>
+                toast({
+                  title: "Privacy Policy",
+                  description: "This page is coming soon.",
+                })
+              }
+            >
+              Privacy Policy
+            </button>
+            <button
+              type="button"
+              className="hover:text-secondary-foreground/80 transition-colors"
+              onClick={() =>
+                toast({
+                  title: "Terms of Service",
+                  description: "This page is coming soon.",
+                })
+              }
+            >
+              Terms of Service
+            </button>
           </div>
         </div>
       </div>
