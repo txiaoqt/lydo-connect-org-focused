@@ -1,5 +1,13 @@
-﻿const CACHE_NAME = "lydo-connect-v1";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/favicon.ico"];
+﻿const CACHE_NAME = "lydo-connect-v2";
+const APP_SHELL = [
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/favicon.ico",
+  "/apple-touch-icon.png",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png"
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

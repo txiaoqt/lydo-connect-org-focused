@@ -3,21 +3,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface ProgramCardProps {
+  id?: string;
   title: string;
   sector: string;
   description: string;
   date?: string;
   location?: string;
-  type: "program" | "event" | "scholarship";
+  type: "program" | "event" | "organization";
+  sourcePostUrl?: string;
+  isJoined?: boolean;
+  onToggleJoin?: () => void;
 }
 
 const typeColors: Record<string, string> = {
   program: "bg-primary/10 text-primary",
   event: "bg-accent/20 text-accent-foreground",
-  scholarship: "bg-secondary/80 text-secondary-foreground",
+  organization: "bg-secondary/80 text-secondary-foreground",
 };
 
-const ProgramCard = ({ title, sector, description, date, location, type }: ProgramCardProps) => {
+const ProgramCard = ({ title, sector, description, date, location, type, sourcePostUrl, isJoined, onToggleJoin }: ProgramCardProps) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -45,15 +49,27 @@ const ProgramCard = ({ title, sector, description, date, location, type }: Progr
             </span>
           )}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => setExpanded((prev) => !prev)}
-        >
-          {expanded ? "Show Less" : "Learn More"}
-        </Button>
+        {sourcePostUrl && (
+          <a href={sourcePostUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline block mb-3">
+            Source Post
+          </a>
+        )}
+        <div className="grid grid-cols-1 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setExpanded((prev) => !prev)}
+          >
+            {expanded ? "Show Less" : "Learn More"}
+          </Button>
+          {onToggleJoin && (
+            <Button type="button" size="sm" className="w-full" onClick={onToggleJoin}>
+              {isJoined ? "Joined (Click to Leave)" : "Join Program"}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

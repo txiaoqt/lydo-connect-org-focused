@@ -1,0 +1,246 @@
+import { Bell, Building2, Calendar, Camera, Eye, FolderOpen, Save, Settings, User } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/hooks/use-auth";
+import { UserSettings, useUserProfile } from "@/hooks/use-user-profile";
+import { youthEvents, youthOrganizations, youthPrograms } from "@/lib/youthCatalog";
+import { useToast } from "@/hooks/use-toast";
+
+const findLabel = (
+  list: Array<{ id: string; title?: string; name?: string }>,
+  id: string,
+) => list.find((item) => item.id === id)?.title ?? list.find((item) => item.id === id)?.name ?? id;
+
+const initialsFrom = (name: string) => {
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "LY";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
+
+export default function Profile() {
+  const { isAuthenticated, user } = useAuth();
+  const { profile, updateSettings, leave, joinedCounts } = useUserProfile();
+  const { toast } = useToast();
+  const [settings, setSettings] = useState<UserSettings>(profile.settings);
+
+  useEffect(() => {
+    setSettings(profile.settings);
+  }, [profile.settings]);
+
+  const joinedEvents = useMemo(
+    () => profile.joined.events.map((id) => ({ id, label: findLabel(youthEvents, id) })),
+    [profile.joined.events],
+  );
+  const joinedPrograms = useMemo(
+    () => profile.joined.programs.map((id) => ({ id, label: findLabel(youthPrograms, id) })),
+    [profile.joined.programs],
+  );
+  const joinedOrganizations = useMemo(
+    () => profile.joined.organizations.map((id) => ({ id, label: findLabel(youthOrganizations, id) })),
+    [profile.joined.organizations],
+  );
+
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  const handleSaveSettings = (event: React.FormEvent) => {
+    event.preventDefault();
+    updateSettings(settings);
+    toast({
+      title: "Settings Saved",
+      description: "Your profile settings were updated successfully.",
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="pt-16">
+        <section className="container py-8 space-y-6 max-w-5xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-card border rounded-xl p-5 card-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Joined Events</p>
+                  <p className="text-3xl leading-none font-semibold mt-1">{joinedCounts.events}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border rounded-xl p-5 card-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                  <FolderOpen className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Joined Programs</p>
+                  <p className="text-3xl leading-none font-semibold mt-1">{joinedCounts.programs}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border rounded-xl p-5 card-shadow">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Joined Organizations</p>
+                  <p className="text-3xl leading-none font-semibold mt-1">{joinedCounts.organizations}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveSettings} className="bg-card border rounded-xl card-shadow overflow-hidden">
+            <div className="px-6 py-5 border-b flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-2xl font-semibold">Account Settings</h2>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 pb-6 border-b">
+                <div className="relative">
+                  <div className="h-20 w-20 rounded-full bg-primary/10 grid place-items-center text-primary text-3xl font-bold">
+                    {initialsFrom(settings.fullName || user?.displayName || "LYDO")}
+                  </div>
+                  <button type="button" className="absolute -right-1 -bottom-1 h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center shadow">
+                    <Camera className="h-4 w-4" />
+                  </button>
+                </div>
+                <div>
+                  <p className="text-xl font-semibold">{settings.fullName || user?.displayName || "LYDO User"}</p>
+                  <p className="text-muted-foreground">{settings.email || user?.email || "user@lydo.local"}</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input id="fullName" value={settings.fullName} onChange={(e) => setSettings({ ...settings, fullName: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="contactNumber">Phone Number</Label>
+                  <Input id="contactNumber" value={settings.contactNumber} onChange={(e) => setSettings({ ...settings, contactNumber: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="municipality">Municipality</Label>
+                  <Input id="municipality" value={settings.municipality} onChange={(e) => setSettings({ ...settings, municipality: e.target.value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="barangay">Barangay</Label>
+                  <Input id="barangay" value={settings.barangay} onChange={(e) => setSettings({ ...settings, barangay: e.target.value })} />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Input id="bio" value={settings.bio} onChange={(e) => setSettings({ ...settings, bio: e.target.value })} placeholder="Community organizer and youth advocate." />
+                </div>
+              </div>
+
+              <div className="pt-5 border-t space-y-4">
+                <h3 className="font-semibold">Preferences</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Receive notification updates</span>
+                  </div>
+                  <Switch checked={settings.notifications} onCheckedChange={(checked) => setSettings({ ...settings, notifications: checked })} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Show email on public profile</span>
+                  </div>
+                  <Switch checked={settings.showEmailPublic} onCheckedChange={(checked) => setSettings({ ...settings, showEmailPublic: checked })} />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" className="min-w-36">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Settings
+                </Button>
+              </div>
+            </div>
+          </form>
+
+          <div className="grid lg:grid-cols-3 gap-4">
+            <div className="bg-card border rounded-xl p-6 card-shadow">
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /> My Events</h3>
+              <div className="space-y-3">
+                {joinedEvents.length === 0 && <p className="text-sm text-muted-foreground">No joined events.</p>}
+                {joinedEvents.map((item) => (
+                  <div key={item.id} className="space-y-2">
+                    <p className="text-sm">{item.label}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to={`/events/${item.id}`}>Details</Link>
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("events", item.id)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 card-shadow">
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><FolderOpen className="h-4 w-4 text-muted-foreground" /> My Programs</h3>
+              <div className="space-y-3">
+                {joinedPrograms.length === 0 && <p className="text-sm text-muted-foreground">No joined programs.</p>}
+                {joinedPrograms.map((item) => (
+                  <div key={item.id} className="space-y-2">
+                    <p className="text-sm">{item.label}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/programs">Details</Link>
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("programs", item.id)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-xl p-6 card-shadow">
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" /> My Organizations</h3>
+              <div className="space-y-3">
+                {joinedOrganizations.length === 0 && <p className="text-sm text-muted-foreground">No joined organizations.</p>}
+                {joinedOrganizations.map((item) => (
+                  <div key={item.id} className="space-y-2">
+                    <p className="text-sm">{item.label}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/organizations">Details</Link>
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("organizations", item.id)}>
+                        Leave
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <Footer />
+    </div>
+  );
+}

@@ -5,27 +5,46 @@ import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProgramCard from "@/components/ProgramCard";
+import { youthPrograms } from "@/lib/youthCatalog";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
-const allPrograms = [
-  { title: "Youth Leadership Summit 2026", sector: "LYDO", description: "A three-day intensive leadership development program for aspiring youth leaders in San Mateo.", date: "March 15-17, 2026", location: "San Mateo Town Hall", type: "program" as const },
-  { title: "Digital Skills Training Program", sector: "LYDC", description: "Free workshops on web development, graphic design, and digital marketing for Filipino youth.", date: "Ongoing", location: "LYDO Office", type: "program" as const },
-  { title: "Environmental Youth Advocates", sector: "YDAC", description: "Join the movement to protect and preserve the natural resources of Rizal province.", date: "Year-round", location: "Various", type: "program" as const },
-  { title: "Youth Health & Wellness Program", sector: "LYDO", description: "Mental health awareness, sports activities, and wellness workshops for the youth of San Mateo.", date: "Monthly", location: "Municipal Gym", type: "program" as const },
-  { title: "Community Clean-Up Drive", sector: "YDAC", description: "Organized clean-up activities across barangays to promote environmental stewardship.", date: "Every Saturday", location: "Rotating Barangays", type: "program" as const },
-  { title: "Youth Entrepreneurship Bootcamp", sector: "LYDC", description: "Learn business basics, create your pitch, and get mentored by local entrepreneurs.", date: "June 2026", location: "San Mateo Business Center", type: "program" as const },
-];
-
-const sectors = ["All", "LYDO", "LYDC", "YDAC"];
+const sectors = ["All", "LYDO", "YDAC", "SK"];
 
 const Programs = () => {
   const [search, setSearch] = useState("");
   const [activeSector, setActiveSector] = useState("All");
+  const { isJoined, join, leave } = useUserProfile();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
-  const filtered = allPrograms.filter((p) => {
-    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase());
-    const matchSector = activeSector === "All" || p.sector === activeSector;
+  const filtered = youthPrograms.filter((program) => {
+    const matchSearch =
+      program.title.toLowerCase().includes(search.toLowerCase()) ||
+      program.description.toLowerCase().includes(search.toLowerCase());
+    const matchSector = activeSector === "All" || program.sector === activeSector;
     return matchSearch && matchSector;
   });
+
+  const toggleJoin = (programId: string, programTitle: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in first to join programs and manage them in your profile.",
+      });
+      return;
+    }
+
+    if (isJoined("programs", programId)) {
+      leave("programs", programId);
+      toast({ title: "Program Left", description: `Removed ${programTitle} from your profile.` });
+      return;
+    }
+
+    join("programs", programId);
+    toast({ title: "Program Joined", description: `${programTitle} added to your profile.` });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,7 +53,7 @@ const Programs = () => {
         <section className="hero-gradient py-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-3xl md:text-5xl font-heading font-bold text-secondary-foreground mb-4">Youth Programs</h1>
-            <p className="text-secondary-foreground/70 max-w-lg mx-auto">Discover programs designed to empower, educate, and engage the youth of San Mateo, Rizal.</p>
+            <p className="text-secondary-foreground/70 max-w-2xl mx-auto">Includes core LYDO initiatives such as Hirayang Kabataan and Simula, alongside published local youth development activities.</p>
           </div>
         </section>
 
@@ -46,9 +65,9 @@ const Programs = () => {
                 <Input placeholder="Search programs..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
               </div>
               <div className="flex gap-2">
-                {sectors.map((s) => (
-                  <Button key={s} variant={activeSector === s ? "default" : "outline"} size="sm" onClick={() => setActiveSector(s)}>
-                    {s}
+                {sectors.map((sector) => (
+                  <Button key={sector} variant={activeSector === sector ? "default" : "outline"} size="sm" onClick={() => setActiveSector(sector)}>
+                    {sector}
                   </Button>
                 ))}
               </div>
@@ -56,7 +75,14 @@ const Programs = () => {
 
             {filtered.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map((p) => <ProgramCard key={p.title} {...p} />)}
+                {filtered.map((program) => (
+                  <ProgramCard
+                    key={program.id}
+                    {...program}
+                    isJoined={isJoined("programs", program.id)}
+                    onToggleJoin={() => toggleJoin(program.id, program.title)}
+                  />
+                ))}
               </div>
             ) : (
               <div className="text-center py-16 text-muted-foreground">

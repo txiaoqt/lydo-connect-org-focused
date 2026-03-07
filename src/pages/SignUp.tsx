@@ -25,11 +25,14 @@ const SignUp = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+          <Link to="/" className="inline-flex items-center gap-2 mb-6 max-w-full">
             <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-heading font-bold text-xl">L</span>
+              <span className="text-primary-foreground font-heading font-bold text-sm tracking-tight">YG</span>
             </div>
-            <span className="font-heading font-bold text-xl text-foreground">LYDO <span className="text-primary">Connect</span></span>
+            <span className="font-heading font-bold text-left text-sm sm:text-base text-foreground leading-tight">
+              <span className="sm:hidden">Youth Governance System</span>
+              <span className="hidden sm:inline">Youth Governance Transparency and Accountability System</span>
+            </span>
           </Link>
           <h1 className="text-2xl font-heading font-bold text-foreground">Create your account</h1>
           <p className="text-muted-foreground text-sm mt-1">Join the youth of San Mateo today</p>
