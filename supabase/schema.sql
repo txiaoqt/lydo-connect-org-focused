@@ -1,0 +1,14 @@
+-- Split schema entrypoint.
+-- Run files in supabase/sql/README.md order.
+--
+-- This project intentionally keeps SQL split into multiple files:
+--   supabase/sql/00_extensions_enums.sql
+--   supabase/sql/01_core_tables.sql
+--   supabase/sql/02_youth_tables.sql
+--   supabase/sql/03_transparency_tables.sql
+--   supabase/sql/04_functions_triggers.sql
+--   supabase/sql/05_indexes.sql
+--   supabase/sql/06_rls_policies.sql
+--   supabase/sql/07_seed_data.sql
+--   supabase/sql/08_privileges.sql
+--   supabase/sql/09_template_seed_data.sql

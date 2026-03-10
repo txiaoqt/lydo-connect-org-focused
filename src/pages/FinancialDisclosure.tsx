@@ -1,4 +1,5 @@
-﻿import { BarChart3, DollarSign, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BarChart3, DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -14,12 +15,7 @@ import Footer from "@/components/Footer";
 import StatCard from "@/components/StatCard";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { barangayData, barangays, monthlyBudgetData } from "@/lib/mockData";
-
-const totalBudget = Object.values(barangayData).reduce((sum, row) => sum + row.skBudget, 0);
-const totalUtilized = Object.values(barangayData).reduce((sum, row) => sum + row.utilizedBudget, 0);
-const totalRemaining = totalBudget - totalUtilized;
-const utilizationRate = Math.round((totalUtilized / totalBudget) * 100);
+import { fetchFinancialDashboardData, type FinancialDashboardRow } from "@/lib/data-api";
 
 const getUtilizationStatus = (percent: number) => {
   if (percent >= 80) return { label: "Healthy", className: "bg-accent/20 text-accent border-accent/40" };
@@ -28,14 +24,33 @@ const getUtilizationStatus = (percent: number) => {
 };
 
 export default function FinancialDisclosure() {
-  const rows = barangays
-    .map((name) => {
-      const row = barangayData[name];
-      const remaining = row.skBudget - row.utilizedBudget;
-      const percent = Math.round((row.utilizedBudget / row.skBudget) * 100);
-      return { name, ...row, remaining, percent };
-    })
-    .sort((a, b) => b.percent - a.percent);
+  const [rows, setRows] = useState<FinancialDashboardRow[]>([]);
+  const [monthlyTrend, setMonthlyTrend] = useState<Array<{ month: string; allocated: number; utilized: number }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoading(true);
+      const dashboard = await fetchFinancialDashboardData();
+      if (!mounted) return;
+      setRows(dashboard.rows.sort((a, b) => b.percent - a.percent));
+      setMonthlyTrend(dashboard.monthlyTrend);
+      setIsLoading(false);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const totals = useMemo(() => {
+    const totalBudget = rows.reduce((sum, row) => sum + row.skBudget, 0);
+    const totalUtilized = rows.reduce((sum, row) => sum + row.utilizedBudget, 0);
+    const totalRemaining = totalBudget - totalUtilized;
+    const utilizationRate = totalBudget > 0 ? Math.round((totalUtilized / totalBudget) * 100) : 0;
+    return { totalBudget, totalUtilized, totalRemaining, utilizationRate };
+  }, [rows]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,10 +67,10 @@ export default function FinancialDisclosure() {
 
         <section className="container py-8 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <StatCard icon={DollarSign} label="Total Budget" value={`PHP ${(totalBudget / 1000000).toFixed(1)}M`} variant="primary" />
-            <StatCard icon={TrendingUp} label="Utilized" value={`PHP ${(totalUtilized / 1000000).toFixed(1)}M`} variant="accent" />
-            <StatCard icon={TrendingDown} label="Remaining" value={`PHP ${(totalRemaining / 1000000).toFixed(1)}M`} variant="warning" />
-            <StatCard icon={BarChart3} label="Utilization Rate" value={`${utilizationRate}%`} description="Overall SK utilization" variant="primary" />
+            <StatCard icon={DollarSign} label="Total Budget" value={`PHP ${(totals.totalBudget / 1000000).toFixed(1)}M`} variant="primary" />
+            <StatCard icon={TrendingUp} label="Utilized" value={`PHP ${(totals.totalUtilized / 1000000).toFixed(1)}M`} variant="accent" />
+            <StatCard icon={TrendingDown} label="Remaining" value={`PHP ${(totals.totalRemaining / 1000000).toFixed(1)}M`} variant="warning" />
+            <StatCard icon={BarChart3} label="Utilization Rate" value={`${totals.utilizationRate}%`} description="Overall SK utilization" variant="primary" />
           </div>
 
           <div className="bg-card rounded-xl border p-6 card-shadow">
@@ -70,17 +85,21 @@ export default function FinancialDisclosure() {
               </div>
             </div>
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyBudgetData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(210 20% 90%)" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `PHP ${(value / 1000000).toFixed(1)}M`} />
-                  <Tooltip formatter={(value: number) => `PHP ${value.toLocaleString()}`} />
-                  <Legend />
-                  <Bar dataKey="allocated" name="Allocated" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="utilized" name="Utilized" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {monthlyTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(210 20% 90%)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `PHP ${(value / 1000000).toFixed(1)}M`} />
+                    <Tooltip formatter={(value: number) => `PHP ${value.toLocaleString()}`} />
+                    <Legend />
+                    <Bar dataKey="allocated" name="Allocated" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="utilized" name="Utilized" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full grid place-items-center text-sm text-muted-foreground">No monthly financial trend data yet.</div>
+              )}
             </div>
           </div>
 
@@ -91,42 +110,48 @@ export default function FinancialDisclosure() {
                 <p className="text-sm text-muted-foreground">Sorted by utilization rate (highest to lowest)</p>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-xs sm:text-sm">
-                <thead>
-                  <tr className="bg-muted/50 text-left">
-                    <th className="px-5 py-3 font-medium">Barangay</th>
-                    <th className="px-5 py-3 font-medium text-right">SK Budget</th>
-                    <th className="px-5 py-3 font-medium text-right">Utilized</th>
-                    <th className="px-5 py-3 font-medium text-right">Remaining</th>
-                    <th className="px-5 py-3 font-medium">Health</th>
-                    <th className="px-5 py-3 font-medium w-44">Utilization</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => {
-                    const status = getUtilizationStatus(row.percent);
-                    return (
-                      <tr key={row.name} className="border-t hover:bg-muted/20 transition-colors">
-                        <td className="px-5 py-3 font-medium">{row.name}</td>
-                        <td className="px-5 py-3 text-right">PHP {row.skBudget.toLocaleString()}</td>
-                        <td className="px-5 py-3 text-right">PHP {row.utilizedBudget.toLocaleString()}</td>
-                        <td className="px-5 py-3 text-right">PHP {row.remaining.toLocaleString()}</td>
-                        <td className="px-5 py-3">
-                          <Badge variant="outline" className={status.className}>{status.label}</Badge>
-                        </td>
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
-                            <Progress value={row.percent} className="h-2 flex-1" />
-                            <span className="text-xs text-muted-foreground w-9 text-right">{row.percent}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {isLoading ? (
+              <div className="p-6 text-sm text-muted-foreground">Loading financial data...</div>
+            ) : rows.length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">No barangay financial rows in Supabase yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[860px] text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 text-left">
+                      <th className="px-5 py-3 font-medium">Barangay</th>
+                      <th className="px-5 py-3 font-medium text-right">SK Budget</th>
+                      <th className="px-5 py-3 font-medium text-right">Utilized</th>
+                      <th className="px-5 py-3 font-medium text-right">Remaining</th>
+                      <th className="px-5 py-3 font-medium">Health</th>
+                      <th className="px-5 py-3 font-medium w-44">Utilization</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => {
+                      const status = getUtilizationStatus(row.percent);
+                      return (
+                        <tr key={row.name} className="border-t hover:bg-muted/20 transition-colors">
+                          <td className="px-5 py-3 font-medium">{row.name}</td>
+                          <td className="px-5 py-3 text-right">PHP {row.skBudget.toLocaleString()}</td>
+                          <td className="px-5 py-3 text-right">PHP {row.utilizedBudget.toLocaleString()}</td>
+                          <td className="px-5 py-3 text-right">PHP {row.remaining.toLocaleString()}</td>
+                          <td className="px-5 py-3">
+                            <Badge variant="outline" className={status.className}>{status.label}</Badge>
+                          </td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              <Progress value={row.percent} className="h-2 flex-1" />
+                              <span className="text-xs text-muted-foreground w-9 text-right">{row.percent}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </section>
       </div>

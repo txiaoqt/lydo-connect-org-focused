@@ -1,11 +1,12 @@
 import { Search, Filter } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProgramCard from "@/components/ProgramCard";
-import { youthPrograms } from "@/lib/youthCatalog";
+import type { YouthProgram } from "@/lib/youthCatalog";
+import { fetchPrograms } from "@/lib/data-api";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -15,11 +16,28 @@ const sectors = ["All", "LYDO", "YDAC", "SK"];
 const Programs = () => {
   const [search, setSearch] = useState("");
   const [activeSector, setActiveSector] = useState("All");
+  const [programs, setPrograms] = useState<YouthProgram[]>([]);
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
   const { isJoined, join, leave } = useUserProfile();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  const filtered = youthPrograms.filter((program) => {
+  useEffect(() => {
+    let mounted = true;
+    const loadPrograms = async () => {
+      setIsLoadingPrograms(true);
+      const data = await fetchPrograms();
+      if (!mounted) return;
+      setPrograms(data);
+      setIsLoadingPrograms(false);
+    };
+    void loadPrograms();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filtered = programs.filter((program) => {
     const matchSearch =
       program.title.toLowerCase().includes(search.toLowerCase()) ||
       program.description.toLowerCase().includes(search.toLowerCase());
@@ -73,7 +91,11 @@ const Programs = () => {
               </div>
             </div>
 
-            {filtered.length > 0 ? (
+            {isLoadingPrograms ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <p className="text-sm">Loading programs...</p>
+              </div>
+            ) : filtered.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filtered.map((program) => (
                   <ProgramCard

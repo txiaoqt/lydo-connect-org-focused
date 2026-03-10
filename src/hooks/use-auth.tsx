@@ -1,86 +1,182 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
-const AUTH_STORAGE_KEY = "lydo_connect_is_authenticated";
-const AUTH_ROLE_KEY = "lydo_connect_role";
-const AUTH_USER_KEY = "lydo_connect_user";
-
-export type UserRole = "guest" | "youth" | "sk";
+export type UserRole = "guest" | "youth" | "sk" | "staff" | "admin";
 export type AuthUser = {
   id: string;
   email: string;
   displayName: string;
 };
 
+type SignInParams = {
+  email: string;
+  password: string;
+};
+
+type SignUpParams = {
+  email: string;
+  password: string;
+  fullName?: string;
+};
+
 type AuthContextValue = {
   isAuthenticated: boolean;
+  isInitialized: boolean;
   role: UserRole;
   user: AuthUser | null;
-  signIn: (params: { role: Exclude<UserRole, "guest">; email: string; displayName: string }) => void;
-  signOut: () => void;
+  signIn: (params: SignInParams) => Promise<{ error?: string }>;
+  signUp: (params: SignUpParams) => Promise<{ error?: string; needsEmailConfirmation?: boolean }>;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const getStoredAuthState = () => {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(AUTH_STORAGE_KEY) === "true";
-};
-
-const getStoredRole = (): UserRole => {
-  if (typeof window === "undefined") return "guest";
-  const role = window.localStorage.getItem(AUTH_ROLE_KEY);
-  if (role === "youth" || role === "sk") return role;
-  return "guest";
-};
-
-const getStoredUser = (): AuthUser | null => {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(AUTH_USER_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
+const priorityRole = (codes: string[]): UserRole => {
+  if (codes.includes("admin")) return "admin";
+  if (codes.includes("staff")) return "staff";
+  if (codes.includes("sk")) return "sk";
+  if (codes.includes("youth")) return "youth";
+  return "youth";
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(getStoredAuthState);
-  const [role, setRole] = useState<UserRole>(getStoredRole);
-  const [user, setUser] = useState<AuthUser | null>(getStoredUser);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [role, setRole] = useState<UserRole>("guest");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const signIn = ({ role: selectedRole, email, displayName }: { role: Exclude<UserRole, "guest">; email: string; displayName: string }) => {
-    const userRecord: AuthUser = {
-      id: email.trim().toLowerCase(),
-      email: email.trim().toLowerCase(),
-      displayName,
+  useEffect(() => {
+    if (!supabase) {
+      setIsInitialized(true);
+      return;
+    }
+
+    let mounted = true;
+
+    const applySession = async (session: Session | null) => {
+      if (!mounted) return;
+      if (!session?.user) {
+        setIsAuthenticated(false);
+        setRole("guest");
+        setUser(null);
+        setIsInitialized(true);
+        return;
+      }
+
+      const authUser = session.user;
+      const defaultDisplayName =
+        (authUser.user_metadata?.display_name as string | undefined) ??
+        (authUser.user_metadata?.full_name as string | undefined) ??
+        authUser.email?.split("@")[0] ??
+        "User";
+
+      const [profileResp, rolesResp] = await Promise.all([
+        supabase
+          .from("user_profiles")
+          .select("display_name,full_name,email")
+          .eq("user_id", authUser.id)
+          .maybeSingle(),
+        supabase.from("user_roles").select("roles(code)").eq("user_id", authUser.id),
+      ]);
+
+      const roleCodes =
+        rolesResp.data
+          ?.map((entry) => {
+            const related = (entry as { roles?: { code?: string } | Array<{ code?: string }> }).roles;
+            if (Array.isArray(related)) return related[0]?.code;
+            return related?.code;
+          })
+          .filter((code): code is string => Boolean(code)) ?? [];
+
+      const resolvedRole = priorityRole(roleCodes);
+      const resolvedUser: AuthUser = {
+        id: authUser.id,
+        email: (profileResp.data?.email as string | undefined) ?? authUser.email ?? "",
+        displayName:
+          (profileResp.data?.display_name as string | undefined) ??
+          (profileResp.data?.full_name as string | undefined) ??
+          defaultDisplayName,
+      };
+
+      setIsAuthenticated(true);
+      setRole(resolvedRole);
+      setUser(resolvedUser);
+      setIsInitialized(true);
     };
-    setIsAuthenticated(true);
-    setRole(selectedRole);
-    setUser(userRecord);
-    window.localStorage.setItem(AUTH_STORAGE_KEY, "true");
-    window.localStorage.setItem(AUTH_ROLE_KEY, selectedRole);
-    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userRecord));
+
+    supabase.auth.getSession().then(({ data }) => {
+      void applySession(data.session ?? null);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      void applySession(session);
+    });
+
+    return () => {
+      mounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const signIn = async ({ email, password }: SignInParams) => {
+    if (!supabase) {
+      return {
+        error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+      };
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) return { error: error.message };
+    return {};
   };
 
-  const signOut = () => {
+  const signUp = async ({ email, password, fullName }: SignUpParams) => {
+    if (!supabase) {
+      return {
+        error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+      };
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: fullName ?? "",
+          display_name: fullName ?? "",
+        },
+      },
+    });
+
+    if (error) return { error: error.message };
+
+    return {
+      needsEmailConfirmation: Boolean(data.user && !data.session),
+    };
+  };
+
+  const signOut = async () => {
+    if (supabase) await supabase.auth.signOut();
     setIsAuthenticated(false);
     setRole("guest");
     setUser(null);
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    window.localStorage.removeItem(AUTH_ROLE_KEY);
-    window.localStorage.removeItem(AUTH_USER_KEY);
   };
 
   const value = useMemo(
     () => ({
       isAuthenticated,
+      isInitialized,
       role,
       user,
       signIn,
+      signUp,
       signOut,
     }),
-    [isAuthenticated, role, user],
+    [isAuthenticated, isInitialized, role, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

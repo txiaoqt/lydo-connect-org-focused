@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { serviceAdvisories } from "@/lib/transparencyPortalData";
+import { fetchServiceAdvisories } from "@/lib/data-api";
 
 const badgeStyle = (status: string) => {
   if (status === "Operational") return "bg-primary/10 text-primary";
@@ -16,6 +17,24 @@ const iconFor = (status: string) => {
 };
 
 export default function ServiceAdvisories() {
+  const [advisories, setAdvisories] = useState<Array<{ id: string; title: string; status: string; message: string; updatedAt: string }>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoading(true);
+      const data = await fetchServiceAdvisories();
+      if (!mounted) return;
+      setAdvisories(data);
+      setIsLoading(false);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -31,7 +50,10 @@ export default function ServiceAdvisories() {
 
         <section className="container py-8">
           <div className="space-y-4">
-            {serviceAdvisories.map((item) => (
+            {isLoading ? (
+              <div className="text-sm text-muted-foreground">Loading advisories...</div>
+            ) : advisories.length > 0 ? (
+              advisories.map((item) => (
               <div key={item.id} className="bg-card border rounded-xl p-5 card-shadow">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
@@ -43,7 +65,10 @@ export default function ServiceAdvisories() {
                 <p className="text-sm text-muted-foreground">{item.message}</p>
                 <p className="text-xs text-muted-foreground mt-2">Updated: {item.updatedAt}</p>
               </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground">No service advisories in Supabase yet.</div>
+            )}
           </div>
         </section>
       </div>

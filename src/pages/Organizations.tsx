@@ -1,10 +1,11 @@
 import { Building2, Filter, Search, ShieldCheck, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { youthOrganizations } from "@/lib/youthCatalog";
+import type { YouthOrganization } from "@/lib/youthCatalog";
+import { fetchOrganizations } from "@/lib/data-api";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -12,19 +13,36 @@ import { useToast } from "@/hooks/use-toast";
 export default function Organizations() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"active" | "partner">("active");
+  const [organizations, setOrganizations] = useState<YouthOrganization[]>([]);
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
   const { isJoined, join, leave } = useUserProfile();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
+  useEffect(() => {
+    let mounted = true;
+    const loadOrganizations = async () => {
+      setIsLoadingOrgs(true);
+      const data = await fetchOrganizations();
+      if (!mounted) return;
+      setOrganizations(data);
+      setIsLoadingOrgs(false);
+    };
+    void loadOrganizations();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filtered = useMemo(
     () =>
-      youthOrganizations.filter(
+      organizations.filter(
         (org) =>
           org.status === tab &&
           (org.name.toLowerCase().includes(search.toLowerCase()) ||
             org.focus.toLowerCase().includes(search.toLowerCase())),
       ),
-    [search, tab],
+    [organizations, search, tab],
   );
 
   const toggleJoin = (orgId: string, orgName: string) => {
@@ -84,7 +102,11 @@ export default function Organizations() {
               </div>
             </div>
 
-            {filtered.length > 0 ? (
+            {isLoadingOrgs ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <p className="text-sm">Loading organizations...</p>
+              </div>
+            ) : filtered.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filtered.map((org) => (
                   <div

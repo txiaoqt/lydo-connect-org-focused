@@ -47,6 +47,18 @@ A modern web application for the Municipality of San Mateo, Rizal to centralize 
 
 4. Open your browser and navigate to `http://localhost:8080`
 
+### Supabase Setup (Dynamic Mode)
+
+1. Create a Supabase project.
+2. Run SQL files in order from `supabase/sql/README.md`.
+3. Copy `.env.example` to `.env` and set:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Restart the dev server.
+
+If env variables are missing, Supabase-auth actions are disabled and data pages render empty states.
+To preload the same values that used to live in local mock files, also run `supabase/sql/09_template_seed_data.sql`.
+
 ### Available Scripts
 
 - `npm run dev` - Start development server

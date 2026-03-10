@@ -1,27 +1,18 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronDown, CircleX, FileText } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { barangays } from "@/lib/mockData";
+import { fetchComplianceBoardData, fetchMonthlyComplianceData, type ComplianceBoardRow } from "@/lib/data-api";
 
 type DocState = "ok" | "issue" | "partial";
-
-type BoardRow = {
-  barangay: string;
-  cbydp: DocState;
-  abyip: DocState;
-  annualBudget: DocState;
-  rcb: DocState;
-  mil: DocState;
-  remarks: string;
-};
-
 type SubmissionState = "submitted" | "missing" | "late";
 type MonthlyDocKey = "mfr" | "mil" | "rcb" | "accomplishment" | "census";
 type MonthlyOverallStatus = "Open" | "Due Soon" | "Late" | "Completed";
+
+type BoardRow = ComplianceBoardRow;
 
 type MonthlyComplianceItem = {
   month: string;
@@ -31,77 +22,6 @@ type MonthlyComplianceItem = {
   submissions: Record<MonthlyDocKey, SubmissionState>;
   reportPdf: string;
 };
-
-const rowData: BoardRow[] = [
-  { barangay: "Ampid I", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant (1/20/2026)" },
-  { barangay: "Ampid II", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "issue", mil: "partial", remarks: "Partially Compliant" },
-  { barangay: "Banaba", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Dulong Bayan I", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Dulong Bayan II", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Guinayang", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "partial", remarks: "Partially Compliant" },
-  { barangay: "Gulod Malaya", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Guitnang Bayan I", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant (1/20/2026)" },
-  { barangay: "Guitnang Bayan II", cbydp: "partial", abyip: "ok", annualBudget: "ok", rcb: "issue", mil: "issue", remarks: "Partially Compliant" },
-  { barangay: "Malanday", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "issue", mil: "issue", remarks: "Partially Compliant" },
-  { barangay: "Maly", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Pintong Bocaue", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant (1/19/2026)" },
-  { barangay: "San Jose", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "San Rafael", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Santa Ana", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "ok", remarks: "Fully Compliant" },
-  { barangay: "Santo Nino", cbydp: "ok", abyip: "ok", annualBudget: "ok", rcb: "ok", mil: "partial", remarks: "Partially Compliant" },
-];
-
-const docKeys: MonthlyDocKey[] = ["mfr", "mil", "rcb", "accomplishment", "census"];
-
-const sortRows = () => {
-  const lookup = new Map(rowData.map((row) => [row.barangay, row]));
-  return barangays.map((name) => lookup.get(name)).filter((row): row is BoardRow => Boolean(row));
-};
-
-const monthLabel = (year: number, monthIndex: number) =>
-  new Date(year, monthIndex, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-
-const dueDateIso = (year: number, monthIndex: number) => {
-  const due = new Date(year, monthIndex + 1, 5);
-  return due.toISOString().slice(0, 10);
-};
-
-const generateSubmissions = (bIndex: number, mIndex: number): Record<MonthlyDocKey, SubmissionState> => {
-  const map = {} as Record<MonthlyDocKey, SubmissionState>;
-  docKeys.forEach((key, keyIndex) => {
-    const seed = bIndex * 13 + mIndex * 7 + keyIndex * 5;
-    if (seed % 11 === 0) map[key] = "missing";
-    else if (seed % 7 === 0) map[key] = "late";
-    else map[key] = "submitted";
-  });
-  return map;
-};
-
-const buildMonthlyItems = (): MonthlyComplianceItem[] => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const items: MonthlyComplianceItem[] = [];
-
-  for (let m = 0; m <= currentMonth; m += 1) {
-    const label = monthLabel(year, m);
-    const dueDate = dueDateIso(year, m);
-    barangays.forEach((barangay, bIndex) => {
-      items.push({
-        month: label,
-        monthIndex: m,
-        barangay,
-        dueDate,
-        submissions: generateSubmissions(bIndex + 1, m + 1),
-        reportPdf: "/disclosure-registry-test.pdf",
-      });
-    });
-  }
-
-  return items;
-};
-
-const monthlyComplianceItems = buildMonthlyItems();
 
 const statusIcon = (state: DocState) => {
   if (state === "ok") return <CheckCircle2 className="h-5 w-5 text-accent mx-auto" />;
@@ -193,10 +113,14 @@ const MonthlyTable = ({ rows, showMonth = true }: { rows: MonthlyComputedRow[]; 
             <td className="px-4 py-3 text-center font-semibold">{row.completion}%</td>
             <td className="px-4 py-3 text-center">{monthlyStatusBadge(row.overallStatus)}</td>
             <td className="px-4 py-3 text-center">
-              <a href={row.reportPdf} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                <FileText className="h-4 w-4" />
-                PDF
-              </a>
+              {row.reportPdf ? (
+                <a href={row.reportPdf} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                  <FileText className="h-4 w-4" />
+                  PDF
+                </a>
+              ) : (
+                <span className="text-muted-foreground">N/A</span>
+              )}
             </td>
           </tr>
         ))}
@@ -210,13 +134,33 @@ export default function TransparencyBoard() {
   const [monthFilter, setMonthFilter] = useState("All");
   const [barangayFilter, setBarangayFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState<"All" | MonthlyOverallStatus>("All");
+  const [boardTitle, setBoardTitle] = useState("No published quarter");
+  const [rows, setRows] = useState<BoardRow[]>([]);
+  const [monthlySource, setMonthlySource] = useState<MonthlyComplianceItem[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
-  const rows = sortRows();
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoadingData(true);
+      const [boardData, monthlyData] = await Promise.all([fetchComplianceBoardData(), fetchMonthlyComplianceData()]);
+      if (!mounted) return;
+      setRows(boardData.rows);
+      setBoardTitle(boardData.fiscalYearLabel);
+      setMonthlySource(monthlyData);
+      setIsLoadingData(false);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const fullyCompliant = rows.filter((row) => !row.remarks.toLowerCase().includes("partially")).length;
   const partiallyCompliant = rows.length - fullyCompliant;
 
   const monthlyRows = useMemo(() => {
-    const withComputed = monthlyComplianceItems.map((item) => ({
+    const withComputed = monthlySource.map((item) => ({
       ...item,
       overallStatus: computeMonthlyStatus(item),
       completion: completionScore(item.submissions),
@@ -228,9 +172,9 @@ export default function TransparencyBoard() {
       const statusMatch = statusFilter === "All" || item.overallStatus === statusFilter;
       return monthMatch && barangayMatch && statusMatch;
     });
-  }, [monthFilter, barangayFilter, statusFilter]);
+  }, [barangayFilter, monthFilter, monthlySource, statusFilter]);
 
-  const monthOptions = monthlyComplianceItems
+  const monthOptions = monthlySource
     .reduce((acc, item) => {
       if (!acc.some((entry) => entry.label === item.month)) {
         acc.push({ label: item.month, index: item.monthIndex });
@@ -238,6 +182,8 @@ export default function TransparencyBoard() {
       return acc;
     }, [] as { label: string; index: number }[])
     .sort((a, b) => a.index - b.index);
+
+  const barangayOptions = Array.from(new Set(monthlySource.map((item) => item.barangay))).sort((a, b) => a.localeCompare(b));
 
   const monthlyTotals = {
     total: monthlyRows.length,
@@ -276,7 +222,7 @@ export default function TransparencyBoard() {
               ))}
             </div>
             <h1 className="text-2xl md:text-5xl font-heading font-extrabold text-foreground">SK Full Disclosure Board</h1>
-            <p className="text-muted-foreground mt-2">October - December 2025</p>
+            <p className="text-muted-foreground mt-2">{boardTitle}</p>
           </div>
 
           <div className="flex justify-center">
@@ -311,34 +257,40 @@ export default function TransparencyBoard() {
               </div>
 
               <div className="rounded-xl border bg-card overflow-hidden card-shadow">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[860px] text-xs sm:text-sm">
-                    <thead>
-                      <tr className="bg-muted/60 border-b">
-                        <th className="px-4 py-3 text-left font-semibold">Barangay</th>
-                        <th className="px-4 py-3 text-center font-semibold">CBYDP</th>
-                        <th className="px-4 py-3 text-center font-semibold">ABYIP</th>
-                        <th className="px-4 py-3 text-center font-semibold">Annual Budget</th>
-                        <th className="px-4 py-3 text-center font-semibold">RCB</th>
-                        <th className="px-4 py-3 text-center font-semibold">MIL / PR</th>
-                        <th className="px-4 py-3 text-center font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row) => (
-                        <tr key={row.barangay} className="border-b last:border-b-0">
-                          <td className="px-4 py-3 font-medium">{row.barangay}</td>
-                          <td className="px-4 py-3 text-center">{statusIcon(row.cbydp)}</td>
-                          <td className="px-4 py-3 text-center">{statusIcon(row.abyip)}</td>
-                          <td className="px-4 py-3 text-center">{statusIcon(row.annualBudget)}</td>
-                          <td className="px-4 py-3 text-center">{statusIcon(row.rcb)}</td>
-                          <td className="px-4 py-3 text-center">{statusIcon(row.mil)}</td>
-                          <td className="px-4 py-3 text-center">{statusBadge(row.remarks)}</td>
+                {isLoadingData ? (
+                  <div className="p-6 text-sm text-muted-foreground">Loading board data...</div>
+                ) : rows.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[860px] text-xs sm:text-sm">
+                      <thead>
+                        <tr className="bg-muted/60 border-b">
+                          <th className="px-4 py-3 text-left font-semibold">Barangay</th>
+                          <th className="px-4 py-3 text-center font-semibold">CBYDP</th>
+                          <th className="px-4 py-3 text-center font-semibold">ABYIP</th>
+                          <th className="px-4 py-3 text-center font-semibold">Annual Budget</th>
+                          <th className="px-4 py-3 text-center font-semibold">RCB</th>
+                          <th className="px-4 py-3 text-center font-semibold">MIL / PR</th>
+                          <th className="px-4 py-3 text-center font-semibold">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {rows.map((row) => (
+                          <tr key={row.barangay} className="border-b last:border-b-0">
+                            <td className="px-4 py-3 font-medium">{row.barangay}</td>
+                            <td className="px-4 py-3 text-center">{statusIcon(row.cbydp)}</td>
+                            <td className="px-4 py-3 text-center">{statusIcon(row.abyip)}</td>
+                            <td className="px-4 py-3 text-center">{statusIcon(row.annualBudget)}</td>
+                            <td className="px-4 py-3 text-center">{statusIcon(row.rcb)}</td>
+                            <td className="px-4 py-3 text-center">{statusIcon(row.mil)}</td>
+                            <td className="px-4 py-3 text-center">{statusBadge(row.remarks)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-6 text-sm text-muted-foreground">No board records in Supabase yet.</div>
+                )}
               </div>
             </>
           ) : (
@@ -362,7 +314,7 @@ export default function TransparencyBoard() {
                   <SelectTrigger><SelectValue placeholder="Barangay" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Barangays</SelectItem>
-                    {barangays.map((barangay) => <SelectItem key={barangay} value={barangay}>{barangay}</SelectItem>)}
+                    {barangayOptions.map((barangay) => <SelectItem key={barangay} value={barangay}>{barangay}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "All" | MonthlyOverallStatus)}>
@@ -378,37 +330,41 @@ export default function TransparencyBoard() {
               </div>
 
               {monthFilter === "All" ? (
-                <Accordion type="multiple" className="space-y-3">
-                  {groupedByMonth.map((group) => (
-                    <AccordionItem key={group.month} value={group.month} className="rounded-xl border bg-card card-shadow px-3 sm:px-4">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-2 pr-1 sm:pr-3">
-                          <div className="flex items-center gap-3 text-left">
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="font-semibold">{group.month}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {group.rows.length} barangays with records
-                              </p>
+                groupedByMonth.length > 0 ? (
+                  <Accordion type="multiple" className="space-y-3">
+                    {groupedByMonth.map((group) => (
+                      <AccordionItem key={group.month} value={group.month} className="rounded-xl border bg-card card-shadow px-3 sm:px-4">
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-2 pr-1 sm:pr-3">
+                            <div className="flex items-center gap-3 text-left">
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <p className="font-semibold">{group.month}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {group.rows.length} barangays with records
+                                </p>
+                              </div>
                             </div>
+                            <p className="text-xs md:text-sm text-muted-foreground">
+                              Avg Completion: <span className="font-semibold text-foreground">{group.averageCompletion}%</span>
+                            </p>
                           </div>
-                          <p className="text-xs md:text-sm text-muted-foreground">
-                            Avg Completion: <span className="font-semibold text-foreground">{group.averageCompletion}%</span>
-                          </p>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        {group.rows.length > 0 ? (
-                          <div className="rounded-lg border overflow-hidden">
-                            <MonthlyTable rows={group.rows} showMonth={false} />
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground p-2">No rows found for current filters.</p>
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          {group.rows.length > 0 ? (
+                            <div className="rounded-lg border overflow-hidden">
+                              <MonthlyTable rows={group.rows} showMonth={false} />
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground p-2">No rows found for current filters.</p>
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                ) : (
+                  <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">No monthly compliance records in Supabase yet.</div>
+                )
               ) : (
                 <div className="rounded-xl border bg-card overflow-hidden card-shadow">
                   <div className="p-5 border-b">

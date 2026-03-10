@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BarChart3, DollarSign, MapPin, Shield, Users } from "lucide-react";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
@@ -9,28 +9,9 @@ import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ComplianceBadge from "@/components/ComplianceBadge";
-import { barangayData, barangays } from "@/lib/mockData";
+import { fetchFinancialDashboardData, type FinancialDashboardRow } from "@/lib/data-api";
 
 const mapCenter: [number, number] = [14.696, 121.126];
-
-const barangayCoordinates: Record<string, [number, number]> = {
-  "Ampid I": [14.724, 121.153],
-  "Ampid II": [14.72, 121.146],
-  Banaba: [14.697, 121.147],
-  "Dulong Bayan I": [14.687, 121.125],
-  "Dulong Bayan II": [14.689, 121.13],
-  Guinayang: [14.705, 121.101],
-  "Guitnang Bayan I": [14.683, 121.118],
-  "Guitnang Bayan II": [14.685, 121.121],
-  "Gulod Malaya": [14.708, 121.134],
-  Malanday: [14.678, 121.102],
-  Maly: [14.676, 121.11],
-  "Pintong Bocaue": [14.671, 121.119],
-  "San Jose": [14.69, 121.139],
-  "San Rafael": [14.668, 121.097],
-  "Santa Ana": [14.667, 121.107],
-  "Santo Nino": [14.674, 121.115],
-};
 
 const baseMarkerIcon = new L.Icon({
   iconRetinaUrl: markerIcon2x,
@@ -43,8 +24,7 @@ const baseMarkerIcon = new L.Icon({
 });
 
 const statusMarkerIcon = (status: "compliant" | "pending" | "overdue") => {
-  const color =
-    status === "overdue" ? "#ef4444" : status === "pending" ? "#f59e0b" : "#1B4F72";
+  const color = status === "overdue" ? "#ef4444" : status === "pending" ? "#f59e0b" : "#1B4F72";
 
   return L.divIcon({
     className: "status-marker-wrapper",
@@ -67,18 +47,47 @@ const statusMarkerColor = (status: "compliant" | "pending" | "overdue") => {
 };
 
 export default function BarangayMap() {
+  const [rows, setRows] = useState<FinancialDashboardRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
-  const data = selected ? barangayData[selected] : null;
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoading(true);
+      const dashboard = await fetchFinancialDashboardData();
+      if (!mounted) return;
+      setRows(dashboard.rows);
+      setIsLoading(false);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const rowByBarangay = useMemo(
+    () =>
+      rows.reduce<Record<string, FinancialDashboardRow>>((acc, row) => {
+        acc[row.name] = row;
+        return acc;
+      }, {}),
+    [rows],
+  );
 
   const markerItems = useMemo(
     () =>
-      barangays.map((name) => ({
-        name,
-        coords: barangayCoordinates[name] ?? mapCenter,
-        status: barangayData[name].complianceStatus,
-      })),
-    [],
+      rows
+        .filter((row) => row.latitude != null && row.longitude != null)
+        .map((row) => ({
+          name: row.name,
+          coords: [row.latitude as number, row.longitude as number] as [number, number],
+          status: row.complianceStatus,
+        })),
+    [rows],
   );
+
+  const data = selected ? rowByBarangay[selected] : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -110,29 +119,33 @@ export default function BarangayMap() {
                 </div>
 
                 <div className="h-[460px] w-full rounded-lg overflow-hidden border">
-                  <MapContainer center={mapCenter} zoom={13} scrollWheelZoom className="h-full w-full">
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
+                  {isLoading ? (
+                    <div className="h-full grid place-items-center text-sm text-muted-foreground">Loading map data...</div>
+                  ) : (
+                    <MapContainer center={mapCenter} zoom={13} scrollWheelZoom className="h-full w-full">
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
 
-                    {markerItems.map((item) => (
-                      <Marker
-                        key={item.name}
-                        position={item.coords}
-                        icon={statusMarkerIcon(item.status) ?? baseMarkerIcon}
-                        eventHandlers={{ click: () => setSelected(item.name) }}
-                      >
-                        <Popup>
-                          <div className="text-sm">
-                            <p className="font-semibold">{item.name}</p>
-                            <p className="text-muted-foreground">Youth: {barangayData[item.name].youthPopulation.toLocaleString()}</p>
-                            <p className={statusMarkerColor(item.status)}>Status: {item.status}</p>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
-                  </MapContainer>
+                      {markerItems.map((item) => (
+                        <Marker
+                          key={item.name}
+                          position={item.coords}
+                          icon={statusMarkerIcon(item.status) ?? baseMarkerIcon}
+                          eventHandlers={{ click: () => setSelected(item.name) }}
+                        >
+                          <Popup>
+                            <div className="text-sm">
+                              <p className="font-semibold">{item.name}</p>
+                              <p className="text-muted-foreground">Youth: {rowByBarangay[item.name]?.youthPopulation.toLocaleString() ?? 0}</p>
+                              <p className={statusMarkerColor(item.status)}>Status: {item.status}</p>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  )}
                 </div>
               </div>
             </div>

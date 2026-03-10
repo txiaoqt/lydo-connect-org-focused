@@ -1,17 +1,14 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, FileText, Filter, Search } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { disclosureRegistry, transparencyKpis } from "@/lib/transparencyPortalData";
+import type { DisclosureDocument } from "@/lib/transparencyPortalData";
+import { fetchDisclosureRegistry, fetchTransparencyKpis } from "@/lib/data-api";
 
-const docTypes = ["All", ...Array.from(new Set(disclosureRegistry.map((d) => d.documentType)))];
-const years = ["All", ...Array.from(new Set(disclosureRegistry.map((d) => String(d.fiscalYear))))];
 const quarters = ["All", "Q1", "Q2", "Q3", "Q4"];
-const barangays = ["All", ...Array.from(new Set(disclosureRegistry.map((d) => d.barangay)))];
-const offices = ["All", ...Array.from(new Set(disclosureRegistry.map((d) => d.office)))];
 
 const downloadFile = (fileName: string, data: string, mimeType: string) => {
   const blob = new Blob([data], { type: mimeType });
@@ -24,6 +21,15 @@ const downloadFile = (fileName: string, data: string, mimeType: string) => {
 };
 
 export default function TransparencyReports() {
+  const [documents, setDocuments] = useState<DisclosureDocument[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [kpis, setKpis] = useState({
+    disclosuresPublished: 0,
+    reportsReceived: 0,
+    reportsResolved: 0,
+    avgResponseHours: 0,
+    pendingTickets: 0,
+  });
   const [search, setSearch] = useState("");
   const [docType, setDocType] = useState("All");
   const [fiscalYear, setFiscalYear] = useState("All");
@@ -31,9 +37,30 @@ export default function TransparencyReports() {
   const [barangay, setBarangay] = useState("All");
   const [office, setOffice] = useState("All");
 
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setIsLoadingData(true);
+      const [registry, portalKpis] = await Promise.all([fetchDisclosureRegistry(), fetchTransparencyKpis()]);
+      if (!mounted) return;
+      setDocuments(registry);
+      setKpis(portalKpis);
+      setIsLoadingData(false);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const docTypes = ["All", ...Array.from(new Set(documents.map((d) => d.documentType)))];
+  const years = ["All", ...Array.from(new Set(documents.map((d) => String(d.fiscalYear))))];
+  const barangays = ["All", ...Array.from(new Set(documents.map((d) => d.barangay)))];
+  const offices = ["All", ...Array.from(new Set(documents.map((d) => d.office)))];
+
   const filtered = useMemo(
     () =>
-      disclosureRegistry.filter((doc) => {
+      documents.filter((doc) => {
         const matchSearch = doc.title.toLowerCase().includes(search.toLowerCase());
         const matchType = docType === "All" || doc.documentType === docType;
         const matchYear = fiscalYear === "All" || String(doc.fiscalYear) === fiscalYear;
@@ -42,7 +69,7 @@ export default function TransparencyReports() {
         const matchOffice = office === "All" || doc.office === office;
         return matchSearch && matchType && matchYear && matchQuarter && matchBarangay && matchOffice;
       }),
-    [search, docType, fiscalYear, quarter, barangay, office],
+    [documents, search, docType, fiscalYear, quarter, barangay, office],
   );
 
   const exportCsv = () => {
@@ -75,11 +102,11 @@ export default function TransparencyReports() {
           <div className="bg-card border rounded-xl p-4 sm:p-6 card-shadow">
             <h2 className="text-xl font-semibold mb-4">Transparency Board Snapshot</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Disclosures Published</p><p className="text-xl font-semibold">{transparencyKpis.disclosuresPublished}</p></div>
-              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Reports Received</p><p className="text-xl font-semibold">{transparencyKpis.reportsReceived}</p></div>
-              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Reports Resolved</p><p className="text-xl font-semibold">{transparencyKpis.reportsResolved}</p></div>
-              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Avg Response (hrs)</p><p className="text-xl font-semibold">{transparencyKpis.avgResponseHours}</p></div>
-              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Pending Tickets</p><p className="text-xl font-semibold">{transparencyKpis.pendingTickets}</p></div>
+              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Disclosures Published</p><p className="text-xl font-semibold">{kpis.disclosuresPublished}</p></div>
+              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Reports Received</p><p className="text-xl font-semibold">{kpis.reportsReceived}</p></div>
+              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Reports Resolved</p><p className="text-xl font-semibold">{kpis.reportsResolved}</p></div>
+              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Avg Response (hrs)</p><p className="text-xl font-semibold">{kpis.avgResponseHours}</p></div>
+              <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Pending Tickets</p><p className="text-xl font-semibold">{kpis.pendingTickets}</p></div>
             </div>
           </div>
 
@@ -116,46 +143,54 @@ export default function TransparencyReports() {
           </div>
 
           <div className="bg-card rounded-lg border overflow-hidden card-shadow">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-xs sm:text-sm">
-                <thead>
-                  <tr className="bg-muted/40 text-left">
-                    <th className="px-4 py-3 font-medium">Title</th>
-                    <th className="px-4 py-3 font-medium">Type</th>
-                    <th className="px-4 py-3 font-medium">FY</th>
-                    <th className="px-4 py-3 font-medium">Qtr</th>
-                    <th className="px-4 py-3 font-medium">Barangay</th>
-                    <th className="px-4 py-3 font-medium">Office</th>
-                    <th className="px-4 py-3 font-medium">Published</th>
-                    <th className="px-4 py-3 font-medium">PDF Size</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((doc) => (
-                    <tr key={doc.id} className="border-t">
-                      <td className="px-4 py-3 min-w-72">
-                        <div className="flex items-start gap-2">
-                          <FileText className="h-4 w-4 mt-0.5 text-primary" />
-                          <a href={doc.pdfUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-                            {doc.title}
-                          </a>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{doc.documentType}</td>
-                      <td className="px-4 py-3">{doc.fiscalYear}</td>
-                      <td className="px-4 py-3">{doc.quarter}</td>
-                      <td className="px-4 py-3">{doc.barangay}</td>
-                      <td className="px-4 py-3">{doc.office}</td>
-                      <td className="px-4 py-3">{doc.publishedDate}</td>
-                      <td className="px-4 py-3">{doc.size}</td>
+            {isLoadingData ? (
+              <div className="p-6 text-sm text-muted-foreground">Loading disclosure registry...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[860px] text-xs sm:text-sm">
+                  <thead>
+                    <tr className="bg-muted/40 text-left">
+                      <th className="px-4 py-3 font-medium">Title</th>
+                      <th className="px-4 py-3 font-medium">Type</th>
+                      <th className="px-4 py-3 font-medium">FY</th>
+                      <th className="px-4 py-3 font-medium">Qtr</th>
+                      <th className="px-4 py-3 font-medium">Barangay</th>
+                      <th className="px-4 py-3 font-medium">Office</th>
+                      <th className="px-4 py-3 font-medium">Published</th>
+                      <th className="px-4 py-3 font-medium">PDF Size</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filtered.map((doc) => (
+                      <tr key={doc.id} className="border-t">
+                        <td className="px-4 py-3 min-w-72">
+                          <div className="flex items-start gap-2">
+                            <FileText className="h-4 w-4 mt-0.5 text-primary" />
+                            {doc.pdfUrl ? (
+                              <a href={doc.pdfUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                                {doc.title}
+                              </a>
+                            ) : (
+                              <span>{doc.title}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">{doc.documentType}</td>
+                        <td className="px-4 py-3">{doc.fiscalYear}</td>
+                        <td className="px-4 py-3">{doc.quarter}</td>
+                        <td className="px-4 py-3">{doc.barangay}</td>
+                        <td className="px-4 py-3">{doc.office}</td>
+                        <td className="px-4 py-3">{doc.publishedDate}</td>
+                        <td className="px-4 py-3">{doc.size}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
-          {filtered.length === 0 && (
+          {!isLoadingData && filtered.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>No disclosure documents found for selected filters.</p>

@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/use-auth";
 import { UserSettings, useUserProfile } from "@/hooks/use-user-profile";
-import { youthEvents, youthOrganizations, youthPrograms } from "@/lib/youthCatalog";
+import type { YouthEvent, YouthOrganization, YouthProgram } from "@/lib/youthCatalog";
+import { fetchEvents, fetchOrganizations, fetchPrograms } from "@/lib/data-api";
 import { useToast } from "@/hooks/use-toast";
 
 const findLabel = (
@@ -25,27 +26,65 @@ const initialsFrom = (name: string) => {
 };
 
 export default function Profile() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isInitialized } = useAuth();
   const { profile, updateSettings, leave, joinedCounts } = useUserProfile();
   const { toast } = useToast();
+  const [catalog, setCatalog] = useState<{
+    events: YouthEvent[];
+    programs: YouthProgram[];
+    organizations: YouthOrganization[];
+  }>({
+    events: [],
+    programs: [],
+    organizations: [],
+  });
   const [settings, setSettings] = useState<UserSettings>(profile.settings);
 
   useEffect(() => {
     setSettings(profile.settings);
   }, [profile.settings]);
 
+  useEffect(() => {
+    let mounted = true;
+    const loadCatalog = async () => {
+      const [events, programs, organizations] = await Promise.all([
+        fetchEvents(),
+        fetchPrograms(),
+        fetchOrganizations(),
+      ]);
+      if (!mounted) return;
+      setCatalog({ events, programs, organizations });
+    };
+    void loadCatalog();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const joinedEvents = useMemo(
-    () => profile.joined.events.map((id) => ({ id, label: findLabel(youthEvents, id) })),
-    [profile.joined.events],
+    () => profile.joined.events.map((id) => ({ id, label: findLabel(catalog.events, id) })),
+    [catalog.events, profile.joined.events],
   );
   const joinedPrograms = useMemo(
-    () => profile.joined.programs.map((id) => ({ id, label: findLabel(youthPrograms, id) })),
-    [profile.joined.programs],
+    () => profile.joined.programs.map((id) => ({ id, label: findLabel(catalog.programs, id) })),
+    [catalog.programs, profile.joined.programs],
   );
   const joinedOrganizations = useMemo(
-    () => profile.joined.organizations.map((id) => ({ id, label: findLabel(youthOrganizations, id) })),
-    [profile.joined.organizations],
+    () => profile.joined.organizations.map((id) => ({ id, label: findLabel(catalog.organizations, id) })),
+    [catalog.organizations, profile.joined.organizations],
   );
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-24 container">
+          <p className="text-sm text-muted-foreground">Loading profile...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" replace />;

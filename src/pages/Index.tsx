@@ -1,4 +1,5 @@
 import { ArrowRight, BarChart3, Calendar, FileText, Map, Shield, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -8,7 +9,8 @@ import ProgramCard from "@/components/ProgramCard";
 import StatCard from "@/components/StatCard";
 import heroImage from "@/assets/hero-image.png";
 import { useAuth } from "@/hooks/use-auth";
-import { barangayData } from "@/lib/mockData";
+import type { YouthProgram } from "@/lib/youthCatalog";
+import { fetchFinancialDashboardData, fetchPrograms } from "@/lib/data-api";
 
 const youthFeatures = [
   { icon: Calendar, title: "Programs and Events", description: "Discover youth programs, register for events, and track participation in one account." },
@@ -23,17 +25,31 @@ const transparencyFeatures = [
   { icon: Map, title: "Barangay Map", description: "View governance and youth metrics across all barangays." },
 ];
 
-const samplePrograms = [
-  { title: "Hirayang Kabataan Youth Empowerment Program", sector: "LYDO", description: "Leadership, civic engagement, and youth participation.", date: "2025-2026 Cycle", location: "San Mateo, Rizal", type: "program" as const },
-  { title: "Simula Youth Leadership Program", sector: "LYDO", description: "Leadership, governance, and community engagement training.", date: "2025-2026 Cycle", location: "San Mateo, Rizal", type: "program" as const },
-  { title: "Project Ka-ART-ihan", sector: "YDAC", description: "Beginner dance workshop under YDAC for Arts and Culture.", date: "July 12-13, 2025", location: "San Mateo, Rizal", type: "event" as const },
-  { title: "Project Bigkis Kabataan", sector: "LYDO", description: "Youth leaders and organizations assembly.", date: "October 12, 2025", location: "San Mateo, Rizal", type: "program" as const },
-];
-
-const totalBudget = Object.values(barangayData).reduce((sum, row) => sum + row.skBudget, 0);
-
 const Index = () => {
   const { isAuthenticated, role } = useAuth();
+  const [featuredPrograms, setFeaturedPrograms] = useState<YouthProgram[]>([]);
+  const [displayBudget, setDisplayBudget] = useState(0);
+  const [programCount, setProgramCount] = useState(0);
+  const [participantCount, setParticipantCount] = useState(0);
+  const [barangayCount, setBarangayCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      const [programs, financial] = await Promise.all([fetchPrograms(), fetchFinancialDashboardData()]);
+      if (!mounted) return;
+      setFeaturedPrograms(programs.slice(0, 4));
+      setProgramCount(programs.length);
+      const liveBudget = financial.rows.reduce((sum, row) => sum + row.skBudget, 0);
+      setDisplayBudget(liveBudget);
+      setParticipantCount(financial.rows.reduce((sum, row) => sum + row.participants, 0));
+      setBarangayCount(financial.rows.length);
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,10 +92,10 @@ const Index = () => {
       <section className="bg-primary py-12">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <StatCard value="5,000+" label="Youth Engaged" compact />
-            <StatCard value="120+" label="Programs" compact />
-            <StatCard value={`PHP ${(totalBudget / 1000000).toFixed(1)}M`} label="Budget Transparency" compact />
-            <StatCard value="16" label="Barangays Monitored" compact />
+            <StatCard value={participantCount.toLocaleString()} label="Youth Engaged" compact />
+            <StatCard value={programCount.toLocaleString()} label="Programs" compact />
+            <StatCard value={`PHP ${(displayBudget / 1000000).toFixed(1)}M`} label="Budget Transparency" compact />
+            <StatCard value={barangayCount.toLocaleString()} label="Barangays Monitored" compact />
           </div>
         </div>
       </section>
@@ -120,11 +136,17 @@ const Index = () => {
               <Link to="/events">View All <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {samplePrograms.map((program) => (
-              <ProgramCard key={program.title} {...program} />
-            ))}
-          </div>
+          {featuredPrograms.length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredPrograms.map((program) => (
+                <ProgramCard key={program.id ?? program.title} {...program} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border bg-card p-8 text-center text-muted-foreground">
+              No programs are published in Supabase yet.
+            </div>
+          )}
         </div>
       </section>
 

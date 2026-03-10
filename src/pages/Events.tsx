@@ -1,19 +1,37 @@
 import { Search, Filter, Calendar, MapPin, Clock } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { youthEvents } from "@/lib/youthCatalog";
+import type { YouthEvent } from "@/lib/youthCatalog";
+import { fetchEvents } from "@/lib/data-api";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
 const Events = () => {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"all" | "past">("all");
+  const [events, setEvents] = useState<YouthEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const { isJoined } = useUserProfile();
 
-  const filtered = youthEvents.filter((event) => {
+  useEffect(() => {
+    let mounted = true;
+    const loadEvents = async () => {
+      setIsLoadingEvents(true);
+      const data = await fetchEvents();
+      if (!mounted) return;
+      setEvents(data);
+      setIsLoadingEvents(false);
+    };
+    void loadEvents();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filtered = events.filter((event) => {
     const matchSearch = event.title.toLowerCase().includes(search.toLowerCase());
     const matchTab = tab === "all" ? true : event.status === tab;
     return matchSearch && matchTab;
@@ -45,7 +63,11 @@ const Events = () => {
               </div>
             </div>
 
-            {filtered.length > 0 ? (
+            {isLoadingEvents ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <p className="text-sm">Loading events...</p>
+              </div>
+            ) : filtered.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filtered.map((event) => {
                   const registered = isJoined("events", event.id);
