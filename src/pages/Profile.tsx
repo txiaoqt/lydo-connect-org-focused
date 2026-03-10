@@ -1,4 +1,4 @@
-import { Bell, Building2, Calendar, Camera, Eye, FolderOpen, Save, Settings, User } from "lucide-react";
+import { Building2, Calendar, Camera, FolderOpen, Save, Settings } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -6,7 +6,6 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/use-auth";
 import { UserSettings, useUserProfile } from "@/hooks/use-user-profile";
 import type { YouthEvent, YouthOrganization, YouthProgram } from "@/lib/youthCatalog";
@@ -165,7 +164,7 @@ export default function Profile() {
               <div className="grid md:grid-cols-2 gap-5">
                 <div>
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input id="fullName" value={settings.fullName} onChange={(e) => setSettings({ ...settings, fullName: e.target.value })} />
+                  <Input id="fullName" value={settings.fullName || "Not set"} readOnly />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
@@ -177,33 +176,11 @@ export default function Profile() {
                 </div>
                 <div>
                   <Label htmlFor="municipality">Municipality</Label>
-                  <Input id="municipality" value={settings.municipality} onChange={(e) => setSettings({ ...settings, municipality: e.target.value })} />
+                  <Input id="municipality" value={settings.municipality || "San Mateo, Rizal"} readOnly />
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="barangay">Barangay</Label>
-                  <Input id="barangay" value={settings.barangay} onChange={(e) => setSettings({ ...settings, barangay: e.target.value })} />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Input id="bio" value={settings.bio} onChange={(e) => setSettings({ ...settings, bio: e.target.value })} placeholder="Community organizer and youth advocate." />
-                </div>
-              </div>
-
-              <div className="pt-5 border-t space-y-4">
-                <h3 className="font-semibold">Preferences</h3>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Receive notification updates</span>
-                  </div>
-                  <Switch checked={settings.notifications} onCheckedChange={(checked) => setSettings({ ...settings, notifications: checked })} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Eye className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Show email on public profile</span>
-                  </div>
-                  <Switch checked={settings.showEmailPublic} onCheckedChange={(checked) => setSettings({ ...settings, showEmailPublic: checked })} />
+                  <Input id="barangay" value={settings.barangay || "Not set"} readOnly />
                 </div>
               </div>
 

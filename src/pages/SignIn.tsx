@@ -5,85 +5,166 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { PREDEFINED_ADMIN_CREDENTIALS } from "@/lib/admin-auth";
 import { supabase } from "@/lib/supabase";
 
 const SignIn = () => {
+  const [mode, setMode] = useState<"user" | "admin">("user");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, isInitialized } = useAuth();
   const useSupabaseAuth = Boolean(supabase);
+  const isAdminMode = mode === "admin";
+  const canSubmit = isAdminMode
+    ? Boolean(username.trim() && password)
+    : Boolean(useSupabaseAuth && isInitialized && email.trim() && password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const result = await signIn({ email, password });
+    const result = isAdminMode
+      ? await signIn({ mode: "admin", username, password })
+      : await signIn({ mode: "user", email, password });
+
     if (result.error) {
       toast({ title: "Sign In Failed", description: result.error });
       return;
     }
 
-    toast({ title: "Signed In", description: "Welcome back." });
+    toast({ title: "Signed In", description: isAdminMode ? "Welcome, administrator." : "Welcome back." });
+    setUsername("");
     setEmail("");
     setPassword("");
-    navigate("/");
+    navigate(isAdminMode ? "/admin" : "/");
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6 max-w-full">
-            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-heading font-bold text-sm tracking-tight">YG</span>
+    <div className="min-h-screen bg-[#071422] text-slate-100 flex items-center justify-center px-4 py-8 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-180px] left-[-140px] h-[360px] w-[360px] rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="absolute bottom-[-190px] right-[-150px] h-[400px] w-[400px] rounded-full bg-cyan-400/10 blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="mb-6 text-left">
+          <Link to="/" className="inline-flex items-center gap-3 max-w-full">
+            <div className="h-11 w-11 rounded-xl bg-emerald-400 text-[#082538] font-bold flex items-center justify-center shadow-[0_0_0_1px_rgba(16,185,129,0.45)]">
+              LC
             </div>
-            <span className="font-heading font-bold text-left text-sm sm:text-base text-foreground leading-tight">
-              <span className="sm:hidden">Youth Governance System</span>
-              <span className="hidden sm:inline">Youth Governance Transparency and Accountability System</span>
-            </span>
+            <div>
+              <p className="font-heading font-bold text-base leading-tight text-white">LYDO Connect</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-cyan-100/70">Admin Portal</p>
+            </div>
           </Link>
-          <h1 className="text-2xl font-heading font-bold text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground text-sm mt-1">Sign in to your account to continue</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-6 card-shadow space-y-4">
-          {!useSupabaseAuth && (
-            <div className="rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-[#1b3248] bg-[#0b1a2b]/95 backdrop-blur-xl p-6 sm:p-7 space-y-5 shadow-[0_24px_60px_rgba(2,8,24,0.55)]"
+        >
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-white">Sign in</h1>
+            <p className="text-sm text-cyan-100/65 mt-1">Choose your access role and continue.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-cyan-100/85">Access Role</Label>
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#0f2437] p-1 border border-[#1a3249]">
+              <button
+                type="button"
+                onClick={() => setMode("user")}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  !isAdminMode ? "bg-emerald-400 text-[#082538]" : "text-cyan-100/70 hover:text-cyan-100"
+                }`}
+              >
+                User
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("admin")}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isAdminMode ? "bg-emerald-400 text-[#082538]" : "text-cyan-100/70 hover:text-cyan-100"
+                }`}
+              >
+                Admin
+              </button>
+            </div>
+          </div>
+
+          {!useSupabaseAuth && !isAdminMode && (
+            <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
               Supabase is not configured. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in your `.env` file.
             </div>
           )}
+
+          {isAdminMode ? (
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-cyan-100/85">Admin Username</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Enter admin username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="bg-[#10273a] border-[#1f3b55] text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-400/40"
+                required
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-cyan-100/85">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-[#10273a] border-[#1f3b55] text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-400/40"
+                required
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-cyan-100/85">Password</Label>
             <Input
               id="password"
               type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="bg-[#10273a] border-[#1f3b55] text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-400/40"
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={!isInitialized || !useSupabaseAuth}>Sign In</Button>
+
+          {isAdminMode && (
+            <div className="rounded-md border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-200">
+              Predefined admin credentials:{" "}
+              <code>{PREDEFINED_ADMIN_CREDENTIALS.username}</code>
+              {" / "}
+              <code>{PREDEFINED_ADMIN_CREDENTIALS.password}</code>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full bg-emerald-400 hover:bg-emerald-300 text-[#072134] font-semibold"
+            disabled={!canSubmit}
+          >
+            {isAdminMode ? "Sign In as Admin" : "Sign In as User"}
+          </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        <p className="text-center text-sm text-cyan-100/65 mt-6">
           Don't have an account?{" "}
-          <Link to="/signup" className="text-primary font-medium hover:underline">Create one</Link>
+          <Link to="/signup" className="text-emerald-300 font-medium hover:text-emerald-200">Create one</Link>
         </p>
         <p className="text-center mt-3">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">&lt;- Back to home</Link>
+          <Link to="/" className="text-sm text-cyan-100/55 hover:text-cyan-100 transition-colors">&lt;- Back to home</Link>
         </p>
       </div>
     </div>

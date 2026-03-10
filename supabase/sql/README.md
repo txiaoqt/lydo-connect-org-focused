@@ -12,6 +12,9 @@ Run these files in order inside Supabase SQL Editor:
 8. `07_seed_data.sql`
 9. `08_privileges.sql`
 10. `09_template_seed_data.sql` (optional, imports the current in-app dataset into Supabase)
+11. `11_template_seed_data_pack_b.sql` (optional, alternate/additional template dataset)
+12. `12_admin_accounts.sql` (adds predefined admin account metadata and admin-only RLS policies)
+13. `13_auth_signup_profile_metadata.sql` (updates signup trigger to store contact number and barangay id from signup metadata)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

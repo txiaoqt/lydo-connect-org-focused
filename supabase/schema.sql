@@ -12,3 +12,7 @@
 --   supabase/sql/07_seed_data.sql
 --   supabase/sql/08_privileges.sql
 --   supabase/sql/09_template_seed_data.sql
+--   supabase/sql/10_template_seed_data_delete.sql (optional rollback for 09)
+--   supabase/sql/11_template_seed_data_pack_b.sql
+--   supabase/sql/12_admin_accounts.sql
+--   supabase/sql/13_auth_signup_profile_metadata.sql

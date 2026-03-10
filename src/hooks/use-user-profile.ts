@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PREDEFINED_ADMIN_USER } from "@/lib/admin-auth";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./use-auth";
 
@@ -62,6 +63,7 @@ export const useUserProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfileState>(defaultProfile);
   const [isLoading, setIsLoading] = useState(true);
+  const isLocalAdmin = user?.id === PREDEFINED_ADMIN_USER.id;
 
   useEffect(() => {
     let mounted = true;
@@ -74,7 +76,7 @@ export const useUserProfile = () => {
         return;
       }
 
-      if (!supabase) {
+      if (!supabase || isLocalAdmin) {
         if (!mounted) return;
         setProfile({
           ...defaultProfile,
@@ -93,7 +95,7 @@ export const useUserProfile = () => {
       const [profileResp, joinedProgramsResp, joinedOrgsResp, eventRegsResp] = await Promise.all([
         supabase
           .from("user_profiles")
-          .select("full_name,display_name,email,contact_number,municipality,bio,notifications,show_email_public,barangays(name)")
+          .select("full_name,display_name,email,contact_number,municipality,bio,notifications,show_email_public,barangay_id,barangays(name)")
           .eq("user_id", user.id)
           .maybeSingle(),
         supabase.from("user_program_memberships").select("program_id").eq("user_id", user.id).is("left_at", null),
@@ -107,8 +109,17 @@ export const useUserProfile = () => {
       ]);
 
       const profileRow = profileResp.data;
-      const resolvedBarangay =
+      let resolvedBarangay =
         (Array.isArray(profileRow?.barangays) ? profileRow?.barangays[0] : profileRow?.barangays)?.name ?? "";
+
+      if (!resolvedBarangay && profileRow?.barangay_id) {
+        const { data: barangayData } = await supabase
+          .from("barangays")
+          .select("name")
+          .eq("id", profileRow.barangay_id)
+          .maybeSingle();
+        resolvedBarangay = barangayData?.name ?? "";
+      }
 
       const eventRegistrations = (eventRegsResp.data ?? []).reduce<Record<string, EventRegistrationInfo>>((acc, row) => {
         const eventBarangay = (Array.isArray(row.barangays) ? row.barangays[0] : row.barangays)?.name ?? "";
@@ -151,7 +162,7 @@ export const useUserProfile = () => {
     return () => {
       mounted = false;
     };
-  }, [user]);
+  }, [isLocalAdmin, user]);
 
   const persist = (next: UserProfileState) => {
     setProfile(next);
@@ -161,7 +172,7 @@ export const useUserProfile = () => {
     const next = { ...profile, settings };
     persist(next);
 
-    if (!supabase || !user) return;
+    if (!supabase || !user || isLocalAdmin) return;
 
     void (async () => {
       const barangayId = await getBarangayIdByName(settings.barangay);
@@ -181,7 +192,7 @@ export const useUserProfile = () => {
   };
 
   const join = (type: JoinedType, id: string) => {
-    if (!supabase || !user) return;
+    if (!supabase || !user || isLocalAdmin) return;
     if (profile.joined[type].includes(id)) return;
 
     const next = {
@@ -200,7 +211,7 @@ export const useUserProfile = () => {
   };
 
   const leave = (type: JoinedType, id: string) => {
-    if (!supabase || !user) return;
+    if (!supabase || !user || isLocalAdmin) return;
 
     const nextRegistrations = { ...profile.eventRegistrations };
     if (type === "events") delete nextRegistrations[id];
@@ -247,7 +258,7 @@ export const useUserProfile = () => {
   const isJoined = (type: JoinedType, id: string) => profile.joined[type].includes(id);
 
   const registerForEvent = (eventId: string, info: EventRegistrationInfo) => {
-    if (!supabase || !user) return;
+    if (!supabase || !user || isLocalAdmin) return;
 
     const nextEvents = profile.joined.events.includes(eventId)
       ? profile.joined.events
