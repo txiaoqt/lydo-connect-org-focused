@@ -1,10 +1,11 @@
-import { Search, Filter, Calendar, MapPin, Clock } from "lucide-react";
+import { Search, Filter, Calendar, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import LocationPreviewButton from "@/components/LocationPreviewButton";
 import type { YouthEvent } from "@/lib/youthCatalog";
 import { fetchEvents } from "@/lib/data-api";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -68,29 +69,40 @@ const Events = () => {
                 <p className="text-sm">Loading events...</p>
               </div>
             ) : filtered.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {filtered.map((event) => {
                   const registered = isJoined("events", event.id);
                   return (
-                    <div key={event.id} className="bg-card border border-border rounded-xl p-6 card-shadow hover:card-shadow-hover transition-all duration-300 group">
+                    <div key={event.id} className="h-full bg-card border border-border rounded-xl p-6 card-shadow hover:card-shadow-hover transition-all duration-300 group flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-muted-foreground capitalize">{event.status}</span>
                         <span className="text-xs text-muted-foreground">{event.sector}</span>
                         {registered && <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary">Registered</span>}
                       </div>
-                      <h3 className="font-heading font-semibold text-foreground text-lg mb-2 group-hover:text-primary transition-colors">{event.title}</h3>
-                      <p className="text-muted-foreground text-sm mb-4 leading-relaxed">{event.description}</p>
-                      <div className="space-y-1.5 text-xs text-muted-foreground mb-4">
-                        <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {event.date}</span>
-                        <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {event.time}</span>
-                        <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {event.location}</span>
+                      <h3 className="font-heading font-semibold text-foreground text-lg mb-2 min-h-[3.5rem] line-clamp-2 group-hover:text-primary transition-colors">
+                        {event.title}
+                      </h3>
+                      <p className="text-muted-foreground text-sm mb-4 leading-relaxed h-20 line-clamp-3">{event.description}</p>
+                      <div className="space-y-1.5 text-xs text-muted-foreground mb-4 min-h-[4.5rem]">
+                        <span className="flex items-center gap-1.5 line-clamp-1"><Calendar className="h-3.5 w-3.5" /> {event.date}</span>
+                        <span className="flex items-center gap-1.5 line-clamp-1"><Clock className="h-3.5 w-3.5" /> {event.time}</span>
+                        <LocationPreviewButton
+                          location={event.location}
+                          locationLatitude={event.locationLatitude}
+                          locationLongitude={event.locationLongitude}
+                          className="line-clamp-1"
+                        />
                       </div>
-                      {event.sourcePostUrl && (
-                        <a href={event.sourcePostUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline block mb-4">
-                          Source Post
-                        </a>
-                      )}
-                      <Button size="sm" variant="outline" className="w-full" asChild>
+                      <div className="mb-4 min-h-5">
+                        {event.sourcePostUrl ? (
+                          <a href={event.sourcePostUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline block">
+                            Source Post
+                          </a>
+                        ) : (
+                          <span className="invisible text-xs">Source Post</span>
+                        )}
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full mt-auto" asChild>
                         <Link to={`/events/${event.id}`}>View Event Record</Link>
                       </Button>
                     </div>

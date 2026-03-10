@@ -42,42 +42,42 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#071422] text-slate-100 flex items-center justify-center px-4 py-8 relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-8 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-180px] left-[-140px] h-[360px] w-[360px] rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="absolute bottom-[-190px] right-[-150px] h-[400px] w-[400px] rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="absolute top-[-180px] left-[-140px] h-[360px] w-[360px] rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute bottom-[-190px] right-[-150px] h-[400px] w-[400px] rounded-full bg-accent/20 blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         <div className="mb-6 text-left">
           <Link to="/" className="inline-flex items-center gap-3 max-w-full">
-            <div className="h-11 w-11 rounded-xl bg-emerald-400 text-[#082538] font-bold flex items-center justify-center shadow-[0_0_0_1px_rgba(16,185,129,0.45)]">
+            <div className="h-11 w-11 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-[var(--glow-primary)]">
               LC
             </div>
             <div>
-              <p className="font-heading font-bold text-base leading-tight text-white">LYDO Connect</p>
-              <p className="text-xs uppercase tracking-[0.16em] text-cyan-100/70">Admin Portal</p>
+              <p className="font-heading font-bold text-base leading-tight text-foreground">LYDO Connect</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Admin Portal</p>
             </div>
           </Link>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-[#1b3248] bg-[#0b1a2b]/95 backdrop-blur-xl p-6 sm:p-7 space-y-5 shadow-[0_24px_60px_rgba(2,8,24,0.55)]"
+          className="rounded-2xl border border-border bg-card p-6 sm:p-7 space-y-5 card-shadow"
         >
           <div>
-            <h1 className="text-2xl font-heading font-bold text-white">Sign in</h1>
-            <p className="text-sm text-cyan-100/65 mt-1">Choose your access role and continue.</p>
+            <h1 className="text-2xl font-heading font-bold text-foreground">Sign in</h1>
+            <p className="text-sm text-muted-foreground mt-1">Choose your access role and continue.</p>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-cyan-100/85">Access Role</Label>
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#0f2437] p-1 border border-[#1a3249]">
+            <Label className="text-foreground">Access Role</Label>
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1 border border-border">
               <button
                 type="button"
                 onClick={() => setMode("user")}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  !isAdminMode ? "bg-emerald-400 text-[#082538]" : "text-cyan-100/70 hover:text-cyan-100"
+                  !isAdminMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 User
@@ -86,7 +86,7 @@ const SignIn = () => {
                 type="button"
                 onClick={() => setMode("admin")}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isAdminMode ? "bg-emerald-400 text-[#082538]" : "text-cyan-100/70 hover:text-cyan-100"
+                  isAdminMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Admin
@@ -102,47 +102,47 @@ const SignIn = () => {
 
           {isAdminMode ? (
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-cyan-100/85">Admin Username</Label>
+              <Label htmlFor="username" className="text-foreground">Admin Username</Label>
               <Input
                 id="username"
                 type="text"
                 placeholder="Enter admin username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="bg-[#10273a] border-[#1f3b55] text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-400/40"
+                className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
                 required
               />
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-cyan-100/85">Email</Label>
+              <Label htmlFor="email" className="text-foreground">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-[#10273a] border-[#1f3b55] text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-400/40"
+                className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
                 required
               />
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-cyan-100/85">Password</Label>
+            <Label htmlFor="password" className="text-foreground">Password</Label>
             <Input
               id="password"
               type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-[#10273a] border-[#1f3b55] text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-400/40"
+              className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
               required
             />
           </div>
 
           {isAdminMode && (
-            <div className="rounded-md border border-emerald-300/30 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-200">
+            <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent">
               Predefined admin credentials:{" "}
               <code>{PREDEFINED_ADMIN_CREDENTIALS.username}</code>
               {" / "}
@@ -152,19 +152,27 @@ const SignIn = () => {
 
           <Button
             type="submit"
-            className="w-full bg-emerald-400 hover:bg-emerald-300 text-[#072134] font-semibold"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             disabled={!canSubmit}
           >
             {isAdminMode ? "Sign In as Admin" : "Sign In as User"}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-cyan-100/65 mt-6">
-          Don't have an account?{" "}
-          <Link to="/signup" className="text-emerald-300 font-medium hover:text-emerald-200">Create one</Link>
+        <p className="text-center text-sm text-muted-foreground mt-6">
+          {isAdminMode ? (
+            "Admin accounts are predefined and cannot be created from this page."
+          ) : (
+            <>
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-primary font-medium hover:text-primary/90">
+                Create one
+              </Link>
+            </>
+          )}
         </p>
         <p className="text-center mt-3">
-          <Link to="/" className="text-sm text-cyan-100/55 hover:text-cyan-100 transition-colors">&lt;- Back to home</Link>
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">&lt;- Back to home</Link>
         </p>
       </div>
     </div>

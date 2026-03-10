@@ -1,10 +1,20 @@
 
 export type ProgramStatus = 'published' | 'draft' | 'archived';
-export type EventStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-export type OrganizationStatus = 'active' | 'inactive';
+export type EventStatus = 'draft' | 'upcoming' | 'past' | 'cancelled';
+export type OrganizationStatus = 'active' | 'partner' | 'inactive';
 export type RegistrationStatus = 'registered' | 'attended' | 'cancelled';
-export type DisclosureDocType = 'cbydp' | 'abyip' | 'annual_budget' | 'rcb' | 'mil';
-export type QuarterCode = 'q1' | 'q2' | 'q3' | 'q4';
+export type DocState = 'ok' | 'partial' | 'issue';
+export type SubmissionState = 'submitted' | 'late' | 'missing';
+export type BarangayComplianceStatus = 'compliant' | 'pending' | 'overdue';
+export type DisclosureDocType =
+  | 'ordinance'
+  | 'resolution'
+  | 'executive_order'
+  | 'bac_document'
+  | 'financial_statement'
+  | 'program_outcome'
+  | 'other';
+export type QuarterCode = 'Q1' | 'Q2' | 'Q3' | 'Q4';
 
 export interface Barangay {
   id: string;
@@ -27,6 +37,8 @@ export interface Program {
   end_date?: string;
   schedule_text?: string;
   location: string;
+  location_latitude?: number | null;
+  location_longitude?: number | null;
   status: ProgramStatus;
   barangay_id?: string;
   source_post_url?: string;
@@ -45,6 +57,8 @@ export interface Event {
   event_date?: string;
   time_text?: string;
   location: string;
+  location_latitude?: number | null;
+  location_longitude?: number | null;
   status: EventStatus;
   barangay_id?: string;
   source_post_url?: string;
@@ -75,6 +89,7 @@ export interface DisclosureDocument {
   doc_code: string;
   title: string;
   document_type: DisclosureDocType;
+  document_type_other?: string;
   fiscal_year: number;
   quarter: QuarterCode;
   barangay_id?: string;
@@ -103,6 +118,62 @@ export interface UserProfile {
   notifications: boolean;
   show_email_public: boolean;
   avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplianceBoardStatusRow {
+  id: string;
+  barangay_id: string;
+  fiscal_year: number;
+  quarter: QuarterCode;
+  cbydp: DocState;
+  abyip: DocState;
+  annual_budget: DocState;
+  rcb: DocState;
+  mil: DocState;
+  remarks?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MonthlyComplianceRow {
+  id: string;
+  barangay_id: string;
+  fiscal_year: number;
+  month_no: number;
+  due_date: string;
+  mfr_status: SubmissionState;
+  mil_status: SubmissionState;
+  rcb_status: SubmissionState;
+  accomplishment_status: SubmissionState;
+  census_status: SubmissionState;
+  completion_percent: number;
+  report_document_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BarangayFinancialRow {
+  id: string;
+  barangay_id: string;
+  fiscal_year: number;
+  month_no: number;
+  allocated_amount: number;
+  utilized_amount: number;
+  sk_budget: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BarangayYouthMetricRow {
+  id: string;
+  barangay_id: string;
+  fiscal_year: number;
+  activities: number;
+  participants: number;
+  organizations: number;
+  compliance_status: BarangayComplianceStatus;
   created_at: string;
   updated_at: string;
 }

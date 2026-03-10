@@ -13,16 +13,51 @@ import type { YouthProgram } from "@/lib/youthCatalog";
 import { fetchFinancialDashboardData, fetchPrograms } from "@/lib/data-api";
 
 const youthFeatures = [
-  { icon: Calendar, title: "Programs and Events", description: "Discover youth programs, register for events, and track participation in one account." },
-  { icon: Users, title: "Organizations", description: "Find LYDO-connected youth organizations, advocacy groups, and community partners." },
-  { icon: Users, title: "Advocacy Groups", description: "Join youth advocacy communities focused on environment, leadership, and social impact." },
+  {
+    icon: Calendar,
+    title: "Programs and Events",
+    description: "Discover youth programs, register for events, and track participation in one account.",
+    href: "/programs",
+  },
+  {
+    icon: Users,
+    title: "Organizations",
+    description: "Find LYDO-connected youth organizations, advocacy groups, and community partners.",
+    href: "/organizations",
+  },
+  {
+    icon: Users,
+    title: "Advocacy Groups",
+    description: "Join youth advocacy communities focused on environment, leadership, and social impact.",
+    href: "/organizations",
+  },
 ];
 
 const transparencyFeatures = [
-  { icon: FileText, title: "Transparency Reports", description: "Access downloadable reports and official disclosures." },
-  { icon: BarChart3, title: "Financial Disclosure", description: "Review SK budget allocations and utilization by barangay." },
-  { icon: Shield, title: "SK Full Disclosure Board", description: "View board status and monthly compliance turnovers in one place." },
-  { icon: Map, title: "Barangay Map", description: "View governance and youth metrics across all barangays." },
+  {
+    icon: FileText,
+    title: "Transparency Reports",
+    description: "Access downloadable reports and official disclosures.",
+    href: "/transparency/reports",
+  },
+  {
+    icon: BarChart3,
+    title: "Financial Disclosure",
+    description: "Review SK budget allocations and utilization by barangay.",
+    href: "/transparency/financial-disclosure",
+  },
+  {
+    icon: Shield,
+    title: "SK Full Disclosure Board",
+    description: "View board status and monthly compliance turnovers in one place.",
+    href: "/transparency/board",
+  },
+  {
+    icon: Map,
+    title: "Barangay Map",
+    description: "View governance and youth metrics across all barangays.",
+    href: "/transparency/barangay-map",
+  },
 ];
 
 const Index = () => {
@@ -108,7 +143,9 @@ const Index = () => {
               <p className="text-muted-foreground mb-6">Programs, events, organizations, and advocacy groups for young citizens.</p>
               <div className="grid sm:grid-cols-2 gap-4">
                 {youthFeatures.map((feature) => (
-                  <FeatureCard key={feature.title} {...feature} />
+                  <Link key={feature.title} to={feature.href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <FeatureCard icon={feature.icon} title={feature.title} description={feature.description} />
+                  </Link>
                 ))}
               </div>
             </div>
@@ -117,7 +154,9 @@ const Index = () => {
               <p className="text-muted-foreground mb-6">Public reports, financial disclosure, SK compliance, and barangay monitoring.</p>
               <div className="grid sm:grid-cols-2 gap-4">
                 {transparencyFeatures.map((feature) => (
-                  <FeatureCard key={feature.title} {...feature} />
+                  <Link key={feature.title} to={feature.href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <FeatureCard icon={feature.icon} title={feature.title} description={feature.description} />
+                  </Link>
                 ))}
               </div>
             </div>

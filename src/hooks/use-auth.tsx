@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { ADMIN_SESSION_STORAGE_KEY, PREDEFINED_ADMIN_CREDENTIALS, PREDEFINED_ADMIN_USER } from "@/lib/admin-auth";
 import { supabase } from "@/lib/supabase";
@@ -73,12 +73,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<UserRole>("guest");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const applySessionVersionRef = useRef(0);
 
   useEffect(() => {
     let mounted = true;
     const supabaseClient = supabase;
 
     const applySession = async (session: Session | null) => {
+      const applyVersion = ++applySessionVersionRef.current;
       if (!mounted) return;
 
       if (!session?.user) {
@@ -112,6 +114,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .maybeSingle(),
         supabaseClient!.from("user_roles").select("roles(code)").eq("user_id", authUser.id),
       ]);
+
+      // Ignore stale async results if a newer auth event was already applied
+      // (e.g., signUp emits SIGNED_IN then we immediately force SIGNED_OUT).
+      if (!mounted || applyVersion !== applySessionVersionRef.current) return;
 
       const roleCodes =
         rolesResp.data
@@ -221,6 +227,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     if (error) return { error: error.message };
+
+    // Force manual sign-in after registration even when email confirmation is disabled.
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
+    setRole("guest");
+    setUser(null);
 
     return {
       needsEmailConfirmation: Boolean(data.user && !data.session),

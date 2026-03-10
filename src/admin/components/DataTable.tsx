@@ -28,44 +28,44 @@ export function DataTable<T extends { id: string | number }>({
   if (isLoading) {
     return (
       <div className="w-full h-64 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-[#1f3348] bg-[#0f1c2b]">
+    <div className="w-full overflow-hidden rounded-2xl border border-border bg-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#12263a] border-b border-[#1f3348]">
+            <tr className="bg-muted/40 border-b border-border">
               {columns.map((column, idx) => (
                 <th 
                   key={idx} 
-                  className={`px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider ${column.className || ''}`}
+                  className={`px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider ${column.className || ''}`}
                 >
                   {column.header}
                 </th>
               ))}
               {(onEdit || onDelete || onView) && (
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1a2f46]">
+          <tbody className="divide-y divide-border/60">
             {data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-12 text-center text-slate-400 font-medium">
+                <td colSpan={columns.length + 1} className="px-6 py-12 text-center text-muted-foreground font-medium">
                   No records found.
                 </td>
               </tr>
             ) : (
               data.map((item) => (
-                <tr key={item.id} className="hover:bg-[#11253a] transition-colors group">
+                <tr key={item.id} className="hover:bg-muted/30 transition-colors group">
                   {columns.map((column, idx) => (
-                    <td key={idx} className={`px-6 py-4 text-sm text-slate-300 ${column.className || ''}`}>
+                    <td key={idx} className={`px-6 py-4 text-sm text-foreground ${column.className || ''}`}>
                       {typeof column.accessor === 'function' 
                         ? column.accessor(item) 
                         : (item[column.accessor] as React.ReactNode)}
@@ -77,7 +77,7 @@ export function DataTable<T extends { id: string | number }>({
                         {onView && (
                           <button 
                             onClick={() => onView(item)}
-                            className="p-2 text-slate-400 hover:text-emerald-300 hover:bg-emerald-400/10 rounded-lg transition-all"
+                            className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
                           >
                             <Eye size={16} />
                           </button>
@@ -85,7 +85,7 @@ export function DataTable<T extends { id: string | number }>({
                         {onEdit && (
                           <button 
                             onClick={() => onEdit(item)}
-                            className="p-2 text-slate-400 hover:text-cyan-300 hover:bg-cyan-400/10 rounded-lg transition-all"
+                            className="p-2 text-muted-foreground hover:text-info hover:bg-info/10 rounded-lg transition-all"
                           >
                             <Edit2 size={16} />
                           </button>
@@ -93,7 +93,7 @@ export function DataTable<T extends { id: string | number }>({
                         {onDelete && (
                           <button 
                             onClick={() => onDelete(item)}
-                            className="p-2 text-slate-400 hover:text-rose-300 hover:bg-rose-400/10 rounded-lg transition-all"
+                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -110,4 +110,3 @@ export function DataTable<T extends { id: string | number }>({
     </div>
   );
 }
-

@@ -9,7 +9,10 @@ import {
   LogOut,
   Briefcase,
   MapPin,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquareWarning,
+  ClipboardList,
+  BarChart3
 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
@@ -34,8 +37,8 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }: SidebarItemProps) =
     className={cn(
       "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-left",
       active 
-        ? "bg-emerald-500/20 text-emerald-300 shadow-lg shadow-emerald-400/10 border border-emerald-500/30" 
-        : "text-slate-400 hover:bg-[#11253a] hover:text-slate-100"
+        ? "bg-primary/10 text-primary" 
+        : "text-muted-foreground hover:bg-muted hover:text-foreground"
     )}
   >
     <Icon size={20} />
@@ -56,8 +59,11 @@ export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
     { id: 'programs', label: 'Programs', icon: Briefcase },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'organizations', label: 'Organizations', icon: Building2 },
-    { id: 'barangays', label: 'Barangays', icon: MapPin },
-    { id: 'documents', label: 'Transparency', icon: FileText },
+    { id: 'barangays', label: 'Barangay Map Data', icon: MapPin },
+    { id: 'documents', label: 'Transparency Docs', icon: FileText },
+    { id: 'transparency-board', label: 'Transparency Board', icon: ClipboardList },
+    { id: 'financial-dss', label: 'Financial DSS', icon: BarChart3 },
+    { id: 'citizen-desk', label: 'Citizen Desk', icon: MessageSquareWarning },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck },
   ];
@@ -68,15 +74,15 @@ export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
   };
 
   return (
-    <aside className="w-72 bg-[#0b1625] border-r border-[#1f3348] h-screen flex flex-col sticky top-0">
+    <aside className="w-72 bg-card border-r border-border h-screen flex flex-col sticky top-0">
       <div className="p-8">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-emerald-400 rounded-xl flex items-center justify-center text-[#082538] font-bold text-sm shadow-lg shadow-emerald-400/20">
-            LC
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-xl shadow-[var(--glow-primary)]">
+            L
           </div>
           <div>
-            <h1 className="font-bold text-white text-lg leading-tight">LYDO Connect</h1>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Admin Portal</p>
+            <h1 className="font-bold text-foreground text-lg leading-tight">LYDO Connect</h1>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Admin Portal</p>
           </div>
         </div>
 
@@ -93,10 +99,10 @@ export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
         </nav>
       </div>
 
-      <div className="mt-auto p-8 border-t border-[#1f3348]">
+      <div className="mt-auto p-8 border-t border-border">
         <button
           onClick={() => void handleSignOut()}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-[#102235] hover:text-emerald-300 transition-all duration-200 w-full text-left font-medium"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full text-left font-medium"
         >
           <LogOut size={20} />
           <span>Sign Out</span>
@@ -105,4 +111,3 @@ export const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
     </aside>
   );
 };
-

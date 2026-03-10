@@ -1,5 +1,5 @@
 import { Search, Filter } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
@@ -10,8 +10,6 @@ import { fetchPrograms } from "@/lib/data-api";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-
-const sectors = ["All", "LYDO", "YDAC", "SK"];
 
 const Programs = () => {
   const [search, setSearch] = useState("");
@@ -44,6 +42,13 @@ const Programs = () => {
     const matchSector = activeSector === "All" || program.sector === activeSector;
     return matchSearch && matchSector;
   });
+
+  const sectorOptions = useMemo(() => {
+    const dynamicSectors = Array.from(
+      new Set(programs.map((program) => program.sector.trim()).filter((sector) => Boolean(sector))),
+    ).sort((a, b) => a.localeCompare(b));
+    return ["All", ...dynamicSectors];
+  }, [programs]);
 
   const toggleJoin = (programId: string, programTitle: string) => {
     if (!isAuthenticated) {
@@ -83,7 +88,7 @@ const Programs = () => {
                 <Input placeholder="Search programs..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
               </div>
               <div className="flex gap-2">
-                {sectors.map((sector) => (
+                {sectorOptions.map((sector) => (
                   <Button key={sector} variant={activeSector === sector ? "default" : "outline"} size="sm" onClick={() => setActiveSector(sector)}>
                     {sector}
                   </Button>
@@ -96,7 +101,7 @@ const Programs = () => {
                 <p className="text-sm">Loading programs...</p>
               </div>
             ) : filtered.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {filtered.map((program) => (
                   <ProgramCard
                     key={program.id}

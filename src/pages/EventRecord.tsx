@@ -1,4 +1,4 @@
-import { Calendar, Clock, MapPin, UserCheck } from "lucide-react";
+import { Calendar, Clock, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import type { YouthEvent } from "@/lib/youthCatalog";
 import { fetchEventById } from "@/lib/data-api";
+import LocationPreviewButton from "@/components/LocationPreviewButton";
 
 export default function EventRecord() {
   const { eventId = "" } = useParams();
@@ -138,8 +139,11 @@ export default function EventRecord() {
                     {event.time}
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2">
-                    <MapPin className="h-4 w-4" />
-                    {event.location}
+                    <LocationPreviewButton
+                      location={event.location}
+                      locationLatitude={event.locationLatitude}
+                      locationLongitude={event.locationLongitude}
+                    />
                   </div>
                 </div>
 

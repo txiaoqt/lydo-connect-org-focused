@@ -16,3 +16,8 @@
 --   supabase/sql/11_template_seed_data_pack_b.sql
 --   supabase/sql/12_admin_accounts.sql
 --   supabase/sql/13_auth_signup_profile_metadata.sql
+--   supabase/sql/14_admin_portal_anon_manage_policies.sql (optional for frontend predefined-admin write access)
+--   supabase/sql/15_transparency_upload_and_user_manage.sql (optional for transparency file upload + user management in anon-admin mode)
+--   supabase/sql/16_user_profile_delete_removes_auth_user.sql (optional but recommended for full user deletion from auth.users)
+--   supabase/sql/17_admin_citizen_tickets_anon_manage.sql (optional for Citizen Desk ticket management in anon-admin mode)
+--   supabase/sql/18_program_event_precise_location.sql (optional but recommended for precise lat/lng coordinates in programs/events)

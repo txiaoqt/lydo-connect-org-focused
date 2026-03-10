@@ -24,8 +24,16 @@ const initialsFrom = (name: string) => {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
+const roleTagLabel = (role: string) => {
+  if (role === "sk") return "Barangay SK";
+  if (role === "staff") return "LYDO Staff";
+  if (role === "admin") return "Admin";
+  if (role === "youth") return "Youth";
+  return "User";
+};
+
 export default function Profile() {
-  const { isAuthenticated, user, isInitialized } = useAuth();
+  const { isAuthenticated, user, isInitialized, role } = useAuth();
   const { profile, updateSettings, leave, joinedCounts } = useUserProfile();
   const { toast } = useToast();
   const [catalog, setCatalog] = useState<{
@@ -156,7 +164,12 @@ export default function Profile() {
                   </button>
                 </div>
                 <div>
-                  <p className="text-xl font-semibold">{settings.fullName || user?.displayName || "LYDO User"}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xl font-semibold">{settings.fullName || user?.displayName || "LYDO User"}</p>
+                    <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-1 text-xs font-semibold">
+                      {roleTagLabel(role)}
+                    </span>
+                  </div>
                   <p className="text-muted-foreground">{settings.email || user?.email || "user@lydo.local"}</p>
                 </div>
               </div>

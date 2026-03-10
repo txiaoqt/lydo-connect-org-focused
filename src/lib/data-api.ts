@@ -96,7 +96,7 @@ export async function fetchPrograms(): Promise<YouthProgram[]> {
 
   const { data, error } = await supabase
     .from("programs")
-    .select("id,title,sector,description,start_date,end_date,schedule_text,location,source_post_url,status")
+    .select("id,title,sector,description,start_date,end_date,schedule_text,location,location_latitude,location_longitude,source_post_url,status")
     .in("status", ["published"])
     .order("created_at", { ascending: false });
 
@@ -109,6 +109,8 @@ export async function fetchPrograms(): Promise<YouthProgram[]> {
     description: row.description ?? "",
     date: formatDateRange(row.start_date, row.end_date, row.schedule_text),
     location: row.location ?? "",
+    locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
+    locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
     type: "program" as const,
     sourcePostUrl: row.source_post_url ?? undefined,
   }));
@@ -119,7 +121,7 @@ export async function fetchEvents(): Promise<YouthEvent[]> {
 
   const { data, error } = await supabase
     .from("events")
-    .select("id,title,sector,description,event_date,time_text,location,status,source_post_url")
+    .select("id,title,sector,description,event_date,time_text,location,location_latitude,location_longitude,status,source_post_url")
     .in("status", ["upcoming", "past"])
     .order("event_date", { ascending: false, nullsFirst: false });
 
@@ -133,6 +135,8 @@ export async function fetchEvents(): Promise<YouthEvent[]> {
     date: row.event_date ?? "",
     time: row.time_text ?? "",
     location: row.location ?? "",
+    locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
+    locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
     status: row.status === "past" ? "past" : "upcoming",
     sourcePostUrl: row.source_post_url ?? undefined,
   }));
@@ -143,7 +147,7 @@ export async function fetchEventById(eventIdOrSlug: string): Promise<YouthEvent 
 
   const byId = await supabase
     .from("events")
-    .select("id,title,sector,description,event_date,time_text,location,status,source_post_url")
+    .select("id,title,sector,description,event_date,time_text,location,location_latitude,location_longitude,status,source_post_url")
     .eq("id", eventIdOrSlug)
     .maybeSingle();
 
@@ -152,7 +156,7 @@ export async function fetchEventById(eventIdOrSlug: string): Promise<YouthEvent 
     : (
         await supabase
           .from("events")
-          .select("id,title,sector,description,event_date,time_text,location,status,source_post_url")
+          .select("id,title,sector,description,event_date,time_text,location,location_latitude,location_longitude,status,source_post_url")
           .eq("slug", eventIdOrSlug)
           .maybeSingle()
       ).data;
@@ -167,6 +171,8 @@ export async function fetchEventById(eventIdOrSlug: string): Promise<YouthEvent 
     date: row.event_date ?? "",
     time: row.time_text ?? "",
     location: row.location ?? "",
+    locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
+    locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
     status: row.status === "past" ? "past" : "upcoming",
     sourcePostUrl: row.source_post_url ?? undefined,
   };
@@ -200,7 +206,7 @@ export async function fetchDisclosureRegistry(): Promise<DisclosureDocument[]> {
   const { data, error } = await supabase
     .from("disclosure_documents")
     .select(
-      "id,title,document_type,fiscal_year,quarter,published_date,file_size_bytes,public_url,storage_path,applies_to_all_barangays,barangays(name),offices(name)",
+      "id,title,document_type,document_type_other,fiscal_year,quarter,published_date,file_size_bytes,public_url,storage_path,applies_to_all_barangays,barangays(name),offices(name)",
     )
     .order("published_date", { ascending: false });
 
@@ -209,11 +215,14 @@ export async function fetchDisclosureRegistry(): Promise<DisclosureDocument[]> {
   return data.map((row) => {
     const office = Array.isArray(row.offices) ? row.offices[0] : row.offices;
     const barangay = Array.isArray(row.barangays) ? row.barangays[0] : row.barangays;
-    const mappedType = toTitleCase(String(row.document_type ?? "other"))
-      .replace("Bac", "BAC")
-      .replace("Executive Order", "Executive Order")
-      .replace("Program Outcome", "Program Outcome")
-      .replace("Financial Statement", "Financial Statement");
+    const mappedType =
+      row.document_type === "other"
+        ? String(row.document_type_other || "Other")
+        : toTitleCase(String(row.document_type ?? "other"))
+            .replace("Bac", "BAC")
+            .replace("Executive Order", "Executive Order")
+            .replace("Program Outcome", "Program Outcome")
+            .replace("Financial Statement", "Financial Statement");
 
     return {
       id: row.id,
@@ -320,7 +329,7 @@ export async function submitCitizenTicket(params: {
       requester_email: params.email,
       created_by_user_id: params.userId ?? null,
     })
-    .select("id,reference_no,status,created_at")
+    .select("id,reference_no,status,created_at,updated_at")
     .single();
 
   if (error || !data) {
@@ -354,7 +363,7 @@ export async function fetchMyCitizenTickets(userId: string) {
 
   const { data, error } = await supabase
     .from("citizen_tickets")
-    .select("id,reference_no,subject,status,created_at,ticket_types(name)")
+    .select("id,reference_no,subject,status,created_at,updated_at,ticket_types(name)")
     .eq("created_by_user_id", userId)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -369,6 +378,7 @@ export async function fetchMyCitizenTickets(userId: string) {
       subject: row.subject,
       status: row.status,
       createdAt: row.created_at,
+      updatedAt: row.updated_at,
       type: type?.name ?? "",
     };
   });

@@ -15,10 +15,10 @@ const navItems = [
   { label: "Programs", href: "/programs" },
   { label: "Events", href: "/events" },
   { label: "Organizations", href: "/organizations" },
-  { label: "Citizen Desk", href: "/feedback" },
 ];
 
 const transparencyItems = [
+  { label: "Citizen Desk", href: "/feedback" },
   { label: "Disclosure Registry", href: "/transparency/reports" },
   { label: "Transparency Board", href: "/transparency/board" },
   { label: "Financial Disclosure", href: "/transparency/financial-disclosure" },
@@ -31,7 +31,7 @@ const Navbar = () => {
   const [mobileTransparencyOpen, setMobileTransparencyOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, signOut, role } = useAuth();
+  const { isAuthenticated, signOut } = useAuth();
 
   const handleSignOut = () => {
     signOut();
@@ -39,7 +39,7 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const isTransparencyPath = location.pathname.startsWith("/transparency");
+  const isTransparencyPath = location.pathname.startsWith("/transparency") || location.pathname === "/feedback";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
@@ -68,7 +68,7 @@ const Navbar = () => {
               {item.label}
             </Link>
           ))}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger
               className={`inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isTransparencyPath
@@ -94,9 +94,6 @@ const Navbar = () => {
               <Button variant="outline" size="sm" asChild>
                 <Link to="/profile">Profile</Link>
               </Button>
-              <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground capitalize">
-                {role === "sk" ? "Barangay SK" : role}
-              </span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 Sign Out
               </Button>

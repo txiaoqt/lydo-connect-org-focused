@@ -1,13 +1,7 @@
 export type DisclosureDocument = {
   id: string;
   title: string;
-  documentType:
-    | "Ordinance"
-    | "Resolution"
-    | "Executive Order"
-    | "BAC Document"
-    | "Financial Statement"
-    | "Program Outcome";
+  documentType: string;
   fiscalYear: number;
   quarter: "Q1" | "Q2" | "Q3" | "Q4";
   barangay: string;

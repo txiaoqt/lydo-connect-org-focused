@@ -6,6 +6,8 @@ export type YouthEvent = {
   date: string;
   time: string;
   location: string;
+  locationLatitude?: number;
+  locationLongitude?: number;
   status: "past" | "upcoming";
   sourcePostUrl?: string;
 };
@@ -17,6 +19,8 @@ export type YouthProgram = {
   description: string;
   date: string;
   location: string;
+  locationLatitude?: number;
+  locationLongitude?: number;
   type: "program" | "event" | "organization";
   sourcePostUrl?: string;
 };
