@@ -6,11 +6,22 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import type { YouthEvent } from "@/lib/youthCatalog";
 import { fetchEventById } from "@/lib/data-api";
+import { validateRegistrationForm, type RegistrationFormErrors } from "@/lib/registration-validation";
 import LocationPreviewButton from "@/components/LocationPreviewButton";
 import SourcePostEmbed from "@/components/SourcePostEmbed";
 
@@ -36,6 +47,16 @@ export default function EventRecord() {
     municipality: "",
     barangay: "",
   });
+  const [formErrors, setFormErrors] = useState<RegistrationFormErrors>({});
+  const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
+  const [isRegistrationConfirmOpen, setIsRegistrationConfirmOpen] = useState(false);
+  const [pendingRegistration, setPendingRegistration] = useState<{
+    fullName: string;
+    email: string;
+    contactNumber: string;
+    municipality: string;
+    barangay: string;
+  } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -111,6 +132,48 @@ export default function EventRecord() {
     });
   };
 
+  const setFormValue = (field: keyof typeof form, value: string) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
+    setFormErrors((previous) => ({ ...previous, [field]: undefined }));
+  };
+
+  const submitRegistration = async (payload: {
+    fullName: string;
+    email: string;
+    contactNumber: string;
+    municipality: string;
+    barangay: string;
+  }) => {
+    if (!event) return;
+
+    setIsSubmittingRegistration(true);
+    try {
+      if (isProgramRecord) {
+        await registerForProgram(event.id, payload);
+        toast({
+          title: "Program Registration Successful",
+          description: `You are now registered for ${event.title}.`,
+        });
+      } else {
+        await registerForEvent(event.id, payload);
+        toast({
+          title: "Registration Successful",
+          description: `You are now registered for ${event.title}.`,
+        });
+      }
+      setIsRegistrationConfirmOpen(false);
+      setPendingRegistration(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit registration.";
+      toast({
+        title: "Registration Failed",
+        description: message,
+      });
+    } finally {
+      setIsSubmittingRegistration(false);
+    }
+  };
+
   const handleRegister = (eventForm: React.FormEvent) => {
     eventForm.preventDefault();
     if (!event) return;
@@ -122,24 +185,21 @@ export default function EventRecord() {
       });
       return;
     }
-    if (!form.fullName || !form.email || !form.contactNumber || !form.municipality || !form.barangay) {
-      toast({ title: "Incomplete Form", description: "Please complete all registration fields." });
-      return;
-    }
-    if (isProgramRecord) {
-      registerForProgram(event.id, form);
+    const validation = validateRegistrationForm(form);
+    if (!validation.isValid) {
+      setFormErrors(validation.errors);
       toast({
-        title: "Program Registration Successful",
-        description: `You are now registered for ${event.title}.`,
+        title: "Registration Form Error",
+        description: "Please review highlighted fields before submitting.",
       });
       return;
     }
 
-    registerForEvent(event.id, form);
-    toast({
-      title: "Registration Successful",
-      description: `You are now registered for ${event.title}.`,
-    });
+    const normalizedForm = validation.normalized;
+    setForm(normalizedForm);
+    setFormErrors({});
+    setPendingRegistration(normalizedForm);
+    setIsRegistrationConfirmOpen(true);
   };
 
   return (
@@ -265,41 +325,86 @@ export default function EventRecord() {
                       <p className="text-sm text-muted-foreground">
                         Complete your details to register. You can manage this registration from your profile later.
                       </p>
+                      {event.registrationFormUrl ? (
+                        <div className="rounded-lg border bg-background px-3 py-2">
+                          <p className="text-xs text-muted-foreground">Official External Registration Form</p>
+                          <a
+                            href={event.registrationFormUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            Open Google Form
+                          </a>
+                        </div>
+                      ) : null}
                       <div className="grid gap-4">
                         <div>
                           <Label htmlFor="fullName">Name</Label>
-                          <Input id="fullName" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
+                          <Input
+                            id="fullName"
+                            value={form.fullName}
+                            onChange={(e) => setFormValue("fullName", e.target.value)}
+                            className={formErrors.fullName ? "border-destructive focus-visible:ring-destructive/40" : ""}
+                            required
+                          />
+                          {formErrors.fullName ? <p className="mt-1 text-xs text-destructive">{formErrors.fullName}</p> : null}
                         </div>
                         <div>
                           <Label htmlFor="email">Email</Label>
-                          <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                          <Input
+                            id="email"
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => setFormValue("email", e.target.value)}
+                            className={formErrors.email ? "border-destructive focus-visible:ring-destructive/40" : ""}
+                            required
+                          />
+                          {formErrors.email ? <p className="mt-1 text-xs text-destructive">{formErrors.email}</p> : null}
                         </div>
                         <div>
                           <Label htmlFor="contactNumber">Contact Number</Label>
                           <Input
                             id="contactNumber"
+                            type="tel"
                             value={form.contactNumber}
-                            onChange={(e) => setForm({ ...form, contactNumber: e.target.value })}
+                            onChange={(e) => setFormValue("contactNumber", e.target.value)}
+                            placeholder="09XXXXXXXXX or +639XXXXXXXXX"
+                            className={formErrors.contactNumber ? "border-destructive focus-visible:ring-destructive/40" : ""}
                             required
                           />
+                          {formErrors.contactNumber ? <p className="mt-1 text-xs text-destructive">{formErrors.contactNumber}</p> : null}
                         </div>
                         <div>
                           <Label htmlFor="municipality">Municipality</Label>
                           <Input
                             id="municipality"
                             value={form.municipality}
-                            onChange={(e) => setForm({ ...form, municipality: e.target.value })}
+                            onChange={(e) => setFormValue("municipality", e.target.value)}
+                            className={formErrors.municipality ? "border-destructive focus-visible:ring-destructive/40" : ""}
                             required
                           />
+                          {formErrors.municipality ? <p className="mt-1 text-xs text-destructive">{formErrors.municipality}</p> : null}
                         </div>
                         <div>
                           <Label htmlFor="barangay">Barangay</Label>
-                          <Input id="barangay" value={form.barangay} onChange={(e) => setForm({ ...form, barangay: e.target.value })} required />
+                          <Input
+                            id="barangay"
+                            value={form.barangay}
+                            onChange={(e) => setFormValue("barangay", e.target.value)}
+                            className={formErrors.barangay ? "border-destructive focus-visible:ring-destructive/40" : ""}
+                            required
+                          />
+                          {formErrors.barangay ? <p className="mt-1 text-xs text-destructive">{formErrors.barangay}</p> : null}
                         </div>
                       </div>
-                      <Button type="submit" className="w-full">
+                      <Button type="submit" className="w-full" disabled={isSubmittingRegistration}>
                         <UserCheck className="h-4 w-4 mr-2" />
-                        {isProgramRecord ? "Submit Program Registration" : "Confirm Registration"}
+                        {isSubmittingRegistration
+                          ? "Submitting..."
+                          : isProgramRecord
+                            ? "Review Program Registration"
+                            : "Review Registration"}
                       </Button>
                     </form>
                   ) : (
@@ -347,6 +452,52 @@ export default function EventRecord() {
           </>
         ) : null}
       </div>
+      <AlertDialog
+        open={isRegistrationConfirmOpen}
+        onOpenChange={(open) => {
+          if (isSubmittingRegistration) return;
+          setIsRegistrationConfirmOpen(open);
+          if (!open) setPendingRegistration(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isProgramRecord ? "Confirm Program Registration" : "Confirm Event Registration"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please confirm the details below before completing your registration.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2 rounded-lg border bg-muted/25 p-3 text-sm">
+            <p><span className="text-muted-foreground">Record:</span> {event?.title ?? "N/A"}</p>
+            <p><span className="text-muted-foreground">Name:</span> {pendingRegistration?.fullName ?? "-"}</p>
+            <p><span className="text-muted-foreground">Email:</span> {pendingRegistration?.email ?? "-"}</p>
+            <p><span className="text-muted-foreground">Contact:</span> {pendingRegistration?.contactNumber ?? "-"}</p>
+            <p>
+              <span className="text-muted-foreground">Location:</span>{" "}
+              {pendingRegistration?.municipality ?? "-"}, {pendingRegistration?.barangay ?? "-"}
+            </p>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmittingRegistration}>Edit Details</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isSubmittingRegistration || !pendingRegistration}
+              onClick={(actionEvent) => {
+                actionEvent.preventDefault();
+                if (!pendingRegistration) return;
+                void submitRegistration(pendingRegistration);
+              }}
+            >
+              {isSubmittingRegistration
+                ? "Submitting..."
+                : isProgramRecord
+                  ? "Confirm Program Registration"
+                  : "Confirm Event Registration"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Footer />
     </div>
   );

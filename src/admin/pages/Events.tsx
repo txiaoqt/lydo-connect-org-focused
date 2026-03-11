@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getFacebookEmbedIssue, normalizeSourcePostUrl } from "@/lib/source-post";
+import { isGoogleFormUrl, normalizeGoogleSheetCsvUrl } from "@/lib/external-registration";
 import LocationPickerDialog, { LocationPickerResult } from "../components/LocationPickerDialog";
 import {
   Dialog,
@@ -44,6 +45,9 @@ type EventForm = {
   capacity: string;
   status: EventStatus;
   sourcePostUrl: string;
+  registrationFormUrl: string;
+  registrationSheetUrl: string;
+  externalAttendanceEnabled: boolean;
 };
 
 const EVENT_SECTOR_OPTIONS = [
@@ -83,6 +87,9 @@ const defaultForm: EventForm = {
   capacity: "",
   status: "upcoming",
   sourcePostUrl: "",
+  registrationFormUrl: "",
+  registrationSheetUrl: "",
+  externalAttendanceEnabled: false,
 };
 
 const slugify = (value: string) =>
@@ -180,6 +187,9 @@ export const Events = () => {
       capacity: event.capacity ? String(event.capacity) : "",
       status: event.status ?? "upcoming",
       sourcePostUrl: event.source_post_url ?? "",
+      registrationFormUrl: event.registration_form_url ?? "",
+      registrationSheetUrl: event.registration_sheet_url ?? "",
+      externalAttendanceEnabled: event.external_attendance_enabled ?? false,
     });
     setIsFormOpen(true);
   };
@@ -273,6 +283,30 @@ export const Events = () => {
       return;
     }
 
+    const registrationFormUrl = form.registrationFormUrl.trim();
+    const registrationSheetUrl = form.registrationSheetUrl.trim();
+    if (registrationFormUrl && !isGoogleFormUrl(registrationFormUrl)) {
+      toast({
+        title: "Invalid Registration Form URL",
+        description: "Use a valid Google Form link from docs.google.com/forms or forms.gle.",
+      });
+      return;
+    }
+    if (registrationSheetUrl && !normalizeGoogleSheetCsvUrl(registrationSheetUrl)) {
+      toast({
+        title: "Invalid Registration Sheet URL",
+        description: "Use a published Google Sheet link (docs.google.com/spreadsheets).",
+      });
+      return;
+    }
+    if (form.externalAttendanceEnabled && !registrationFormUrl) {
+      toast({
+        title: "Google Form Required",
+        description: "Enable external attendance sync only when a Google Form URL is provided.",
+      });
+      return;
+    }
+
     setIsSaving(true);
     const payload = {
       title: form.title.trim(),
@@ -287,6 +321,9 @@ export const Events = () => {
       capacity: parsedCapacity,
       status: form.status,
       source_post_url: normalizedSourcePostUrl,
+      registration_form_url: registrationFormUrl || null,
+      registration_sheet_url: registrationSheetUrl || null,
+      external_attendance_enabled: form.externalAttendanceEnabled,
       published_at: form.status === "upcoming" || form.status === "past" ? new Date().toISOString() : null,
     };
 
@@ -526,7 +563,7 @@ export const Events = () => {
       <DataTable columns={columns} data={filteredEvents} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle>
             <DialogDescription>Changes here are saved directly to Supabase.</DialogDescription>
@@ -656,6 +693,44 @@ export const Events = () => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Use the direct public post permalink (not `/share/...`) so it can be embedded on the event details page.
+                </p>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="event-registration-form-url">Registration Form URL (Optional)</Label>
+                <Input
+                  id="event-registration-form-url"
+                  value={form.registrationFormUrl}
+                  onChange={(e) => setForm((prev) => ({ ...prev, registrationFormUrl: e.target.value }))}
+                  placeholder="https://docs.google.com/forms/..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  External Google Form link only. The portal does not embed GForm preview.
+                </p>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="event-registration-sheet-url">Registration Sheet URL (Optional)</Label>
+                <Input
+                  id="event-registration-sheet-url"
+                  value={form.registrationSheetUrl}
+                  onChange={(e) => setForm((prev) => ({ ...prev, registrationSheetUrl: e.target.value }))}
+                  placeholder="https://docs.google.com/spreadsheets/.../pubhtml"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use the published Google Sheet URL so admin can preview external attendance.
+                </p>
+              </div>
+              <div className="md:col-span-2 rounded-lg border bg-muted/30 px-3 py-2.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border"
+                    checked={form.externalAttendanceEnabled}
+                    onChange={(e) => setForm((prev) => ({ ...prev, externalAttendanceEnabled: e.target.checked }))}
+                  />
+                  Enable automated Google Form sync
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  When enabled, portal registrations are queued for worker sync to Google Form, which then updates Google Sheet.
                 </p>
               </div>
               <div className="space-y-2 md:col-span-2">

@@ -1,15 +1,25 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { PREDEFINED_ADMIN_CREDENTIALS } from "@/lib/admin-auth";
+import { EFFECTIVE_ADMIN_SIGNIN_PATH, IS_ADMIN_SURFACE, IS_USER_SURFACE } from "@/lib/deployment-surface";
 import { supabase } from "@/lib/supabase";
 
-const SignIn = () => {
-  const [mode, setMode] = useState<"user" | "admin">("user");
+type SignInProps = {
+  forcedMode?: "user" | "admin";
+};
+
+const SignIn = ({ forcedMode }: SignInProps) => {
+  const inferredMode = useMemo<"user" | "admin">(() => {
+    if (forcedMode) return forcedMode;
+    if (IS_ADMIN_SURFACE) return "admin";
+    return "user";
+  }, [forcedMode]);
+
+  const [mode, setMode] = useState<"user" | "admin">(inferredMode);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +27,12 @@ const SignIn = () => {
   const navigate = useNavigate();
   const { signIn, isInitialized } = useAuth();
   const useSupabaseAuth = Boolean(supabase);
+  const roleSelectionEnabled = !forcedMode && !IS_ADMIN_SURFACE && !IS_USER_SURFACE;
+
+  useEffect(() => {
+    setMode(inferredMode);
+  }, [inferredMode]);
+
   const isAdminMode = mode === "admin";
   const canSubmit = isAdminMode
     ? Boolean(username.trim() && password)
@@ -38,7 +54,7 @@ const SignIn = () => {
     setUsername("");
     setEmail("");
     setPassword("");
-    navigate(isAdminMode ? "/admin" : "/");
+    navigate(isAdminMode ? "/admin" : "/", { replace: true });
   };
 
   return (
@@ -56,7 +72,9 @@ const SignIn = () => {
             </div>
             <div>
               <p className="font-heading font-bold text-base leading-tight text-foreground">LYDO Connect</p>
-              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Admin Portal</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                {isAdminMode ? "Admin Portal" : "Youth Portal"}
+              </p>
             </div>
           </Link>
         </div>
@@ -67,32 +85,36 @@ const SignIn = () => {
         >
           <div>
             <h1 className="text-2xl font-heading font-bold text-foreground">Sign in</h1>
-            <p className="text-sm text-muted-foreground mt-1">Choose your access role and continue.</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isAdminMode ? "Sign in with your admin credentials." : "Sign in with your youth account."}
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-foreground">Access Role</Label>
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1 border border-border">
-              <button
-                type="button"
-                onClick={() => setMode("user")}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  !isAdminMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                User
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("admin")}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isAdminMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Admin
-              </button>
+          {roleSelectionEnabled && (
+            <div className="space-y-2">
+              <Label className="text-foreground">Access Role</Label>
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1 border border-border">
+                <button
+                  type="button"
+                  onClick={() => setMode("user")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    !isAdminMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("admin")}
+                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                    isAdminMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Admin
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {!useSupabaseAuth && !isAdminMode && (
             <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
@@ -141,15 +163,6 @@ const SignIn = () => {
             />
           </div>
 
-          {isAdminMode && (
-            <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent">
-              Predefined admin credentials:{" "}
-              <code>{PREDEFINED_ADMIN_CREDENTIALS.username}</code>
-              {" / "}
-              <code>{PREDEFINED_ADMIN_CREDENTIALS.password}</code>
-            </div>
-          )}
-
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
@@ -171,9 +184,17 @@ const SignIn = () => {
             </>
           )}
         </p>
-        <p className="text-center mt-3">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">&lt;- Back to home</Link>
-        </p>
+        {isAdminMode ? (
+          <p className="text-center mt-3">
+            <Link to={EFFECTIVE_ADMIN_SIGNIN_PATH} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Stay on admin login
+            </Link>
+          </p>
+        ) : (
+          <p className="text-center mt-3">
+            <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">&lt;- Back to home</Link>
+          </p>
+        )}
       </div>
     </div>
   );

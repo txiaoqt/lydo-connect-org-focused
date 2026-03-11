@@ -10,6 +10,10 @@ export type YouthEvent = {
   locationLongitude?: number;
   status: "past" | "upcoming";
   sourcePostUrl?: string;
+  registrationFormUrl?: string;
+  registrationSheetUrl?: string;
+  externalAttendanceEnabled?: boolean;
+  capacity?: number;
   recordKind?: "event" | "program";
 };
 

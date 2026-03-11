@@ -15,10 +15,12 @@ import {
   BarChart3,
   History,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  UserCheck,
 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { EFFECTIVE_ADMIN_SIGNIN_PATH } from "@/lib/deployment-surface";
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -82,6 +84,7 @@ export const Sidebar = ({
       items: [
         { id: "programs", label: "Programs", icon: Briefcase },
         { id: "events", label: "Events", icon: Calendar },
+        { id: "registrations", label: "Registrations", icon: UserCheck },
         { id: "organizations", label: "Organizations", icon: Building2 },
         { id: "barangays", label: "Barangay Map Data", icon: MapPin },
       ],
@@ -109,7 +112,7 @@ export const Sidebar = ({
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/signin");
+    navigate(EFFECTIVE_ADMIN_SIGNIN_PATH);
     onNavigate?.();
   };
 

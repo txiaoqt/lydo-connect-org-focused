@@ -294,9 +294,20 @@ export const useUserProfile = () => {
 
   const isJoined = (type: JoinedType, id: string) => profile.joined[type].includes(id);
 
-  const registerForEvent = (eventId: string, info: EventRegistrationInfo) => {
-    if (!supabase || !user || isLocalAdmin) return;
+  const registerForEvent = async (eventId: string, info: EventRegistrationInfo) => {
+    if (!supabase || !user || isLocalAdmin) {
+      throw new Error("Registration is only available for signed-in portal users.");
+    }
 
+    const cleanedInfo: EventRegistrationInfo = {
+      fullName: info.fullName.trim(),
+      email: info.email.trim().toLowerCase(),
+      contactNumber: info.contactNumber.trim(),
+      municipality: info.municipality.trim(),
+      barangay: info.barangay.trim(),
+    };
+
+    const previousProfile = profile;
     const nextEvents = profile.joined.events.includes(eventId)
       ? profile.joined.events
       : [...profile.joined.events, eventId];
@@ -305,53 +316,108 @@ export const useUserProfile = () => {
       ...profile,
       settings: {
         ...profile.settings,
-        fullName: info.fullName,
-        email: info.email,
-        contactNumber: info.contactNumber,
-        municipality: info.municipality,
-        barangay: info.barangay,
+        fullName: cleanedInfo.fullName,
+        email: cleanedInfo.email,
+        contactNumber: cleanedInfo.contactNumber,
+        municipality: cleanedInfo.municipality,
+        barangay: cleanedInfo.barangay,
       },
-      eventRegistrations: { ...profile.eventRegistrations, [eventId]: info },
+      eventRegistrations: { ...profile.eventRegistrations, [eventId]: cleanedInfo },
       joined: { ...profile.joined, events: nextEvents },
     };
 
     persist(next);
 
-    void (async () => {
-      const barangayId = await getBarangayIdByName(info.barangay);
-      const insertResult = await supabase.from("event_registrations").insert({
+    try {
+      const barangayId = await getBarangayIdByName(cleanedInfo.barangay);
+
+      const rpcResult = await supabase.rpc("register_for_event_portal", {
+        p_event_id: eventId,
+        p_full_name: cleanedInfo.fullName,
+        p_email: cleanedInfo.email,
+        p_contact_number: cleanedInfo.contactNumber,
+        p_municipality: cleanedInfo.municipality,
+        p_barangay_id: barangayId,
+      });
+
+      if (!rpcResult.error) return;
+
+      const canFallbackToLegacyFlow =
+        rpcResult.error.code === "42883" ||
+        /register_for_event_portal/i.test(rpcResult.error.message ?? "");
+
+      if (!canFallbackToLegacyFlow) {
+        throw new Error(rpcResult.error.message);
+      }
+
+      const existing = await supabase
+        .from("event_registrations")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("event_id", eventId)
+        .order("registered_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing.error) {
+        throw new Error(existing.error.message);
+      }
+
+      if (existing.data?.id) {
+        const { error: updateError } = await supabase
+          .from("event_registrations")
+          .update({
+            full_name: cleanedInfo.fullName,
+            email: cleanedInfo.email,
+            contact_number: cleanedInfo.contactNumber,
+            municipality: cleanedInfo.municipality,
+            barangay_id: barangayId,
+            registration_status: "registered",
+            cancelled_at: null,
+            registered_at: new Date().toISOString(),
+          })
+          .eq("id", existing.data.id);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+        return;
+      }
+
+      const { error: insertError } = await supabase.from("event_registrations").insert({
         user_id: user.id,
         event_id: eventId,
-        full_name: info.fullName,
-        email: info.email,
-        contact_number: info.contactNumber,
-        municipality: info.municipality,
+        full_name: cleanedInfo.fullName,
+        email: cleanedInfo.email,
+        contact_number: cleanedInfo.contactNumber,
+        municipality: cleanedInfo.municipality,
         barangay_id: barangayId,
         registration_status: "registered",
       });
 
-      if (!insertResult.error) return;
-
-      await supabase
-        .from("event_registrations")
-        .update({
-          full_name: info.fullName,
-          email: info.email,
-          contact_number: info.contactNumber,
-          municipality: info.municipality,
-          barangay_id: barangayId,
-          registration_status: "registered",
-          cancelled_at: null,
-        })
-        .eq("user_id", user.id)
-        .eq("event_id", eventId)
-        .is("cancelled_at", null);
-    })();
+      if (insertError) {
+        throw new Error(insertError.message);
+      }
+    } catch (error) {
+      setProfile(previousProfile);
+      throw error;
+    }
   };
 
-  const registerForProgram = (programId: string, info: ProgramRegistrationInfo) => {
-    if (!supabase || !user || isLocalAdmin) return;
+  const registerForProgram = async (programId: string, info: ProgramRegistrationInfo) => {
+    if (!supabase || !user || isLocalAdmin) {
+      throw new Error("Registration is only available for signed-in portal users.");
+    }
 
+    const cleanedInfo: ProgramRegistrationInfo = {
+      fullName: info.fullName.trim(),
+      email: info.email.trim().toLowerCase(),
+      contactNumber: info.contactNumber.trim(),
+      municipality: info.municipality.trim(),
+      barangay: info.barangay.trim(),
+    };
+
+    const previousProfile = profile;
     const nextPrograms = profile.joined.programs.includes(programId)
       ? profile.joined.programs
       : [...profile.joined.programs, programId];
@@ -360,56 +426,106 @@ export const useUserProfile = () => {
       ...profile,
       settings: {
         ...profile.settings,
-        fullName: info.fullName,
-        email: info.email,
-        contactNumber: info.contactNumber,
-        municipality: info.municipality,
-        barangay: info.barangay,
+        fullName: cleanedInfo.fullName,
+        email: cleanedInfo.email,
+        contactNumber: cleanedInfo.contactNumber,
+        municipality: cleanedInfo.municipality,
+        barangay: cleanedInfo.barangay,
       },
-      programRegistrations: { ...profile.programRegistrations, [programId]: info },
+      programRegistrations: { ...profile.programRegistrations, [programId]: cleanedInfo },
       joined: { ...profile.joined, programs: nextPrograms },
     };
 
     persist(next);
 
-    void (async () => {
-      const barangayId = await getBarangayIdByName(info.barangay);
-      const registrationInsert = await supabase.from("program_registrations").insert({
-        user_id: user.id,
-        program_id: programId,
-        full_name: info.fullName,
-        email: info.email,
-        contact_number: info.contactNumber,
-        municipality: info.municipality,
-        barangay_id: barangayId,
-        registration_status: "registered",
+    try {
+      const barangayId = await getBarangayIdByName(cleanedInfo.barangay);
+
+      const rpcResult = await supabase.rpc("register_for_program_portal", {
+        p_program_id: programId,
+        p_full_name: cleanedInfo.fullName,
+        p_email: cleanedInfo.email,
+        p_contact_number: cleanedInfo.contactNumber,
+        p_municipality: cleanedInfo.municipality,
+        p_barangay_id: barangayId,
       });
 
-      if (registrationInsert.error) {
-        await supabase
+      if (!rpcResult.error) return;
+
+      const canFallbackToLegacyFlow =
+        rpcResult.error.code === "42883" ||
+        /register_for_program_portal/i.test(rpcResult.error.message ?? "");
+
+      if (!canFallbackToLegacyFlow) {
+        throw new Error(rpcResult.error.message);
+      }
+
+      const existing = await supabase
+        .from("program_registrations")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("program_id", programId)
+        .order("registered_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing.error) {
+        throw new Error(existing.error.message);
+      }
+
+      if (existing.data?.id) {
+        const { error: updateError } = await supabase
           .from("program_registrations")
           .update({
-            full_name: info.fullName,
-            email: info.email,
-            contact_number: info.contactNumber,
-            municipality: info.municipality,
+            full_name: cleanedInfo.fullName,
+            email: cleanedInfo.email,
+            contact_number: cleanedInfo.contactNumber,
+            municipality: cleanedInfo.municipality,
             barangay_id: barangayId,
             registration_status: "registered",
             cancelled_at: null,
+            registered_at: new Date().toISOString(),
           })
-          .eq("user_id", user.id)
-          .eq("program_id", programId);
+          .eq("id", existing.data.id);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+      } else {
+        const { error: registrationInsertError } = await supabase.from("program_registrations").insert({
+          user_id: user.id,
+          program_id: programId,
+          full_name: cleanedInfo.fullName,
+          email: cleanedInfo.email,
+          contact_number: cleanedInfo.contactNumber,
+          municipality: cleanedInfo.municipality,
+          barangay_id: barangayId,
+          registration_status: "registered",
+        });
+
+        if (registrationInsertError) {
+          throw new Error(registrationInsertError.message);
+        }
       }
 
-      const membershipInsert = await supabase.from("user_program_memberships").insert({ user_id: user.id, program_id: programId });
+      const membershipInsert = await supabase
+        .from("user_program_memberships")
+        .insert({ user_id: user.id, program_id: programId });
       if (membershipInsert.error) {
-        await supabase
+        const { error: membershipUpdateError } = await supabase
           .from("user_program_memberships")
           .update({ left_at: null })
           .eq("user_id", user.id)
           .eq("program_id", programId);
+
+        if (membershipUpdateError) {
+          throw new Error(membershipUpdateError.message);
+        }
       }
-    })();
+    } catch (error) {
+      setProfile(previousProfile);
+      throw error;
+    }
   };
 
   const getEventRegistration = (eventId: string) => profile.eventRegistrations[eventId] ?? null;

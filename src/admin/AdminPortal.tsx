@@ -13,6 +13,7 @@ import { CitizenDeskAdmin } from "./pages/CitizenDesk";
 import { UsersPage } from "./pages/Users";
 import { Roles } from "./pages/Roles";
 import { AuditLogs } from "./pages/AuditLogs";
+import { Registrations } from "./pages/Registrations";
 
 export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -24,6 +25,7 @@ export default function AdminPortal() {
     dashboard: "Dashboard",
     programs: "Programs",
     events: "Events",
+    registrations: "Registrations",
     organizations: "Organizations",
     barangays: "Barangay Map Data",
     documents: "Transparency Docs",
@@ -85,6 +87,8 @@ export default function AdminPortal() {
         return <Programs />;
       case "events":
         return <Events />;
+      case "registrations":
+        return <Registrations />;
       case "organizations":
         return <Organizations />;
       case "barangays":

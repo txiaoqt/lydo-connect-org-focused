@@ -166,6 +166,10 @@ export async function fetchEvents(): Promise<YouthEvent[]> {
     locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
     status: row.status === "past" ? "past" : "upcoming",
     sourcePostUrl: row.source_post_url ?? undefined,
+    registrationFormUrl: row.registration_form_url ?? undefined,
+    registrationSheetUrl: row.registration_sheet_url ?? undefined,
+    externalAttendanceEnabled: row.external_attendance_enabled ?? false,
+    capacity: row.capacity ?? undefined,
   }));
 }
 
@@ -182,6 +186,10 @@ type EventRecordRow = {
   location_longitude?: number | null;
   status?: string | null;
   source_post_url?: string | null;
+  registration_form_url?: string | null;
+  registration_sheet_url?: string | null;
+  external_attendance_enabled?: boolean | null;
+  capacity?: number | null;
 };
 
 type ProgramRecordRow = {
@@ -198,6 +206,9 @@ type ProgramRecordRow = {
   location_latitude?: number | null;
   location_longitude?: number | null;
   source_post_url?: string | null;
+  registration_form_url?: string | null;
+  registration_sheet_url?: string | null;
+  external_attendance_enabled?: boolean | null;
 };
 
 const mapEventRecord = (row: EventRecordRow): YouthEvent => ({
@@ -212,6 +223,10 @@ const mapEventRecord = (row: EventRecordRow): YouthEvent => ({
   locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
   status: row.status === "past" ? "past" : "upcoming",
   sourcePostUrl: row.source_post_url ?? undefined,
+  registrationFormUrl: row.registration_form_url ?? undefined,
+  registrationSheetUrl: row.registration_sheet_url ?? undefined,
+  externalAttendanceEnabled: row.external_attendance_enabled ?? false,
+  capacity: row.capacity ?? undefined,
   recordKind: "event",
 });
 
@@ -227,6 +242,9 @@ const mapProgramRecord = (row: ProgramRecordRow): YouthEvent => ({
   locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
   status: "upcoming",
   sourcePostUrl: row.source_post_url ?? undefined,
+  registrationFormUrl: row.registration_form_url ?? undefined,
+  registrationSheetUrl: row.registration_sheet_url ?? undefined,
+  externalAttendanceEnabled: row.external_attendance_enabled ?? false,
   recordKind: "program",
 });
 

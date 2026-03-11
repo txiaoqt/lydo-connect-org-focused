@@ -94,6 +94,29 @@ This project is optimized for Vercel deployment:
 - Optimized build settings in `vite.config.ts`
 - Automatic React Router support with proper fallback routing
 
+### Split User/Admin Deployment (Recommended)
+
+Deploy the same repository into two Vercel projects with different env:
+
+- User project env:
+  - `VITE_DEPLOY_SURFACE=user`
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+
+- Admin project env:
+  - `VITE_DEPLOY_SURFACE=admin`
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+  - `SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SYNC_TRIGGER_TOKEN`
+  - optional: `VITE_SYNC_TRIGGER_TOKEN`
+
+Behavior by surface:
+- `user`: admin routes/login are blocked.
+- `admin`: user routes are blocked, login route is `/admin/signin`.
+- `combined`: both user and admin are available in one deployment.
+
 ## Project Structure
 
 ```

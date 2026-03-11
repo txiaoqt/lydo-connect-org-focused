@@ -44,6 +44,9 @@ export interface Program {
   status: ProgramStatus;
   barangay_id?: string;
   source_post_url?: string;
+  registration_form_url?: string | null;
+  registration_sheet_url?: string | null;
+  external_attendance_enabled?: boolean;
   created_by?: string;
   published_at?: string;
   created_at: string;
@@ -65,6 +68,9 @@ export interface Event {
   status: EventStatus;
   barangay_id?: string;
   source_post_url?: string;
+  registration_form_url?: string | null;
+  registration_sheet_url?: string | null;
+  external_attendance_enabled?: boolean;
   capacity?: number;
   created_by?: string;
   published_at?: string;

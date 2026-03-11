@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { ADMIN_SESSION_STORAGE_KEY, PREDEFINED_ADMIN_CREDENTIALS, PREDEFINED_ADMIN_USER } from "@/lib/admin-auth";
+import { IS_USER_SURFACE } from "@/lib/deployment-surface";
 import { supabase } from "@/lib/supabase";
 
 export type UserRole = "guest" | "youth" | "sk" | "staff" | "admin";
@@ -45,14 +46,20 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const ADMIN_USERNAME = PREDEFINED_ADMIN_CREDENTIALS.username;
 const ADMIN_PASSWORD = PREDEFINED_ADMIN_CREDENTIALS.password;
 const ADMIN_USER: AuthUser = PREDEFINED_ADMIN_USER;
+const LOCAL_ADMIN_ALLOWED = !IS_USER_SURFACE;
 
 const readAdminSession = () => {
+  if (!LOCAL_ADMIN_ALLOWED) return false;
   if (typeof window === "undefined") return false;
   return window.localStorage.getItem(ADMIN_SESSION_STORAGE_KEY) === "active";
 };
 
 const writeAdminSession = (active: boolean) => {
   if (typeof window === "undefined") return;
+  if (!LOCAL_ADMIN_ALLOWED) {
+    window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    return;
+  }
   if (active) {
     window.localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, "active");
     return;
@@ -174,6 +181,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (params: SignInParams) => {
     if (params.mode === "admin") {
+      if (!LOCAL_ADMIN_ALLOWED) {
+        return { error: "Admin login is disabled on this deployment." };
+      }
+
       const username = params.username.trim();
       if (username !== ADMIN_USERNAME || params.password !== ADMIN_PASSWORD) {
         return { error: "Invalid admin credentials." };
