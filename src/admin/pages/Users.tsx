@@ -1,5 +1,5 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
-import { Mail, Phone, Search, User } from "lucide-react";
+﻿import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { Filter, Mail, Phone, Search, User } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { UserProfile } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -68,6 +68,10 @@ export const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [barangayFilter, setBarangayFilter] = useState("all");
+  const [municipalityFilter, setMunicipalityFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -316,25 +320,49 @@ export const UsersPage = () => {
 
   const filteredUsers = useMemo(
     () =>
-      users.filter(
-        (u) =>
-          (u.full_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-          u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (u.barangay_name?.toLowerCase() || "").includes(searchTerm.toLowerCase()),
-      ),
-    [searchTerm, users],
+      users.filter((u) => {
+        const term = searchTerm.trim().toLowerCase();
+        const roles = u.role_codes.length > 0 ? u.role_codes : ["youth"];
+        const matchesSearch =
+          term.length === 0
+            ? true
+            : (u.full_name?.toLowerCase() || "").includes(term) ||
+              (u.display_name?.toLowerCase() || "").includes(term) ||
+              u.email.toLowerCase().includes(term) ||
+              (u.barangay_name?.toLowerCase() || "").includes(term) ||
+              (u.municipality?.toLowerCase() || "").includes(term) ||
+              roles.join(", ").toLowerCase().includes(term);
+        const matchesRole = roleFilter === "all" ? true : roles.includes(roleFilter);
+        const matchesBarangay = barangayFilter === "all" ? true : u.barangay_id === barangayFilter;
+        const matchesMunicipality =
+          municipalityFilter === "all" ? true : (u.municipality || "").toLowerCase() === municipalityFilter;
+        return matchesSearch && matchesRole && matchesBarangay && matchesMunicipality;
+      }),
+    [searchTerm, users, roleFilter, barangayFilter, municipalityFilter],
+  );
+
+  const roleOptions = useMemo(
+    () =>
+      ["all", ...Array.from(new Set(users.flatMap((u) => (u.role_codes.length > 0 ? u.role_codes : ["youth"])))).sort((a, b) => a.localeCompare(b))],
+    [users],
+  );
+
+  const municipalityOptions = useMemo(
+    () =>
+      ["all", ...Array.from(new Set(users.map((u) => (u.municipality || "").trim().toLowerCase()).filter(Boolean))).sort((a, b) => a.localeCompare(b))],
+    [users],
   );
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">User Management</h1>
           <p className="text-muted-foreground mt-1 font-medium">View and manage youth profiles and account information.</p>
         </div>
       </header>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border border-border card-shadow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-2xl border border-border card-shadow">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
@@ -345,7 +373,85 @@ export const UsersPage = () => {
             className="w-full pl-10 pr-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all outline-none"
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
+          className={`flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 font-bold rounded-xl transition-all border ${
+            showFilters
+              ? "text-primary bg-primary/10 border-primary/30"
+              : "text-muted-foreground hover:bg-muted border-border"
+          }`}
+        >
+          <Filter size={18} />
+          Filter
+        </button>
       </div>
+
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-card p-4 rounded-2xl border border-border card-shadow">
+          <div className="space-y-1">
+            <Label>Role</Label>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {roleOptions.map((role) => (
+                <option key={role} value={role}>
+                  {role === "all" ? "All Roles" : role}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Barangay</Label>
+            <select
+              value={barangayFilter}
+              onChange={(e) => setBarangayFilter(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All Barangays</option>
+              {barangays.map((barangay) => (
+                <option key={barangay.id} value={barangay.id}>
+                  {barangay.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Municipality</Label>
+            <select
+              value={municipalityFilter}
+              onChange={(e) => setMunicipalityFilter(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {municipalityOptions.map((municipality) => (
+                <option key={municipality} value={municipality}>
+                  {municipality === "all"
+                    ? "All Municipalities"
+                    : municipality
+                        .split(" ")
+                        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                        .join(" ")}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRoleFilter("all");
+                setBarangayFilter("all");
+                setMunicipalityFilter("all");
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -567,3 +673,4 @@ export const UsersPage = () => {
     </div>
   );
 };
+

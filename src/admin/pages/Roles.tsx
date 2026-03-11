@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useState } from "react";
+﻿import React, { FormEvent, useEffect, useState } from "react";
 import { Plus, Shield, ShieldAlert, ShieldCheck } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -225,7 +225,7 @@ export const Roles = () => {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Roles & Permissions</h1>
           <p className="text-muted-foreground mt-1 font-medium">Define and manage access levels for administrative users.</p>
@@ -233,7 +233,7 @@ export const Roles = () => {
         <button
           type="button"
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
         >
           <Plus size={20} />
           Create Role
@@ -330,3 +330,4 @@ export const Roles = () => {
     </div>
   );
 };
+

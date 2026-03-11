@@ -7,18 +7,12 @@ import Footer from "@/components/Footer";
 import ProgramCard from "@/components/ProgramCard";
 import type { YouthProgram } from "@/lib/youthCatalog";
 import { fetchPrograms } from "@/lib/data-api";
-import { useUserProfile } from "@/hooks/use-user-profile";
-import { useAuth } from "@/hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
 
 const Programs = () => {
   const [search, setSearch] = useState("");
   const [activeSector, setActiveSector] = useState("All");
   const [programs, setPrograms] = useState<YouthProgram[]>([]);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
-  const { isJoined, join, leave } = useUserProfile();
-  const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -49,25 +43,6 @@ const Programs = () => {
     ).sort((a, b) => a.localeCompare(b));
     return ["All", ...dynamicSectors];
   }, [programs]);
-
-  const toggleJoin = (programId: string, programTitle: string) => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Sign In Required",
-        description: "Please sign in first to join programs and manage them in your profile.",
-      });
-      return;
-    }
-
-    if (isJoined("programs", programId)) {
-      leave("programs", programId);
-      toast({ title: "Program Left", description: `Removed ${programTitle} from your profile.` });
-      return;
-    }
-
-    join("programs", programId);
-    toast({ title: "Program Joined", description: `${programTitle} added to your profile.` });
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -106,8 +81,8 @@ const Programs = () => {
                   <ProgramCard
                     key={program.id}
                     {...program}
-                    isJoined={isJoined("programs", program.id)}
-                    onToggleJoin={() => toggleJoin(program.id, program.title)}
+                    recordHref={`/programs/${program.id}`}
+                    showModeActions
                   />
                 ))}
               </div>

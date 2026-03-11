@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -74,6 +75,7 @@ export const TransparencyBoardAdmin = () => {
   const [reportDocs, setReportDocs] = useState<ReportOption[]>([]);
   const [boardSearch, setBoardSearch] = useState("");
   const [monthlySearch, setMonthlySearch] = useState("");
+  const [monthlyMonthFilter, setMonthlyMonthFilter] = useState("all");
 
   const [isBoardDialog, setIsBoardDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<BoardRow | null>(null);
@@ -221,10 +223,24 @@ export const TransparencyBoardAdmin = () => {
     const q = boardSearch.toLowerCase();
     return r.barangay_name.toLowerCase().includes(q) || String(r.fiscal_year).includes(q) || r.quarter.toLowerCase().includes(q) || (r.remarks ?? "").toLowerCase().includes(q);
   }), [boardRows, boardSearch]);
+  const availableMonthlyMonths = useMemo(
+    () => Array.from(new Set(monthlyRows.map((row) => row.month_no))).sort((a, b) => a - b),
+    [monthlyRows],
+  );
   const filteredMonthly = useMemo(() => monthlyRows.filter((r) => {
-    const q = monthlySearch.toLowerCase();
-    return r.barangay_name.toLowerCase().includes(q) || String(r.fiscal_year).includes(q) || String(r.month_no).includes(q) || (r.report_doc_code ?? "").toLowerCase().includes(q);
-  }), [monthlyRows, monthlySearch]);
+    const q = monthlySearch.toLowerCase().trim();
+    const monthLabel = MONTH_NAMES[Math.max(0, Math.min(11, r.month_no - 1))] ?? String(r.month_no);
+    const matchesSearch =
+      q.length === 0
+        ? true
+        : r.barangay_name.toLowerCase().includes(q) ||
+          String(r.fiscal_year).includes(q) ||
+          String(r.month_no).includes(q) ||
+          monthLabel.toLowerCase().includes(q) ||
+          (r.report_doc_code ?? "").toLowerCase().includes(q);
+    const matchesMonth = monthlyMonthFilter === "all" ? true : String(r.month_no) === monthlyMonthFilter;
+    return matchesSearch && matchesMonth;
+  }), [monthlyRows, monthlySearch, monthlyMonthFilter]);
 
   return (
     <div className="space-y-8">
@@ -233,44 +249,95 @@ export const TransparencyBoardAdmin = () => {
         <p className="text-muted-foreground mt-1 font-medium">Configure all public Transparency Board and Monthly Compliance data from admin.</p>
       </header>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-bold text-foreground">Board Rows</h2>
-          <Button type="button" onClick={openCreateBoardDialog} className="gap-2"><Plus size={16} />Add Board Row</Button>
-        </div>
-        <div className="relative"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={boardSearch} onChange={(e) => setBoardSearch(e.target.value)} placeholder="Search board rows..." className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm" /></div>
-        <DataTable
-          columns={[
-            { header: "Barangay / Period", accessor: (r: BoardRow) => <div><p className="font-semibold">{r.barangay_name}</p><p className="text-xs text-muted-foreground">FY {r.fiscal_year} - {r.quarter}</p></div> },
-            { header: "Document States", accessor: (r: BoardRow) => <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-md border px-2 py-0.5">CBYDP {DOC_LABEL[r.cbydp]}</span><span className="rounded-md border px-2 py-0.5">ABYIP {DOC_LABEL[r.abyip]}</span><span className="rounded-md border px-2 py-0.5">BUD {DOC_LABEL[r.annual_budget]}</span><span className="rounded-md border px-2 py-0.5">RCB {DOC_LABEL[r.rcb]}</span><span className="rounded-md border px-2 py-0.5">MIL {DOC_LABEL[r.mil]}</span></div> },
-            { header: "Remarks", accessor: (r: BoardRow) => r.remarks || "-" },
-          ]}
-          data={filteredBoard}
-          isLoading={isLoading}
-          onEdit={openEditBoardDialog}
-          onDelete={setDeletingBoard}
-        />
-      </section>
+      <Tabs defaultValue="board-rows" className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="board-rows">Board Rows</TabsTrigger>
+          <TabsTrigger value="monthly-rows">Monthly Compliance</TabsTrigger>
+        </TabsList>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-bold text-foreground">Monthly Compliance Rows</h2>
-          <Button type="button" onClick={() => { setEditingMonthly(null); setMonthlyForm(monthlyDefaults); setIsMonthlyDialog(true); }} className="gap-2"><Plus size={16} />Add Monthly Row</Button>
-        </div>
-        <div className="relative"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={monthlySearch} onChange={(e) => setMonthlySearch(e.target.value)} placeholder="Search monthly rows..." className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm" /></div>
-        <DataTable
-          columns={[
-            { header: "Barangay / Month", accessor: (r: MonthlyRow) => <div><p className="font-semibold">{r.barangay_name}</p><p className="text-xs text-muted-foreground">FY {r.fiscal_year} - {MONTH_NAMES[r.month_no - 1] ?? r.month_no}</p></div> },
-            { header: "Completion", accessor: (r: MonthlyRow) => <div><p className="font-semibold">{r.completion_percent}%</p><p className="text-xs text-muted-foreground">Due {new Date(r.due_date).toLocaleDateString()}</p></div> },
-            { header: "Statuses", accessor: (r: MonthlyRow) => <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-md border px-2 py-0.5">MFR {SUB_LABEL[r.mfr_status]}</span><span className="rounded-md border px-2 py-0.5">MIL {SUB_LABEL[r.mil_status]}</span><span className="rounded-md border px-2 py-0.5">RCB {SUB_LABEL[r.rcb_status]}</span><span className="rounded-md border px-2 py-0.5">ACC {SUB_LABEL[r.accomplishment_status]}</span><span className="rounded-md border px-2 py-0.5">CEN {SUB_LABEL[r.census_status]}</span></div> },
-            { header: "Report", accessor: (r: MonthlyRow) => r.report_doc_code ? (r.report_url ? <a href={r.report_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">{r.report_doc_code}<ExternalLink size={12} /></a> : r.report_doc_code) : "-" },
-          ]}
-          data={filteredMonthly}
-          isLoading={isLoading}
-          onEdit={(row) => { setEditingMonthly(row); setMonthlyForm({ barangayId: row.barangay_id, fiscalYear: String(row.fiscal_year), monthNo: String(row.month_no), dueDate: row.due_date, mfrStatus: row.mfr_status, milStatus: row.mil_status, rcbStatus: row.rcb_status, accomplishmentStatus: row.accomplishment_status, censusStatus: row.census_status, reportDocumentId: row.report_document_id ?? "" }); setIsMonthlyDialog(true); }}
-          onDelete={setDeletingMonthly}
-        />
-      </section>
+        <TabsContent value="board-rows" className="space-y-4">
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-foreground">Board Rows</h2>
+              <Button type="button" onClick={openCreateBoardDialog} className="gap-2"><Plus size={16} />Add Board Row</Button>
+            </div>
+            <div className="relative">
+              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={boardSearch}
+                onChange={(e) => setBoardSearch(e.target.value)}
+                placeholder="Search board rows..."
+                className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm"
+              />
+            </div>
+            <DataTable
+              columns={[
+                { header: "Barangay / Period", accessor: (r: BoardRow) => <div><p className="font-semibold">{r.barangay_name}</p><p className="text-xs text-muted-foreground">FY {r.fiscal_year} - {r.quarter}</p></div> },
+                { header: "Document States", accessor: (r: BoardRow) => <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-md border px-2 py-0.5">CBYDP {DOC_LABEL[r.cbydp]}</span><span className="rounded-md border px-2 py-0.5">ABYIP {DOC_LABEL[r.abyip]}</span><span className="rounded-md border px-2 py-0.5">BUD {DOC_LABEL[r.annual_budget]}</span><span className="rounded-md border px-2 py-0.5">RCB {DOC_LABEL[r.rcb]}</span><span className="rounded-md border px-2 py-0.5">MIL {DOC_LABEL[r.mil]}</span></div> },
+                { header: "Remarks", accessor: (r: BoardRow) => r.remarks || "-" },
+              ]}
+              data={filteredBoard}
+              isLoading={isLoading}
+              onEdit={openEditBoardDialog}
+              onDelete={setDeletingBoard}
+            />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="monthly-rows" className="space-y-4">
+          <section className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-foreground">Monthly Compliance Rows</h2>
+              <Button type="button" onClick={() => { setEditingMonthly(null); setMonthlyForm(monthlyDefaults); setIsMonthlyDialog(true); }} className="gap-2"><Plus size={16} />Add Monthly Row</Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={monthlySearch}
+                  onChange={(e) => setMonthlySearch(e.target.value)}
+                  placeholder="Search monthly rows..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <select
+                  value={monthlyMonthFilter}
+                  onChange={(e) => setMonthlyMonthFilter(e.target.value)}
+                  className="w-full sm:w-52 h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="all">All Months</option>
+                  {availableMonthlyMonths.map((month) => (
+                    <option key={month} value={month}>
+                      {MONTH_NAMES[Math.max(0, Math.min(11, month - 1))] ?? month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMonthlyMonthFilter("all")}
+                disabled={monthlyMonthFilter === "all"}
+              >
+                Clear Month
+              </Button>
+            </div>
+            <DataTable
+              columns={[
+                { header: "Barangay / Month", accessor: (r: MonthlyRow) => <div><p className="font-semibold">{r.barangay_name}</p><p className="text-xs text-muted-foreground">FY {r.fiscal_year} - {MONTH_NAMES[r.month_no - 1] ?? r.month_no}</p></div> },
+                { header: "Completion", accessor: (r: MonthlyRow) => <div><p className="font-semibold">{r.completion_percent}%</p><p className="text-xs text-muted-foreground">Due {new Date(r.due_date).toLocaleDateString()}</p></div> },
+                { header: "Statuses", accessor: (r: MonthlyRow) => <div className="flex flex-wrap gap-1.5 text-xs"><span className="rounded-md border px-2 py-0.5">MFR {SUB_LABEL[r.mfr_status]}</span><span className="rounded-md border px-2 py-0.5">MIL {SUB_LABEL[r.mil_status]}</span><span className="rounded-md border px-2 py-0.5">RCB {SUB_LABEL[r.rcb_status]}</span><span className="rounded-md border px-2 py-0.5">ACC {SUB_LABEL[r.accomplishment_status]}</span><span className="rounded-md border px-2 py-0.5">CEN {SUB_LABEL[r.census_status]}</span></div> },
+                { header: "Report", accessor: (r: MonthlyRow) => r.report_doc_code ? (r.report_url ? <a href={r.report_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">{r.report_doc_code}<ExternalLink size={12} /></a> : r.report_doc_code) : "-" },
+              ]}
+              data={filteredMonthly}
+              isLoading={isLoading}
+              onEdit={(row) => { setEditingMonthly(row); setMonthlyForm({ barangayId: row.barangay_id, fiscalYear: String(row.fiscal_year), monthNo: String(row.month_no), dueDate: row.due_date, mfrStatus: row.mfr_status, milStatus: row.mil_status, rcbStatus: row.rcb_status, accomplishmentStatus: row.accomplishment_status, censusStatus: row.census_status, reportDocumentId: row.report_document_id ?? "" }); setIsMonthlyDialog(true); }}
+              onDelete={setDeletingMonthly}
+            />
+          </section>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isBoardDialog} onOpenChange={setIsBoardDialog}>
         <DialogContent className="max-w-3xl">

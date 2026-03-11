@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Programs from "./pages/Programs";
 import Events from "./pages/Events";
@@ -49,6 +50,14 @@ const NotFoundRoute = () => {
   return <NotFound />;
 };
 
+const ScrollToTopOnRouteChange = () => {
+  const { pathname, search } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname, search]);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -56,6 +65,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTopOnRouteChange />
           <Routes>
             <Route
               path="/admin"
@@ -131,6 +141,14 @@ const App = () => (
             />
             <Route
               path="/events/:eventId"
+              element={
+                <RedirectAdmin>
+                  <EventRecord />
+                </RedirectAdmin>
+              }
+            />
+            <Route
+              path="/programs/:programId"
               element={
                 <RedirectAdmin>
                   <EventRecord />

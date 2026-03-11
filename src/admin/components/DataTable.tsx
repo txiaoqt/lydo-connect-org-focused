@@ -42,13 +42,13 @@ export function DataTable<T extends { id: string | number }>({
               {columns.map((column, idx) => (
                 <th 
                   key={idx} 
-                  className={`px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider ${column.className || ''}`}
+                  className={`admin-kicker px-6 py-4 ${column.className || ''}`}
                 >
                   {column.header}
                 </th>
               ))}
               {(onEdit || onDelete || onView) && (
-                <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">
+                <th className="admin-kicker px-6 py-4 text-right">
                   Actions
                 </th>
               )}
@@ -73,7 +73,7 @@ export function DataTable<T extends { id: string | number }>({
                   ))}
                   {(onEdit || onDelete || onView) && (
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {onView && (
                           <button 
                             onClick={() => onView(item)}

@@ -116,6 +116,38 @@
   .animate-fade-up {
     animation: fadeUp 0.6s ease-out forwards;
   }
+
+  .admin-kicker {
+    color: hsl(196 34% 44%);
+    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+}
+
+@layer components {
+  .admin-shell h1,
+  .admin-shell h2,
+  .admin-shell h3 {
+    color: hsl(210 52% 14%);
+  }
+
+  .admin-shell label {
+    color: hsl(196 34% 44%);
+    letter-spacing: 0.12em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .admin-shell .text-xs.font-semibold.uppercase.tracking-wider {
+    color: hsl(196 34% 44%);
+  }
+
+  .admin-shell thead th {
+    color: hsl(196 34% 44%);
+  }
 }
 
 @keyframes float {

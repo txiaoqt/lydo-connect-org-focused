@@ -10,6 +10,7 @@ export type YouthEvent = {
   locationLongitude?: number;
   status: "past" | "upcoming";
   sourcePostUrl?: string;
+  recordKind?: "event" | "program";
 };
 
 export type YouthProgram = {
@@ -18,6 +19,7 @@ export type YouthProgram = {
   sector: string;
   description: string;
   date: string;
+  time?: string;
   location: string;
   locationLatitude?: number;
   locationLongitude?: number;

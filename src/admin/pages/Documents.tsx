@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+﻿import React, { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Calendar, ExternalLink, FileText, Plus, Search, Tag, UploadCloud } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
@@ -514,7 +514,7 @@ export const Documents = () => {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Transparency Documents</h1>
           <p className="text-muted-foreground mt-1 font-medium">Upload public files and keep the transparency registry up to date.</p>
@@ -522,7 +522,7 @@ export const Documents = () => {
         <button
           type="button"
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
         >
           <Plus size={20} />
           Upload Document
@@ -544,7 +544,7 @@ export const Documents = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border border-border card-shadow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-2xl border border-border card-shadow">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
@@ -784,3 +784,4 @@ export const Documents = () => {
     </div>
   );
 };
+

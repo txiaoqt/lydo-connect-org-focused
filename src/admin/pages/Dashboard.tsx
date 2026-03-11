@@ -1,8 +1,38 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Briefcase, Building2, Calendar, CheckCircle2, Clock, Users } from "lucide-react";
+import {
+  BarChart3,
+  Briefcase,
+  Building2,
+  Calendar,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  FileText,
+  LayoutDashboard,
+  MapPin,
+  MessageSquareWarning,
+  History,
+  Search,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import { StatsCard } from "../components/StatsCard";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+
+type AdminTab =
+  | "dashboard"
+  | "programs"
+  | "events"
+  | "organizations"
+  | "barangays"
+  | "documents"
+  | "transparency-board"
+  | "financial-dss"
+  | "citizen-desk"
+  | "audit-logs"
+  | "users"
+  | "roles";
 
 type AdminActivity = {
   id: string;
@@ -10,6 +40,7 @@ type AdminActivity = {
   detail: string;
   timestamp: string;
   status: "success" | "update" | "pending" | "completed";
+  tab: AdminTab;
 };
 
 type DashboardUser = {
@@ -27,7 +58,35 @@ type DashboardUser = {
   created_at: string;
 };
 
-export const Dashboard = () => {
+type DashboardProps = {
+  onNavigate: (tab: AdminTab) => void;
+};
+
+type SearchResult = {
+  id: string;
+  title: string;
+  subtitle: string;
+  tab: AdminTab;
+  type: "section" | "activity" | "user";
+  score: number;
+};
+
+const scoreSearchHit = (query: string, ...parts: string[]) => {
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+  const text = parts.join(" ").toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  let score = 0;
+  if (text === q) score += 12;
+  if (text.startsWith(q)) score += 8;
+  if (text.includes(q)) score += 5;
+  for (const token of tokens) {
+    if (text.includes(token)) score += 2;
+  }
+  return score;
+};
+
+export const Dashboard = ({ onNavigate }: DashboardProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [totals, setTotals] = useState({
     users: 0,
@@ -46,6 +105,7 @@ export const Dashboard = () => {
   });
   const [recentActivities, setRecentActivities] = useState<AdminActivity[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUser[]>([]);
+  const [overviewSearch, setOverviewSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const { toast } = useToast();
 
@@ -137,6 +197,7 @@ export const Dashboard = () => {
         detail: "Program created",
         timestamp: row.created_at,
         status: "update" as const,
+        tab: "programs" as const,
       })),
       ...(recentEventsResp.data ?? []).map((row) => ({
         id: `e-${row.id}`,
@@ -144,6 +205,7 @@ export const Dashboard = () => {
         detail: "Event created",
         timestamp: row.created_at,
         status: "success" as const,
+        tab: "events" as const,
       })),
       ...(recentOrgsResp.data ?? []).map((row) => ({
         id: `o-${row.id}`,
@@ -151,6 +213,7 @@ export const Dashboard = () => {
         detail: "Organization registered",
         timestamp: row.created_at,
         status: "pending" as const,
+        tab: "organizations" as const,
       })),
       ...(recentTicketsResp.data ?? []).map((row) => ({
         id: `t-${row.id}`,
@@ -158,6 +221,7 @@ export const Dashboard = () => {
         detail: `Citizen ticket: ${row.status}`,
         timestamp: row.created_at,
         status: row.status === "resolved" || row.status === "closed" ? ("completed" as const) : ("pending" as const),
+        tab: "citizen-desk" as const,
       })),
     ]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -215,11 +279,127 @@ export const Dashboard = () => {
   }, []);
 
   const stats = [
-    { label: "Total Youth Users", value: totals.users.toLocaleString(), icon: Users, color: "blue" as const },
-    { label: "Published Programs", value: totals.programs.toLocaleString(), icon: Briefcase, color: "blue" as const },
-    { label: "Upcoming Events", value: totals.events.toLocaleString(), icon: Calendar, color: "amber" as const },
-    { label: "Active/Partner Orgs", value: totals.organizations.toLocaleString(), icon: Building2, color: "indigo" as const },
+    {
+      label: "Total Youth Users",
+      value: totals.users.toLocaleString(),
+      icon: Users,
+      color: "blue" as const,
+      tab: "users" as const,
+      keywords: "users youth profiles members",
+    },
+    {
+      label: "Published Programs",
+      value: totals.programs.toLocaleString(),
+      icon: Briefcase,
+      color: "blue" as const,
+      tab: "programs" as const,
+      keywords: "programs projects published",
+    },
+    {
+      label: "Upcoming Events",
+      value: totals.events.toLocaleString(),
+      icon: Calendar,
+      color: "amber" as const,
+      tab: "events" as const,
+      keywords: "events upcoming calendar",
+    },
+    {
+      label: "Active/Partner Orgs",
+      value: totals.organizations.toLocaleString(),
+      icon: Building2,
+      color: "indigo" as const,
+      tab: "organizations" as const,
+      keywords: "organizations partners groups",
+    },
   ];
+
+  const sectionShortcuts = [
+    { label: "Dashboard", tab: "dashboard" as const, icon: LayoutDashboard, keywords: "overview analytics summary" },
+    { label: "Programs", tab: "programs" as const, icon: Briefcase, keywords: "projects sectors drafts published" },
+    { label: "Events", tab: "events" as const, icon: Calendar, keywords: "schedule upcoming past cancelled" },
+    { label: "Organizations", tab: "organizations" as const, icon: Building2, keywords: "groups partners active" },
+    { label: "Barangay Map Data", tab: "barangays" as const, icon: MapPin, keywords: "barangay maps youth metrics" },
+    { label: "Transparency Docs", tab: "documents" as const, icon: FileText, keywords: "documents advisories uploads registry" },
+    { label: "Transparency Board", tab: "transparency-board" as const, icon: ClipboardList, keywords: "compliance board monthly" },
+    { label: "Financial DSS", tab: "financial-dss" as const, icon: BarChart3, keywords: "budget finance dss rows" },
+    { label: "Citizen Desk", tab: "citizen-desk" as const, icon: MessageSquareWarning, keywords: "tickets requests complaints" },
+    { label: "Audit Logs", tab: "audit-logs" as const, icon: History, keywords: "audit logs changes history admin edits" },
+    { label: "Users", tab: "users" as const, icon: Users, keywords: "accounts profiles members" },
+    { label: "Roles & Permissions", tab: "roles" as const, icon: ShieldCheck, keywords: "roles permissions access" },
+  ];
+
+  const moduleCoverageCards = [
+    { label: "Disclosure Documents", count: moduleCounts.documents, tab: "documents" as const, keywords: "documents disclosure files" },
+    { label: "Service Advisories", count: moduleCounts.advisories, tab: "documents" as const, keywords: "advisories notices service" },
+    { label: "Ticket Types", count: moduleCounts.ticketTypes, tab: "citizen-desk" as const, keywords: "tickets categories citizen desk" },
+    { label: "Barangay Financial Rows", count: moduleCounts.financialRows, tab: "financial-dss" as const, keywords: "finance budget rows" },
+    { label: "Barangay Youth Metrics", count: moduleCounts.youthMetricsRows, tab: "barangays" as const, keywords: "barangay metrics youth" },
+    { label: "Compliance Board Rows", count: moduleCounts.boardRows, tab: "transparency-board" as const, keywords: "compliance board" },
+    { label: "Monthly Compliance Rows", count: moduleCounts.monthlyRows, tab: "transparency-board" as const, keywords: "monthly compliance reports" },
+  ];
+
+  const overviewResults = useMemo(() => {
+    const query = overviewSearch.trim().toLowerCase();
+    if (!query) return [] as SearchResult[];
+
+    const sectionHits: SearchResult[] = [
+      ...sectionShortcuts.map((section) => ({
+        id: `section-${section.tab}`,
+        title: section.label,
+        subtitle: "Open admin section",
+        tab: section.tab,
+        type: "section" as const,
+        score: scoreSearchHit(query, section.label, section.keywords),
+      })),
+      ...stats.map((stat) => ({
+        id: `stat-${stat.tab}`,
+        title: stat.label,
+        subtitle: `${stat.value} records`,
+        tab: stat.tab,
+        type: "section" as const,
+        score: scoreSearchHit(query, stat.label, stat.keywords),
+      })),
+      ...moduleCoverageCards.map((card) => ({
+        id: `coverage-${card.label}`,
+        title: card.label,
+        subtitle: `${card.count} rows`,
+        tab: card.tab,
+        type: "section" as const,
+        score: scoreSearchHit(query, card.label, card.keywords),
+      })),
+    ];
+
+    const activityHits: SearchResult[] = recentActivities.map((activity) => ({
+      id: `activity-${activity.id}`,
+      title: activity.text,
+      subtitle: activity.detail,
+      tab: activity.tab,
+      type: "activity" as const,
+      score: scoreSearchHit(query, activity.text, activity.detail, activity.tab),
+    }));
+
+    const userHits: SearchResult[] = dashboardUsers.map((user) => ({
+      id: `user-${user.user_id}`,
+      title: user.full_name || user.display_name || user.email,
+      subtitle: `${user.email} ${user.barangay_name} ${user.municipality} ${user.role_codes.join(", ")}`.trim(),
+      tab: "users" as const,
+      type: "user" as const,
+      score: scoreSearchHit(
+        query,
+        user.full_name ?? "",
+        user.display_name ?? "",
+        user.email,
+        user.barangay_name ?? "",
+        user.municipality ?? "",
+        user.role_codes.join(" "),
+      ),
+    }));
+
+    return [...sectionHits, ...activityHits, ...userHits]
+      .filter((result) => result.score > 0)
+      .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title))
+      .slice(0, 12);
+  }, [dashboardUsers, moduleCoverageCards, overviewSearch, recentActivities, sectionShortcuts, stats]);
 
   const filteredUsers = useMemo(
     () =>
@@ -241,14 +421,72 @@ export const Dashboard = () => {
     <div className="space-y-8">
       <header>
         <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>
-        <p className="text-muted-foreground mt-1 font-medium">Live Supabase metrics with complete user dataset visibility.</p>
+        <p className="text-muted-foreground mt-1 font-medium">
+          Live Supabase metrics with smart navigation across all admin modules.
+        </p>
       </header>
+
+      <section className="bg-card p-5 rounded-2xl border border-border card-shadow space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+          <input
+            type="text"
+            placeholder="Smart search: users, modules, tickets, programs, events..."
+            value={overviewSearch}
+            onChange={(e) => setOverviewSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all outline-none"
+          />
+        </div>
+        {overviewSearch.trim() && (
+          <div className="rounded-xl border border-border overflow-hidden">
+            {overviewResults.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-muted-foreground">No overview results found.</div>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {overviewResults.map((result) => (
+                  <li key={result.id}>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(result.tab)}
+                      className="w-full px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                    >
+                      <p className="text-sm font-semibold text-foreground">{result.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {result.subtitle} - {result.type}
+                      </p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {sectionShortcuts.map((section) => (
+            <button
+              key={section.tab}
+              type="button"
+              onClick={() => onNavigate(section.tab)}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              <section.icon size={13} />
+              {section.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
-          <div key={stat.label}>
-            <StatsCard {...stat} />
-          </div>
+          <button
+            key={stat.label}
+            type="button"
+            onClick={() => onNavigate(stat.tab)}
+            className="w-full text-left rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <StatsCard label={stat.label} value={stat.value} icon={stat.icon} color={stat.color} />
+          </button>
         ))}
       </div>
 
@@ -260,34 +498,19 @@ export const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <p className="font-semibold text-foreground">Disclosure Documents</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.documents} rows</p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <p className="font-semibold text-foreground">Service Advisories</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.advisories} rows</p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <p className="font-semibold text-foreground">Ticket Types</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.ticketTypes} rows</p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <p className="font-semibold text-foreground">Barangay Financial Rows</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.financialRows} rows</p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <p className="font-semibold text-foreground">Barangay Youth Metrics</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.youthMetricsRows} rows</p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <p className="font-semibold text-foreground">Compliance Board Rows</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.boardRows} rows</p>
-            </div>
-            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 md:col-span-2">
-              <p className="font-semibold text-foreground">Monthly Compliance Rows</p>
-              <p className="text-xs text-muted-foreground">{moduleCounts.monthlyRows} rows</p>
-            </div>
+            {moduleCoverageCards.map((card) => (
+              <button
+                key={card.label}
+                type="button"
+                onClick={() => onNavigate(card.tab)}
+                className={`rounded-xl border border-border bg-muted/40 px-4 py-3 text-left hover:bg-muted/60 transition-colors ${
+                  card.label === "Monthly Compliance Rows" ? "md:col-span-2" : ""
+                }`}
+              >
+                <p className="font-semibold text-foreground">{card.label}</p>
+                <p className="text-xs text-muted-foreground">{card.count} rows</p>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -298,7 +521,12 @@ export const Dashboard = () => {
               <p className="text-sm text-muted-foreground">No recent Supabase activity yet.</p>
             ) : (
               recentActivities.map((activity) => (
-                <div key={activity.id} className="flex gap-4">
+                <button
+                  key={activity.id}
+                  type="button"
+                  onClick={() => onNavigate(activity.tab)}
+                  className="flex gap-4 w-full text-left hover:bg-muted/30 rounded-xl p-2 -mx-2 transition-colors"
+                >
                   <div
                     className={`mt-1 p-2 rounded-lg shrink-0 ${
                       activity.status === "success"
@@ -317,7 +545,7 @@ export const Dashboard = () => {
                     <p className="text-xs text-muted-foreground mt-1">{activity.detail}</p>
                     <p className="text-xs text-muted-foreground mt-1">{new Date(activity.timestamp).toLocaleString()}</p>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -398,4 +626,3 @@ export const Dashboard = () => {
     </div>
   );
 };
-

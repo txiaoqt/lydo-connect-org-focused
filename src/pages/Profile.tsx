@@ -236,7 +236,7 @@ export default function Profile() {
                     <p className="text-sm">{item.label}</p>
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="outline" asChild>
-                        <Link to="/programs">Details</Link>
+                        <Link to={`/programs/${item.id}`}>Details</Link>
                       </Button>
                       <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("programs", item.id)}>
                         Cancel

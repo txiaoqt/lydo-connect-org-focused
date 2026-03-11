@@ -178,7 +178,7 @@ const Index = () => {
           {featuredPrograms.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredPrograms.map((program) => (
-                <ProgramCard key={program.id ?? program.title} {...program} />
+                <ProgramCard key={program.id ?? program.title} {...program} recordHref={`/programs/${program.id}`} />
               ))}
             </div>
           ) : (

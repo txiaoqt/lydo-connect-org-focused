@@ -43,7 +43,7 @@ export const StatsCard = ({ label, value, icon: Icon, trend, trendLabel, color =
         )}
       </div>
       
-      <h3 className="text-muted-foreground text-sm font-medium mb-1">{label}</h3>
+      <h3 className="admin-kicker mb-1">{label}</h3>
       <p className="text-2xl font-bold text-foreground">{value}</p>
       
       {trendLabel && (

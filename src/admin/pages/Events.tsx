@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useState } from "react";
+﻿import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { Calendar as CalendarIcon, Filter, MapPin, Plus, Search, Users } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getFacebookEmbedIssue, normalizeSourcePostUrl } from "@/lib/source-post";
 import LocationPickerDialog, { LocationPickerResult } from "../components/LocationPickerDialog";
 import {
   Dialog,
@@ -35,7 +36,8 @@ type EventForm = {
   customSector: string;
   description: string;
   eventDate: string;
-  timeText: string;
+  startTime: string;
+  endTime: string;
   location: string;
   locationLatitude: string;
   locationLongitude: string;
@@ -73,7 +75,8 @@ const defaultForm: EventForm = {
   customSector: "",
   description: "",
   eventDate: "",
-  timeText: "",
+  startTime: "",
+  endTime: "",
   location: "San Mateo, Rizal",
   locationLatitude: "",
   locationLongitude: "",
@@ -90,11 +93,37 @@ const slugify = (value: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const formatTimeLabel = (value?: string | null) => {
+  const raw = (value ?? "").trim();
+  if (!raw) return "";
+  const hhmm = raw.slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return raw;
+  const [hourText, minuteText] = hhmm.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return raw;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const normalizedHour = hour % 12 || 12;
+  return `${normalizedHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+};
+
+const formatTimeRange = (startTime?: string | null, endTime?: string | null) => {
+  const start = formatTimeLabel(startTime);
+  const end = formatTimeLabel(endTime);
+  if (start && end) return `${start} - ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return "TBD";
+};
+
 export const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | EventStatus>("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
@@ -143,7 +172,8 @@ export const Events = () => {
       customSector: sectorValues.customSector,
       description: event.description ?? "",
       eventDate: event.event_date ?? "",
-      timeText: event.time_text ?? "",
+      startTime: event.start_time ?? "",
+      endTime: event.end_time ?? "",
       location: event.location ?? "",
       locationLatitude: event.location_latitude != null ? String(event.location_latitude) : "",
       locationLongitude: event.location_longitude != null ? String(event.location_longitude) : "",
@@ -190,6 +220,10 @@ export const Events = () => {
       toast({ title: "Missing Sector", description: "Please select a sector or enter a custom sector." });
       return;
     }
+    if (form.startTime && form.endTime && form.endTime < form.startTime) {
+      toast({ title: "Invalid Time Range", description: "End time must be the same as or later than start time." });
+      return;
+    }
 
     const hasLat = Boolean(form.locationLatitude.trim());
     const hasLng = Boolean(form.locationLongitude.trim());
@@ -221,19 +255,38 @@ export const Events = () => {
       return;
     }
 
+    const rawSourcePostUrl = form.sourcePostUrl.trim();
+    const normalizedSourcePostUrl = rawSourcePostUrl ? normalizeSourcePostUrl(rawSourcePostUrl) : null;
+    if (rawSourcePostUrl && !normalizedSourcePostUrl) {
+      toast({
+        title: "Invalid Source URL",
+        description: "Please provide a valid full URL starting with https://.",
+      });
+      return;
+    }
+    const embedIssue = getFacebookEmbedIssue(normalizedSourcePostUrl);
+    if (embedIssue) {
+      toast({
+        title: "Use Direct Facebook Permalink",
+        description: embedIssue.message,
+      });
+      return;
+    }
+
     setIsSaving(true);
     const payload = {
       title: form.title.trim(),
       sector: selectedSector,
       description: form.description.trim(),
       event_date: form.eventDate || null,
-      time_text: form.timeText.trim() || null,
+      start_time: form.startTime || null,
+      end_time: form.endTime || null,
       location: form.location.trim() || "San Mateo, Rizal",
       location_latitude: parsedLatitude,
       location_longitude: parsedLongitude,
       capacity: parsedCapacity,
       status: form.status,
-      source_post_url: form.sourcePostUrl.trim() || null,
+      source_post_url: normalizedSourcePostUrl,
       published_at: form.status === "upcoming" || form.status === "past" ? new Date().toISOString() : null,
     };
 
@@ -320,7 +373,7 @@ export const Events = () => {
             <CalendarIcon size={12} className="text-muted-foreground" />
             <span>{e.event_date ? format(new Date(e.event_date), "MMM d, yyyy") : "N/A"}</span>
           </div>
-          <span className="text-muted-foreground ml-4">{e.time_text || "TBD"}</span>
+          <span className="text-muted-foreground ml-4">{formatTimeRange(e.start_time, e.end_time)}</span>
         </div>
       ),
     },
@@ -362,13 +415,30 @@ export const Events = () => {
     },
   ];
 
-  const filteredEvents = events.filter(
-    (e) => e.title.toLowerCase().includes(searchTerm.toLowerCase()) || e.sector.toLowerCase().includes(searchTerm.toLowerCase()),
+  const availableSectorFilters = useMemo(
+    () => ["all", ...Array.from(new Set(events.map((event) => event.sector).filter(Boolean))).sort((a, b) => a.localeCompare(b))],
+    [events],
+  );
+
+  const filteredEvents = useMemo(
+    () =>
+      events.filter((event) => {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch =
+          event.title.toLowerCase().includes(term) ||
+          event.sector.toLowerCase().includes(term) ||
+          (event.location ?? "").toLowerCase().includes(term) ||
+          (event.description ?? "").toLowerCase().includes(term);
+        const matchesStatus = statusFilter === "all" ? true : event.status === statusFilter;
+        const matchesSector = sectorFilter === "all" ? true : event.sector === sectorFilter;
+        return matchesSearch && matchesStatus && matchesSector;
+      }),
+    [events, searchTerm, statusFilter, sectorFilter],
   );
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Events Management</h1>
           <p className="text-muted-foreground mt-1 font-medium">Coordinate and manage community events for the youth.</p>
@@ -376,14 +446,14 @@ export const Events = () => {
         <button
           type="button"
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
         >
           <Plus size={20} />
           Create New Event
         </button>
       </header>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border border-border card-shadow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-2xl border border-border card-shadow">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
@@ -394,11 +464,64 @@ export const Events = () => {
             className="w-full pl-10 pr-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all outline-none"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 text-muted-foreground font-bold hover:bg-muted rounded-xl transition-all border border-border">
+        <button
+          type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
+          className={`flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 font-bold rounded-xl transition-all border ${
+            showFilters
+              ? "text-primary bg-primary/10 border-primary/30"
+              : "text-muted-foreground hover:bg-muted border-border"
+          }`}
+        >
           <Filter size={18} />
           Filter
         </button>
       </div>
+
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-card p-4 rounded-2xl border border-border card-shadow">
+          <div className="space-y-1">
+            <Label>Status</Label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | EventStatus)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All Statuses</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="past">Past</option>
+              <option value="draft">Draft</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Sector</Label>
+            <select
+              value={sectorFilter}
+              onChange={(e) => setSectorFilter(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {availableSectorFilters.map((sector) => (
+                <option key={sector} value={sector}>
+                  {sector === "all" ? "All Sectors" : sector}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2 flex items-end justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStatusFilter("all");
+                setSectorFilter("all");
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DataTable columns={columns} data={filteredEvents} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
 
@@ -485,12 +608,21 @@ export const Events = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="event-time">Time Text</Label>
+                <Label htmlFor="event-start-time">Start Time</Label>
                 <Input
-                  id="event-time"
-                  value={form.timeText}
-                  onChange={(e) => setForm((prev) => ({ ...prev, timeText: e.target.value }))}
-                  placeholder="8:00 AM - 12:00 PM"
+                  id="event-start-time"
+                  type="time"
+                  value={form.startTime}
+                  onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="event-end-time">End Time</Label>
+                <Input
+                  id="event-end-time"
+                  type="time"
+                  value={form.endTime}
+                  onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -520,8 +652,11 @@ export const Events = () => {
                   id="event-source"
                   value={form.sourcePostUrl}
                   onChange={(e) => setForm((prev) => ({ ...prev, sourcePostUrl: e.target.value }))}
-                  placeholder="https://..."
+                  placeholder="https://www.facebook.com/..."
                 />
+                <p className="text-xs text-muted-foreground">
+                  Use the direct public post permalink (not `/share/...`) so it can be embedded on the event details page.
+                </p>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="event-description">Description</Label>
@@ -590,3 +725,4 @@ export const Events = () => {
     </div>
   );
 };
+

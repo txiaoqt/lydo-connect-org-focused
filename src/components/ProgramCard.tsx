@@ -1,8 +1,7 @@
-import { Calendar } from "lucide-react";
-import { useState } from "react";
+import { Calendar, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
 import { format, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import LocationPreviewButton from "@/components/LocationPreviewButton";
 
 interface ProgramCardProps {
@@ -11,11 +10,14 @@ interface ProgramCardProps {
   sector: string;
   description: string;
   date?: string;
+  time?: string;
   location?: string;
   locationLatitude?: number;
   locationLongitude?: number;
   type: "program" | "event" | "organization";
   sourcePostUrl?: string;
+  recordHref?: string;
+  showModeActions?: boolean;
   isJoined?: boolean;
   onToggleJoin?: () => void;
 }
@@ -48,16 +50,20 @@ const ProgramCard = ({
   sector,
   description,
   date,
+  time,
   location,
   locationLatitude,
   locationLongitude,
   type,
   sourcePostUrl,
+  recordHref,
+  showModeActions = false,
   isJoined,
   onToggleJoin,
 }: ProgramCardProps) => {
-  const [expanded, setExpanded] = useState(false);
   const displayDate = formatCardDate(date);
+  const detailsHref = recordHref ? `${recordHref}${recordHref.includes("?") ? "&" : "?"}view=details` : "";
+  const registrationHref = recordHref ? `${recordHref}${recordHref.includes("?") ? "&" : "?"}view=registration` : "";
 
   return (
     <div className="h-full bg-card rounded-xl border border-border card-shadow hover:card-shadow-hover transition-all duration-300 overflow-hidden group">
@@ -71,19 +77,23 @@ const ProgramCard = ({
         <h3 className="font-heading font-semibold text-foreground text-lg mb-2 min-h-[3.5rem] line-clamp-2 group-hover:text-primary transition-colors">
           {title}
         </h3>
-        <p
-          className={cn(
-            "text-muted-foreground text-sm mb-4 leading-relaxed h-20",
-            expanded ? "overflow-y-auto pr-1" : "line-clamp-3",
-          )}
-        >
-          {description}
-        </p>
-        <div className="space-y-2 text-xs text-muted-foreground mb-4 min-h-[3.75rem]">
+        <p className="text-muted-foreground text-sm mb-2 leading-relaxed h-20 line-clamp-3">{description}</p>
+        {recordHref && (
+          <Link to={showModeActions ? detailsHref : recordHref} className="text-xs text-primary hover:underline mb-3 block">
+            See more
+          </Link>
+        )}
+        <div className="space-y-2 text-xs text-muted-foreground mb-4 min-h-[5rem]">
           {displayDate && (
             <div className="flex items-start gap-1.5 leading-relaxed">
               <Calendar className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <span className="line-clamp-2 break-words">{displayDate}</span>
+            </div>
+          )}
+          {time && (
+            <div className="flex items-start gap-1.5 leading-relaxed">
+              <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span className="line-clamp-2 break-words">{time}</span>
             </div>
           )}
           {location && (
@@ -107,15 +117,22 @@ const ProgramCard = ({
           )}
         </div>
         <div className="grid grid-cols-1 gap-2 mt-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => setExpanded((prev) => !prev)}
-          >
-            {expanded ? "Show Less" : "Learn More"}
-          </Button>
+          {recordHref && (
+            showModeActions ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                  <Link to={detailsHref}>Details</Link>
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                  <Link to={registrationHref}>Registration</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                <Link to={recordHref}>{type === "program" ? "View Program Record" : "View Event Record"}</Link>
+              </Button>
+            )
+          )}
           {onToggleJoin && (
             <Button type="button" size="sm" className="w-full" onClick={onToggleJoin}>
               {isJoined ? "Joined (Click to Leave)" : "Join Program"}

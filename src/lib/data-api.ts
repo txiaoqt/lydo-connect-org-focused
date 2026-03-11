@@ -18,6 +18,32 @@ const formatDateRange = (startDate?: string | null, endDate?: string | null, sch
   return "TBA";
 };
 
+const formatTimeValue = (value?: string | null) => {
+  const raw = (value ?? "").trim();
+  if (!raw) return "";
+  const hhmm = raw.slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return raw;
+  const [hourText, minuteText] = hhmm.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return raw;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const normalizedHour = hour % 12 || 12;
+  return `${normalizedHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+};
+
+const formatTimeRange = (
+  startTime?: string | null,
+  endTime?: string | null,
+) => {
+  const start = formatTimeValue(startTime);
+  const end = formatTimeValue(endTime);
+  if (start && end) return `${start} - ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return "";
+};
+
 const formatFileSize = (bytes?: number | null) => {
   if (!bytes || bytes <= 0) return "N/A";
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -96,7 +122,7 @@ export async function fetchPrograms(): Promise<YouthProgram[]> {
 
   const { data, error } = await supabase
     .from("programs")
-    .select("id,title,sector,description,start_date,end_date,schedule_text,location,location_latitude,location_longitude,source_post_url,status")
+    .select("*")
     .in("status", ["published"])
     .order("created_at", { ascending: false });
 
@@ -108,6 +134,7 @@ export async function fetchPrograms(): Promise<YouthProgram[]> {
     sector: row.sector,
     description: row.description ?? "",
     date: formatDateRange(row.start_date, row.end_date, row.schedule_text),
+    time: formatTimeRange(row.start_time, row.end_time),
     location: row.location ?? "",
     locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
     locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
@@ -121,7 +148,7 @@ export async function fetchEvents(): Promise<YouthEvent[]> {
 
   const { data, error } = await supabase
     .from("events")
-    .select("id,title,sector,description,event_date,time_text,location,location_latitude,location_longitude,status,source_post_url")
+    .select("*")
     .in("status", ["upcoming", "past"])
     .order("event_date", { ascending: false, nullsFirst: false });
 
@@ -133,7 +160,7 @@ export async function fetchEvents(): Promise<YouthEvent[]> {
     sector: row.sector,
     description: row.description ?? "",
     date: row.event_date ?? "",
-    time: row.time_text ?? "",
+    time: formatTimeRange(row.start_time, row.end_time),
     location: row.location ?? "",
     locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
     locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
@@ -142,40 +169,118 @@ export async function fetchEvents(): Promise<YouthEvent[]> {
   }));
 }
 
-export async function fetchEventById(eventIdOrSlug: string): Promise<YouthEvent | null> {
-  if (!supabase) return null;
+type EventRecordRow = {
+  id: string;
+  title: string;
+  sector: string;
+  description?: string | null;
+  event_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
+  location_latitude?: number | null;
+  location_longitude?: number | null;
+  status?: string | null;
+  source_post_url?: string | null;
+};
 
+type ProgramRecordRow = {
+  id: string;
+  title: string;
+  sector: string;
+  description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  schedule_text?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  location?: string | null;
+  location_latitude?: number | null;
+  location_longitude?: number | null;
+  source_post_url?: string | null;
+};
+
+const mapEventRecord = (row: EventRecordRow): YouthEvent => ({
+  id: row.id,
+  title: row.title,
+  sector: row.sector,
+  description: row.description ?? "",
+  date: row.event_date ?? "",
+  time: formatTimeRange(row.start_time, row.end_time),
+  location: row.location ?? "",
+  locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
+  locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
+  status: row.status === "past" ? "past" : "upcoming",
+  sourcePostUrl: row.source_post_url ?? undefined,
+  recordKind: "event",
+});
+
+const mapProgramRecord = (row: ProgramRecordRow): YouthEvent => ({
+  id: row.id,
+  title: row.title,
+  sector: row.sector,
+  description: row.description ?? "",
+  date: formatDateRange(row.start_date, row.end_date, row.schedule_text),
+  time: formatTimeRange(row.start_time, row.end_time),
+  location: row.location ?? "",
+  locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
+  locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
+  status: "upcoming",
+  sourcePostUrl: row.source_post_url ?? undefined,
+  recordKind: "program",
+});
+
+const findEventByIdOrSlug = async (eventIdOrSlug: string): Promise<EventRecordRow | null> => {
   const byId = await supabase
-    .from("events")
-    .select("id,title,sector,description,event_date,time_text,location,location_latitude,location_longitude,status,source_post_url")
+    ?.from("events")
+    .select("*")
     .eq("id", eventIdOrSlug)
     .maybeSingle();
 
-  const row = byId.data
-    ? byId.data
-    : (
-        await supabase
-          .from("events")
-          .select("id,title,sector,description,event_date,time_text,location,location_latitude,location_longitude,status,source_post_url")
-          .eq("slug", eventIdOrSlug)
-          .maybeSingle()
-      ).data;
+  if (byId?.data) return byId.data as EventRecordRow;
 
-  if (!row) return null;
+  const bySlug = await supabase
+    ?.from("events")
+    .select("*")
+    .eq("slug", eventIdOrSlug)
+    .maybeSingle();
 
-  return {
-    id: row.id,
-    title: row.title,
-    sector: row.sector,
-    description: row.description ?? "",
-    date: row.event_date ?? "",
-    time: row.time_text ?? "",
-    location: row.location ?? "",
-    locationLatitude: row.location_latitude != null ? Number(row.location_latitude) : undefined,
-    locationLongitude: row.location_longitude != null ? Number(row.location_longitude) : undefined,
-    status: row.status === "past" ? "past" : "upcoming",
-    sourcePostUrl: row.source_post_url ?? undefined,
-  };
+  return (bySlug?.data as EventRecordRow | null) ?? null;
+};
+
+const findProgramByIdOrSlug = async (programIdOrSlug: string): Promise<ProgramRecordRow | null> => {
+  const byId = await supabase
+    ?.from("programs")
+    .select("*")
+    .eq("id", programIdOrSlug)
+    .maybeSingle();
+
+  if (byId?.data) return byId.data as ProgramRecordRow;
+
+  const bySlug = await supabase
+    ?.from("programs")
+    .select("*")
+    .eq("slug", programIdOrSlug)
+    .maybeSingle();
+
+  return (bySlug?.data as ProgramRecordRow | null) ?? null;
+};
+
+export async function fetchEventById(
+  eventIdOrSlug: string,
+  preferredKind: "event" | "program" = "event",
+): Promise<YouthEvent | null> {
+  if (!supabase) return null;
+
+  if (preferredKind === "program") {
+    const programRow = await findProgramByIdOrSlug(eventIdOrSlug);
+    return programRow ? mapProgramRecord(programRow) : null;
+  }
+
+  const eventRow = await findEventByIdOrSlug(eventIdOrSlug);
+  if (eventRow) return mapEventRecord(eventRow);
+  const programRow = await findProgramByIdOrSlug(eventIdOrSlug);
+  return programRow ? mapProgramRecord(programRow) : null;
 }
 
 export async function fetchOrganizations(): Promise<YouthOrganization[]> {

@@ -1,8 +1,11 @@
-﻿const CACHE_NAME = "lydo-connect-v2";
+﻿const CACHE_NAME = "lydo-connect-v3";
 const APP_SHELL = [
   "/",
+  "/admin",
+  "/signin",
   "/index.html",
   "/manifest.webmanifest",
+  "/manifest-admin.webmanifest",
   "/favicon.ico",
   "/apple-touch-icon.png",
   "/icons/icon-192.png",

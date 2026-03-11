@@ -1,25 +1,23 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BarChart3, MapPin, Plus, Search } from "lucide-react";
+import { FileSpreadsheet, FileText, Filter, Plus, RefreshCw, Search } from "lucide-react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { DataTable } from "../components/DataTable";
-import { Barangay, BarangayComplianceStatus, BarangayFinancialRow, BarangayYouthMetricRow } from "../types";
+import { Barangay, BarangayFinancialRow } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -33,7 +31,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 type FinancialRow = BarangayFinancialRow & { barangay_name: string };
-type MetricsRow = BarangayYouthMetricRow & { barangay_name: string };
 type Option = { id: string; name: string };
 type BudgetRow = {
   id: string;
@@ -42,6 +39,14 @@ type BudgetRow = {
   fiscal_year: number;
   total_budget: number;
   row_count: number;
+};
+type BudgetOverviewRow = {
+  id: string;
+  barangay_name: string;
+  total_budget: number;
+  utilized_amount: number;
+  remaining_budget: number;
+  utilization_rate: number;
 };
 type FinancialForm = {
   barangayId: string;
@@ -56,13 +61,8 @@ type BudgetForm = {
   fiscalYear: string;
   totalBudget: string;
 };
-type MetricsForm = {
-  barangayId: string; fiscalYear: string; activities: string; participants: string; organizations: string; complianceStatus: BarangayComplianceStatus;
-};
 
-const COMPLIANCE: BarangayComplianceStatus[] = ["compliant", "pending", "overdue"];
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const PIE_COLORS = ["#0f766e", "#ca8a04", "#b91c1c"];
 
 const financialDefaults: FinancialForm = {
   barangayId: "", fiscalYear: String(new Date().getFullYear()), monthNo: String(new Date().getMonth() + 1),
@@ -73,9 +73,6 @@ const budgetDefaults: BudgetForm = {
   fiscalYear: String(new Date().getFullYear()),
   totalBudget: "0",
 };
-const metricsDefaults: MetricsForm = {
-  barangayId: "", fiscalYear: String(new Date().getFullYear()), activities: "0", participants: "0", organizations: "0", complianceStatus: "pending",
-};
 
 const asCurrency = (value: number) => `PHP ${Number(value || 0).toLocaleString()}`;
 const budgetKey = (barangayId: string, fiscalYear: number | string) => `${barangayId}::${fiscalYear}`;
@@ -83,11 +80,13 @@ const budgetKey = (barangayId: string, fiscalYear: number | string) => `${barang
 export const FinancialDss = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [financialRows, setFinancialRows] = useState<FinancialRow[]>([]);
-  const [metricsRows, setMetricsRows] = useState<MetricsRow[]>([]);
-  const [barangayRows, setBarangayRows] = useState<Barangay[]>([]);
   const [barangayOptions, setBarangayOptions] = useState<Option[]>([]);
   const [financialSearch, setFinancialSearch] = useState("");
-  const [metricsSearch, setMetricsSearch] = useState("");
+  const [analyticsYear, setAnalyticsYear] = useState<number>(new Date().getFullYear());
+  const [showFinancialFilters, setShowFinancialFilters] = useState(false);
+  const [financialYearFilter, setFinancialYearFilter] = useState("all");
+  const [financialBarangayFilter, setFinancialBarangayFilter] = useState("all");
+  const [financialMonthFilter, setFinancialMonthFilter] = useState("all");
 
   const [isFinancialDialog, setIsFinancialDialog] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState<FinancialRow | null>(null);
@@ -99,43 +98,45 @@ export const FinancialDss = () => {
   const [editingBudget, setEditingBudget] = useState<BudgetRow | null>(null);
   const [budgetForm, setBudgetForm] = useState<BudgetForm>(budgetDefaults);
   const [isSavingBudget, setIsSavingBudget] = useState(false);
-
-  const [isMetricsDialog, setIsMetricsDialog] = useState(false);
-  const [editingMetrics, setEditingMetrics] = useState<MetricsRow | null>(null);
-  const [metricsForm, setMetricsForm] = useState<MetricsForm>(metricsDefaults);
-  const [isSavingMetrics, setIsSavingMetrics] = useState(false);
-  const [deletingMetrics, setDeletingMetrics] = useState<MetricsRow | null>(null);
-  const [isDeletingMetrics, setIsDeletingMetrics] = useState(false);
   const { toast } = useToast();
 
   const loadData = async () => {
     setIsLoading(true);
     if (!isSupabaseConfigured || !supabase) {
-      setFinancialRows([]); setMetricsRows([]); setBarangayRows([]); setBarangayOptions([]); setIsLoading(false); return;
+      setFinancialRows([]);
+      setBarangayOptions([]);
+      setIsLoading(false);
+      return;
     }
-    const [financialResp, metricsResp, barangayResp] = await Promise.all([
+
+    const [financialResp, barangayResp] = await Promise.all([
       supabase.from("barangay_financials").select("*,barangays(name)").order("fiscal_year", { ascending: false }).order("month_no", { ascending: false }),
-      supabase.from("barangay_youth_metrics").select("*,barangays(name)").order("fiscal_year", { ascending: false }),
-      supabase.from("barangays").select("*").order("name", { ascending: true }),
+      supabase.from("barangays").select("id,name").order("name", { ascending: true }),
     ]);
-    const err = financialResp.error || metricsResp.error || barangayResp.error;
+
+    const err = financialResp.error || barangayResp.error;
     if (err) { toast({ title: "Load Failed", description: err.message }); setIsLoading(false); return; }
 
     setFinancialRows(((financialResp.data ?? []) as Array<BarangayFinancialRow & { barangays?: { name?: string } | Array<{ name?: string }> }>).map((row) => {
       const b = Array.isArray(row.barangays) ? row.barangays[0] : row.barangays;
       return { ...row, barangay_name: b?.name ?? "Unknown Barangay" };
     }));
-    setMetricsRows(((metricsResp.data ?? []) as Array<BarangayYouthMetricRow & { barangays?: { name?: string } | Array<{ name?: string }> }>).map((row) => {
-      const b = Array.isArray(row.barangays) ? row.barangays[0] : row.barangays;
-      return { ...row, barangay_name: b?.name ?? "Unknown Barangay" };
-    }));
     const bs = (barangayResp.data ?? []) as Barangay[];
-    setBarangayRows(bs);
     setBarangayOptions(bs.map((b) => ({ id: b.id, name: b.name })));
     setIsLoading(false);
   };
 
   useEffect(() => { void loadData(); }, []);
+
+  const availableYears = useMemo(
+    () => Array.from(new Set(financialRows.map((row) => row.fiscal_year))).sort((a, b) => b - a),
+    [financialRows],
+  );
+
+  useEffect(() => {
+    if (availableYears.length === 0) return;
+    setAnalyticsYear((current) => (availableYears.includes(current) ? current : availableYears[0]));
+  }, [availableYears]);
 
   const totalBudgetByKey = useMemo(() => {
     const map = new Map<string, number>();
@@ -284,14 +285,6 @@ export const FinancialDss = () => {
     }
 
     const existingRows = existingResp.data ?? [];
-    if (existingRows.length === 0) {
-      setIsSavingBudget(false);
-      toast({
-        title: "No Financial Rows Yet",
-        description: "Create at least one financial row for this barangay and fiscal year before setting total budget.",
-      });
-      return;
-    }
 
     const exceedsBudget = existingRows.some((row) => Number(row.allocated_amount ?? 0) > totalBudget);
     if (exceedsBudget) {
@@ -303,42 +296,43 @@ export const FinancialDss = () => {
       return;
     }
 
-    const updateResp = await supabase
-      .from("barangay_financials")
-      .update({ sk_budget: totalBudget })
-      .eq("barangay_id", budgetForm.barangayId)
-      .eq("fiscal_year", fy);
+    let mutationError: string | null = null;
+    if (existingRows.length === 0) {
+      const insertResp = await supabase.from("barangay_financials").insert({
+        barangay_id: budgetForm.barangayId,
+        fiscal_year: fy,
+        month_no: 1,
+        sk_budget: totalBudget,
+        allocated_amount: 0,
+        utilized_amount: 0,
+      });
+      mutationError = insertResp.error?.message ?? null;
+    } else {
+      const updateResp = await supabase
+        .from("barangay_financials")
+        .update({ sk_budget: totalBudget })
+        .eq("barangay_id", budgetForm.barangayId)
+        .eq("fiscal_year", fy);
+      mutationError = updateResp.error?.message ?? null;
+    }
 
     setIsSavingBudget(false);
-    if (updateResp.error) {
-      toast({ title: "Save Failed", description: updateResp.error.message });
+    if (mutationError) {
+      toast({ title: "Save Failed", description: mutationError });
       return;
     }
 
-    toast({ title: "Total Budget Updated", description: "Budget was applied to all matching financial rows." });
+    toast({
+      title: "Total Budget Updated",
+      description:
+        existingRows.length === 0
+          ? "Budget saved with an initial month row. You can now edit or add monthly rows."
+          : "Budget was applied to all matching financial rows.",
+    });
     setIsBudgetDialog(false);
     setEditingBudget(null);
     setBudgetForm(budgetDefaults);
     void loadData();
-  };
-
-  const saveMetrics = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!supabase || !metricsForm.barangayId) return;
-    const fy = Number(metricsForm.fiscalYear);
-    const activities = Number(metricsForm.activities);
-    const participants = Number(metricsForm.participants);
-    const organizations = Number(metricsForm.organizations);
-    if (!Number.isInteger(fy) || fy < 2000 || fy > 2100) { toast({ title: "Invalid Fiscal Year", description: "Fiscal year must be 2000-2100." }); return; }
-    if ([activities, participants, organizations].some((n) => !Number.isFinite(n) || n < 0 || !Number.isInteger(n))) { toast({ title: "Invalid Metric", description: "Activities, participants and organizations must be whole non-negative numbers." }); return; }
-    setIsSavingMetrics(true);
-    const payload = { barangay_id: metricsForm.barangayId, fiscal_year: fy, activities, participants, organizations, compliance_status: metricsForm.complianceStatus };
-    const resp = editingMetrics
-      ? await supabase.from("barangay_youth_metrics").update(payload).eq("id", editingMetrics.id)
-      : await supabase.from("barangay_youth_metrics").insert(payload);
-    setIsSavingMetrics(false);
-    if (resp.error) { toast({ title: "Save Failed", description: resp.error.code === "23505" ? "Duplicate row for this barangay and fiscal year." : resp.error.message }); return; }
-    setIsMetricsDialog(false); setEditingMetrics(null); setMetricsForm(metricsDefaults); toast({ title: "Saved", description: "Youth metrics row saved." }); void loadData();
   };
 
   const deleteFinancial = async () => {
@@ -350,194 +344,534 @@ export const FinancialDss = () => {
     setDeletingFinancial(null); toast({ title: "Deleted", description: "Financial row deleted." }); void loadData();
   };
 
-  const deleteMetrics = async () => {
-    if (!supabase || !deletingMetrics) return;
-    setIsDeletingMetrics(true);
-    const resp = await supabase.from("barangay_youth_metrics").delete().eq("id", deletingMetrics.id);
-    setIsDeletingMetrics(false);
-    if (resp.error) { toast({ title: "Delete Failed", description: resp.error.message }); return; }
-    setDeletingMetrics(null); toast({ title: "Deleted", description: "Metrics row deleted." }); void loadData();
-  };
+  const availableMonths = useMemo(
+    () => Array.from(new Set(financialRows.map((row) => row.month_no))).sort((a, b) => a - b),
+    [financialRows],
+  );
 
-  const filteredFinancial = useMemo(() => financialRows.filter((r) => {
-    const q = financialSearch.toLowerCase();
-    return r.barangay_name.toLowerCase().includes(q) || String(r.fiscal_year).includes(q) || String(r.month_no).includes(q);
-  }), [financialRows, financialSearch]);
-  const filteredMetrics = useMemo(() => metricsRows.filter((r) => {
-    const q = metricsSearch.toLowerCase();
-    return r.barangay_name.toLowerCase().includes(q) || String(r.fiscal_year).includes(q) || r.compliance_status.toLowerCase().includes(q);
-  }), [metricsRows, metricsSearch]);
+  const filteredFinancial = useMemo(
+    () =>
+      financialRows.filter((r) => {
+        const q = financialSearch.trim().toLowerCase();
+        const monthLabel = MONTH_NAMES[Math.max(0, Math.min(11, r.month_no - 1))] ?? String(r.month_no);
+        const matchesSearch =
+          q.length === 0
+            ? true
+            : r.barangay_name.toLowerCase().includes(q) ||
+              String(r.fiscal_year).includes(q) ||
+              String(r.month_no).includes(q) ||
+              monthLabel.toLowerCase().includes(q);
+        const matchesYear = financialYearFilter === "all" ? true : String(r.fiscal_year) === financialYearFilter;
+        const matchesBarangay = financialBarangayFilter === "all" ? true : r.barangay_id === financialBarangayFilter;
+        const matchesMonth = financialMonthFilter === "all" ? true : String(r.month_no) === financialMonthFilter;
+        return matchesSearch && matchesYear && matchesBarangay && matchesMonth;
+      }),
+    [financialRows, financialSearch, financialYearFilter, financialBarangayFilter, financialMonthFilter],
+  );
+  const rowsForSelectedYear = useMemo(() => financialRows.filter((r) => r.fiscal_year === analyticsYear), [financialRows, analyticsYear]);
+  const monthlyTrend = useMemo(() => {
+    const trendMap = new Map<number, { allocated: number; utilized: number }>();
+    rowsForSelectedYear.forEach((row) => {
+      const prev = trendMap.get(row.month_no) ?? { allocated: 0, utilized: 0 };
+      trendMap.set(row.month_no, {
+        allocated: prev.allocated + Number(row.allocated_amount ?? 0),
+        utilized: prev.utilized + Number(row.utilized_amount ?? 0),
+      });
+    });
+    return Array.from(trendMap.entries()).sort((a, b) => a[0] - b[0]).map(([monthNo, values]) => ({
+      month: MONTH_NAMES[Math.max(0, Math.min(11, monthNo - 1))] ?? `M${monthNo}`,
+      allocated: values.allocated,
+      utilized: values.utilized,
+    }));
+  }, [rowsForSelectedYear]);
+  const budgetOverviewRows = useMemo<BudgetOverviewRow[]>(() => {
+    const latestRows = new Map<string, FinancialRow>();
+    rowsForSelectedYear.forEach((row) => {
+      const existing = latestRows.get(row.barangay_id);
+      if (!existing || row.month_no > existing.month_no) {
+        latestRows.set(row.barangay_id, row);
+      }
+    });
+
+    return Array.from(latestRows.values())
+      .map((row) => {
+        const totalBudget = resolveBudgetFromDashboard(row.barangay_id, analyticsYear);
+        const utilizedAmount = Number(row.utilized_amount ?? 0);
+        const remainingBudget = Math.max(totalBudget - utilizedAmount, 0);
+        const utilizationRate = totalBudget > 0 ? Math.round((utilizedAmount / totalBudget) * 100) : 0;
+        return {
+          id: row.barangay_id,
+          barangay_name: row.barangay_name,
+          total_budget: totalBudget,
+          utilized_amount: utilizedAmount,
+          remaining_budget: remainingBudget,
+          utilization_rate: utilizationRate,
+        };
+      })
+      .sort((a, b) => b.utilization_rate - a.utilization_rate);
+  }, [rowsForSelectedYear, analyticsYear, totalBudgetByKey]);
+  const summary = useMemo(() => {
+    const totalBudget = budgetOverviewRows.reduce((sum, row) => sum + row.total_budget, 0);
+    const totalUtilized = budgetOverviewRows.reduce((sum, row) => sum + row.utilized_amount, 0);
+    const remainingBudget = Math.max(totalBudget - totalUtilized, 0);
+    const utilizationRate = totalBudget > 0 ? Math.round((totalUtilized / totalBudget) * 100) : 0;
+    return { totalBudget, totalUtilized, remainingBudget, utilizationRate };
+  }, [budgetOverviewRows]);
   const formTotalBudget = Number(financialForm.totalBudget || 0);
   const formAllocated = Number(financialForm.allocatedAmount || 0);
   const formUtilized = Number(financialForm.utilizedAmount || 0);
-  const remainingAfterAllocation = Number.isFinite(formTotalBudget) && Number.isFinite(formAllocated) ? formTotalBudget - formAllocated : 0;
-  const notUtilized = Number.isFinite(formAllocated) && Number.isFinite(formUtilized) ? formAllocated - formUtilized : 0;
+  const remainingAfterUtilization = Number.isFinite(formTotalBudget) && Number.isFinite(formUtilized)
+    ? formTotalBudget - formUtilized
+    : 0;
 
-  const analytics = useMemo(() => {
-    const latestFinancial = new Map<string, FinancialRow>();
-    for (const row of financialRows) if (!latestFinancial.has(row.barangay_id)) latestFinancial.set(row.barangay_id, row);
-    const latestMetric = new Map<string, MetricsRow>();
-    for (const row of metricsRows) if (!latestMetric.has(row.barangay_id)) latestMetric.set(row.barangay_id, row);
-    const latestFinancialRows = Array.from(latestFinancial.values());
-    const totalBudget = latestFinancialRows.reduce((s, r) => s + Number(r.sk_budget ?? 0), 0);
-    const utilized = latestFinancialRows.reduce((s, r) => s + Number(r.utilized_amount ?? 0), 0);
-    const allocated = latestFinancialRows.reduce((s, r) => s + Number(r.allocated_amount ?? 0), 0);
-    const rate = totalBudget > 0 ? Math.round((utilized / totalBudget) * 100) : 0;
-    const year = financialRows.length ? Math.max(...financialRows.map((r) => r.fiscal_year)) : new Date().getFullYear();
-    const trendMap = new Map<number, { allocated: number; utilized: number }>();
-    financialRows.filter((r) => r.fiscal_year === year).forEach((r) => {
-      const prev = trendMap.get(r.month_no) ?? { allocated: 0, utilized: 0 };
-      trendMap.set(r.month_no, { allocated: prev.allocated + Number(r.allocated_amount ?? 0), utilized: prev.utilized + Number(r.utilized_amount ?? 0) });
-    });
-    const trend = Array.from(trendMap.entries()).sort((a, b) => a[0] - b[0]).map(([m, v]) => ({ month: MONTH_NAMES[m - 1] ?? `M${m}`, allocated: v.allocated, utilized: v.utilized }));
-    const compliance = { compliant: 0, pending: 0, overdue: 0 };
-    latestMetric.forEach((r) => { compliance[r.compliance_status] += 1; });
-    const mapConfigured = barangayRows.filter((b) => b.latitude != null && b.longitude != null).length;
-    return {
-      totalBudget, utilized, allocated, rate, latestYear: year, trend, mapConfigured,
-      complianceData: [
-        { name: "Compliant", value: compliance.compliant },
-        { name: "Pending", value: compliance.pending },
-        { name: "Overdue", value: compliance.overdue },
-      ],
-    };
-  }, [financialRows, metricsRows, barangayRows]);
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  const buildFinancialRowsHtml = (rows: FinancialRow[]) =>
+    rows
+      .map((row) => {
+        const monthLabel = MONTH_NAMES[Math.max(0, Math.min(11, row.month_no - 1))] ?? String(row.month_no);
+        return `
+          <tr>
+            <td>${escapeHtml(row.barangay_name)}</td>
+            <td>${escapeHtml(String(row.fiscal_year))}</td>
+            <td>${escapeHtml(monthLabel)}</td>
+            <td>${escapeHtml(asCurrency(Number(row.sk_budget ?? 0)))}</td>
+            <td>${escapeHtml(asCurrency(Number(row.allocated_amount ?? 0)))}</td>
+            <td>${escapeHtml(asCurrency(Number(row.utilized_amount ?? 0)))}</td>
+            <td>${escapeHtml(asCurrency(Math.max(Number(row.sk_budget ?? 0) - Number(row.utilized_amount ?? 0), 0)))}</td>
+            <td>${escapeHtml(asCurrency(Math.max(Number(row.allocated_amount ?? 0) - Number(row.utilized_amount ?? 0), 0)))}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+  const exportFinancialExcel = () => {
+    if (filteredFinancial.length === 0) {
+      toast({ title: "No Data", description: "No financial rows available to export." });
+      return;
+    }
+
+    const generatedAt = new Date().toLocaleString();
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <style>
+            body { font-family: Arial, sans-serif; color: #1f2937; }
+            h1 { font-size: 20px; margin: 0 0 8px 0; }
+            p { margin: 0 0 12px 0; color: #4b5563; }
+            table { border-collapse: collapse; width: 100%; font-size: 12px; }
+            th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+            th { background: #f3f4f6; font-weight: 700; }
+            tr:nth-child(even) { background: #fafafa; }
+          </style>
+        </head>
+        <body>
+          <h1>Financial DSS - Filtered Financial Rows</h1>
+          <p>Generated: ${escapeHtml(generatedAt)}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Barangay</th>
+                <th>Fiscal Year</th>
+                <th>Month</th>
+                <th>Total Budget</th>
+                <th>Allocated</th>
+                <th>Utilized</th>
+                <th>Remaining (SK Budget - Utilized)</th>
+                <th>Not Utilized (Allocated - Utilized)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${buildFinancialRowsHtml(filteredFinancial)}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `financial-rows-${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast({ title: "Exported", description: "Formatted Excel file downloaded." });
+  };
+
+  const exportFinancialPdf = () => {
+    if (filteredFinancial.length === 0) {
+      toast({ title: "No Data", description: "No financial rows available to export." });
+      return;
+    }
+
+    const generatedAt = new Date().toLocaleString();
+    const html = `
+      <html>
+        <head>
+          <title>Financial DSS Export</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #111827; padding: 20px; }
+            h1 { font-size: 20px; margin: 0 0 8px 0; }
+            p { margin: 0 0 12px 0; color: #4b5563; }
+            table { border-collapse: collapse; width: 100%; font-size: 11px; }
+            th, td { border: 1px solid #d1d5db; padding: 7px; text-align: left; }
+            th { background: #f3f4f6; font-weight: 700; }
+            tr:nth-child(even) { background: #fafafa; }
+            @media print {
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Financial DSS - Filtered Financial Rows</h1>
+          <p>Generated: ${escapeHtml(generatedAt)}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Barangay</th>
+                <th>Fiscal Year</th>
+                <th>Month</th>
+                <th>Total Budget</th>
+                <th>Allocated</th>
+                <th>Utilized</th>
+                <th>Remaining (SK Budget - Utilized)</th>
+                <th>Not Utilized (Allocated - Utilized)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${buildFinancialRowsHtml(filteredFinancial)}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function () {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1200,height=800");
+    if (!printWindow) {
+      toast({ title: "Popup Blocked", description: "Allow popups to export PDF." });
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">Financial DSS and Map Config</h1>
-        <p className="text-muted-foreground mt-1 font-medium">Configure Financial Disclosure and Barangay Map datasets, with analytics for decision support.</p>
+        <h1 className="text-3xl font-bold text-foreground">Financial DSS</h1>
+        <p className="text-muted-foreground mt-1 font-medium">
+          Finance-only dashboard for budget setup, monthly allocation/utilization tracking, and fiscal-year analytics.
+        </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Total Budget (Latest)</p><p className="text-2xl font-bold mt-2">{asCurrency(analytics.totalBudget)}</p></div>
-        <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Utilized (Latest)</p><p className="text-2xl font-bold mt-2">{asCurrency(analytics.utilized)}</p></div>
-        <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Utilization Rate</p><p className="text-2xl font-bold mt-2">{analytics.rate}%</p></div>
-        <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs uppercase text-muted-foreground">Map Coordinates Set</p><p className="text-2xl font-bold mt-2">{analytics.mapConfigured}/{barangayRows.length}</p></div>
-      </div>
+      <Tabs defaultValue="dashboard" className="space-y-4">
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="budget-setup">Budget Setup</TabsTrigger>
+          <TabsTrigger value="financial-rows">Financial Rows</TabsTrigger>
+        </TabsList>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-lg font-bold">Monthly Budget Trend (FY {analytics.latestYear})</h2>
-          <p className="text-sm text-muted-foreground mb-3">Allocated vs utilized amount</p>
-          <div className="h-64">
-            {analytics.trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.trend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value: number) => asCurrency(value)} />
-                  <Legend />
-                  <Bar dataKey="allocated" name="Allocated" fill="#1B4F72" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="utilized" name="Utilized" fill="#0f766e" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : <div className="h-full grid place-items-center text-sm text-muted-foreground">No trend data yet.</div>}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-lg font-bold">Compliance Distribution</h2>
-          <p className="text-sm text-muted-foreground mb-3">Latest barangay youth metrics status</p>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={analytics.complianceData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                  {analytics.complianceData.map((_, idx) => <Cell key={`cell-${idx}`} fill={PIE_COLORS[idx % PIE_COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Total Budget Setup</h2>
-          <Button type="button" onClick={openCreateBudgetDialog} className="gap-2">
-            <Plus size={16} />
-            Set Total Budget
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Manage total budget by barangay and fiscal year. Financial row forms will reflect this value as read-only.
-        </p>
-        <DataTable
-          columns={[
-            {
-              header: "Barangay / Fiscal Year",
-              accessor: (row: BudgetRow) => (
-                <div>
-                  <p className="font-semibold">{row.barangay_name}</p>
-                  <p className="text-xs text-muted-foreground">FY {row.fiscal_year}</p>
+        <TabsContent value="dashboard" className="space-y-6">
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Fiscal Year Summary</h2>
+                <p className="text-sm text-muted-foreground">Focused metrics for financial decisions only.</p>
+              </div>
+              <div className="flex items-end gap-2">
+                <div className="space-y-1">
+                  <Label>Fiscal Year</Label>
+                  <select
+                    value={String(analyticsYear)}
+                    onChange={(event) => setAnalyticsYear(Number(event.target.value))}
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    disabled={availableYears.length === 0}
+                  >
+                    {availableYears.length === 0 ? (
+                      <option value={String(new Date().getFullYear())}>No data</option>
+                    ) : (
+                      availableYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))
+                    )}
+                  </select>
                 </div>
-              ),
-            },
-            { header: "Total Budget", accessor: (row: BudgetRow) => asCurrency(row.total_budget) },
-            { header: "Rows Covered", accessor: (row: BudgetRow) => row.row_count.toLocaleString() },
-          ]}
-          data={budgetRows}
-          isLoading={isLoading}
-          onEdit={openEditBudgetDialog}
-        />
-      </section>
+                <Button type="button" variant="outline" onClick={() => void loadData()} className="gap-2">
+                  <RefreshCw size={15} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Financial Rows</h2><Button type="button" onClick={openCreateFinancialDialog} className="gap-2"><Plus size={16} />Add Financial Row</Button></div>
-        <div className="relative"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={financialSearch} onChange={(e) => setFinancialSearch(e.target.value)} placeholder="Search financial rows..." className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm" /></div>
-        <DataTable
-          columns={[
-            { header: "Barangay / Period", accessor: (r: FinancialRow) => <div><p className="font-semibold">{r.barangay_name}</p><p className="text-xs text-muted-foreground">FY {r.fiscal_year} - {MONTH_NAMES[r.month_no - 1] ?? r.month_no}</p></div> },
-            { header: "Total Budget", accessor: (r: FinancialRow) => asCurrency(Number(r.sk_budget ?? 0)) },
-            { header: "Allocated", accessor: (r: FinancialRow) => asCurrency(Number(r.allocated_amount ?? 0)) },
-            { header: "Remaining (Total-Allocated)", accessor: (r: FinancialRow) => asCurrency(Number(r.sk_budget ?? 0) - Number(r.allocated_amount ?? 0)) },
-            { header: "Utilized", accessor: (r: FinancialRow) => asCurrency(Number(r.utilized_amount ?? 0)) },
-            { header: "Not Utilized", accessor: (r: FinancialRow) => asCurrency(Number(r.allocated_amount ?? 0) - Number(r.utilized_amount ?? 0)) },
-          ]}
-          data={filteredFinancial}
-          isLoading={isLoading}
-          onEdit={openEditFinancialDialog}
-          onDelete={setDeletingFinancial}
-        />
-      </section>
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Total Budget</p>
+              <p className="mt-2 text-2xl font-bold">{asCurrency(summary.totalBudget)}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Total Utilized</p>
+              <p className="mt-2 text-2xl font-bold">{asCurrency(summary.totalUtilized)}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Remaining (SK Budget - Utilized)</p>
+              <p className="mt-2 text-2xl font-bold">{asCurrency(summary.remainingBudget)}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Utilization Rate</p>
+              <p className="mt-2 text-2xl font-bold">{summary.utilizationRate}%</p>
+            </div>
+          </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Youth Metrics Rows</h2><Button type="button" onClick={() => { setEditingMetrics(null); setMetricsForm(metricsDefaults); setIsMetricsDialog(true); }} className="gap-2"><Plus size={16} />Add Metrics Row</Button></div>
-        <div className="relative"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={metricsSearch} onChange={(e) => setMetricsSearch(e.target.value)} placeholder="Search metrics rows..." className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm" /></div>
-        <DataTable
-          columns={[
-            { header: "Barangay / Fiscal Year", accessor: (r: MetricsRow) => <div><p className="font-semibold">{r.barangay_name}</p><p className="text-xs text-muted-foreground">FY {r.fiscal_year}</p></div> },
-            { header: "Activities", accessor: (r: MetricsRow) => Number(r.activities ?? 0).toLocaleString() },
-            { header: "Participants", accessor: (r: MetricsRow) => Number(r.participants ?? 0).toLocaleString() },
-            { header: "Organizations", accessor: (r: MetricsRow) => Number(r.organizations ?? 0).toLocaleString() },
-            { header: "Compliance", accessor: (r: MetricsRow) => <span className="capitalize">{r.compliance_status}</span> },
-          ]}
-          data={filteredMetrics}
-          isLoading={isLoading}
-          onEdit={(row) => { setEditingMetrics(row); setMetricsForm({ barangayId: row.barangay_id, fiscalYear: String(row.fiscal_year), activities: String(row.activities ?? 0), participants: String(row.participants ?? 0), organizations: String(row.organizations ?? 0), complianceStatus: row.compliance_status }); setIsMetricsDialog(true); }}
-          onDelete={setDeletingMetrics}
-        />
-      </section>
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-lg font-bold">Monthly Budget Trend (FY {analyticsYear})</h2>
+            <p className="text-sm text-muted-foreground mb-3">Allocated vs utilized amount</p>
+            <div className="h-64">
+              {monthlyTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => asCurrency(value)} />
+                    <Legend />
+                    <Bar dataKey="allocated" name="Allocated" fill="#1B4F72" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="utilized" name="Utilized" fill="#0f766e" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full grid place-items-center text-sm text-muted-foreground">No trend data yet.</div>
+              )}
+            </div>
+          </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2"><MapPin size={18} /><h2 className="text-xl font-bold">Barangay Map Source Data</h2></div>
-        <p className="text-sm text-muted-foreground">These rows power map markers and profile cards. Edit coordinates, SK chairperson, and youth population in the existing Barangay Map Data tab.</p>
-        <DataTable
-          columns={[
-            { header: "Barangay", accessor: (r: Barangay) => r.name },
-            { header: "Latitude", accessor: (r: Barangay) => (r.latitude ?? "-") as string | number },
-            { header: "Longitude", accessor: (r: Barangay) => (r.longitude ?? "-") as string | number },
-            { header: "Youth Population", accessor: (r: Barangay) => Number(r.youth_population ?? 0).toLocaleString() },
-            { header: "SK Chairperson", accessor: (r: Barangay) => r.sk_chairperson || "-" },
-          ]}
-          data={barangayRows}
-          isLoading={isLoading}
-        />
-      </section>
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Budget Overview by Barangay (FY {analyticsYear})</h2>
+              <p className="text-sm text-muted-foreground">
+                Uses latest monthly utilized value per barangay for annual snapshot consistency.
+              </p>
+            </div>
+            <DataTable
+              columns={[
+                { header: "Barangay", accessor: (row: BudgetOverviewRow) => row.barangay_name },
+                { header: "Total Budget", accessor: (row: BudgetOverviewRow) => asCurrency(row.total_budget) },
+                { header: "Remaining", accessor: (row: BudgetOverviewRow) => asCurrency(row.remaining_budget) },
+                { header: "Utilized", accessor: (row: BudgetOverviewRow) => asCurrency(row.utilized_amount) },
+                {
+                  header: "Utilization Rate",
+                  accessor: (row: BudgetOverviewRow) => (
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        row.utilization_rate >= 80
+                          ? "bg-accent/20 text-accent"
+                          : row.utilization_rate >= 50
+                            ? "bg-warning/20 text-warning"
+                            : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {row.utilization_rate}%
+                    </span>
+                  ),
+                },
+              ]}
+              data={budgetOverviewRows}
+              isLoading={isLoading}
+            />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="budget-setup" className="space-y-4">
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Total Budget Setup</h2>
+                <p className="text-sm text-muted-foreground">
+                  Set budget per barangay and fiscal year. Financial rows will use this value as read-only.
+                </p>
+              </div>
+              <Button type="button" onClick={openCreateBudgetDialog} className="gap-2">
+                <Plus size={16} />
+                Set Total Budget
+              </Button>
+            </div>
+          </section>
+          <DataTable
+            columns={[
+              {
+                header: "Barangay / Fiscal Year",
+                accessor: (row: BudgetRow) => (
+                  <div>
+                    <p className="font-semibold">{row.barangay_name}</p>
+                    <p className="text-xs text-muted-foreground">FY {row.fiscal_year}</p>
+                  </div>
+                ),
+              },
+              { header: "Total Budget", accessor: (row: BudgetRow) => asCurrency(row.total_budget) },
+              { header: "Rows Covered", accessor: (row: BudgetRow) => row.row_count.toLocaleString() },
+            ]}
+            data={budgetRows}
+            isLoading={isLoading}
+            onEdit={openEditBudgetDialog}
+          />
+        </TabsContent>
+
+        <TabsContent value="financial-rows" className="space-y-4">
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Financial Rows</h2>
+                <p className="text-sm text-muted-foreground">
+                  Monthly entries used by Financial Disclosure and DSS analytics.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" onClick={exportFinancialExcel} className="gap-2">
+                  <FileSpreadsheet size={16} />
+                  Export Excel
+                </Button>
+                <Button type="button" variant="outline" onClick={exportFinancialPdf} className="gap-2">
+                  <FileText size={16} />
+                  Export PDF
+                </Button>
+                <Button type="button" onClick={openCreateFinancialDialog} className="gap-2">
+                  <Plus size={16} />
+                  Add Financial Row
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={financialSearch}
+                  onChange={(e) => setFinancialSearch(e.target.value)}
+                  placeholder="Search financial rows..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm"
+                />
+              </div>
+              <Button type="button" variant="outline" onClick={() => setShowFinancialFilters((prev) => !prev)} className="gap-2">
+                <Filter size={16} />
+                Filter
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void loadData()} className="gap-2">
+                <RefreshCw size={16} />
+                Refresh Data
+              </Button>
+            </div>
+            {showFinancialFilters && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label>Fiscal Year</Label>
+                  <select
+                    value={financialYearFilter}
+                    onChange={(e) => setFinancialYearFilter(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="all">All Years</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Barangay</Label>
+                  <select
+                    value={financialBarangayFilter}
+                    onChange={(e) => setFinancialBarangayFilter(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="all">All Barangays</option>
+                    {barangayOptions.map((barangay) => (
+                      <option key={barangay.id} value={barangay.id}>
+                        {barangay.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Month</Label>
+                  <select
+                    value={financialMonthFilter}
+                    onChange={(e) => setFinancialMonthFilter(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="all">All Months</option>
+                    {availableMonths.map((month) => (
+                      <option key={month} value={month}>
+                        {MONTH_NAMES[Math.max(0, Math.min(11, month - 1))] ?? month}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setFinancialYearFilter("all");
+                      setFinancialBarangayFilter("all");
+                      setFinancialMonthFilter("all");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+          <DataTable
+            columns={[
+              {
+                header: "Barangay / Period",
+                accessor: (r: FinancialRow) => (
+                  <div>
+                    <p className="font-semibold">{r.barangay_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      FY {r.fiscal_year} - {MONTH_NAMES[r.month_no - 1] ?? r.month_no}
+                    </p>
+                  </div>
+                ),
+              },
+              { header: "Total Budget", accessor: (r: FinancialRow) => asCurrency(Number(r.sk_budget ?? 0)) },
+              { header: "Allocated", accessor: (r: FinancialRow) => asCurrency(Number(r.allocated_amount ?? 0)) },
+              {
+                header: "Remaining (SK Budget - Utilized)",
+                accessor: (r: FinancialRow) => asCurrency(Math.max(Number(r.sk_budget ?? 0) - Number(r.utilized_amount ?? 0), 0)),
+              },
+              { header: "Utilized", accessor: (r: FinancialRow) => asCurrency(Number(r.utilized_amount ?? 0)) },
+              {
+                header: "Not Utilized",
+                accessor: (r: FinancialRow) => asCurrency(Math.max(Number(r.allocated_amount ?? 0) - Number(r.utilized_amount ?? 0), 0)),
+              },
+            ]}
+            data={filteredFinancial}
+            isLoading={isLoading}
+            onEdit={openEditFinancialDialog}
+            onDelete={setDeletingFinancial}
+          />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isBudgetDialog} onOpenChange={setIsBudgetDialog}>
         <DialogContent className="max-w-xl">
@@ -587,7 +921,7 @@ export const FinancialDss = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              If no financial rows exist yet for this barangay and fiscal year, create one row first so this budget can be applied.
+              If no monthly row exists yet, the system will create an initial month entry for this fiscal year.
             </p>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsBudgetDialog(false)} disabled={isSavingBudget}>
@@ -603,7 +937,7 @@ export const FinancialDss = () => {
 
       <Dialog open={isFinancialDialog} onOpenChange={setIsFinancialDialog}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>{editingFinancial ? "Edit Financial Row" : "Create Financial Row"}</DialogTitle><DialogDescription>Used by Financial Disclosure and Barangay Map pages.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingFinancial ? "Edit Financial Row" : "Create Financial Row"}</DialogTitle><DialogDescription>Used by Financial Disclosure and DSS analytics.</DialogDescription></DialogHeader>
           <form onSubmit={saveFinancial} className="space-y-4">
             <div className="space-y-4">
               <div className="rounded-xl border border-border p-4 space-y-4">
@@ -667,12 +1001,17 @@ export const FinancialDss = () => {
                     <Input type="number" value={Number.isFinite(formTotalBudget) ? formTotalBudget.toFixed(2) : "0.00"} readOnly className="bg-muted/50" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Remaining Budget (Total - Allocated)</Label>
-                    <Input type="number" value={Number.isFinite(remainingAfterAllocation) ? remainingAfterAllocation.toFixed(2) : "0.00"} readOnly className="bg-muted/50" />
+                    <Label>Remaining Budget (SK Budget - Utilized)</Label>
+                    <Input type="number" value={Number.isFinite(remainingAfterUtilization) ? remainingAfterUtilization.toFixed(2) : "0.00"} readOnly className="bg-muted/50" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Not Utilized (Allocated - Utilized)</Label>
-                    <Input type="number" value={Number.isFinite(notUtilized) ? notUtilized.toFixed(2) : "0.00"} readOnly className="bg-muted/50" />
+                    <Label>Allocation Gap (Allocated - Utilized)</Label>
+                    <Input
+                      type="number"
+                      value={Number.isFinite(formAllocated) && Number.isFinite(formUtilized) ? (formAllocated - formUtilized).toFixed(2) : "0.00"}
+                      readOnly
+                      className="bg-muted/50"
+                    />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -685,29 +1024,8 @@ export const FinancialDss = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isMetricsDialog} onOpenChange={setIsMetricsDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>{editingMetrics ? "Edit Metrics Row" : "Create Metrics Row"}</DialogTitle><DialogDescription>Used by Financial Disclosure and Barangay Map pages.</DialogDescription></DialogHeader>
-          <form onSubmit={saveMetrics} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2 md:col-span-2"><Label>Barangay</Label><select value={metricsForm.barangayId} onChange={(e) => setMetricsForm((p) => ({ ...p, barangayId: e.target.value }))} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" required><option value="">Select barangay</option>{barangayOptions.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-              <div className="space-y-2"><Label>Fiscal Year</Label><Input type="number" min={2000} max={2100} value={metricsForm.fiscalYear} onChange={(e) => setMetricsForm((p) => ({ ...p, fiscalYear: e.target.value }))} required /></div>
-              <div className="space-y-2"><Label>Activities</Label><Input type="number" min={0} value={metricsForm.activities} onChange={(e) => setMetricsForm((p) => ({ ...p, activities: e.target.value }))} required /></div>
-              <div className="space-y-2"><Label>Participants</Label><Input type="number" min={0} value={metricsForm.participants} onChange={(e) => setMetricsForm((p) => ({ ...p, participants: e.target.value }))} required /></div>
-              <div className="space-y-2"><Label>Organizations</Label><Input type="number" min={0} value={metricsForm.organizations} onChange={(e) => setMetricsForm((p) => ({ ...p, organizations: e.target.value }))} required /></div>
-              <div className="space-y-2"><Label>Compliance Status</Label><select value={metricsForm.complianceStatus} onChange={(e) => setMetricsForm((p) => ({ ...p, complianceStatus: e.target.value as BarangayComplianceStatus }))} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">{COMPLIANCE.map((status) => <option key={status} value={status} className="capitalize">{status}</option>)}</select></div>
-            </div>
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setIsMetricsDialog(false)} disabled={isSavingMetrics}>Cancel</Button><Button type="submit" disabled={isSavingMetrics}>{isSavingMetrics ? "Saving..." : editingMetrics ? "Save Changes" : "Create Row"}</Button></DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       <AlertDialog open={Boolean(deletingFinancial)} onOpenChange={(open) => { if (!open) setDeletingFinancial(null); }}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Financial Row</AlertDialogTitle><AlertDialogDescription>{deletingFinancial ? `Delete ${deletingFinancial.barangay_name} FY ${deletingFinancial.fiscal_year} month ${deletingFinancial.month_no}?` : "This cannot be undone."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isDeletingFinancial}>Cancel</AlertDialogCancel><AlertDialogAction onClick={deleteFinancial} disabled={isDeletingFinancial} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{isDeletingFinancial ? "Deleting..." : "Delete"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={Boolean(deletingMetrics)} onOpenChange={(open) => { if (!open) setDeletingMetrics(null); }}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Metrics Row</AlertDialogTitle><AlertDialogDescription>{deletingMetrics ? `Delete ${deletingMetrics.barangay_name} FY ${deletingMetrics.fiscal_year}?` : "This cannot be undone."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={isDeletingMetrics}>Cancel</AlertDialogCancel><AlertDialogAction onClick={deleteMetrics} disabled={isDeletingMetrics} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{isDeletingMetrics ? "Deleting..." : "Delete"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
     </div>
   );

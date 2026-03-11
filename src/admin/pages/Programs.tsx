@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useState } from "react";
+﻿import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { Filter, Plus, Search } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getFacebookEmbedIssue, normalizeSourcePostUrl } from "@/lib/source-post";
 import LocationPickerDialog, { LocationPickerResult } from "../components/LocationPickerDialog";
 import {
   Dialog,
@@ -39,6 +40,8 @@ type ProgramForm = {
   locationLongitude: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   status: ProgramStatus;
   sourcePostUrl: string;
 };
@@ -76,6 +79,8 @@ const defaultForm: ProgramForm = {
   locationLongitude: "",
   startDate: "",
   endDate: "",
+  startTime: "",
+  endTime: "",
   status: "draft",
   sourcePostUrl: "",
 };
@@ -88,11 +93,37 @@ const slugify = (value: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const formatTimeLabel = (value?: string | null) => {
+  const raw = (value ?? "").trim();
+  if (!raw) return "";
+  const hhmm = raw.slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(hhmm)) return raw;
+  const [hourText, minuteText] = hhmm.split(":");
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return raw;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const normalizedHour = hour % 12 || 12;
+  return `${normalizedHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+};
+
+const formatTimeRange = (startTime?: string | null, endTime?: string | null) => {
+  const start = formatTimeLabel(startTime);
+  const end = formatTimeLabel(endTime);
+  if (start && end) return `${start} - ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return "TBD";
+};
+
 export const Programs = () => {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | ProgramStatus>("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
@@ -145,6 +176,8 @@ export const Programs = () => {
       locationLongitude: program.location_longitude != null ? String(program.location_longitude) : "",
       startDate: program.start_date ?? "",
       endDate: program.end_date ?? "",
+      startTime: program.start_time ?? "",
+      endTime: program.end_time ?? "",
       status: program.status ?? "draft",
       sourcePostUrl: program.source_post_url ?? "",
     });
@@ -187,6 +220,10 @@ export const Programs = () => {
       toast({ title: "Missing Sector", description: "Please select a sector or enter a custom sector." });
       return;
     }
+    if (form.startTime && form.endTime && form.endTime < form.startTime) {
+      toast({ title: "Invalid Time Range", description: "End time must be the same as or later than start time." });
+      return;
+    }
 
     const hasLat = Boolean(form.locationLatitude.trim());
     const hasLng = Boolean(form.locationLongitude.trim());
@@ -212,6 +249,24 @@ export const Programs = () => {
       return;
     }
 
+    const rawSourcePostUrl = form.sourcePostUrl.trim();
+    const normalizedSourcePostUrl = rawSourcePostUrl ? normalizeSourcePostUrl(rawSourcePostUrl) : null;
+    if (rawSourcePostUrl && !normalizedSourcePostUrl) {
+      toast({
+        title: "Invalid Source URL",
+        description: "Please provide a valid full URL starting with https://.",
+      });
+      return;
+    }
+    const embedIssue = getFacebookEmbedIssue(normalizedSourcePostUrl);
+    if (embedIssue) {
+      toast({
+        title: "Use Direct Facebook Permalink",
+        description: embedIssue.message,
+      });
+      return;
+    }
+
     setIsSaving(true);
     const payload = {
       title: form.title.trim(),
@@ -222,8 +277,10 @@ export const Programs = () => {
       location_longitude: parsedLongitude,
       start_date: form.startDate || null,
       end_date: form.endDate || null,
+      start_time: form.startTime || null,
+      end_time: form.endTime || null,
       status: form.status,
-      source_post_url: form.sourcePostUrl.trim() || null,
+      source_post_url: normalizedSourcePostUrl,
       published_at: form.status === "published" ? new Date().toISOString() : null,
     };
 
@@ -326,6 +383,7 @@ export const Programs = () => {
         <div className="flex flex-col text-xs font-medium">
           <span>{p.start_date ? format(new Date(p.start_date), "MMM d, yyyy") : "N/A"}</span>
           <span className="text-muted-foreground">to {p.end_date ? format(new Date(p.end_date), "MMM d, yyyy") : "N/A"}</span>
+          <span className="text-muted-foreground">{formatTimeRange(p.start_time, p.end_time)}</span>
         </div>
       ),
     },
@@ -336,13 +394,30 @@ export const Programs = () => {
     },
   ];
 
-  const filteredPrograms = programs.filter(
-    (p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.sector.toLowerCase().includes(searchTerm.toLowerCase()),
+  const availableSectorFilters = useMemo(
+    () => ["all", ...Array.from(new Set(programs.map((program) => program.sector).filter(Boolean))).sort((a, b) => a.localeCompare(b))],
+    [programs],
+  );
+
+  const filteredPrograms = useMemo(
+    () =>
+      programs.filter((program) => {
+        const term = searchTerm.toLowerCase();
+        const matchesSearch =
+          program.title.toLowerCase().includes(term) ||
+          program.sector.toLowerCase().includes(term) ||
+          (program.location ?? "").toLowerCase().includes(term) ||
+          (program.description ?? "").toLowerCase().includes(term);
+        const matchesStatus = statusFilter === "all" ? true : program.status === statusFilter;
+        const matchesSector = sectorFilter === "all" ? true : program.sector === sectorFilter;
+        return matchesSearch && matchesStatus && matchesSector;
+      }),
+    [programs, searchTerm, statusFilter, sectorFilter],
   );
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Programs Management</h1>
           <p className="text-muted-foreground mt-1 font-medium">Manage and monitor youth development programs in San Mateo.</p>
@@ -350,14 +425,14 @@ export const Programs = () => {
         <button
           type="button"
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
         >
           <Plus size={20} />
           Create New Program
         </button>
       </header>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border border-border card-shadow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-2xl border border-border card-shadow">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
@@ -368,11 +443,63 @@ export const Programs = () => {
             className="w-full pl-10 pr-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all outline-none"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 text-muted-foreground font-bold hover:bg-muted rounded-xl transition-all border border-border">
+        <button
+          type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
+          className={`flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2.5 font-bold rounded-xl transition-all border ${
+            showFilters
+              ? "text-primary bg-primary/10 border-primary/30"
+              : "text-muted-foreground hover:bg-muted border-border"
+          }`}
+        >
           <Filter size={18} />
           Filter
         </button>
       </div>
+
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-card p-4 rounded-2xl border border-border card-shadow">
+          <div className="space-y-1">
+            <Label>Status</Label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | ProgramStatus)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All Statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label>Sector</Label>
+            <select
+              value={sectorFilter}
+              onChange={(e) => setSectorFilter(e.target.value)}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {availableSectorFilters.map((sector) => (
+                <option key={sector} value={sector}>
+                  {sector === "all" ? "All Sectors" : sector}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2 flex items-end justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStatusFilter("all");
+                setSectorFilter("all");
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DataTable columns={columns} data={filteredPrograms} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
 
@@ -455,6 +582,24 @@ export const Programs = () => {
                   onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="program-start-time">Start Time</Label>
+                <Input
+                  id="program-start-time"
+                  type="time"
+                  value={form.startTime}
+                  onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="program-end-time">End Time</Label>
+                <Input
+                  id="program-end-time"
+                  type="time"
+                  value={form.endTime}
+                  onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                />
+              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="program-location">Location</Label>
                 <div className="flex flex-col md:flex-row gap-2">
@@ -482,8 +627,11 @@ export const Programs = () => {
                   id="program-source"
                   value={form.sourcePostUrl}
                   onChange={(e) => setForm((prev) => ({ ...prev, sourcePostUrl: e.target.value }))}
-                  placeholder="https://..."
+                  placeholder="https://www.facebook.com/..."
                 />
+                <p className="text-xs text-muted-foreground">
+                  Use the direct public post permalink (not `/share/...`) so it can be embedded on the program details page.
+                </p>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="program-description">Description</Label>
@@ -552,3 +700,4 @@ export const Programs = () => {
     </div>
   );
 };
+

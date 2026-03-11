@@ -35,6 +35,8 @@ export interface Program {
   description: string;
   start_date?: string;
   end_date?: string;
+  start_time?: string | null;
+  end_time?: string | null;
   schedule_text?: string;
   location: string;
   location_latitude?: number | null;
@@ -55,7 +57,8 @@ export interface Event {
   sector: string;
   description: string;
   event_date?: string;
-  time_text?: string;
+  start_time?: string | null;
+  end_time?: string | null;
   location: string;
   location_latitude?: number | null;
   location_longitude?: number | null;
@@ -176,4 +179,22 @@ export interface BarangayYouthMetricRow {
   compliance_status: BarangayComplianceStatus;
   created_at: string;
   updated_at: string;
+}
+
+export type AuditOperation = "INSERT" | "UPDATE" | "DELETE";
+
+export interface AuditLogEntry {
+  id: string;
+  occurred_at: string;
+  actor_user_id?: string | null;
+  actor_name?: string | null;
+  actor_email?: string | null;
+  actor_role?: string | null;
+  operation: AuditOperation;
+  table_schema: string;
+  table_name: string;
+  row_pk?: Record<string, unknown> | null;
+  changed_fields?: string[] | null;
+  old_data?: Record<string, unknown> | null;
+  new_data?: Record<string, unknown> | null;
 }

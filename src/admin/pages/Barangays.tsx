@@ -1,5 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
-import { Mail, MapPin, Phone, Plus, Search, User, Users } from "lucide-react";
+import { Mail, MapPin, Pencil, Phone, Plus, Search, User, Users } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { Barangay, UserProfile } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -38,12 +38,36 @@ type ResidentRow = UserProfile & {
   role_codes: string[];
 };
 
+type ResidentForm = {
+  fullName: string;
+  displayName: string;
+  email: string;
+  contactNumber: string;
+  municipality: string;
+  barangayId: string;
+  bio: string;
+  notifications: boolean;
+  showEmailPublic: boolean;
+};
+
 const defaultForm: BarangayForm = {
   name: "",
   skChairperson: "",
   youthPopulation: "0",
   latitude: "",
   longitude: "",
+};
+
+const defaultResidentForm: ResidentForm = {
+  fullName: "",
+  displayName: "",
+  email: "",
+  contactNumber: "",
+  municipality: "",
+  barangayId: "",
+  bio: "",
+  notifications: true,
+  showEmailPublic: false,
 };
 
 export const Barangays = () => {
@@ -62,6 +86,10 @@ export const Barangays = () => {
   const [selectedBarangay, setSelectedBarangay] = useState<Barangay | null>(null);
   const [residents, setResidents] = useState<ResidentRow[]>([]);
   const [residentSearchTerm, setResidentSearchTerm] = useState("");
+  const [isResidentFormOpen, setIsResidentFormOpen] = useState(false);
+  const [editingResident, setEditingResident] = useState<ResidentRow | null>(null);
+  const [residentForm, setResidentForm] = useState<ResidentForm>(defaultResidentForm);
+  const [isResidentSaving, setIsResidentSaving] = useState(false);
   const { toast } = useToast();
 
   const loadBarangays = async () => {
@@ -166,6 +194,70 @@ export const Barangays = () => {
     setResidentSearchTerm("");
     setIsResidentsOpen(true);
     void loadResidents(barangay);
+  };
+
+  const openResidentEditModal = (resident: ResidentRow) => {
+    setEditingResident(resident);
+    setResidentForm({
+      fullName: resident.full_name ?? "",
+      displayName: resident.display_name ?? "",
+      email: resident.email ?? "",
+      contactNumber: resident.contact_number ?? "",
+      municipality: resident.municipality ?? "",
+      barangayId: resident.barangay_id ?? "",
+      bio: resident.bio ?? "",
+      notifications: resident.notifications ?? true,
+      showEmailPublic: resident.show_email_public ?? false,
+    });
+    setIsResidentFormOpen(true);
+  };
+
+  const saveResident = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingResident) return;
+
+    if (!isSupabaseConfigured || !supabase) {
+      toast({
+        title: "Supabase Not Configured",
+        description: "Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY first.",
+      });
+      return;
+    }
+
+    if (!residentForm.email.trim()) {
+      toast({ title: "Missing Email", description: "Email is required." });
+      return;
+    }
+
+    setIsResidentSaving(true);
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({
+        full_name: residentForm.fullName.trim() || null,
+        display_name: residentForm.displayName.trim() || null,
+        email: residentForm.email.trim(),
+        contact_number: residentForm.contactNumber.trim() || null,
+        municipality: residentForm.municipality.trim() || "San Mateo, Rizal",
+        barangay_id: residentForm.barangayId || null,
+        bio: residentForm.bio.trim() || null,
+        notifications: residentForm.notifications,
+        show_email_public: residentForm.showEmailPublic,
+      })
+      .eq("user_id", editingResident.user_id);
+    setIsResidentSaving(false);
+
+    if (error) {
+      toast({ title: "Save Failed", description: error.message });
+      return;
+    }
+
+    toast({ title: "Resident Updated", description: `${residentForm.email.trim()} updated successfully.` });
+    setIsResidentFormOpen(false);
+    setEditingResident(null);
+    setResidentForm(defaultResidentForm);
+    if (selectedBarangay) {
+      await loadResidents(selectedBarangay);
+    }
   };
 
   const saveBarangay = async (event: FormEvent) => {
@@ -322,7 +414,7 @@ export const Barangays = () => {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Barangay Map Data</h1>
           <p className="text-muted-foreground mt-1 font-medium">Manage coordinates, youth population, and SK leadership used by the public Barangay Map.</p>
@@ -330,14 +422,14 @@ export const Barangays = () => {
         <button
           type="button"
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
+          className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-all"
         >
           <Plus size={20} />
           Add Barangay
         </button>
       </header>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border border-border card-shadow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-2xl border border-border card-shadow">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
@@ -360,6 +452,9 @@ export const Barangays = () => {
             setSelectedBarangay(null);
             setResidents([]);
             setResidentSearchTerm("");
+            setIsResidentFormOpen(false);
+            setEditingResident(null);
+            setResidentForm(defaultResidentForm);
           }
         }}
       >
@@ -404,12 +499,24 @@ export const Barangays = () => {
                         </p>
                         <p className="text-xs text-muted-foreground">{resident.display_name || "No display name"}</p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {(resident.role_codes.length > 0 ? resident.role_codes : ["youth"]).map((role) => (
-                          <span key={`${resident.user_id}-${role}`} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                            {role}
-                          </span>
-                        ))}
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                          {(resident.role_codes.length > 0 ? resident.role_codes : ["youth"]).map((role) => (
+                            <span key={`${resident.user_id}-${role}`} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+                              {role}
+                            </span>
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3"
+                          onClick={() => openResidentEditModal(resident)}
+                        >
+                          <Pencil size={14} className="mr-1.5" />
+                          Edit
+                        </Button>
                       </div>
                     </div>
 
@@ -442,6 +549,128 @@ export const Barangays = () => {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isResidentFormOpen}
+        onOpenChange={(open) => {
+          setIsResidentFormOpen(open);
+          if (!open) {
+            setEditingResident(null);
+            setResidentForm(defaultResidentForm);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl max-h-[88vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Resident Profile</DialogTitle>
+            <DialogDescription>
+              {editingResident
+                ? `Update profile details for ${editingResident.full_name || editingResident.display_name || editingResident.email}.`
+                : "Update profile details for this resident."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={saveResident} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="resident-full-name">Full Name</Label>
+                <Input
+                  id="resident-full-name"
+                  value={residentForm.fullName}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resident-display-name">Display Name</Label>
+                <Input
+                  id="resident-display-name"
+                  value={residentForm.displayName}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resident-email">Email</Label>
+                <Input
+                  id="resident-email"
+                  type="email"
+                  value={residentForm.email}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resident-contact">Contact Number</Label>
+                <Input
+                  id="resident-contact"
+                  value={residentForm.contactNumber}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resident-municipality">Municipality</Label>
+                <Input
+                  id="resident-municipality"
+                  value={residentForm.municipality}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, municipality: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resident-barangay">Barangay</Label>
+                <select
+                  id="resident-barangay"
+                  value={residentForm.barangayId}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, barangayId: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">None</option>
+                  {barangays.map((barangay) => (
+                    <option key={barangay.id} value={barangay.id}>
+                      {barangay.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="resident-bio">Bio</Label>
+                <textarea
+                  id="resident-bio"
+                  rows={4}
+                  value={residentForm.bio}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, bio: e.target.value }))}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={residentForm.notifications}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, notifications: e.target.checked }))}
+                  className="h-4 w-4"
+                />
+                Notifications enabled
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={residentForm.showEmailPublic}
+                  onChange={(e) => setResidentForm((prev) => ({ ...prev, showEmailPublic: e.target.checked }))}
+                  className="h-4 w-4"
+                />
+                Show email publicly
+              </label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsResidentFormOpen(false)} disabled={isResidentSaving}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isResidentSaving}>
+                {isResidentSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -547,3 +776,4 @@ export const Barangays = () => {
     </div>
   );
 };
+

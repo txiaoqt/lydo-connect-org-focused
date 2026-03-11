@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useMemo, useState } from "react";
+﻿import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { Mail, MessageSquareWarning, Phone, Search } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -60,6 +60,8 @@ export const CitizenDeskAdmin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | TicketStatus>("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | "1" | "2" | "3" | "4" | "5">("all");
   const [viewingTicket, setViewingTicket] = useState<TicketRow | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingTicket, setEditingTicket] = useState<TicketRow | null>(null);
@@ -257,27 +259,30 @@ export const CitizenDeskAdmin = () => {
     () =>
       tickets.filter((ticket) => {
         const term = searchTerm.toLowerCase();
-        return (
+        const matchesSearch = (
           ticket.reference_no.toLowerCase().includes(term) ||
           ticket.subject.toLowerCase().includes(term) ||
           ticket.requester_email.toLowerCase().includes(term) ||
           ticket.ticket_type.toLowerCase().includes(term) ||
           ticket.status.toLowerCase().includes(term)
         );
+        const matchesStatus = statusFilter === "all" ? true : ticket.status === statusFilter;
+        const matchesPriority = priorityFilter === "all" ? true : String(ticket.priority ?? 3) === priorityFilter;
+        return matchesSearch && matchesStatus && matchesPriority;
       }),
-    [searchTerm, tickets],
+    [searchTerm, tickets, statusFilter, priorityFilter],
   );
 
   return (
     <div className="space-y-8">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Citizen Desk</h1>
           <p className="text-muted-foreground mt-1 font-medium">Monitor user-submitted tickets and update request status.</p>
         </div>
       </header>
 
-      <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border border-border card-shadow">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center bg-card p-4 rounded-2xl border border-border card-shadow">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <input
@@ -288,6 +293,40 @@ export const CitizenDeskAdmin = () => {
             className="w-full pl-10 pr-4 py-2.5 bg-muted/40 border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring transition-all outline-none"
           />
         </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | TicketStatus)}
+          className="h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-sm min-w-0 sm:min-w-[150px]"
+        >
+          <option value="all">All Statuses</option>
+          <option value="received">Received</option>
+          <option value="in_progress">Ongoing</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value as "all" | "1" | "2" | "3" | "4" | "5")}
+          className="h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-sm min-w-0 sm:min-w-[145px]"
+        >
+          <option value="all">All Priorities</option>
+          <option value="1">Priority 1</option>
+          <option value="2">Priority 2</option>
+          <option value="3">Priority 3</option>
+          <option value="4">Priority 4</option>
+          <option value="5">Priority 5</option>
+        </select>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => {
+            setStatusFilter("all");
+            setPriorityFilter("all");
+          }}
+        >
+          Clear
+        </Button>
       </div>
 
       <DataTable

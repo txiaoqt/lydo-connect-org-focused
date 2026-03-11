@@ -72,6 +72,8 @@ const Events = () => {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {filtered.map((event) => {
                   const registered = isJoined("events", event.id);
+                  const detailsHref = `/events/${event.id}?view=details`;
+                  const registrationHref = `/events/${event.id}?view=registration`;
                   return (
                     <div key={event.id} className="h-full bg-card border border-border rounded-xl p-6 card-shadow hover:card-shadow-hover transition-all duration-300 group flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
@@ -82,7 +84,12 @@ const Events = () => {
                       <h3 className="font-heading font-semibold text-foreground text-lg mb-2 min-h-[3.5rem] line-clamp-2 group-hover:text-primary transition-colors">
                         {event.title}
                       </h3>
-                      <p className="text-muted-foreground text-sm mb-4 leading-relaxed h-20 line-clamp-3">{event.description}</p>
+                      <p className="text-muted-foreground text-sm mb-2 leading-relaxed h-20 line-clamp-3">{event.description}</p>
+                      {event.description.trim().length > 120 && (
+                        <Link to={detailsHref} className="text-xs text-primary hover:underline mb-3 block">
+                          See more
+                        </Link>
+                      )}
                       <div className="space-y-1.5 text-xs text-muted-foreground mb-4 min-h-[4.5rem]">
                         <span className="flex items-center gap-1.5 line-clamp-1"><Calendar className="h-3.5 w-3.5" /> {event.date}</span>
                         <span className="flex items-center gap-1.5 line-clamp-1"><Clock className="h-3.5 w-3.5" /> {event.time}</span>
@@ -90,7 +97,9 @@ const Events = () => {
                           location={event.location}
                           locationLatitude={event.locationLatitude}
                           locationLongitude={event.locationLongitude}
-                          className="line-clamp-1"
+                          className="w-full text-xs leading-relaxed"
+                          iconClassName="mt-0.5 shrink-0"
+                          labelClassName="line-clamp-1 break-words"
                         />
                       </div>
                       <div className="mb-4 min-h-5">
@@ -102,9 +111,14 @@ const Events = () => {
                           <span className="invisible text-xs">Source Post</span>
                         )}
                       </div>
-                      <Button size="sm" variant="outline" className="w-full mt-auto" asChild>
-                        <Link to={`/events/${event.id}`}>View Event Record</Link>
-                      </Button>
+                      <div className="grid grid-cols-2 gap-2 mt-auto">
+                        <Button size="sm" variant="outline" className="w-full" asChild>
+                          <Link to={detailsHref}>Details</Link>
+                        </Button>
+                        <Button size="sm" variant="outline" className="w-full" asChild>
+                          <Link to={registrationHref}>Registration</Link>
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

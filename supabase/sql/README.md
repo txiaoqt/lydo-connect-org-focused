@@ -20,6 +20,10 @@ Run these files in order inside Supabase SQL Editor:
 16. `16_user_profile_delete_removes_auth_user.sql` (optional but recommended: deleting from `user_profiles` also deletes matching `auth.users`)
 17. `17_admin_citizen_tickets_anon_manage.sql` (optional: allows predefined frontend admin mode to read/update Citizen Desk tickets)
 18. `18_program_event_precise_location.sql` (optional but recommended: adds precise `location_latitude` and `location_longitude` columns for programs/events, used by admin map picker and user map directions)
+19. `19_program_event_time_fields.sql` (optional but recommended: adds `start_time`/`end_time` fields with time-order checks for programs/events)
+20. `20_events_remove_legacy_time_text.sql` (optional but recommended: ensures `start_time`/`end_time` exist, then removes legacy `events.time_text` so event time comes only from actual time fields)
+21. `21_program_registrations.sql` (optional but recommended: adds `program_registrations` so programs can use form-based registration like events)
+22. `22_audit_logs.sql` (optional but recommended: adds row-level `audit_logs` + triggers so admin changes are traceable by actor, table, and payload diff)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

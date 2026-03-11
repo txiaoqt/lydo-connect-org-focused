@@ -24,9 +24,12 @@ export type EventRegistrationInfo = {
   barangay: string;
 };
 
+export type ProgramRegistrationInfo = EventRegistrationInfo;
+
 type UserProfileState = {
   settings: UserSettings;
   eventRegistrations: Record<string, EventRegistrationInfo>;
+  programRegistrations: Record<string, ProgramRegistrationInfo>;
   joined: {
     events: string[];
     programs: string[];
@@ -46,6 +49,7 @@ const defaultProfile: UserProfileState = {
     showEmailPublic: false,
   },
   eventRegistrations: {},
+  programRegistrations: {},
   joined: {
     events: [],
     programs: [],
@@ -92,7 +96,7 @@ export const useUserProfile = () => {
 
       setIsLoading(true);
 
-      const [profileResp, joinedProgramsResp, joinedOrgsResp, eventRegsResp] = await Promise.all([
+      const [profileResp, joinedProgramsResp, joinedOrgsResp, eventRegsResp, programRegsResp] = await Promise.all([
         supabase
           .from("user_profiles")
           .select("full_name,display_name,email,contact_number,municipality,bio,notifications,show_email_public,barangay_id,barangays(name)")
@@ -103,6 +107,12 @@ export const useUserProfile = () => {
         supabase
           .from("event_registrations")
           .select("event_id,full_name,email,contact_number,municipality,registration_status,cancelled_at,barangays(name)")
+          .eq("user_id", user.id)
+          .is("cancelled_at", null)
+          .in("registration_status", ["registered", "attended", "waitlisted"]),
+        supabase
+          .from("program_registrations")
+          .select("program_id,full_name,email,contact_number,municipality,registration_status,cancelled_at,barangays(name)")
           .eq("user_id", user.id)
           .is("cancelled_at", null)
           .in("registration_status", ["registered", "attended", "waitlisted"]),
@@ -132,6 +142,20 @@ export const useUserProfile = () => {
         };
         return acc;
       }, {});
+      const programRegistrations = (programRegsResp.data ?? []).reduce<Record<string, ProgramRegistrationInfo>>((acc, row) => {
+        const programBarangay = (Array.isArray(row.barangays) ? row.barangays[0] : row.barangays)?.name ?? "";
+        acc[row.program_id] = {
+          fullName: row.full_name ?? "",
+          email: row.email ?? "",
+          contactNumber: row.contact_number ?? "",
+          municipality: row.municipality ?? "San Mateo, Rizal",
+          barangay: programBarangay,
+        };
+        return acc;
+      }, {});
+      const joinedProgramIds = Array.from(
+        new Set([...(joinedProgramsResp.data ?? []).map((row) => row.program_id), ...Object.keys(programRegistrations)]),
+      );
 
       const loaded: UserProfileState = {
         settings: {
@@ -145,11 +169,12 @@ export const useUserProfile = () => {
           showEmailPublic: profileRow?.show_email_public ?? false,
         },
         joined: {
-          programs: (joinedProgramsResp.data ?? []).map((row) => row.program_id),
+          programs: joinedProgramIds,
           organizations: (joinedOrgsResp.data ?? []).map((row) => row.organization_id),
           events: Object.keys(eventRegistrations),
         },
         eventRegistrations,
+        programRegistrations,
       };
 
       if (!mounted) return;
@@ -214,11 +239,14 @@ export const useUserProfile = () => {
     if (!supabase || !user || isLocalAdmin) return;
 
     const nextRegistrations = { ...profile.eventRegistrations };
+    const nextProgramRegistrations = { ...profile.programRegistrations };
     if (type === "events") delete nextRegistrations[id];
+    if (type === "programs") delete nextProgramRegistrations[id];
 
     const next = {
       ...profile,
       eventRegistrations: nextRegistrations,
+      programRegistrations: nextProgramRegistrations,
       joined: {
         ...profile.joined,
         [type]: profile.joined[type].filter((itemId) => itemId !== id),
@@ -234,6 +262,15 @@ export const useUserProfile = () => {
           .eq("user_id", user.id)
           .eq("program_id", id)
           .is("left_at", null);
+        await supabase
+          .from("program_registrations")
+          .update({
+            registration_status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+          })
+          .eq("user_id", user.id)
+          .eq("program_id", id)
+          .is("cancelled_at", null);
       } else if (type === "organizations") {
         await supabase
           .from("user_org_memberships")
@@ -312,7 +349,71 @@ export const useUserProfile = () => {
     })();
   };
 
+  const registerForProgram = (programId: string, info: ProgramRegistrationInfo) => {
+    if (!supabase || !user || isLocalAdmin) return;
+
+    const nextPrograms = profile.joined.programs.includes(programId)
+      ? profile.joined.programs
+      : [...profile.joined.programs, programId];
+
+    const next = {
+      ...profile,
+      settings: {
+        ...profile.settings,
+        fullName: info.fullName,
+        email: info.email,
+        contactNumber: info.contactNumber,
+        municipality: info.municipality,
+        barangay: info.barangay,
+      },
+      programRegistrations: { ...profile.programRegistrations, [programId]: info },
+      joined: { ...profile.joined, programs: nextPrograms },
+    };
+
+    persist(next);
+
+    void (async () => {
+      const barangayId = await getBarangayIdByName(info.barangay);
+      const registrationInsert = await supabase.from("program_registrations").insert({
+        user_id: user.id,
+        program_id: programId,
+        full_name: info.fullName,
+        email: info.email,
+        contact_number: info.contactNumber,
+        municipality: info.municipality,
+        barangay_id: barangayId,
+        registration_status: "registered",
+      });
+
+      if (registrationInsert.error) {
+        await supabase
+          .from("program_registrations")
+          .update({
+            full_name: info.fullName,
+            email: info.email,
+            contact_number: info.contactNumber,
+            municipality: info.municipality,
+            barangay_id: barangayId,
+            registration_status: "registered",
+            cancelled_at: null,
+          })
+          .eq("user_id", user.id)
+          .eq("program_id", programId);
+      }
+
+      const membershipInsert = await supabase.from("user_program_memberships").insert({ user_id: user.id, program_id: programId });
+      if (membershipInsert.error) {
+        await supabase
+          .from("user_program_memberships")
+          .update({ left_at: null })
+          .eq("user_id", user.id)
+          .eq("program_id", programId);
+      }
+    })();
+  };
+
   const getEventRegistration = (eventId: string) => profile.eventRegistrations[eventId] ?? null;
+  const getProgramRegistration = (programId: string) => profile.programRegistrations[programId] ?? null;
 
   const joinedCounts = useMemo(
     () => ({
@@ -331,7 +432,9 @@ export const useUserProfile = () => {
     leave,
     isJoined,
     registerForEvent,
+    registerForProgram,
     getEventRegistration,
+    getProgramRegistration,
     joinedCounts,
   };
 };

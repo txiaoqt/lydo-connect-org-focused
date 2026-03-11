@@ -21,3 +21,7 @@
 --   supabase/sql/16_user_profile_delete_removes_auth_user.sql (optional but recommended for full user deletion from auth.users)
 --   supabase/sql/17_admin_citizen_tickets_anon_manage.sql (optional for Citizen Desk ticket management in anon-admin mode)
 --   supabase/sql/18_program_event_precise_location.sql (optional but recommended for precise lat/lng coordinates in programs/events)
+--   supabase/sql/19_program_event_time_fields.sql (optional but recommended for start/end time support in programs/events)
+--   supabase/sql/20_events_remove_legacy_time_text.sql (optional but recommended to enforce actual event time fields and remove legacy events.time_text)
+--   supabase/sql/21_program_registrations.sql (optional but recommended for form-based program registrations)
+--   supabase/sql/22_audit_logs.sql (optional but recommended for row-level audit logging of admin-managed data changes)
