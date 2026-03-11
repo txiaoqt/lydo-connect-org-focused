@@ -1,5 +1,5 @@
-import { ArrowUpRight, Calendar, Clock, FileText, MapPin, UserCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowUpRight, Calendar, Clock, FileText, Loader2, MapPin, UserCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -22,6 +22,7 @@ import { useUserProfile } from "@/hooks/use-user-profile";
 import type { YouthEvent } from "@/lib/youthCatalog";
 import { fetchEventById } from "@/lib/data-api";
 import { validateRegistrationForm, type RegistrationFormErrors } from "@/lib/registration-validation";
+import { searchPhilippineLocationSuggestions, type LocationSuggestion } from "@/lib/location-autocomplete";
 import LocationPreviewButton from "@/components/LocationPreviewButton";
 import SourcePostEmbed from "@/components/SourcePostEmbed";
 
@@ -50,6 +51,10 @@ export default function EventRecord() {
   const [formErrors, setFormErrors] = useState<RegistrationFormErrors>({});
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
   const [isRegistrationConfirmOpen, setIsRegistrationConfirmOpen] = useState(false);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isLocationSearching, setIsLocationSearching] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [pendingRegistration, setPendingRegistration] = useState<{
     fullName: string;
     email: string;
@@ -57,6 +62,8 @@ export default function EventRecord() {
     municipality: string;
     barangay: string;
   } | null>(null);
+  const locationSearchContainerRef = useRef<HTMLDivElement | null>(null);
+  const locationRequestControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +88,56 @@ export default function EventRecord() {
   useEffect(() => {
     setView(requestedView);
   }, [recordId, requestedView]);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!locationSearchContainerRef.current) return;
+      if (locationSearchContainerRef.current.contains(event.target as Node)) return;
+      setShowLocationSuggestions(false);
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const query = locationSearch.trim();
+    if (query.length < 3) {
+      setLocationSuggestions([]);
+      setIsLocationSearching(false);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      locationRequestControllerRef.current?.abort();
+      const controller = new AbortController();
+      locationRequestControllerRef.current = controller;
+
+      setIsLocationSearching(true);
+      try {
+        const suggestions = await searchPhilippineLocationSuggestions(query, 6, controller.signal);
+        setLocationSuggestions(suggestions);
+        setShowLocationSuggestions(true);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setLocationSuggestions([]);
+      } finally {
+        setIsLocationSearching(false);
+      }
+    }, 280);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [locationSearch]);
+
+  useEffect(() => {
+    return () => {
+      locationRequestControllerRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     setForm({
@@ -135,6 +192,22 @@ export default function EventRecord() {
   const setFormValue = (field: keyof typeof form, value: string) => {
     setForm((previous) => ({ ...previous, [field]: value }));
     setFormErrors((previous) => ({ ...previous, [field]: undefined }));
+  };
+
+  const applyLocationSuggestion = (suggestion: LocationSuggestion) => {
+    setLocationSearch(suggestion.displayName);
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+    setForm((previous) => ({
+      ...previous,
+      municipality: suggestion.municipality || previous.municipality,
+      barangay: suggestion.barangay || previous.barangay,
+    }));
+    setFormErrors((previous) => ({
+      ...previous,
+      municipality: undefined,
+      barangay: undefined,
+    }));
   };
 
   const submitRegistration = async (payload: {
@@ -313,6 +386,9 @@ export default function EventRecord() {
                             locationLongitude={event.locationLongitude}
                             className="text-sm"
                           />
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Tip: click the location to open map preview and directions.
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -374,6 +450,51 @@ export default function EventRecord() {
                             required
                           />
                           {formErrors.contactNumber ? <p className="mt-1 text-xs text-destructive">{formErrors.contactNumber}</p> : null}
+                        </div>
+                        <div ref={locationSearchContainerRef} className="relative">
+                          <Label htmlFor="locationSearch">Location Search (Optional)</Label>
+                          <div className="relative">
+                            <Input
+                              id="locationSearch"
+                              value={locationSearch}
+                              onChange={(e) => {
+                                setLocationSearch(e.target.value);
+                                setShowLocationSuggestions(true);
+                              }}
+                              placeholder="Type place or address for smart suggestions"
+                              className="pr-9"
+                              autoComplete="off"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              {isLocationSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Selecting a suggestion can auto-fill Municipality and Barangay.
+                          </p>
+                          {showLocationSuggestions ? (
+                            locationSuggestions.length > 0 ? (
+                              <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-md border bg-popover shadow-lg">
+                                {locationSuggestions.map((suggestion) => (
+                                  <button
+                                    key={suggestion.id}
+                                    type="button"
+                                    onClick={() => applyLocationSuggestion(suggestion)}
+                                    className="w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted"
+                                  >
+                                    <p className="line-clamp-1 font-medium text-foreground">{suggestion.displayName}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {suggestion.barangay || "Barangay N/A"} | {suggestion.municipality || "Municipality N/A"}
+                                    </p>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : locationSearch.trim().length >= 3 && !isLocationSearching ? (
+                              <div className="absolute z-30 mt-1 w-full rounded-md border bg-popover px-3 py-2 text-sm text-muted-foreground shadow-lg">
+                                No location suggestions found.
+                              </div>
+                            ) : null
+                          ) : null}
                         </div>
                         <div>
                           <Label htmlFor="municipality">Municipality</Label>
