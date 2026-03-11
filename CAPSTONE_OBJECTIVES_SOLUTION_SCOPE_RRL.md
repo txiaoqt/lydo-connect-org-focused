@@ -6,11 +6,11 @@
 To design and develop a web-based Youth Governance Transparency and Accountability System for the Municipality of San Mateo, Rizal that centralizes youth records, participation services, and public transparency processes in one role-based digital platform.
 
 ### Specific Objectives
-1. Consolidate Programs, Events, Organizations, Transparency, Citizen Desk, and User Profile services into one unified portal for youth users, citizens, and administrators.
-2. Execute end-to-end participation workflows where users can register or cancel in events and programs, and join or leave organizations with corresponding record updates.
-3. Publish and update transparency data through disclosure documents, quarterly board rows, monthly compliance rows, and barangay-level financial and mapping records.
-4. Enforce accountability by applying role-based access controls and recording create, update, and delete operations with readable before-and-after audit entries.
-5. Deploy a responsive user and admin platform that supports mobile access, installable admin web app behavior, and source-linked event/program record pages.
+1. Consolidate Programs, Events, Organizations, Transparency, Citizen Desk, and Profile services into a single web platform for youth users, citizens, and administrators.
+2. Implement validated participation workflows where users register or cancel for events and programs, and join or leave organizations, with corresponding status updates in user profiles and admin records.
+3. Automate registration data flow by synchronizing portal registrations to attendance pipelines (Supabase and Google Form/Sheet-linked outputs) with trackable sync statuses and retry controls.
+4. Publish and maintain transparency datasets through disclosure documents, quarterly board entries, monthly compliance records, and barangay-level financial and mapping views with user-facing filters.
+5. Enforce governance accountability by recording auditable create/update/delete changes and deploying the platform with Progressive Web App (PWA) capability for installable admin operations and continuous web access.
 
 ## 2. Proposed System Solution
 

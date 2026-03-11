@@ -414,10 +414,21 @@ begin
   values (v_user_id, p_program_id, null)
   on conflict do nothing;
 
-  update public.user_program_memberships
-  set left_at = null
-  where user_id = v_user_id
-    and program_id = p_program_id;
+  update public.user_program_memberships upm
+  set
+    left_at = null,
+    joined_at = case when upm.left_at is null then upm.joined_at else now() end
+  where upm.id = (
+    select candidate.id
+    from public.user_program_memberships candidate
+    where candidate.user_id = v_user_id
+      and candidate.program_id = p_program_id
+    order by
+      (candidate.left_at is null) desc,
+      coalesce(candidate.left_at, candidate.joined_at) desc,
+      candidate.created_at desc
+    limit 1
+  );
 
   return v_registration_id;
 end;

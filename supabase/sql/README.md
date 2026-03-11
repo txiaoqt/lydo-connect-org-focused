@@ -27,6 +27,7 @@ Run these files in order inside Supabase SQL Editor:
 23. `23_registration_integration.sql` (optional but recommended: adds registration source URLs for events/programs and RPC registration functions with strict validation)
 24. `24_registration_sync_automation.sql` (optional but recommended: adds Google Form sync lifecycle columns + retry RPC + worker-ready automation fields)
 25. `25_admin_portal_anon_registration_policies.sql` (optional: if you use predefined local admin login/anon-manage mode, allows admin registration page to read/retry registration sync records)
+26. `26_program_registration_membership_fix.sql` (recommended if SQL 23/24 was already applied: fixes program registration RPC membership reactivation so historical membership rows do not trigger `uq_user_program_active`)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

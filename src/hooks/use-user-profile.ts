@@ -452,9 +452,13 @@ export const useUserProfile = () => {
 
       if (!rpcResult.error) return;
 
+      const isKnownMembershipConstraintIssue =
+        rpcResult.error.code === "23505" &&
+        /uq_user_program_active/i.test(rpcResult.error.message ?? "");
       const canFallbackToLegacyFlow =
         rpcResult.error.code === "42883" ||
-        /register_for_program_portal/i.test(rpcResult.error.message ?? "");
+        /register_for_program_portal/i.test(rpcResult.error.message ?? "") ||
+        isKnownMembershipConstraintIssue;
 
       if (!canFallbackToLegacyFlow) {
         throw new Error(rpcResult.error.message);
@@ -512,14 +516,12 @@ export const useUserProfile = () => {
         .from("user_program_memberships")
         .insert({ user_id: user.id, program_id: programId });
       if (membershipInsert.error) {
-        const { error: membershipUpdateError } = await supabase
-          .from("user_program_memberships")
-          .update({ left_at: null })
-          .eq("user_id", user.id)
-          .eq("program_id", programId);
+        const duplicateActiveMembership =
+          membershipInsert.error.code === "23505" ||
+          /uq_user_program_active/i.test(membershipInsert.error.message ?? "");
 
-        if (membershipUpdateError) {
-          throw new Error(membershipUpdateError.message);
+        if (!duplicateActiveMembership) {
+          throw new Error(membershipInsert.error.message);
         }
       }
     } catch (error) {

@@ -25,3 +25,7 @@
 --   supabase/sql/20_events_remove_legacy_time_text.sql (optional but recommended to enforce actual event time fields and remove legacy events.time_text)
 --   supabase/sql/21_program_registrations.sql (optional but recommended for form-based program registrations)
 --   supabase/sql/22_audit_logs.sql (optional but recommended for row-level audit logging of admin-managed data changes)
+--   supabase/sql/23_registration_integration.sql (optional but recommended for registration source URLs and validated RPC registration flows)
+--   supabase/sql/24_registration_sync_automation.sql (optional but recommended for Google Form sync lifecycle fields + retry RPC)
+--   supabase/sql/25_admin_portal_anon_registration_policies.sql (optional for anon-admin registration monitoring/retry in local predefined admin mode)
+--   supabase/sql/26_program_registration_membership_fix.sql (recommended patch for existing DBs: prevents duplicate active program membership conflicts)
