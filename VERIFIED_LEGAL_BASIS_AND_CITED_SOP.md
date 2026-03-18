@@ -22,7 +22,7 @@ So yes, the laws are important, but they should usually be cited as `legal basis
 | `EO No. 2, s. 2016` - Freedom of Information | Useful for transparency and public access to information | `Supportive` | It directly operationalizes FOI in the `Executive Branch`, so for LGU/LYDO transparency it should not be your only legal basis |
 | `RA 10175` - Cybercrime Prevention Act of 2012 | Useful for system security and unlawful access concerns | `Supportive` | Good for `illegal access`, `data interference`, and system abuse; `cyber-libel` is only relevant if your platform allows public posting or comment publication |
 | `RA 12254` - E-Governance Act | Very strong and very current legal basis for citizen-centered digital government, interoperability, privacy-by-design, online public services, and inclusivity | `Core` | This law is recent, approved on `September 5, 2025`, so use it only if your capstone timeline allows citing current law |
-| `DICT MC 004-2017` - WCAG / accessibility | I could not verify this exact citation cleanly from official sources | `Replace` | Do not rely on this exact citation unless you can produce the official document |
+| `DICT Memorandum Circular No. 004, s. 2017` - WCAG / accessibility | Useful legal and design basis for accessible government web content | `Supportive` | Best used for accessibility and inclusivity claims, not as the main basis for the whole system |
 
 ## Corrections You Should Make
 
@@ -80,13 +80,17 @@ It can support the claim that the system must be designed with safeguards agains
 
 For `cyber-libel`, use this only if your system allows user-generated public content. If your `Citizen Desk` is a controlled, case-based, or private submission channel, then `cyber-libel` is not a central legal anchor for the paper.
 
-### 5. `DICT MC 004-2017` should be replaced unless you can verify the exact document
+### 5. `DICT Memorandum Circular No. 004, s. 2017` is usable for accessibility claims
 
-I could not verify this exact memorandum circular from official sources during this pass. The safer and verifiable replacement is:
+Using the PDF link you provided, this memorandum circular is now verified as a usable accessibility basis. It is helpful because it prescribes the Philippine Web Accessibility Policy and adopts `WCAG 2.0` as a standard for making web content more accessible to a wider range of persons with disabilities.
 
-- `ICTO-NCDA Joint Circular No. 1, s. 2010` on Accessible Website Design Guidelines
+This makes it a good legal support for:
 
-This official issuance clearly enjoins government agencies to implement accessible website design. It is a better citation if you want to justify that the proposed platform should be accessible to PWDs and more inclusive in public service delivery.
+- accessible government website design
+- inclusivity of digital public services
+- PWD-friendly public-facing interfaces
+
+The `ICTO-NCDA Joint Circular No. 1, s. 2010` remains a useful supplementary accessibility source, especially if you want an additional government accessibility issuance.
 
 ## Additional Laws and Issuances You Should Consider Including
 
@@ -165,7 +169,7 @@ Why include it:
 - it is a verifiable government accessibility issuance
 - it directly supports accessible website design for government web services
 
-This is the best verified substitute for the unverified `DICT MC 004-2017` citation.
+This is a useful supplementary accessibility issuance that can be paired with `DICT Memorandum Circular No. 004, s. 2017`.
 
 ## Best Law-to-Claim Mapping for the Paper
 
@@ -180,7 +184,7 @@ This is the best verified substitute for the unverified `DICT MC 004-2017` citat
 | The platform supports digital government service delivery | `RA 12254`, `RA 11032`, `RA 8792` |
 | The citizen desk / complaint module is legally reasonable | `RA 11032`, optional support from `EO No. 6` |
 | The system should be secure against unlawful access or interference | `RA 10173`, `RA 12254`, `RA 10175` |
-| The system should be accessible and inclusive | `RA 12254` and `ICTO-NCDA Joint Circular No. 1, s. 2010` |
+| The system should be accessible and inclusive | `RA 12254`, `DICT Memorandum Circular No. 004, s. 2017`, and `ICTO-NCDA Joint Circular No. 1, s. 2010` |
 
 ## Safer Data Privacy Position for Youth Users Aged 15-17
 
@@ -213,13 +217,14 @@ If you want a strong but focused legal basis section, use this set:
 7. `RA 6713`
 8. `RA 11032`
 9. `RA 8792`
-10. `ICTO-NCDA Joint Circular No. 1, s. 2010`
+10. `DICT Memorandum Circular No. 004, s. 2017`
+11. `ICTO-NCDA Joint Circular No. 1, s. 2010`
 
 Optional:
 
-11. `EO No. 2, s. 2016`
-12. `EO No. 6, s. 2016`
-13. `RA 10175`
+12. `EO No. 2, s. 2016`
+13. `EO No. 6, s. 2016`
+14. `RA 10175`
 
 ## Revised Statement of the Problem with RRL and Legal Anchors
 
@@ -300,6 +305,9 @@ Taken together, these legal and empirical foundations indicate a broader problem
 
 ### Accessibility
 
+- `DICT Memorandum Circular No. 004, s. 2017`  
+  https://navy.mil.ph/images/DICT-MEMO-CIRCULAR-004-2017-W3C-WEB-CONTENT-ACCESSIBILITY-GUIDELINES-WCAG-2.pdf
+
 - `ICTO-NCDA Joint Circular No. 1, s. 2010`  
   https://ncda.gov.ph/disability-laws/joint-circulars/accessible-website-design-guidelines/
 
@@ -320,4 +328,4 @@ The strongest correction is this:
 - keep `RA 10173`, but pair it with NPC child/privacy guidance when minors are involved
 - keep `EO No. 2` only as supportive, not as your only transparency basis
 - keep `RA 10175` only as secondary support
-- replace `DICT MC 004-2017` with `ICTO-NCDA Joint Circular No. 1, s. 2010`
+- use `DICT Memorandum Circular No. 004, s. 2017` for accessibility, and keep `ICTO-NCDA Joint Circular No. 1, s. 2010` as supplementary support
