@@ -37,6 +37,6 @@ on conflict (username) do update
 set password_hash = excluded.password_hash,
     display_name = excluded.display_name,
     is_active = excluded.is_active,
-    updated_at = now();
+    updated_at = now();/*  */
 
 commit;
