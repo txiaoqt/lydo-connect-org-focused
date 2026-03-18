@@ -4,9 +4,9 @@
 
 This thematic discussion follows your requested source structure:
 
-- `Foreign Literature 1:` Augsberger, Collins, and Howard (2024)
+- `Foreign Literature 1:` Collins, Augsberger, and Gecker (2016)
 - `Foreign Literature 2:` OECD (2023)
-- `Local Literature:` National Privacy Commission (2016)
+- `Local Literature:` Kiram, Kiram, Hadjibun, and Taraji (2025)
 - `Local Study:` Valenzuela (2025)
 
 The set is also aligned with your required topics:
@@ -16,13 +16,15 @@ The set is also aligned with your required topics:
 - web-based information systems for government
 - data privacy in government systems
 
+All four sources in this version are `open-access` or `directly downloadable`.
+
 ## Theme 1: Youth Participation and Program Monitoring in Local Governance
 
 Structured youth participation is an important element of local governance because it allows young people to become involved in community affairs, leadership development, and decision-making processes. However, youth participation mechanisms become more meaningful when they are supported by systems that can document activities, identify barriers, and monitor outcomes over time. Without organized monitoring, local youth programs may continue to operate without clear evidence of their effectiveness, reach, or long-term impact on youth engagement.
 
-Augsberger, Collins, and Howard (2024) examined the global context of youth engagement through a scoping review of youth councils in municipal government. The review found that municipal youth councils are widely used as mechanisms for involving young people in local governance, but their structures, activities, and impacts vary greatly across settings. The study also emphasized that while youth councils show promise in empowering young people and strengthening community participation, there remains a need for more systematic research on their best practices, barriers, and broader outcomes. This is important because it shows that youth engagement initiatives are not strengthened by participation alone, but also by the presence of more structured mechanisms for documenting how youth bodies function and what results they produce.
+Collins, Augsberger, and Gecker (2016) examined youth councils in municipal government by looking at their activities, impacts, and barriers. The study found that youth councils provide young people with opportunities to participate in advisory work, community projects, leadership activities, and local decision-making processes. It also showed that youth councils can create positive outcomes such as stronger civic awareness, leadership development, and greater youth voice in public affairs. However, the study also identified barriers including adult control, limited diversity of participants, outreach difficulties, and structural constraints that can reduce the effectiveness of youth engagement mechanisms. These findings are important because they show that youth participation initiatives need more than simple involvement; they also require systems that can document participation patterns, identify obstacles, and support continuous improvement.
 
-This literature is highly relevant to the proposed LYDO Connect system because Local Youth Development Offices, like municipal youth councils, are expected to create meaningful youth participation at the local level. The need identified by Augsberger et al. (2024) for more systematic monitoring and documentation supports the study's argument that youth programs should not rely only on announcements and attendance lists. Instead, they require a centralized digital system that can track registrations, participation records, and program-related information in a more organized and analyzable manner. In this sense, LYDO Connect responds to the same gap highlighted in the literature by providing a structured platform for youth information and participation monitoring.
+This literature is highly relevant to the proposed LYDO Connect system because Local Youth Development Offices, like municipal youth councils, are expected to support meaningful youth participation at the local level. The issues identified by Collins et al. (2016), particularly the need to understand activities, impacts, and barriers, support the study's argument that youth programs should not rely only on announcements and attendance lists. Instead, they require a centralized digital system that can track registrations, participation records, and program-related information in a more organized and analyzable manner. In this sense, LYDO Connect responds to the same gap highlighted in the literature by providing a structured platform for youth information and participation monitoring.
 
 ## Theme 2: Status of Local Youth Development Offices and Youth Engagement
 
@@ -44,28 +46,33 @@ This literature is relevant to the proposed LYDO Connect system because the stud
 
 As government institutions adopt digital systems to manage information and deliver services, data privacy becomes a critical concern. Public-sector platforms often process personal information such as names, contact details, demographic records, and service-related transactions. Because of this, digital government systems must not only improve efficiency and accessibility, but also protect the rights of data subjects and ensure that personal data are collected, processed, and stored responsibly.
 
-The National Privacy Commission (2016), through the Implementing Rules and Regulations of the Data Privacy Act of 2012, provides the local policy framework for data protection in government and private information systems. The IRR emphasizes that personal data processing must adhere to the principles of transparency, legitimate purpose, and proportionality, and that organizations must implement appropriate organizational, physical, and technical security measures to protect personal information. The IRR is especially significant for government systems because it makes clear that the handling of personal data in information and communications systems must be secured and protected, while also ensuring that individuals are properly informed of how their data are processed.
+Kiram, Kiram, Hadjibun, and Taraji (2025) examined data governance and privacy in Sulu, Philippines in relation to digital public service delivery. The study found a significant gap between national policy aspirations and local implementation realities. While privacy and security are emphasized at the policy level, the study reported that awareness and actual implementation remain limited in local settings, and that citizens continue to express concerns about data misuse, weak digital literacy, and insufficient infrastructure. At the same time, the study noted that digital technologies still present important opportunities for improving transparency, accountability, and citizen participation when they are supported by stronger oversight and context-sensitive implementation strategies.
 
-This literature is directly relevant to LYDO Connect because the proposed system manages youth profiles, registration records, participation histories, and citizen desk information. These system functions involve the processing of personal data, which means that the platform must be designed with privacy-conscious practices such as limited data collection, secure storage, controlled access, and role-based permissions. In this sense, the National Privacy Commission (2016) supports the study by providing the legal and operational basis for why a youth governance platform must incorporate privacy and security safeguards as part of responsible digital public service delivery.
+This literature is directly relevant to LYDO Connect because the proposed system manages youth profiles, registration records, participation histories, and citizen desk information. These system functions involve the processing of personal data, which means that the platform must be designed with privacy-conscious practices such as limited data collection, secure storage, controlled access, and role-based permissions. In this sense, Kiram et al. (2025) supports the study by showing that privacy is not only a legal requirement, but also a practical factor that affects public trust and the responsible use of digital government systems.
 
 ## Integrative Analysis
 
-Taken together, these foreign and local sources support the proposed study from four connected angles. First, foreign literature on youth engagement in municipal governance shows that youth participation mechanisms require more systematic monitoring and documentation to understand their impact and limitations. Second, the local study on LYDO operations confirms that youth engagement and community development are closely tied to the strength of local youth governance structures, reinforcing the need for improved program and participation monitoring. Third, foreign literature on government information websites supports the value of a centralized and user-oriented web platform for improving access to official information and services. Fourth, local literature on data privacy establishes that government digital systems must protect personal data through lawful, proportionate, and secure processing practices.
+Taken together, these foreign and local sources support the proposed study from four connected angles. First, foreign literature on youth engagement in municipal governance shows that youth participation mechanisms require more systematic monitoring and documentation to understand their activities, impacts, and barriers. Second, the local study on LYDO operations confirms that youth engagement and community development are closely tied to the strength of local youth governance structures, reinforcing the need for improved program and participation monitoring. Third, foreign literature on government information websites supports the value of a centralized and user-oriented web platform for improving access to official information and services. Fourth, local literature on data privacy and digital public service delivery shows that government digital systems must not only be functional, but also trusted, secure, and responsibly implemented.
 
 These themes collectively justify the development of LYDO Connect as more than a simple posting platform. They show that the proposed system addresses documented needs in youth governance, information access, public-sector digital service delivery, and data protection. By centralizing youth program information, participation tracking, transparency records, and citizen-facing services in one web-based platform, LYDO Connect responds to both the governance and systems gaps identified in the reviewed literature.
 
+## Direct File Links
+
+- `Collins et al. (2016)` PDF: `https://open.bu.edu/bitstream/2144/30795/3/Youth%20Councils%20in%20Muncipal%20Government.pdf`
+- `OECD (2023)` PDF: `https://www.oecd.org/content/dam/oecd/en/publications/reports/2023/01/effective-government-information-websites_260c241e/ac325b03-en.pdf`
+- `Kiram et al. (2025)` PDF: `https://journalsocialsciences.com/index.php/oaijss/article/download/283/531/`
+- `Valenzuela (2025)` PDF: `https://www.ijfmr.com/papers/2025/3/46153.pdf`
+
 ## References
 
-Augsberger, A., Collins, M. E., & Howard, R. C. (2024). The global context of youth engagement: A scoping review of youth councils in municipal government. *Children and Youth Services Review, 156*, 107349. https://doi.org/10.1016/j.childyouth.2023.107349
+Collins, M. E., Augsberger, A., & Gecker, W. (2016). Youth councils in municipal government: Examination of activities, impact and barriers. *Children and Youth Services Review, 65*, 140-147. https://doi.org/10.1016/j.childyouth.2016.04.007
 
-National Privacy Commission. (2016). *Implementing rules and regulations of the Data Privacy Act of 2012*. https://privacy.gov.ph/implementing-rules-regulations-data-privacy-act-2012/
+Kiram, D. A. K., Kiram, M. M., Hadjibun, J.-A. A., & Taraji, M. (2025). Data governance and privacy in Sulu, Philippines: Building trust and ensuring accountability in digital public service delivery. *Open Access Indonesia Journal of Social Sciences, 8*(1), 1952-1966. https://doi.org/10.37275/oaijss.v8i1.283
 
 OECD. (2023). *Effective government information websites: Toolkit for implementation*. OECD Publishing. https://doi.org/10.1787/ac325b03-en
 
 Valenzuela, A. M. (2025). Status of Local Youth Development Office towards community development and youth engagement: Basis for sustainability plan. *International Journal for Multidisciplinary Research, 7*(3). https://doi.org/10.36948/ijfmr.2025.v07i03.46153
 
-## Optional Note
+## Supporting Legal Basis Note
 
-If your adviser prefers a `journal or conference source` instead of a `policy or legal document` for the local literature on data privacy, you can substitute the National Privacy Commission (2016) with:
-
-Ching, M. R. D., & Celis, N. J. (2018). Data Privacy Act of 2012 compliance performance of Philippine government agencies: A case study approach. *ACM International Conference Proceeding Series*. https://doi.org/10.1145/3234781.3234784
+Even if `Kiram et al. (2025)` is used as the local literature for the privacy theme, you may still cite the `National Privacy Commission (2016) Implementing Rules and Regulations of the Data Privacy Act of 2012` as a supporting legal basis for the study.

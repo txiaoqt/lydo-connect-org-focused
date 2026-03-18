@@ -2,6 +2,8 @@
 
 ## Recommended 4-Source Set
 
+This updated set is intentionally limited to `open-access` or `directly downloadable` materials so you can access the files without paywall issues.
+
 This set follows your requested structure:
 
 - `2 foreign literature`
@@ -19,21 +21,22 @@ It is also aligned with the themes you specified:
 
 ### A. Replacement for Calvert et al. (2015)
 
-**Augsberger, A., Collins, M. E., & Howard, R. C. (2024). _The global context of youth engagement: A scoping review of youth councils in municipal government_. Children and Youth Services Review, 156, 107349. https://doi.org/10.1016/j.childyouth.2023.107349**
+**Collins, M. E., Augsberger, A., & Gecker, W. (2016). _Youth councils in municipal government: Examination of activities, impact and barriers_. Children and Youth Services Review, 65, 140-147. https://doi.org/10.1016/j.childyouth.2016.04.007**
 
 **Why this fits**
 
 - This is a `2016-present` source and is a strong replacement for `Calvert et al. (2015)`.
 - It is directly connected to `youth participation in local governance`.
-- It reviews `municipal youth councils`, which are close to the role of youth governance structures relevant to LYDO and SK-related participation.
-- It emphasizes that while youth councils show promise, there is still a need for `more systematic research on best practices, barriers, and impacts`, which supports your argument for `structured monitoring of youth engagement and outcomes`.
+- It examines `municipal youth councils`, which are close to the role of youth governance structures relevant to LYDO and SK-related participation.
+- It identifies the `activities`, `impacts`, and `barriers` of youth councils, which supports your argument for `structured monitoring of youth engagement and program outcomes`.
+- It has a `directly downloadable open-access manuscript` from Boston University.
 
 **Best use in your paper**
 
 Use this source when discussing:
 
 - the importance of structured youth participation in local governance;
-- the need to monitor the activities, impacts, and barriers of youth engagement mechanisms;
+- the need to monitor the activities, impacts, and barriers of youth participation mechanisms;
 - the rationale for having a system that tracks youth participation and program outcomes.
 
 ## 2. Foreign Literature
@@ -47,6 +50,7 @@ Use this source when discussing:
 - This is a strong foreign literature source for `web-based information systems for government`.
 - It explains that government information websites improve `communication`, reduce `administrative burdens`, and increase `access to public services`.
 - It also emphasizes `user-centered design`, `searchability`, `accessibility`, `continuous improvement`, and `website performance assessment`, which are all highly relevant to your proposed platform.
+- It has a `direct download PDF` on the official OECD website.
 
 **Best use in your paper**
 
@@ -60,22 +64,22 @@ Use this source when discussing:
 
 ### C. Data Privacy in Government Systems
 
-**National Privacy Commission. (2016). _Implementing rules and regulations of Republic Act No. 10173, otherwise known as the Data Privacy Act of 2012_. https://privacy.gov.ph/implementing-rules-regulations-data-privacy-act-2012/**
+**Kiram, D. A. K., Kiram, M. M., Hadjibun, J.-A. A., & Taraji, M. (2025). _Data governance and privacy in Sulu, Philippines: Building trust and ensuring accountability in digital public service delivery_. Open Access Indonesia Journal of Social Sciences, 8(1), 1952-1966. https://doi.org/10.37275/oaijss.v8i1.283**
 
 **Why this fits**
 
-- This is the safest and strongest `local literature` source for `data privacy in government systems`.
-- It operationalizes the `Data Privacy Act of 2012` and applies directly to how government and non-government entities process personal data.
-- It supports privacy principles such as `transparency`, `legitimate purpose`, `proportionality`, and the requirement for `appropriate security measures`.
-- It is directly useful for your system because LYDO Connect handles youth records, registrations, profiles, and citizen desk information.
+- This is a strong `local literature` source for `data privacy in government systems` and it is `Philippines-based`.
+- It directly discusses `digital public service delivery`, `data governance`, `privacy`, `trust`, and `accountability`.
+- It found a `gap between policy aspirations and actual implementation`, including concerns about data misuse, weak awareness, and local implementation challenges.
+- It has a `direct open-access PDF`.
 
 **Best use in your paper**
 
 Use this source when discussing:
 
-- the need to minimize personal data collection;
-- the protection of youth and citizen information in the system;
-- secure handling of records in public-sector digital platforms.
+- the importance of privacy and trust in public-sector digital systems;
+- the risks of weak implementation of data privacy practices at the local level;
+- the need for responsible and secure handling of youth and citizen data in LYDO Connect.
 
 ## 4. Local Study
 
@@ -102,17 +106,28 @@ Use this source when discussing:
 | Theme Needed | Best Source |
 |---|---|
 | Youth program monitoring | `Valenzuela (2025)` |
-| Replacement for `Calvert et al. (2015)` | `Augsberger et al. (2024)` |
+| Replacement for `Calvert et al. (2015)` | `Collins et al. (2016)` |
 | Web-based information systems for government | `OECD (2023)` |
-| Data privacy in government systems | `NPC IRR of RA 10173 (2016)` |
+| Data privacy in government systems | `Kiram et al. (2025)` |
 
-## If Your Adviser Does Not Accept Laws or Policies as "Literature"
+## Direct Download Links
 
-If your adviser wants the `local literature` to be a journal or conference source instead of a legal or policy document, use this as the substitute:
+- `Collins et al. (2016)` PDF:
+  `https://open.bu.edu/bitstream/2144/30795/3/Youth%20Councils%20in%20Muncipal%20Government.pdf`
+- `OECD (2023)` PDF:
+  `https://www.oecd.org/content/dam/oecd/en/publications/reports/2023/01/effective-government-information-websites_260c241e/ac325b03-en.pdf`
+- `Kiram et al. (2025)` PDF:
+  `https://journalsocialsciences.com/index.php/oaijss/article/download/283/531/`
+- `Valenzuela (2025)` PDF:
+  `https://www.ijfmr.com/papers/2025/3/46153.pdf`
 
-**Ching, M. R. D., & Celis, N. J. (2018). _Data Privacy Act of 2012 compliance performance of Philippine government agencies: A case study approach_. ACM International Conference Proceeding Series. https://doi.org/10.1145/3234781.3234784**
+## Supporting Legal Basis for Privacy
 
-This source is useful because it found that the Philippine government agencies examined were only `partially compliant`, which supports the need for more careful privacy implementation in government information systems.
+Even if `Kiram et al. (2025)` is used as the local literature for your RRL, you can still cite the following as `supporting legal basis` in your legal framework or synthesis:
+
+- `National Privacy Commission. (2016). Implementing Rules and Regulations of the Data Privacy Act of 2012.`
+- Official page: `https://privacy.gov.ph/implementing-rules-regulations-data-privacy-act-2012/`
+- Direct PDF: `https://privacy.gov.ph/wp-content/uploads/IRR-of-the-DPA.pdf`
 
 ## Optional Backup Sources
 
