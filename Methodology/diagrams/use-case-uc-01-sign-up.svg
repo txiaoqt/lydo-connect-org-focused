@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="920" fill="#fff"/>
+
+  <text x="800" y="46" text-anchor="middle" class="title">Figure 1. Use Case Diagram of Sign Up</text>
+
+  <rect x="360" y="100" width="880" height="710" rx="12" ry="12" class="shape"/>
+  <text x="800" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="800" cy="220" rx="190" ry="44" class="shape"/>
+  <text x="800" y="213" text-anchor="middle" class="text">UC-01</text>
+  <text x="800" y="236" text-anchor="middle" class="text">Sign Up</text>
+
+  <ellipse cx="610" cy="500" rx="180" ry="36" class="shape"/>
+  <text x="610" y="493" text-anchor="middle" class="text">Encode User Details</text>
+
+  <ellipse cx="1010" cy="500" rx="200" ry="36" class="shape"/>
+  <text x="1010" y="493" text-anchor="middle" class="text">Validate Registration Data</text>
+
+  <circle cx="110" cy="220" r="22" class="shape"/>
+  <line x1="110" y1="242" x2="110" y2="312" class="line"/>
+  <line x1="74" y1="268" x2="146" y2="268" class="line"/>
+  <line x1="110" y1="312" x2="80" y2="362" class="line"/>
+  <line x1="110" y1="312" x2="140" y2="362" class="line"/>
+  <text x="110" y="396" text-anchor="middle" class="label">Youth User</text>
+
+  <circle cx="110" cy="520" r="22" class="shape"/>
+  <line x1="110" y1="542" x2="110" y2="612" class="line"/>
+  <line x1="74" y1="568" x2="146" y2="568" class="line"/>
+  <line x1="110" y1="612" x2="80" y2="662" class="line"/>
+  <line x1="110" y1="612" x2="140" y2="662" class="line"/>
+  <text x="110" y="696" text-anchor="middle" class="label">Citizen</text>
+
+  <circle cx="1490" cy="250" r="22" class="shape"/>
+  <line x1="1490" y1="272" x2="1490" y2="342" class="line"/>
+  <line x1="1454" y1="298" x2="1526" y2="298" class="line"/>
+  <line x1="1490" y1="342" x2="1460" y2="392" class="line"/>
+  <line x1="1490" y1="342" x2="1520" y2="392" class="line"/>
+  <text x="1490" y="426" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1490" y="448" text-anchor="middle" class="label">Authentication</text>
+
+  <line x1="146" y1="268" x2="610" y2="220" class="line"/>
+  <line x1="146" y1="568" x2="635" y2="236" class="line"/>
+  <line x1="1454" y1="298" x2="1210" y2="500" class="line"/>
+
+  <line x1="735" y1="263" x2="665" y2="464" class="dashed"/>
+  <text x="688" y="380" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="865" y1="263" x2="955" y2="464" class="dashed"/>
+  <text x="920" y="380" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+</svg>

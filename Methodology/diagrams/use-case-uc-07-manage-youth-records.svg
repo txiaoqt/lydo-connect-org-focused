@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1020" viewBox="0 0 1800 1020">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="1020" fill="#fff"/>
+
+  <text x="900" y="46" text-anchor="middle" class="title">Figure 7. Use Case Diagram of Manage Youth Records</text>
+
+  <rect x="410" y="100" width="980" height="790" rx="12" ry="12" class="shape"/>
+  <text x="900" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="900" cy="210" rx="240" ry="44" class="shape"/>
+  <text x="900" y="203" text-anchor="middle" class="text">UC-07</text>
+  <text x="900" y="226" text-anchor="middle" class="text">Manage Youth Records</text>
+
+  <ellipse cx="680" cy="440" rx="180" ry="36" class="shape"/>
+  <text x="680" y="433" text-anchor="middle" class="text">Validate Record Data</text>
+
+  <ellipse cx="1100" cy="440" rx="185" ry="36" class="shape"/>
+  <text x="1100" y="433" text-anchor="middle" class="text">Save Record Changes</text>
+
+  <ellipse cx="600" cy="710" rx="150" ry="34" class="shape"/>
+  <text x="600" y="703" text-anchor="middle" class="text">Publish Record</text>
+
+  <ellipse cx="900" cy="710" rx="160" ry="34" class="shape"/>
+  <text x="900" y="703" text-anchor="middle" class="text">Attach Source Link</text>
+
+  <ellipse cx="1200" cy="710" rx="130" ry="34" class="shape"/>
+  <text x="1200" y="703" text-anchor="middle" class="text">Set Location</text>
+
+  <circle cx="110" cy="280" r="22" class="shape"/>
+  <line x1="110" y1="302" x2="110" y2="372" class="line"/>
+  <line x1="74" y1="328" x2="146" y2="328" class="line"/>
+  <line x1="110" y1="372" x2="80" y2="422" class="line"/>
+  <line x1="110" y1="372" x2="140" y2="422" class="line"/>
+  <text x="110" y="456" text-anchor="middle" class="label">LYDO</text>
+  <text x="110" y="480" text-anchor="middle" class="label">Administrator</text>
+
+  <circle cx="1690" cy="280" r="22" class="shape"/>
+  <line x1="1690" y1="302" x2="1690" y2="372" class="line"/>
+  <line x1="1654" y1="328" x2="1726" y2="328" class="line"/>
+  <line x1="1690" y1="372" x2="1660" y2="422" class="line"/>
+  <line x1="1690" y1="372" x2="1720" y2="422" class="line"/>
+  <text x="1690" y="456" text-anchor="middle" class="label">LYDO Staff /</text>
+  <text x="1690" y="480" text-anchor="middle" class="label">SK Officer</text>
+
+  <line x1="146" y1="328" x2="660" y2="210" class="line"/>
+  <line x1="1654" y1="328" x2="1140" y2="210" class="line"/>
+
+  <line x1="820" y1="252" x2="730" y2="404" class="dashed"/>
+  <text x="770" y="334" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="980" y1="252" x2="1050" y2="404" class="dashed"/>
+  <text x="1020" y="334" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="600" y1="676" x2="845" y2="252" class="dashed"/>
+  <text x="682" y="596" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="900" y1="676" x2="900" y2="254" class="dashed"/>
+  <text x="942" y="548" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="1200" y1="676" x2="955" y2="252" class="dashed"/>
+  <text x="1112" y="596" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

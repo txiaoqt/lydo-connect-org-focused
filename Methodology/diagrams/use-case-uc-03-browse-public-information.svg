@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="960" viewBox="0 0 1700 960">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1700" height="960" fill="#fff"/>
+
+  <text x="850" y="46" text-anchor="middle" class="title">Figure 3. Use Case Diagram of Browse and View Public Information</text>
+
+  <rect x="390" y="100" width="920" height="730" rx="12" ry="12" class="shape"/>
+  <text x="850" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="850" cy="210" rx="300" ry="46" class="shape"/>
+  <text x="850" y="202" text-anchor="middle" class="text">UC-03</text>
+  <text x="850" y="226" text-anchor="middle" class="text">Browse and View Public Information</text>
+
+  <ellipse cx="640" cy="470" rx="190" ry="36" class="shape"/>
+  <text x="640" y="463" text-anchor="middle" class="text">Load Published Records</text>
+
+  <ellipse cx="1070" cy="470" rx="210" ry="36" class="shape"/>
+  <text x="1070" y="463" text-anchor="middle" class="text">View Program / Event Record</text>
+
+  <ellipse cx="640" cy="690" rx="170" ry="34" class="shape"/>
+  <text x="640" y="683" text-anchor="middle" class="text">Open Source Post</text>
+
+  <ellipse cx="1070" cy="690" rx="180" ry="34" class="shape"/>
+  <text x="1070" y="683" text-anchor="middle" class="text">View Location Preview</text>
+
+  <circle cx="110" cy="180" r="22" class="shape"/>
+  <line x1="110" y1="202" x2="110" y2="272" class="line"/>
+  <line x1="74" y1="228" x2="146" y2="228" class="line"/>
+  <line x1="110" y1="272" x2="80" y2="322" class="line"/>
+  <line x1="110" y1="272" x2="140" y2="322" class="line"/>
+  <text x="110" y="356" text-anchor="middle" class="label">Youth User</text>
+
+  <circle cx="110" cy="410" r="22" class="shape"/>
+  <line x1="110" y1="432" x2="110" y2="502" class="line"/>
+  <line x1="74" y1="458" x2="146" y2="458" class="line"/>
+  <line x1="110" y1="502" x2="80" y2="552" class="line"/>
+  <line x1="110" y1="502" x2="140" y2="552" class="line"/>
+  <text x="110" y="586" text-anchor="middle" class="label">Citizen</text>
+
+  <circle cx="110" cy="640" r="22" class="shape"/>
+  <line x1="110" y1="662" x2="110" y2="732" class="line"/>
+  <line x1="74" y1="688" x2="146" y2="688" class="line"/>
+  <line x1="110" y1="732" x2="80" y2="782" class="line"/>
+  <line x1="110" y1="732" x2="140" y2="782" class="line"/>
+  <text x="110" y="816" text-anchor="middle" class="label">Public Viewer</text>
+
+  <line x1="146" y1="228" x2="550" y2="210" class="line"/>
+  <line x1="146" y1="458" x2="575" y2="222" class="line"/>
+  <line x1="146" y1="688" x2="600" y2="234" class="line"/>
+
+  <line x1="760" y1="254" x2="695" y2="434" class="dashed"/>
+  <text x="720" y="360" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="940" y1="254" x2="1015" y2="434" class="dashed"/>
+  <text x="990" y="360" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="640" y1="656" x2="770" y2="253" class="dashed"/>
+  <text x="690" y="556" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="1070" y1="656" x2="935" y2="253" class="dashed"/>
+  <text x="1015" y="556" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1060" viewBox="0 0 1900 1060">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1900" height="1060" fill="#fff"/>
+
+  <text x="950" y="46" text-anchor="middle" class="title">Figure 8. Use Case Diagram of Manage Transparency and Financial Records</text>
+
+  <rect x="430" y="100" width="1040" height="830" rx="12" ry="12" class="shape"/>
+  <text x="950" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="950" cy="210" rx="345" ry="46" class="shape"/>
+  <text x="950" y="202" text-anchor="middle" class="text">UC-08</text>
+  <text x="950" y="226" text-anchor="middle" class="text">Manage Transparency and Financial Records</text>
+
+  <ellipse cx="650" cy="430" rx="165" ry="36" class="shape"/>
+  <text x="650" y="423" text-anchor="middle" class="text">Upload Document</text>
+
+  <ellipse cx="950" cy="430" rx="165" ry="36" class="shape"/>
+  <text x="950" y="423" text-anchor="middle" class="text">Validate Metadata</text>
+
+  <ellipse cx="1250" cy="430" rx="185" ry="36" class="shape"/>
+  <text x="1250" y="423" text-anchor="middle" class="text">Save Compliance Data</text>
+
+  <ellipse cx="730" cy="730" rx="180" ry="34" class="shape"/>
+  <text x="730" y="723" text-anchor="middle" class="text">Link Report Document</text>
+
+  <ellipse cx="1170" cy="730" rx="235" ry="40" class="shape"/>
+  <text x="1170" y="721" text-anchor="middle" class="text">Compute Completion /</text>
+  <text x="1170" y="744" text-anchor="middle" class="text">Summary Values</text>
+
+  <circle cx="110" cy="280" r="22" class="shape"/>
+  <line x1="110" y1="302" x2="110" y2="372" class="line"/>
+  <line x1="74" y1="328" x2="146" y2="328" class="line"/>
+  <line x1="110" y1="372" x2="80" y2="422" class="line"/>
+  <line x1="110" y1="372" x2="140" y2="422" class="line"/>
+  <text x="110" y="456" text-anchor="middle" class="label">LYDO</text>
+  <text x="110" y="480" text-anchor="middle" class="label">Administrator</text>
+
+  <circle cx="1790" cy="280" r="22" class="shape"/>
+  <line x1="1790" y1="302" x2="1790" y2="372" class="line"/>
+  <line x1="1754" y1="328" x2="1826" y2="328" class="line"/>
+  <line x1="1790" y1="372" x2="1760" y2="422" class="line"/>
+  <line x1="1790" y1="372" x2="1820" y2="422" class="line"/>
+  <text x="1790" y="456" text-anchor="middle" class="label">LYDO Staff /</text>
+  <text x="1790" y="480" text-anchor="middle" class="label">SK Officer</text>
+
+  <line x1="146" y1="328" x2="605" y2="210" class="line"/>
+  <line x1="1754" y1="328" x2="1295" y2="210" class="line"/>
+
+  <line x1="810" y1="252" x2="705" y2="394" class="dashed"/>
+  <text x="754" y="326" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="950" y1="256" x2="950" y2="394" class="dashed"/>
+  <text x="995" y="334" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1090" y1="252" x2="1190" y2="394" class="dashed"/>
+  <text x="1146" y="326" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="730" y1="696" x2="885" y2="254" class="dashed"/>
+  <text x="788" y="598" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="1170" y1="690" x2="1010" y2="254" class="dashed"/>
+  <text x="1116" y="598" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

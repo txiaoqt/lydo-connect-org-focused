@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="920" viewBox="0 0 1700 920">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1700" height="920" fill="#fff"/>
+
+  <text x="850" y="46" text-anchor="middle" class="title">Figure 4. Use Case Diagram of Register for Program or Event</text>
+
+  <rect x="390" y="100" width="920" height="710" rx="12" ry="12" class="shape"/>
+  <text x="850" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="850" cy="220" rx="250" ry="44" class="shape"/>
+  <text x="850" y="213" text-anchor="middle" class="text">UC-04</text>
+  <text x="850" y="236" text-anchor="middle" class="text">Register for Program or Event</text>
+
+  <ellipse cx="640" cy="500" rx="205" ry="36" class="shape"/>
+  <text x="640" y="493" text-anchor="middle" class="text">Validate Registration Details</text>
+
+  <ellipse cx="1080" cy="500" rx="220" ry="38" class="shape"/>
+  <text x="1080" y="493" text-anchor="middle" class="text">Sync Registration to Google Form</text>
+
+  <circle cx="110" cy="260" r="22" class="shape"/>
+  <line x1="110" y1="282" x2="110" y2="352" class="line"/>
+  <line x1="74" y1="308" x2="146" y2="308" class="line"/>
+  <line x1="110" y1="352" x2="80" y2="402" class="line"/>
+  <line x1="110" y1="352" x2="140" y2="402" class="line"/>
+  <text x="110" y="436" text-anchor="middle" class="label">Youth User</text>
+
+  <circle cx="1590" cy="220" r="22" class="shape"/>
+  <line x1="1590" y1="242" x2="1590" y2="312" class="line"/>
+  <line x1="1554" y1="268" x2="1626" y2="268" class="line"/>
+  <line x1="1590" y1="312" x2="1560" y2="362" class="line"/>
+  <line x1="1590" y1="312" x2="1620" y2="362" class="line"/>
+  <text x="1590" y="396" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1590" y="418" text-anchor="middle" class="label">Authentication</text>
+
+  <circle cx="1590" cy="560" r="22" class="shape"/>
+  <line x1="1590" y1="582" x2="1590" y2="652" class="line"/>
+  <line x1="1554" y1="608" x2="1626" y2="608" class="line"/>
+  <line x1="1590" y1="652" x2="1560" y2="702" class="line"/>
+  <line x1="1590" y1="652" x2="1620" y2="702" class="line"/>
+  <text x="1590" y="736" text-anchor="middle" class="label">Google Form /</text>
+  <text x="1590" y="760" text-anchor="middle" class="label">Google Sheet</text>
+
+  <line x1="146" y1="308" x2="600" y2="220" class="line"/>
+  <line x1="1554" y1="268" x2="1090" y2="220" class="line"/>
+  <line x1="1554" y1="608" x2="1300" y2="500" class="line"/>
+
+  <line x1="770" y1="263" x2="700" y2="464" class="dashed"/>
+  <text x="722" y="380" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1080" y1="462" x2="935" y2="262" class="dashed"/>
+  <text x="1018" y="380" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

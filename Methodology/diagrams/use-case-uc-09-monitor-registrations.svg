@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1850" height="1020" viewBox="0 0 1850 1020">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1850" height="1020" fill="#fff"/>
+
+  <text x="925" y="46" text-anchor="middle" class="title">Figure 9. Use Case Diagram of Monitor Registrations and Retry Sync</text>
+
+  <rect x="420" y="100" width="1010" height="790" rx="12" ry="12" class="shape"/>
+  <text x="925" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="925" cy="210" rx="330" ry="46" class="shape"/>
+  <text x="925" y="202" text-anchor="middle" class="text">UC-09</text>
+  <text x="925" y="226" text-anchor="middle" class="text">Monitor Registrations and Retry Sync</text>
+
+  <ellipse cx="680" cy="450" rx="205" ry="36" class="shape"/>
+  <text x="680" y="443" text-anchor="middle" class="text">View Registration Records</text>
+
+  <ellipse cx="1170" cy="450" rx="180" ry="36" class="shape"/>
+  <text x="1170" y="443" text-anchor="middle" class="text">Retry Failed Sync</text>
+
+  <ellipse cx="680" cy="730" rx="190" ry="34" class="shape"/>
+  <text x="680" y="723" text-anchor="middle" class="text">Export Registration Data</text>
+
+  <ellipse cx="1170" cy="730" rx="240" ry="40" class="shape"/>
+  <text x="1170" y="721" text-anchor="middle" class="text">Preview External Attendance</text>
+  <text x="1170" y="744" text-anchor="middle" class="text">Sheet</text>
+
+  <circle cx="110" cy="260" r="22" class="shape"/>
+  <line x1="110" y1="282" x2="110" y2="352" class="line"/>
+  <line x1="74" y1="308" x2="146" y2="308" class="line"/>
+  <line x1="110" y1="352" x2="80" y2="402" class="line"/>
+  <line x1="110" y1="352" x2="140" y2="402" class="line"/>
+  <text x="110" y="436" text-anchor="middle" class="label">LYDO</text>
+  <text x="110" y="460" text-anchor="middle" class="label">Administrator</text>
+
+  <circle cx="110" cy="610" r="22" class="shape"/>
+  <line x1="110" y1="632" x2="110" y2="702" class="line"/>
+  <line x1="74" y1="658" x2="146" y2="658" class="line"/>
+  <line x1="110" y1="702" x2="80" y2="752" class="line"/>
+  <line x1="110" y1="702" x2="140" y2="752" class="line"/>
+  <text x="110" y="786" text-anchor="middle" class="label">LYDO Staff /</text>
+  <text x="110" y="810" text-anchor="middle" class="label">SK Officer</text>
+
+  <circle cx="1740" cy="360" r="22" class="shape"/>
+  <line x1="1740" y1="382" x2="1740" y2="452" class="line"/>
+  <line x1="1704" y1="408" x2="1776" y2="408" class="line"/>
+  <line x1="1740" y1="452" x2="1710" y2="502" class="line"/>
+  <line x1="1740" y1="452" x2="1770" y2="502" class="line"/>
+  <text x="1740" y="536" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1740" y="558" text-anchor="middle" class="label">Google Form /</text>
+  <text x="1740" y="582" text-anchor="middle" class="label">Google Sheet</text>
+
+  <line x1="146" y1="308" x2="595" y2="210" class="line"/>
+  <line x1="146" y1="658" x2="640" y2="228" class="line"/>
+  <line x1="1704" y1="408" x2="1410" y2="730" class="line"/>
+
+  <line x1="825" y1="255" x2="735" y2="414" class="dashed"/>
+  <text x="775" y="346" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1025" y1="255" x2="1115" y2="414" class="dashed"/>
+  <text x="1075" y="346" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="680" y1="696" x2="860" y2="254" class="dashed"/>
+  <text x="744" y="606" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="1170" y1="690" x2="990" y2="254" class="dashed"/>
+  <text x="1104" y="606" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

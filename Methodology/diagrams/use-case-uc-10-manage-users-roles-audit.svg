@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1020" viewBox="0 0 1800 1020">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="1020" fill="#fff"/>
+
+  <text x="900" y="46" text-anchor="middle" class="title">Figure 10. Use Case Diagram of Manage Users, Roles, and Audit Logs</text>
+
+  <rect x="410" y="100" width="980" height="790" rx="12" ry="12" class="shape"/>
+  <text x="900" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="900" cy="210" rx="310" ry="46" class="shape"/>
+  <text x="900" y="202" text-anchor="middle" class="text">UC-10</text>
+  <text x="900" y="226" text-anchor="middle" class="text">Manage Users, Roles, and Audit Logs</text>
+
+  <ellipse cx="620" cy="460" rx="140" ry="36" class="shape"/>
+  <text x="620" y="453" text-anchor="middle" class="text">View Users</text>
+
+  <ellipse cx="900" cy="460" rx="140" ry="36" class="shape"/>
+  <text x="900" y="453" text-anchor="middle" class="text">Assign Roles</text>
+
+  <ellipse cx="1180" cy="460" rx="165" ry="36" class="shape"/>
+  <text x="1180" y="453" text-anchor="middle" class="text">Review Audit Trail</text>
+
+  <ellipse cx="900" cy="740" rx="165" ry="34" class="shape"/>
+  <text x="900" y="733" text-anchor="middle" class="text">Update User Access</text>
+
+  <circle cx="110" cy="300" r="22" class="shape"/>
+  <line x1="110" y1="322" x2="110" y2="392" class="line"/>
+  <line x1="74" y1="348" x2="146" y2="348" class="line"/>
+  <line x1="110" y1="392" x2="80" y2="442" class="line"/>
+  <line x1="110" y1="392" x2="140" y2="442" class="line"/>
+  <text x="110" y="476" text-anchor="middle" class="label">LYDO</text>
+  <text x="110" y="500" text-anchor="middle" class="label">Administrator</text>
+
+  <line x1="146" y1="348" x2="590" y2="220" class="line"/>
+
+  <line x1="800" y1="255" x2="680" y2="424" class="dashed"/>
+  <text x="736" y="348" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="900" y1="256" x2="900" y2="424" class="dashed"/>
+  <text x="944" y="348" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1000" y1="255" x2="1120" y2="424" class="dashed"/>
+  <text x="1064" y="348" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="900" y1="706" x2="900" y2="256" class="dashed"/>
+  <text x="942" y="584" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>
