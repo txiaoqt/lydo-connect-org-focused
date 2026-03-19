@@ -12,7 +12,7 @@ This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement
 
 ## Files
 
-- [3.0 Methodology Overview](./3.0-Methodology-Overview.md)
+- [3.0 Methodology](./3.0-Methodology.md)
 - [3.1.1 Requirement Analysis](./3.1.1-Requirement-Analysis.md)
 - [3.1.2 Use Case Diagram](./3.1.2-Use-Case-Diagram.md)
 - [3.1.3 Use Case Report](./3.1.3-Use-Case-Report.md)
