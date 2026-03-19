@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="900" viewBox="0 0 1460 900">
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1040" viewBox="0 0 1700 1040">
   <defs>
     <style>
       .title { font: 700 28px Arial, sans-serif; fill: #111; }
-      .label { font: 600 18px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
       .text { font: 16px Arial, sans-serif; fill: #111; }
       .small { font: italic 15px Arial, sans-serif; fill: #111; }
       .line { stroke: #111; stroke-width: 2.2; fill: none; }
@@ -15,94 +15,112 @@
     </marker>
   </defs>
 
-  <text x="730" y="42" text-anchor="middle" class="title">Figure 2. Public User Use Case Diagram</text>
+  <text x="850" y="42" text-anchor="middle" class="title">Figure 2. Public User Use Case Diagram</text>
 
-  <rect x="300" y="80" width="820" height="740" rx="8" ry="8" class="shape"/>
-  <text x="710" y="115" text-anchor="middle" class="label">LYDO Connect - Public Portal</text>
+  <rect x="260" y="80" width="1120" height="900" rx="10" ry="10" class="shape"/>
+  <text x="820" y="118" text-anchor="middle" class="label">LYDO Connect - Public Portal</text>
 
-  <ellipse cx="520" cy="180" rx="110" ry="30" class="shape"/>
-  <text x="520" y="186" text-anchor="middle" class="text">Sign Up</text>
+  <ellipse cx="540" cy="175" rx="115" ry="30" class="shape"/>
+  <text x="540" y="181" text-anchor="middle" class="text">Sign Up</text>
 
-  <ellipse cx="520" cy="255" rx="110" ry="30" class="shape"/>
-  <text x="520" y="261" text-anchor="middle" class="text">Log In</text>
+  <ellipse cx="540" cy="265" rx="115" ry="30" class="shape"/>
+  <text x="540" y="271" text-anchor="middle" class="text">Log In</text>
 
-  <ellipse cx="520" cy="355" rx="180" ry="42" class="shape"/>
-  <text x="520" y="348" text-anchor="middle" class="text">Browse Programs, Events,</text>
-  <text x="520" y="369" text-anchor="middle" class="text">Organizations, and Advisories</text>
+  <ellipse cx="540" cy="380" rx="180" ry="38" class="shape"/>
+  <text x="540" y="374" text-anchor="middle" class="text">Browse Programs</text>
+  <text x="540" y="395" text-anchor="middle" class="text">and Events</text>
 
-  <ellipse cx="520" cy="465" rx="155" ry="36" class="shape"/>
-  <text x="520" y="460" text-anchor="middle" class="text">View Program / Event</text>
-  <text x="520" y="481" text-anchor="middle" class="text">Record</text>
+  <ellipse cx="540" cy="495" rx="175" ry="38" class="shape"/>
+  <text x="540" y="489" text-anchor="middle" class="text">View Program / Event</text>
+  <text x="540" y="510" text-anchor="middle" class="text">Record</text>
 
-  <ellipse cx="520" cy="585" rx="155" ry="36" class="shape"/>
-  <text x="520" y="580" text-anchor="middle" class="text">Register for Program</text>
-  <text x="520" y="601" text-anchor="middle" class="text">or Event</text>
+  <ellipse cx="540" cy="610" rx="175" ry="38" class="shape"/>
+  <text x="540" y="604" text-anchor="middle" class="text">Register for Program</text>
+  <text x="540" y="625" text-anchor="middle" class="text">or Event</text>
 
-  <ellipse cx="520" cy="705" rx="185" ry="42" class="shape"/>
-  <text x="520" y="698" text-anchor="middle" class="text">Manage Profile and</text>
-  <text x="520" y="719" text-anchor="middle" class="text">Participation History</text>
+  <ellipse cx="540" cy="730" rx="160" ry="34" class="shape"/>
+  <text x="540" y="724" text-anchor="middle" class="text">Join / Leave</text>
+  <text x="540" y="745" text-anchor="middle" class="text">Organization</text>
 
-  <ellipse cx="880" cy="235" rx="180" ry="42" class="shape"/>
-  <text x="880" y="228" text-anchor="middle" class="text">View Transparency, Financial,</text>
-  <text x="880" y="249" text-anchor="middle" class="text">and Barangay Data</text>
+  <ellipse cx="1030" cy="175" rx="205" ry="38" class="shape"/>
+  <text x="1030" y="169" text-anchor="middle" class="text">Manage Profile and</text>
+  <text x="1030" y="190" text-anchor="middle" class="text">Participation History</text>
 
-  <ellipse cx="880" cy="370" rx="140" ry="32" class="shape"/>
-  <text x="880" y="376" text-anchor="middle" class="text">Submit Citizen Ticket</text>
+  <ellipse cx="1030" cy="295" rx="205" ry="38" class="shape"/>
+  <text x="1030" y="289" text-anchor="middle" class="text">View Transparency Reports</text>
+  <text x="1030" y="310" text-anchor="middle" class="text">and Transparency Board</text>
 
-  <ellipse cx="880" cy="470" rx="130" ry="30" class="shape"/>
-  <text x="880" y="476" text-anchor="middle" class="text">Track Citizen Ticket</text>
+  <ellipse cx="1030" cy="420" rx="215" ry="40" class="shape"/>
+  <text x="1030" y="413" text-anchor="middle" class="text">View Financial Disclosure</text>
+  <text x="1030" y="435" text-anchor="middle" class="text">and Barangay Map</text>
 
-  <ellipse cx="880" cy="585" rx="150" ry="34" class="shape"/>
-  <text x="880" y="580" text-anchor="middle" class="text">Validate Registration</text>
-  <text x="880" y="601" text-anchor="middle" class="text">Details</text>
+  <ellipse cx="1030" cy="545" rx="155" ry="32" class="shape"/>
+  <text x="1030" y="551" text-anchor="middle" class="text">Submit Citizen Ticket</text>
 
-  <ellipse cx="880" cy="705" rx="170" ry="38" class="shape"/>
-  <text x="880" y="699" text-anchor="middle" class="text">Sync Registration to</text>
-  <text x="880" y="720" text-anchor="middle" class="text">Google Form</text>
+  <ellipse cx="1030" cy="665" rx="190" ry="38" class="shape"/>
+  <text x="1030" y="659" text-anchor="middle" class="text">Track Tickets and</text>
+  <text x="1030" y="680" text-anchor="middle" class="text">View My Tickets</text>
 
-  <circle cx="110" cy="390" r="22" class="shape"/>
-  <line x1="110" y1="412" x2="110" y2="480" class="line"/>
-  <line x1="74" y1="438" x2="146" y2="438" class="line"/>
-  <line x1="110" y1="480" x2="80" y2="530" class="line"/>
-  <line x1="110" y1="480" x2="140" y2="530" class="line"/>
-  <text x="110" y="562" text-anchor="middle" class="label">Youth User</text>
+  <ellipse cx="1030" cy="785" rx="165" ry="34" class="shape"/>
+  <text x="1030" y="791" text-anchor="middle" class="text">View Service Advisories</text>
 
-  <circle cx="1320" cy="220" r="22" class="shape"/>
-  <line x1="1320" y1="242" x2="1320" y2="310" class="line"/>
-  <line x1="1284" y1="268" x2="1356" y2="268" class="line"/>
-  <line x1="1320" y1="310" x2="1290" y2="360" class="line"/>
-  <line x1="1320" y1="310" x2="1350" y2="360" class="line"/>
-  <text x="1320" y="390" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
-  <text x="1320" y="412" text-anchor="middle" class="label">Authentication</text>
+  <ellipse cx="720" cy="900" rx="165" ry="32" class="shape"/>
+  <text x="720" y="894" text-anchor="middle" class="text">Validate Registration</text>
+  <text x="720" y="915" text-anchor="middle" class="text">Details</text>
 
-  <circle cx="1320" cy="600" r="22" class="shape"/>
-  <line x1="1320" y1="622" x2="1320" y2="690" class="line"/>
-  <line x1="1284" y1="648" x2="1356" y2="648" class="line"/>
-  <line x1="1320" y1="690" x2="1290" y2="740" class="line"/>
-  <line x1="1320" y1="690" x2="1350" y2="740" class="line"/>
-  <text x="1320" y="772" text-anchor="middle" class="label">Google Form /</text>
-  <text x="1320" y="794" text-anchor="middle" class="label">Google Sheet</text>
+  <ellipse cx="1060" cy="900" rx="185" ry="34" class="shape"/>
+  <text x="1060" y="894" text-anchor="middle" class="text">Sync Registration to</text>
+  <text x="1060" y="915" text-anchor="middle" class="text">Google Form</text>
 
-  <line x1="132" y1="438" x2="410" y2="180" class="line"/>
-  <line x1="132" y1="438" x2="410" y2="255" class="line"/>
-  <line x1="132" y1="438" x2="340" y2="355" class="line"/>
-  <line x1="132" y1="438" x2="365" y2="465" class="line"/>
-  <line x1="132" y1="438" x2="365" y2="585" class="line"/>
-  <line x1="132" y1="438" x2="335" y2="705" class="line"/>
-  <line x1="132" y1="438" x2="700" y2="235" class="line"/>
-  <line x1="132" y1="438" x2="740" y2="370" class="line"/>
-  <line x1="132" y1="438" x2="750" y2="470" class="line"/>
+  <circle cx="95" cy="420" r="22" class="shape"/>
+  <line x1="95" y1="442" x2="95" y2="510" class="line"/>
+  <line x1="59" y1="468" x2="131" y2="468" class="line"/>
+  <line x1="95" y1="510" x2="65" y2="560" class="line"/>
+  <line x1="95" y1="510" x2="125" y2="560" class="line"/>
+  <text x="95" y="594" text-anchor="middle" class="label">Youth User / Citizen</text>
 
-  <line x1="1298" y1="268" x2="630" y2="180" class="line"/>
-  <line x1="1298" y1="268" x2="630" y2="255" class="line"/>
-  <line x1="1298" y1="268" x2="675" y2="585" class="line"/>
-  <line x1="1298" y1="268" x2="705" y2="705" class="line"/>
+  <circle cx="1560" cy="220" r="22" class="shape"/>
+  <line x1="1560" y1="242" x2="1560" y2="310" class="line"/>
+  <line x1="1524" y1="268" x2="1596" y2="268" class="line"/>
+  <line x1="1560" y1="310" x2="1530" y2="360" class="line"/>
+  <line x1="1560" y1="310" x2="1590" y2="360" class="line"/>
+  <text x="1560" y="390" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1560" y="412" text-anchor="middle" class="label">Authentication</text>
 
-  <line x1="1298" y1="648" x2="1050" y2="705" class="line"/>
+  <circle cx="1560" cy="720" r="22" class="shape"/>
+  <line x1="1560" y1="742" x2="1560" y2="810" class="line"/>
+  <line x1="1524" y1="768" x2="1596" y2="768" class="line"/>
+  <line x1="1560" y1="810" x2="1530" y2="860" class="line"/>
+  <line x1="1560" y1="810" x2="1590" y2="860" class="line"/>
+  <text x="1560" y="892" text-anchor="middle" class="label">Google Form /</text>
+  <text x="1560" y="914" text-anchor="middle" class="label">Google Sheet</text>
 
-  <line x1="675" y1="585" x2="730" y2="585" class="include"/>
-  <text x="690" y="565" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+  <line x1="117" y1="468" x2="220" y2="468" class="line"/>
+  <line x1="220" y1="468" x2="425" y2="175" class="line"/>
+  <line x1="220" y1="468" x2="425" y2="265" class="line"/>
+  <line x1="220" y1="468" x2="360" y2="380" class="line"/>
+  <line x1="220" y1="468" x2="365" y2="495" class="line"/>
+  <line x1="220" y1="468" x2="365" y2="610" class="line"/>
+  <line x1="220" y1="468" x2="380" y2="730" class="line"/>
+  <line x1="220" y1="468" x2="825" y2="175" class="line"/>
+  <line x1="220" y1="468" x2="825" y2="295" class="line"/>
+  <line x1="220" y1="468" x2="815" y2="420" class="line"/>
+  <line x1="220" y1="468" x2="875" y2="545" class="line"/>
+  <line x1="220" y1="468" x2="840" y2="665" class="line"/>
+  <line x1="220" y1="468" x2="865" y2="785" class="line"/>
 
-  <line x1="650" y1="610" x2="730" y2="690" class="include"/>
-  <text x="660" y="675" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1538" y1="268" x2="1440" y2="268" class="line"/>
+  <line x1="1440" y1="268" x2="655" y2="175" class="line"/>
+  <line x1="1440" y1="268" x2="655" y2="265" class="line"/>
+  <line x1="1440" y1="268" x2="715" y2="610" class="line"/>
+  <line x1="1440" y1="268" x2="1235" y2="175" class="line"/>
+
+  <line x1="1538" y1="768" x2="1450" y2="768" class="line"/>
+  <line x1="1450" y1="768" x2="1245" y2="900" class="line"/>
+
+  <line x1="655" y1="642" x2="705" y2="869" class="include"/>
+  <text x="700" y="770" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="670" y1="636" x2="955" y2="868" class="include"/>
+  <text x="870" y="800" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
 </svg>

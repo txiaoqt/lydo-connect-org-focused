@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1420" height="900" viewBox="0 0 1420 900">
+<svg xmlns="http://www.w3.org/2000/svg" width="1740" height="1100" viewBox="0 0 1740 1100">
   <defs>
     <style>
       .title { font: 700 28px Arial, sans-serif; fill: #111; }
-      .label { font: 600 18px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
       .text { font: 16px Arial, sans-serif; fill: #111; }
       .small { font: italic 15px Arial, sans-serif; fill: #111; }
       .line { stroke: #111; stroke-width: 2.2; fill: none; }
@@ -15,96 +15,136 @@
     </marker>
   </defs>
 
-  <text x="710" y="42" text-anchor="middle" class="title">Figure 3. Admin Use Case Diagram</text>
+  <text x="870" y="42" text-anchor="middle" class="title">Figure 3. Admin Use Case Diagram</text>
 
-  <rect x="280" y="80" width="820" height="740" rx="8" ry="8" class="shape"/>
-  <text x="690" y="115" text-anchor="middle" class="label">LYDO Connect - Admin Portal</text>
+  <rect x="280" y="80" width="1160" height="960" rx="10" ry="10" class="shape"/>
+  <text x="860" y="118" text-anchor="middle" class="label">LYDO Connect - Admin Portal</text>
 
-  <ellipse cx="530" cy="170" rx="110" ry="30" class="shape"/>
-  <text x="530" y="176" text-anchor="middle" class="text">Log In</text>
+  <ellipse cx="560" cy="170" rx="115" ry="30" class="shape"/>
+  <text x="560" y="176" text-anchor="middle" class="text">Log In</text>
 
-  <ellipse cx="530" cy="280" rx="185" ry="40" class="shape"/>
-  <text x="530" y="274" text-anchor="middle" class="text">Manage Programs, Events,</text>
-  <text x="530" y="295" text-anchor="middle" class="text">and Organizations</text>
+  <ellipse cx="560" cy="260" rx="135" ry="30" class="shape"/>
+  <text x="560" y="266" text-anchor="middle" class="text">View Dashboard</text>
 
-  <ellipse cx="530" cy="400" rx="170" ry="36" class="shape"/>
-  <text x="530" y="395" text-anchor="middle" class="text">Manage Transparency</text>
-  <text x="530" y="416" text-anchor="middle" class="text">Documents</text>
+  <ellipse cx="560" cy="360" rx="145" ry="32" class="shape"/>
+  <text x="560" y="366" text-anchor="middle" class="text">Manage Programs</text>
 
-  <ellipse cx="530" cy="525" rx="185" ry="40" class="shape"/>
-  <text x="530" y="519" text-anchor="middle" class="text">Manage Compliance and</text>
-  <text x="530" y="540" text-anchor="middle" class="text">Financial Records</text>
+  <ellipse cx="560" cy="455" rx="135" ry="30" class="shape"/>
+  <text x="560" y="461" text-anchor="middle" class="text">Manage Events</text>
 
-  <ellipse cx="530" cy="650" rx="145" ry="34" class="shape"/>
-  <text x="530" y="656" text-anchor="middle" class="text">Monitor Registrations</text>
+  <ellipse cx="560" cy="550" rx="165" ry="34" class="shape"/>
+  <text x="560" y="556" text-anchor="middle" class="text">Manage Organizations</text>
 
-  <ellipse cx="870" cy="230" rx="125" ry="30" class="shape"/>
-  <text x="870" y="236" text-anchor="middle" class="text">Retry Failed Sync</text>
+  <ellipse cx="560" cy="655" rx="205" ry="38" class="shape"/>
+  <text x="560" y="649" text-anchor="middle" class="text">Manage Barangay Map</text>
+  <text x="560" y="670" text-anchor="middle" class="text">and Resident Data</text>
 
-  <ellipse cx="870" cy="360" rx="145" ry="34" class="shape"/>
-  <text x="870" y="355" text-anchor="middle" class="text">Manage Citizen Desk</text>
-  <text x="870" y="376" text-anchor="middle" class="text">Tickets</text>
+  <ellipse cx="560" cy="770" rx="185" ry="36" class="shape"/>
+  <text x="560" y="764" text-anchor="middle" class="text">Manage Transparency</text>
+  <text x="560" y="785" text-anchor="middle" class="text">Documents</text>
 
-  <ellipse cx="870" cy="500" rx="140" ry="32" class="shape"/>
-  <text x="870" y="495" text-anchor="middle" class="text">Manage Users and</text>
-  <text x="870" y="516" text-anchor="middle" class="text">Roles</text>
+  <ellipse cx="1050" cy="170" rx="180" ry="36" class="shape"/>
+  <text x="1050" y="164" text-anchor="middle" class="text">Manage Transparency</text>
+  <text x="1050" y="185" text-anchor="middle" class="text">Board</text>
 
-  <ellipse cx="870" cy="640" rx="120" ry="30" class="shape"/>
-  <text x="870" y="646" text-anchor="middle" class="text">Review Audit Logs</text>
+  <ellipse cx="1050" cy="275" rx="165" ry="34" class="shape"/>
+  <text x="1050" y="281" text-anchor="middle" class="text">Manage Financial DSS</text>
 
-  <circle cx="90" cy="250" r="22" class="shape"/>
-  <line x1="90" y1="272" x2="90" y2="340" class="line"/>
-  <line x1="54" y1="298" x2="126" y2="298" class="line"/>
-  <line x1="90" y1="340" x2="60" y2="390" class="line"/>
-  <line x1="90" y1="340" x2="120" y2="390" class="line"/>
-  <text x="90" y="422" text-anchor="middle" class="label">LYDO</text>
-  <text x="90" y="444" text-anchor="middle" class="label">Administrator</text>
+  <ellipse cx="1050" cy="390" rx="215" ry="38" class="shape"/>
+  <text x="1050" y="384" text-anchor="middle" class="text">Monitor Registrations</text>
+  <text x="1050" y="405" text-anchor="middle" class="text">and Sync Status</text>
 
-  <circle cx="90" cy="580" r="22" class="shape"/>
-  <line x1="90" y1="602" x2="90" y2="670" class="line"/>
-  <line x1="54" y1="628" x2="126" y2="628" class="line"/>
-  <line x1="90" y1="670" x2="60" y2="720" class="line"/>
-  <line x1="90" y1="670" x2="120" y2="720" class="line"/>
-  <text x="90" y="752" text-anchor="middle" class="label">LYDO Staff /</text>
-  <text x="90" y="774" text-anchor="middle" class="label">SK Officer</text>
+  <ellipse cx="1050" cy="505" rx="170" ry="34" class="shape"/>
+  <text x="1050" y="499" text-anchor="middle" class="text">Manage Citizen Desk</text>
+  <text x="1050" y="520" text-anchor="middle" class="text">Tickets</text>
 
-  <circle cx="1290" cy="220" r="22" class="shape"/>
-  <line x1="1290" y1="242" x2="1290" y2="310" class="line"/>
-  <line x1="1254" y1="268" x2="1326" y2="268" class="line"/>
-  <line x1="1290" y1="310" x2="1260" y2="360" class="line"/>
-  <line x1="1290" y1="310" x2="1320" y2="360" class="line"/>
-  <text x="1290" y="390" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
-  <text x="1290" y="412" text-anchor="middle" class="label">Authentication</text>
+  <ellipse cx="1050" cy="620" rx="155" ry="32" class="shape"/>
+  <text x="1050" y="626" text-anchor="middle" class="text">Manage Users and Roles</text>
 
-  <circle cx="1290" cy="580" r="22" class="shape"/>
-  <line x1="1290" y1="602" x2="1290" y2="670" class="line"/>
-  <line x1="1254" y1="628" x2="1326" y2="628" class="line"/>
-  <line x1="1290" y1="670" x2="1260" y2="720" class="line"/>
-  <line x1="1290" y1="670" x2="1320" y2="720" class="line"/>
-  <text x="1290" y="752" text-anchor="middle" class="label">Google Form /</text>
-  <text x="1290" y="774" text-anchor="middle" class="label">Google Sheet</text>
+  <ellipse cx="1050" cy="730" rx="135" ry="30" class="shape"/>
+  <text x="1050" y="736" text-anchor="middle" class="text">Review Audit Logs</text>
 
-  <line x1="112" y1="298" x2="420" y2="170" class="line"/>
-  <line x1="112" y1="298" x2="345" y2="280" class="line"/>
-  <line x1="112" y1="298" x2="360" y2="400" class="line"/>
-  <line x1="112" y1="298" x2="345" y2="525" class="line"/>
-  <line x1="112" y1="298" x2="385" y2="650" class="line"/>
-  <line x1="112" y1="298" x2="745" y2="230" class="line"/>
-  <line x1="112" y1="298" x2="725" y2="360" class="line"/>
-  <line x1="112" y1="298" x2="730" y2="500" class="line"/>
-  <line x1="112" y1="298" x2="750" y2="640" class="line"/>
+  <ellipse cx="770" cy="895" rx="145" ry="32" class="shape"/>
+  <text x="770" y="901" text-anchor="middle" class="text">Retry Failed Sync</text>
 
-  <line x1="112" y1="628" x2="345" y2="280" class="line"/>
-  <line x1="112" y1="628" x2="360" y2="400" class="line"/>
-  <line x1="112" y1="628" x2="345" y2="525" class="line"/>
-  <line x1="112" y1="628" x2="385" y2="650" class="line"/>
-  <line x1="112" y1="628" x2="725" y2="360" class="line"/>
-  <line x1="112" y1="628" x2="745" y2="230" class="line"/>
+  <ellipse cx="1040" cy="895" rx="160" ry="34" class="shape"/>
+  <text x="1040" y="889" text-anchor="middle" class="text">Export Registration</text>
+  <text x="1040" y="910" text-anchor="middle" class="text">Data</text>
 
-  <line x1="1268" y1="268" x2="640" y2="170" class="line"/>
-  <line x1="1268" y1="268" x2="1010" y2="230" class="line"/>
-  <line x1="1268" y1="628" x2="995" y2="230" class="line"/>
+  <ellipse cx="1280" cy="895" rx="185" ry="36" class="shape"/>
+  <text x="1280" y="889" text-anchor="middle" class="text">Preview External</text>
+  <text x="1280" y="910" text-anchor="middle" class="text">Attendance Sheet</text>
 
-  <line x1="675" y1="650" x2="745" y2="245" class="include"/>
-  <text x="730" y="440" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+  <circle cx="90" cy="280" r="22" class="shape"/>
+  <line x1="90" y1="302" x2="90" y2="370" class="line"/>
+  <line x1="54" y1="328" x2="126" y2="328" class="line"/>
+  <line x1="90" y1="370" x2="60" y2="420" class="line"/>
+  <line x1="90" y1="370" x2="120" y2="420" class="line"/>
+  <text x="90" y="454" text-anchor="middle" class="label">LYDO Administrator</text>
+
+  <circle cx="90" cy="710" r="22" class="shape"/>
+  <line x1="90" y1="732" x2="90" y2="800" class="line"/>
+  <line x1="54" y1="758" x2="126" y2="758" class="line"/>
+  <line x1="90" y1="800" x2="60" y2="850" class="line"/>
+  <line x1="90" y1="800" x2="120" y2="850" class="line"/>
+  <text x="90" y="884" text-anchor="middle" class="label">LYDO Staff / SK Officer</text>
+
+  <circle cx="1630" cy="220" r="22" class="shape"/>
+  <line x1="1630" y1="242" x2="1630" y2="310" class="line"/>
+  <line x1="1594" y1="268" x2="1666" y2="268" class="line"/>
+  <line x1="1630" y1="310" x2="1600" y2="360" class="line"/>
+  <line x1="1630" y1="310" x2="1660" y2="360" class="line"/>
+  <text x="1630" y="390" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1630" y="412" text-anchor="middle" class="label">Authentication</text>
+
+  <circle cx="1630" cy="760" r="22" class="shape"/>
+  <line x1="1630" y1="782" x2="1630" y2="850" class="line"/>
+  <line x1="1594" y1="808" x2="1666" y2="808" class="line"/>
+  <line x1="1630" y1="850" x2="1600" y2="900" class="line"/>
+  <line x1="1630" y1="850" x2="1660" y2="900" class="line"/>
+  <text x="1630" y="932" text-anchor="middle" class="label">Google Form /</text>
+  <text x="1630" y="954" text-anchor="middle" class="label">Google Sheet</text>
+
+  <line x1="112" y1="328" x2="220" y2="328" class="line"/>
+  <line x1="220" y1="328" x2="445" y2="170" class="line"/>
+  <line x1="220" y1="328" x2="425" y2="260" class="line"/>
+  <line x1="220" y1="328" x2="415" y2="360" class="line"/>
+  <line x1="220" y1="328" x2="425" y2="455" class="line"/>
+  <line x1="220" y1="328" x2="395" y2="550" class="line"/>
+  <line x1="220" y1="328" x2="355" y2="655" class="line"/>
+  <line x1="220" y1="328" x2="375" y2="770" class="line"/>
+  <line x1="220" y1="328" x2="870" y2="170" class="line"/>
+  <line x1="220" y1="328" x2="885" y2="275" class="line"/>
+  <line x1="220" y1="328" x2="835" y2="390" class="line"/>
+  <line x1="220" y1="328" x2="880" y2="505" class="line"/>
+  <line x1="220" y1="328" x2="895" y2="620" class="line"/>
+  <line x1="220" y1="328" x2="915" y2="730" class="line"/>
+
+  <line x1="112" y1="758" x2="220" y2="758" class="line"/>
+  <line x1="220" y1="758" x2="425" y2="260" class="line"/>
+  <line x1="220" y1="758" x2="415" y2="360" class="line"/>
+  <line x1="220" y1="758" x2="425" y2="455" class="line"/>
+  <line x1="220" y1="758" x2="395" y2="550" class="line"/>
+  <line x1="220" y1="758" x2="355" y2="655" class="line"/>
+  <line x1="220" y1="758" x2="375" y2="770" class="line"/>
+  <line x1="220" y1="758" x2="870" y2="170" class="line"/>
+  <line x1="220" y1="758" x2="885" y2="275" class="line"/>
+  <line x1="220" y1="758" x2="835" y2="390" class="line"/>
+  <line x1="220" y1="758" x2="880" y2="505" class="line"/>
+
+  <line x1="1608" y1="268" x2="1510" y2="268" class="line"/>
+  <line x1="1510" y1="268" x2="675" y2="170" class="line"/>
+
+  <line x1="1608" y1="808" x2="1510" y2="808" class="line"/>
+  <line x1="1510" y1="808" x2="1095" y2="895" class="line"/>
+  <line x1="1510" y1="808" x2="1465" y2="895" class="line"/>
+
+  <line x1="915" y1="390" x2="780" y2="863" class="include"/>
+  <text x="820" y="640" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1010" y1="428" x2="1040" y2="861" class="include"/>
+  <text x="1068" y="650" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1135" y1="420" x2="1260" y2="859" class="include"/>
+  <text x="1245" y="645" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
 </svg>
