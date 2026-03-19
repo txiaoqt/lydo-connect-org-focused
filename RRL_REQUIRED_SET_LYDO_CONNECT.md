@@ -21,22 +21,22 @@ It is also aligned with the themes you specified:
 
 ### A. Replacement for Calvert et al. (2015)
 
-**Collins, M. E., Augsberger, A., & Gecker, W. (2016). _Youth councils in municipal government: Examination of activities, impact and barriers_. Children and Youth Services Review, 65, 140-147. https://doi.org/10.1016/j.childyouth.2016.04.007**
+**Mukwaya, S. N., Bagonza, R. A., & Lubaale, G. (2021). _Influence of youth participation under decentralization in local governments in Uganda_. International Journal of Research and Innovation in Social Science, 5(9), 350-357. https://www.rsisinternational.org/journals/ijriss/Digital-Library/volume-5-issue-9/350-357.pdf**
 
 **Why this fits**
 
 - This is a `2016-present` source and is a strong replacement for `Calvert et al. (2015)`.
 - It is directly connected to `youth participation in local governance`.
-- It examines `municipal youth councils`, which are close to the role of youth governance structures relevant to LYDO and SK-related participation.
-- It identifies the `activities`, `impacts`, and `barriers` of youth councils, which supports your argument for `structured monitoring of youth engagement and program outcomes`.
-- It has a `directly downloadable open-access manuscript` from Boston University.
+- It examines `youth participation under decentralization in local governments`, which is closely connected to local youth governance structures relevant to LYDO and SK participation.
+- It shows that youth participation has a `positive and significant effect` in the local government context and discusses youth involvement in `decision making`.
+- It has a `directly downloadable open-access PDF`.
 
 **Best use in your paper**
 
 Use this source when discussing:
 
 - the importance of structured youth participation in local governance;
-- the need to monitor the activities, impacts, and barriers of youth participation mechanisms;
+- the need to support youth involvement in local decision-making through more organized systems;
 - the rationale for having a system that tracks youth participation and program outcomes.
 
 ## 2. Foreign Literature
@@ -106,14 +106,14 @@ Use this source when discussing:
 | Theme Needed | Best Source |
 |---|---|
 | Youth program monitoring | `Valenzuela (2025)` |
-| Replacement for `Calvert et al. (2015)` | `Collins et al. (2016)` |
+| Replacement for `Calvert et al. (2015)` | `Mukwaya et al. (2021)` |
 | Web-based information systems for government | `OECD (2023)` |
 | Data privacy in government systems | `Kiram et al. (2025)` |
 
 ## Direct Download Links
 
-- `Collins et al. (2016)` PDF:
-  `https://open.bu.edu/bitstream/2144/30795/3/Youth%20Councils%20in%20Muncipal%20Government.pdf`
+- `Mukwaya et al. (2021)` PDF:
+  `https://www.rsisinternational.org/journals/ijriss/Digital-Library/volume-5-issue-9/350-357.pdf`
 - `OECD (2023)` PDF:
   `https://www.oecd.org/content/dam/oecd/en/publications/reports/2023/01/effective-government-information-websites_260c241e/ac325b03-en.pdf`
 - `Kiram et al. (2025)` PDF:
