@@ -18,7 +18,7 @@
 
   <rect width="1700" height="920" fill="#fff"/>
 
-  <text x="850" y="46" text-anchor="middle" class="title">Figure 4. Use Case Diagram of Register for Program or Event</text>
+  <text x="850" y="46" text-anchor="middle" class="title">Figure 5. Use Case Diagram of Register for Program or Event</text>
 
   <rect x="390" y="100" width="920" height="710" rx="12" ry="12" class="shape"/>
   <text x="850" y="138" text-anchor="middle" class="system">LYDO Connect</text>

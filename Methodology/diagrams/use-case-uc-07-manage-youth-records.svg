@@ -18,7 +18,7 @@
 
   <rect width="1800" height="1020" fill="#fff"/>
 
-  <text x="900" y="46" text-anchor="middle" class="title">Figure 7. Use Case Diagram of Manage Youth Records</text>
+  <text x="900" y="46" text-anchor="middle" class="title">Figure 8. Use Case Diagram of Manage Youth Records</text>
 
   <rect x="410" y="100" width="980" height="790" rx="12" ry="12" class="shape"/>
   <text x="900" y="138" text-anchor="middle" class="system">LYDO Connect</text>

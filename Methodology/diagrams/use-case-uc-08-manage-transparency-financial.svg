@@ -18,7 +18,7 @@
 
   <rect width="1900" height="1060" fill="#fff"/>
 
-  <text x="950" y="46" text-anchor="middle" class="title">Figure 8. Use Case Diagram of Manage Transparency and Financial Records</text>
+  <text x="950" y="46" text-anchor="middle" class="title">Figure 9. Use Case Diagram of Manage Transparency and Financial Records</text>
 
   <rect x="430" y="100" width="1040" height="830" rx="12" ry="12" class="shape"/>
   <text x="950" y="138" text-anchor="middle" class="system">LYDO Connect</text>

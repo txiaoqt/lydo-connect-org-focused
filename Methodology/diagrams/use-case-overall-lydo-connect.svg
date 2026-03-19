@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1160" viewBox="0 0 1900 1160">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 15px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .line { fill: none; stroke: #111; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="1900" height="1160" fill="#fff"/>
+
+  <text x="950" y="46" text-anchor="middle" class="title">Figure 1. Overall Use Case Diagram of LYDO Connect</text>
+
+  <rect x="330" y="100" width="1240" height="930" rx="12" ry="12" class="shape"/>
+  <text x="950" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="690" cy="210" rx="190" ry="38" class="shape"/>
+  <text x="690" y="203" text-anchor="middle" class="text">UC-01</text>
+  <text x="690" y="224" text-anchor="middle" class="text">Sign Up</text>
+
+  <ellipse cx="1210" cy="210" rx="165" ry="38" class="shape"/>
+  <text x="1210" y="203" text-anchor="middle" class="text">UC-02</text>
+  <text x="1210" y="224" text-anchor="middle" class="text">Log In</text>
+
+  <ellipse cx="690" cy="370" rx="265" ry="42" class="shape"/>
+  <text x="690" y="362" text-anchor="middle" class="text">UC-03</text>
+  <text x="690" y="384" text-anchor="middle" class="text">Browse and View Public Information</text>
+
+  <ellipse cx="1210" cy="370" rx="225" ry="40" class="shape"/>
+  <text x="1210" y="362" text-anchor="middle" class="text">UC-04</text>
+  <text x="1210" y="384" text-anchor="middle" class="text">Register for Program or Event</text>
+
+  <ellipse cx="690" cy="550" rx="275" ry="42" class="shape"/>
+  <text x="690" y="542" text-anchor="middle" class="text">UC-05</text>
+  <text x="690" y="564" text-anchor="middle" class="text">Manage Profile and Participation History</text>
+
+  <ellipse cx="1210" cy="550" rx="250" ry="40" class="shape"/>
+  <text x="1210" y="542" text-anchor="middle" class="text">UC-06</text>
+  <text x="1210" y="564" text-anchor="middle" class="text">Submit and Track Citizen Ticket</text>
+
+  <ellipse cx="690" cy="730" rx="185" ry="38" class="shape"/>
+  <text x="690" y="723" text-anchor="middle" class="text">UC-07</text>
+  <text x="690" y="744" text-anchor="middle" class="text">Manage Youth Records</text>
+
+  <ellipse cx="1210" cy="730" rx="265" ry="42" class="shape"/>
+  <text x="1210" y="722" text-anchor="middle" class="text">UC-08</text>
+  <text x="1210" y="744" text-anchor="middle" class="text">Manage Transparency and Financial Records</text>
+
+  <ellipse cx="690" cy="900" rx="250" ry="40" class="shape"/>
+  <text x="690" y="892" text-anchor="middle" class="text">UC-09</text>
+  <text x="690" y="914" text-anchor="middle" class="text">Monitor Registrations and Retry Sync</text>
+
+  <ellipse cx="1210" cy="900" rx="260" ry="42" class="shape"/>
+  <text x="1210" y="892" text-anchor="middle" class="text">UC-10</text>
+  <text x="1210" y="914" text-anchor="middle" class="text">Manage Users, Roles, and Audit Logs</text>
+
+  <circle cx="95" cy="180" r="22" class="shape"/>
+  <line x1="95" y1="202" x2="95" y2="272" class="line"/>
+  <line x1="59" y1="228" x2="131" y2="228" class="line"/>
+  <line x1="95" y1="272" x2="65" y2="322" class="line"/>
+  <line x1="95" y1="272" x2="125" y2="322" class="line"/>
+  <text x="95" y="356" text-anchor="middle" class="label">Youth User</text>
+
+  <circle cx="95" cy="430" r="22" class="shape"/>
+  <line x1="95" y1="452" x2="95" y2="522" class="line"/>
+  <line x1="59" y1="478" x2="131" y2="478" class="line"/>
+  <line x1="95" y1="522" x2="65" y2="572" class="line"/>
+  <line x1="95" y1="522" x2="125" y2="572" class="line"/>
+  <text x="95" y="606" text-anchor="middle" class="label">Citizen</text>
+
+  <circle cx="95" cy="720" r="22" class="shape"/>
+  <line x1="95" y1="742" x2="95" y2="812" class="line"/>
+  <line x1="59" y1="768" x2="131" y2="768" class="line"/>
+  <line x1="95" y1="812" x2="65" y2="862" class="line"/>
+  <line x1="95" y1="812" x2="125" y2="862" class="line"/>
+  <text x="95" y="896" text-anchor="middle" class="label">Public Viewer</text>
+
+  <circle cx="1805" cy="170" r="22" class="shape"/>
+  <line x1="1805" y1="192" x2="1805" y2="262" class="line"/>
+  <line x1="1769" y1="218" x2="1841" y2="218" class="line"/>
+  <line x1="1805" y1="262" x2="1775" y2="312" class="line"/>
+  <line x1="1805" y1="262" x2="1835" y2="312" class="line"/>
+  <text x="1805" y="346" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1805" y="368" text-anchor="middle" class="label">Authentication</text>
+
+  <circle cx="1805" cy="470" r="22" class="shape"/>
+  <line x1="1805" y1="492" x2="1805" y2="562" class="line"/>
+  <line x1="1769" y1="518" x2="1841" y2="518" class="line"/>
+  <line x1="1805" y1="562" x2="1775" y2="612" class="line"/>
+  <line x1="1805" y1="562" x2="1835" y2="612" class="line"/>
+  <text x="1805" y="646" text-anchor="middle" class="label">LYDO</text>
+  <text x="1805" y="670" text-anchor="middle" class="label">Administrator</text>
+
+  <circle cx="1805" cy="760" r="22" class="shape"/>
+  <line x1="1805" y1="782" x2="1805" y2="852" class="line"/>
+  <line x1="1769" y1="808" x2="1841" y2="808" class="line"/>
+  <line x1="1805" y1="852" x2="1775" y2="902" class="line"/>
+  <line x1="1805" y1="852" x2="1835" y2="902" class="line"/>
+  <text x="1805" y="936" text-anchor="middle" class="label">LYDO Staff /</text>
+  <text x="1805" y="960" text-anchor="middle" class="label">SK Officer</text>
+
+  <line x1="131" y1="228" x2="500" y2="210" class="line"/>
+  <line x1="131" y1="228" x2="1045" y2="210" class="line"/>
+  <line x1="131" y1="228" x2="425" y2="370" class="line"/>
+  <line x1="131" y1="228" x2="985" y2="370" class="line"/>
+  <line x1="131" y1="228" x2="430" y2="550" class="line"/>
+  <line x1="131" y1="228" x2="960" y2="550" class="line"/>
+
+  <line x1="131" y1="478" x2="500" y2="210" class="line"/>
+  <line x1="131" y1="478" x2="1045" y2="210" class="line"/>
+  <line x1="131" y1="478" x2="425" y2="370" class="line"/>
+  <line x1="131" y1="478" x2="960" y2="550" class="line"/>
+
+  <line x1="131" y1="768" x2="425" y2="370" class="line"/>
+
+  <line x1="1769" y1="218" x2="880" y2="210" class="line"/>
+  <line x1="1769" y1="218" x2="1375" y2="210" class="line"/>
+  <line x1="1769" y1="218" x2="1435" y2="370" class="line"/>
+
+  <line x1="1769" y1="518" x2="875" y2="210" class="line"/>
+  <line x1="1769" y1="518" x2="875" y2="730" class="line"/>
+  <line x1="1769" y1="518" x2="1475" y2="730" class="line"/>
+  <line x1="1769" y1="518" x2="940" y2="900" class="line"/>
+  <line x1="1769" y1="518" x2="1470" y2="900" class="line"/>
+
+  <line x1="1769" y1="808" x2="875" y2="210" class="line"/>
+  <line x1="1769" y1="808" x2="875" y2="730" class="line"/>
+  <line x1="1769" y1="808" x2="1475" y2="730" class="line"/>
+  <line x1="1769" y1="808" x2="940" y2="900" class="line"/>
+</svg>

@@ -18,7 +18,7 @@
 
   <rect width="1600" height="920" fill="#fff"/>
 
-  <text x="800" y="46" text-anchor="middle" class="title">Figure 1. Use Case Diagram of Sign Up</text>
+  <text x="800" y="46" text-anchor="middle" class="title">Figure 2. Use Case Diagram of Sign Up</text>
 
   <rect x="360" y="100" width="880" height="710" rx="12" ry="12" class="shape"/>
   <text x="800" y="138" text-anchor="middle" class="system">LYDO Connect</text>

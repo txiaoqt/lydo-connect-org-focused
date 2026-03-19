@@ -18,7 +18,7 @@
 
   <rect width="1700" height="960" fill="#fff"/>
 
-  <text x="850" y="46" text-anchor="middle" class="title">Figure 3. Use Case Diagram of Browse and View Public Information</text>
+  <text x="850" y="46" text-anchor="middle" class="title">Figure 4. Use Case Diagram of Browse and View Public Information</text>
 
   <rect x="390" y="100" width="920" height="730" rx="12" ry="12" class="shape"/>
   <text x="850" y="138" text-anchor="middle" class="system">LYDO Connect</text>

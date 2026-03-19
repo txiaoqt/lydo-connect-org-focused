@@ -18,7 +18,7 @@
 
   <rect width="1700" height="980" fill="#fff"/>
 
-  <text x="850" y="46" text-anchor="middle" class="title">Figure 6. Use Case Diagram of Submit and Track Citizen Ticket</text>
+  <text x="850" y="46" text-anchor="middle" class="title">Figure 7. Use Case Diagram of Submit and Track Citizen Ticket</text>
 
   <rect x="390" y="100" width="920" height="770" rx="12" ry="12" class="shape"/>
   <text x="850" y="138" text-anchor="middle" class="system">LYDO Connect</text>

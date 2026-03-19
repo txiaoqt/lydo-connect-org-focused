@@ -18,7 +18,7 @@
 
   <rect width="1850" height="1020" fill="#fff"/>
 
-  <text x="925" y="46" text-anchor="middle" class="title">Figure 9. Use Case Diagram of Monitor Registrations and Retry Sync</text>
+  <text x="925" y="46" text-anchor="middle" class="title">Figure 10. Use Case Diagram of Monitor Registrations and Retry Sync</text>
 
   <rect x="420" y="100" width="1010" height="790" rx="12" ry="12" class="shape"/>
   <text x="925" y="138" text-anchor="middle" class="system">LYDO Connect</text>
