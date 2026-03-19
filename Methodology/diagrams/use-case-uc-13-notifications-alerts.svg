@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1100" viewBox="0 0 1900 1100">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .dashedShape { fill: #fff; stroke: #111; stroke-width: 2.3; stroke-dasharray: 12 8; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1900" height="1100" fill="#fff"/>
+
+  <text x="950" y="46" text-anchor="middle" class="title">Figure 14. Use Case Diagram of Notifications and Alerts</text>
+  <text x="950" y="74" text-anchor="middle" class="small">Planned Future Extension</text>
+
+  <rect x="420" y="100" width="1060" height="860" rx="12" ry="12" class="dashedShape"/>
+  <text x="950" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="950" cy="220" rx="235" ry="44" class="dashedShape"/>
+  <text x="950" y="213" text-anchor="middle" class="text">UC-13</text>
+  <text x="950" y="236" text-anchor="middle" class="text">Notifications and Alerts</text>
+
+  <ellipse cx="690" cy="470" rx="205" ry="36" class="shape"/>
+  <text x="690" y="463" text-anchor="middle" class="text">Compose Notification Message</text>
+
+  <ellipse cx="1210" cy="470" rx="150" ry="36" class="shape"/>
+  <text x="1210" y="463" text-anchor="middle" class="text">Deliver Alert</text>
+
+  <ellipse cx="690" cy="760" rx="180" ry="34" class="shape"/>
+  <text x="690" y="753" text-anchor="middle" class="text">View Notification History</text>
+
+  <ellipse cx="1210" cy="760" rx="185" ry="34" class="shape"/>
+  <text x="1210" y="753" text-anchor="middle" class="text">Mark Notification as Read</text>
+
+  <circle cx="110" cy="200" r="22" class="shape"/>
+  <line x1="110" y1="222" x2="110" y2="292" class="line"/>
+  <line x1="74" y1="248" x2="146" y2="248" class="line"/>
+  <line x1="110" y1="292" x2="80" y2="342" class="line"/>
+  <line x1="110" y1="292" x2="140" y2="342" class="line"/>
+  <text x="110" y="376" text-anchor="middle" class="label">Youth User</text>
+
+  <circle cx="110" cy="500" r="22" class="shape"/>
+  <line x1="110" y1="522" x2="110" y2="592" class="line"/>
+  <line x1="74" y1="548" x2="146" y2="548" class="line"/>
+  <line x1="110" y1="592" x2="80" y2="642" class="line"/>
+  <line x1="110" y1="592" x2="140" y2="642" class="line"/>
+  <text x="110" y="676" text-anchor="middle" class="label">Citizen</text>
+
+  <circle cx="1790" cy="200" r="22" class="shape"/>
+  <line x1="1790" y1="222" x2="1790" y2="292" class="line"/>
+  <line x1="1754" y1="248" x2="1826" y2="248" class="line"/>
+  <line x1="1790" y1="292" x2="1760" y2="342" class="line"/>
+  <line x1="1790" y1="292" x2="1820" y2="342" class="line"/>
+  <text x="1790" y="376" text-anchor="middle" class="label">LYDO</text>
+  <text x="1790" y="400" text-anchor="middle" class="label">Administrator</text>
+
+  <circle cx="1790" cy="500" r="22" class="shape"/>
+  <line x1="1790" y1="522" x2="1790" y2="592" class="line"/>
+  <line x1="1754" y1="548" x2="1826" y2="548" class="line"/>
+  <line x1="1790" y1="592" x2="1760" y2="642" class="line"/>
+  <line x1="1790" y1="592" x2="1820" y2="642" class="line"/>
+  <text x="1790" y="676" text-anchor="middle" class="label">LYDO Staff /</text>
+  <text x="1790" y="700" text-anchor="middle" class="label">SK Officer</text>
+
+  <circle cx="1790" cy="800" r="22" class="shape"/>
+  <line x1="1790" y1="822" x2="1790" y2="892" class="line"/>
+  <line x1="1754" y1="848" x2="1826" y2="848" class="line"/>
+  <line x1="1790" y1="892" x2="1760" y2="942" class="line"/>
+  <line x1="1790" y1="892" x2="1820" y2="942" class="line"/>
+  <text x="1790" y="976" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
+  <text x="1790" y="998" text-anchor="middle" class="label">Notification Service</text>
+
+  <line x1="146" y1="248" x2="715" y2="220" class="line"/>
+  <line x1="146" y1="548" x2="730" y2="234" class="line"/>
+  <line x1="1754" y1="248" x2="1185" y2="220" class="line"/>
+  <line x1="1754" y1="548" x2="1170" y2="234" class="line"/>
+  <line x1="1754" y1="848" x2="1360" y2="470" class="line"/>
+
+  <line x1="840" y1="263" x2="745" y2="434" class="dashed"/>
+  <text x="788" y="360" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1060" y1="263" x2="1155" y2="434" class="dashed"/>
+  <text x="1112" y="360" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="690" y1="726" x2="870" y2="263" class="dashed"/>
+  <text x="756" y="628" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="1210" y1="726" x2="1030" y2="263" class="dashed"/>
+  <text x="1144" y="628" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

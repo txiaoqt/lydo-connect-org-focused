@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="980" viewBox="0 0 1700 980">
+  <defs>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #111; }
+      .system { font: 700 22px Arial, sans-serif; fill: #111; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111; }
+      .text { font: 16px Arial, sans-serif; fill: #111; }
+      .small { font: italic 15px Arial, sans-serif; fill: #111; }
+      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
+      .dashedShape { fill: #fff; stroke: #111; stroke-width: 2.3; stroke-dasharray: 12 8; }
+      .line { fill: none; stroke: #111; stroke-width: 2.3; stroke-linecap: round; }
+      .dashed { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 11 8; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#111"/>
+    </marker>
+  </defs>
+
+  <rect width="1700" height="980" fill="#fff"/>
+
+  <text x="850" y="46" text-anchor="middle" class="title">Figure 12. Use Case Diagram of Analytics Dashboard</text>
+  <text x="850" y="74" text-anchor="middle" class="small">Planned Future Extension</text>
+
+  <rect x="390" y="100" width="920" height="770" rx="12" ry="12" class="dashedShape"/>
+  <text x="850" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+
+  <ellipse cx="850" cy="220" rx="215" ry="44" class="dashedShape"/>
+  <text x="850" y="213" text-anchor="middle" class="text">UC-11</text>
+  <text x="850" y="236" text-anchor="middle" class="text">Analytics Dashboard</text>
+
+  <ellipse cx="640" cy="500" rx="185" ry="36" class="shape"/>
+  <text x="640" y="493" text-anchor="middle" class="text">View Summary Indicators</text>
+
+  <ellipse cx="1070" cy="500" rx="170" ry="36" class="shape"/>
+  <text x="1070" y="493" text-anchor="middle" class="text">Filter Dashboard Data</text>
+
+  <ellipse cx="850" cy="730" rx="195" ry="34" class="shape"/>
+  <text x="850" y="723" text-anchor="middle" class="text">Open Detailed Trend View</text>
+
+  <circle cx="110" cy="280" r="22" class="shape"/>
+  <line x1="110" y1="302" x2="110" y2="372" class="line"/>
+  <line x1="74" y1="328" x2="146" y2="328" class="line"/>
+  <line x1="110" y1="372" x2="80" y2="422" class="line"/>
+  <line x1="110" y1="372" x2="140" y2="422" class="line"/>
+  <text x="110" y="456" text-anchor="middle" class="label">LYDO</text>
+  <text x="110" y="480" text-anchor="middle" class="label">Administrator</text>
+
+  <circle cx="1590" cy="280" r="22" class="shape"/>
+  <line x1="1590" y1="302" x2="1590" y2="372" class="line"/>
+  <line x1="1554" y1="328" x2="1626" y2="328" class="line"/>
+  <line x1="1590" y1="372" x2="1560" y2="422" class="line"/>
+  <line x1="1590" y1="372" x2="1620" y2="422" class="line"/>
+  <text x="1590" y="456" text-anchor="middle" class="label">LYDO Staff /</text>
+  <text x="1590" y="480" text-anchor="middle" class="label">SK Officer</text>
+
+  <line x1="146" y1="328" x2="635" y2="220" class="line"/>
+  <line x1="1554" y1="328" x2="1065" y2="220" class="line"/>
+
+  <line x1="770" y1="263" x2="695" y2="464" class="dashed"/>
+  <text x="722" y="380" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="930" y1="263" x2="1015" y2="464" class="dashed"/>
+  <text x="986" y="380" text-anchor="middle" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="850" y1="696" x2="850" y2="264" class="dashed"/>
+  <text x="892" y="560" text-anchor="middle" class="small">&lt;&lt;extend&gt;&gt;</text>
+</svg>

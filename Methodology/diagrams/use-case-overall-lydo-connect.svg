@@ -64,15 +64,15 @@
   <text x="950" y="1010" text-anchor="middle" class="small">Planned Future Extensions</text>
 
   <ellipse cx="570" cy="1110" rx="170" ry="36" class="planned"/>
-  <text x="570" y="1103" text-anchor="middle" class="text">P-01</text>
+  <text x="570" y="1103" text-anchor="middle" class="text">UC-11</text>
   <text x="570" y="1124" text-anchor="middle" class="text">Analytics Dashboard</text>
 
   <ellipse cx="950" cy="1110" rx="220" ry="38" class="planned"/>
-  <text x="950" y="1102" text-anchor="middle" class="text">P-02</text>
+  <text x="950" y="1102" text-anchor="middle" class="text">UC-12</text>
   <text x="950" y="1124" text-anchor="middle" class="text">Manage Requests and Feedback</text>
 
   <ellipse cx="1330" cy="1110" rx="205" ry="38" class="planned"/>
-  <text x="1330" y="1102" text-anchor="middle" class="text">P-03</text>
+  <text x="1330" y="1102" text-anchor="middle" class="text">UC-13</text>
   <text x="1330" y="1124" text-anchor="middle" class="text">Notifications and Alerts</text>
 
   <circle cx="95" cy="180" r="22" class="shape"/>
@@ -160,5 +160,5 @@
 
   <rect x="1380" y="1080" width="150" height="70" rx="8" ry="8" class="shape"/>
   <line x1="1402" y1="1114" x2="1452" y2="1114" class="plannedLine"/>
-  <text x="1455" y="1119" class="text">Planned</text>
+  <text x="1455" y="1119" class="text">Planned UC</text>
 </svg>
