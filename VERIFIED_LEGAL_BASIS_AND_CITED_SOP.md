@@ -46,33 +46,43 @@ If you plan to cite the new E-Governance law, the correct law is `Republic Act N
   System fit: operational and sustainability basis for local youth development processes.  
   Paper use: rationale for sustained LYDO operations and support systems.
 
-- `2016 IRR of RA 10742, Rule I, Sec. 3(h)`  
+- `Revised IRR of RA 10742, Rule I, Sec. 3(j)`  
   What it gives you: the exact definition of the `Local Youth Development Plan (LYDP)`.  
   System fit: planning alignment, program records, and monitoring.  
   Paper use: explaining why the system needs structured planning and records support.
 
-- `2016 IRR of RA 10742, Rule I, Sec. 3(n)`  
+- `Revised IRR of RA 10742, Rule I, Sec. 3(q)`  
   What it gives you: the youth age range of `15-30`, including `15-17 child youth`, `18-24 core youth`, and `25-30 adult youth`.  
   System fit: user scope, registration scope, and privacy caution when minors are involved.  
   Paper use: `Scope`, `Data Privacy`, and defense questions about youth-user coverage.
 
-- `2016 IRR of RA 10742, Rule III, Sec. 24(d)`  
-  What it gives you: local registration and verification of youth organizations and youth-serving organizations, subject to `YORP` guidelines.  
+- `Revised IRR of RA 10742, Rule III, Sec. 25(d)`  
+  What it gives you: local registration of youth organizations and youth-serving organizations at the city, municipal, provincial, and highly urbanized city levels.  
   System fit: youth organization directory and local organization records.  
   Paper use: legal basis for storing and organizing youth-organization information.
 
-- `2016 IRR of RA 10742, Rule III, Sec. 24(f)`  
-  What it gives you: registration and verification is valid for three years unless earlier revoked or cancelled.  
+- `Revised IRR of RA 10742, Rule III, Sec. 25(e)`  
+  What it gives you: local verification of youth organizations and youth-serving organizations, with submission of the verified list to the Commission.  
+  System fit: organization validation and official organization lists.  
+  Paper use: support for validated organization records.
+
+- `Revised IRR of RA 10742, Rule III, Sec. 25(f)`  
+  What it gives you: renewal, verification, and continuing local registration every three years.  
   System fit: organization profile validity and periodic updating.  
   Paper use: support for record maintenance and verification.
 
-- `2016 IRR of RA 10742, Rule III, Sec. 24(g)`  
+- `Revised IRR of RA 10742, Rule III, Sec. 25(g)`  
   What it gives you: registration and verification is a condition precedent for participation in the election of `LYDC` representatives.  
   System fit: why organization records matter to formal youth participation structures.  
   Paper use: support for the organization directory and governance-linked records.
 
-- `2016 IRR of RA 10742, Rule IV, Sec. 26(d)(1)-(8)`  
-  What it gives you: the functions of the `LYDO`, including registering and verifying youth organizations, assisting the `LYDC` in the `LYDP`, facilitating LYDC representative election, serving as secretariat, conducting training, monitoring and evaluating youth programs, and coordinating youth development programs.  
+- `Revised IRR of RA 10742, Rule III, Sec. 25(m)(2)-(4)`  
+  What it gives you: the `LYDC` finalizes the `LYDP`, submits it for inclusion in the Local Development Plan and for approval, and monitors and evaluates implementation of the `LYDP`.  
+  System fit: planning records, participation monitoring, and youth program evaluation support.  
+  Paper use: strongest revised-IRR support for monitoring and evaluation functions.
+
+- `Revised IRR of RA 10742, Rule IV, Sec. 27(d)(1)-(8)`  
+  What it gives you: the functions of the `LYDO`, including registering and verifying youth organizations, assisting the `LYDC` in the `LYDP`, facilitating LYDC representative election, serving as secretariat, conducting training, providing technical/logistical support, coordinating with the Commission, and performing related youth-development functions.  
   System fit: almost the entire admin portal scope.  
   Paper use: the strongest section for justifying the system's admin-side modules.
 
@@ -253,9 +263,9 @@ If you plan to cite the new E-Governance law, the correct law is `Republic Act N
 
 | System feature or module | Best exact legal anchors |
 |---|---|
-| `LYDO-specific admin platform` | `RA 11768, Sec. 10`; `2016 IRR of RA 10742, Rule IV, Sec. 26(d)(1)-(8)` |
-| `Programs, events, and participation monitoring` | `RA 11768, Sec. 7`; `2016 IRR of RA 10742, Rule I, Sec. 3(h)`; `Rule IV, Sec. 26(d)(6)-(8)` |
-| `Youth organization directory and local registration records` | `2016 IRR of RA 10742, Rule III, Sec. 24(d), (f), (g)` |
+| `LYDO-specific admin platform` | `RA 11768, Sec. 10`; `Revised IRR of RA 10742, Rule IV, Sec. 27(d)(1)-(8)` |
+| `Programs, events, and participation monitoring` | `RA 11768, Sec. 7`; `Revised IRR of RA 10742, Rule I, Sec. 3(j)`; `Rule III, Sec. 25(m)(2)-(4)` |
+| `Youth organization directory and local registration records` | `Revised IRR of RA 10742, Rule III, Sec. 25(d), (e), (f), (g)` |
 | `Transparency portal, reports, and financial disclosure views` | `1987 Constitution, Art. II, Sec. 28`; `Art. III, Sec. 7`; `RA 6713, Sec. 5(e)`; `RA 12254, Sec. 20-22` |
 | `Citizen Desk, complaints, requests, and tracking` | `RA 12254, Sec. 9(h)`; `Sec. 21(f)`; `RA 11032, Sec. 6`; `Sec. 9`; `Sec. 20`; `EO No. 6, s. 2016, Sec. 2, 4, 5(c)-(d)` |
 | `User accounts and personal data handling` | `RA 10173, Sec. 11`; `Sec. 12`; `Sec. 16`; `Sec. 20`; `Sec. 22` |
@@ -266,15 +276,15 @@ If you plan to cite the new E-Governance law, the correct law is `Republic Act N
 
 ## III. Revised Cited Statement of the Problem
 
-Local Youth Development Offices (LYDOs) are legally grounded local structures for youth governance. The policy basis for organized youth participation appears in `RA 10742, Sec. 2`, while the current legal basis for the office itself is strengthened by `RA 11768, Sec. 10`, which amends `RA 10742, Sec. 26` to require the creation of a Youth Development Office in every province, city, and municipality. The same amendatory law also supports institutional planning through `RA 11768, Sec. 7`, amending `RA 10742, Sec. 21(d)`, where the Pederasyon ng Sangguniang Kabataan and the Local Youth Development Council (LYDC) are tasked to draft the `Local Youth Development Plan (LYDP)` and convene quarterly. These are operationalized further by the `2016 IRR of RA 10742`, especially `Rule I, Sec. 3(h)` and `Rule IV, Sec. 26(d)(1)-(8)`, which connect LYDO functions to youth planning, organization registration, program monitoring, coordination, and records support. Despite this legal framework, the concept paper and current system context show that LYDO operations still suffer from fragmented communication, manually organized records, and weakly integrated service channels.
+Local Youth Development Offices (LYDOs) are legally grounded local structures for youth governance. The policy basis for organized youth participation appears in `RA 10742, Sec. 2`, while the current legal basis for the office itself is strengthened by `RA 11768, Sec. 10`, which amends `RA 10742, Sec. 26` to require the creation of a Youth Development Office in every province, city, and municipality. The same amendatory law also supports institutional planning through `RA 11768, Sec. 7`, amending `RA 10742, Sec. 21(d)`, where the Pederasyon ng Sangguniang Kabataan and the Local Youth Development Council (LYDC) are tasked to draft the `Local Youth Development Plan (LYDP)` and convene quarterly. These are operationalized further by the `Revised IRR of RA 10742`, especially `Rule I, Sec. 3(j)`, `Rule III, Sec. 25(m)(2)-(4)`, and `Rule IV, Sec. 27(d)(1)-(8)`, which connect LYDO functions to youth planning, organization registration, program coordination, monitoring support, and records support. Despite this legal framework, the concept paper and current system context show that LYDO operations still suffer from fragmented communication, manually organized records, and weakly integrated service channels.
 
 First, youth access to information remains inconsistent and unreliable when announcements, participation opportunities, and official youth-governance information are distributed through scattered channels rather than a structured government portal. This problem is legally significant because public information and public-interest transactions are protected under `1987 Constitution, Art. III, Sec. 7` and `Art. II, Sec. 28`, while `RA 6713, Sec. 5(e)` requires public documents to be accessible to the public. More recently, `RA 12254, Sec. 20` requires government websites and e-bulletin boards to be interactive, secure, accessible, mobile-friendly, and regularly updated, while `RA 12254, Sec. 21(a)-(f)` requires websites to include relevant links, FAQs, contact information, accessibility compliance, and real-time citizen feedback. These provisions show that a youth-governance office now has a much stronger legal basis for maintaining a reliable public-facing digital platform than fragmented informal channels alone.
 
-Second, there remains no sufficiently systematic mechanism for monitoring youth engagement and program outcomes across programs, events, organizations, and participation-related records. This directly affects evidence-based planning and evaluation. `RA 11768, Sec. 7` is especially important here because it ties local youth planning to the `LYDP`, while `2016 IRR of RA 10742, Rule IV, Sec. 26(d)(6)-(8)` supports the LYDO's role in monitoring and evaluating youth programs, coordinating implementation, and supporting youth development processes. The local registration and verification of youth organizations under `2016 IRR of RA 10742, Rule III, Sec. 24(d), (f), and (g)` further shows that organization records are part of formal youth-governance structures. In digital-government terms, `RA 12254, Sec. 9(l)` also supports records and knowledge management systems for the tracking, storage, verification, and management of government records and documents. Together, these provisions strongly support the need for a centralized participation and records platform rather than disconnected manual records and social-media-based coordination.
+Second, there remains no sufficiently systematic mechanism for monitoring youth engagement and program outcomes across programs, events, organizations, and participation-related records. This directly affects evidence-based planning and evaluation. `RA 11768, Sec. 7` is especially important here because it ties local youth planning to the `LYDP`, while `Revised IRR of RA 10742, Rule III, Sec. 25(m)(2)-(4)` expressly provides that the `LYDC` finalizes the `LYDP` and monitors and evaluates its implementation. The local registration and verification of youth organizations under `Revised IRR of RA 10742, Rule III, Sec. 25(d), (e), (f), and (g)` further shows that organization records are part of formal youth-governance structures, while `Rule IV, Sec. 27(d)(1)-(4)` gives the `LYDO` a concrete support role in organization registration, technical assistance to the `LYDC`, facilitation of elections, and secretariat functions. In digital-government terms, `RA 12254, Sec. 9(l)` also supports records and knowledge management systems for the tracking, storage, verification, and management of government records and documents. Together, these provisions strongly support the need for a centralized participation and records platform rather than disconnected manual records and social-media-based coordination.
 
 Third, public transparency and citizen-facing service are weakened when the public cannot access disclosures, advisories, requests, and follow-up mechanisms through one consistent system. The constitutional basis for public disclosure is found in `1987 Constitution, Art. II, Sec. 28`, while access to official records and public information is grounded in `Art. III, Sec. 7`. At the statutory level, `RA 6713, Sec. 5(a), (d), and (e)` supports responsiveness to public communications, immediate action on personal transactions, and access to public documents. `RA 11032, Sec. 6` also requires offices to present service standards, procedures, complaint mechanisms, and contact information through a Citizen's Charter, including website posting where applicable. For the specific complaint-and-feedback aspect of the system, the strongest direct legal match is `RA 12254, Sec. 9(h)`, which provides that the `Online Public Service Portal` shall serve as a help desk for information, assistance, recommendations, appreciation, complaints, and feedback, reinforced by `RA 12254, Sec. 21(f)`, `RA 11032, Sec. 20`, and `EO No. 6, s. 2016, Sec. 2, 4, and 5(c)-(d)`. These provisions strongly support the reasonableness of the `Citizen Desk` and service-advisory functions of LYDO Connect.
 
-Finally, the shift to a centralized digital platform also raises clear privacy, security, and accessibility requirements. `RA 10173, Sec. 11` requires transparency, legitimate purpose, and proportionality in personal-data processing; `Sec. 12` requires lawful processing; `Sec. 16` protects the rights of the data subject; `Sec. 20` requires reasonable and appropriate security measures; and `Sec. 22` places responsibility on heads of agencies for securing sensitive personal information in government. This is especially relevant because the `2016 IRR of RA 10742, Rule I, Sec. 3(n)` recognizes `15-17` as `child youth`, making careful and proportionate collection of youth-user data more defensible than broad or unnecessary data collection. In addition, `RA 12254, Sec. 11`, `Sec. 23`, and `Sec. 24(a)-(c)` strengthen the legal basis for information-security protections, while `RA 10175, Sec. 4(a)(1), (3), (4), and (5)` provides a supporting anti-cybercrime basis against illegal access, data interference, and system interference. For accessibility, `RA 12254, Sec. 21(e)` and `Sec. 6(j)` require compliance with the Philippine Web Accessibility Policy and inclusive access for persons with disabilities, which makes accessibility an integral legal design consideration for the proposed web-based LYDO platform.
+Finally, the shift to a centralized digital platform also raises clear privacy, security, and accessibility requirements. `RA 10173, Sec. 11` requires transparency, legitimate purpose, and proportionality in personal-data processing; `Sec. 12` requires lawful processing; `Sec. 16` protects the rights of the data subject; `Sec. 20` requires reasonable and appropriate security measures; and `Sec. 22` places responsibility on heads of agencies for securing sensitive personal information in government. This is especially relevant because the `Revised IRR of RA 10742, Rule I, Sec. 3(q)` recognizes `15-17` as `child youth`, making careful and proportionate collection of youth-user data more defensible than broad or unnecessary data collection. In addition, `RA 12254, Sec. 11`, `Sec. 23`, and `Sec. 24(a)-(c)` strengthen the legal basis for information-security protections, while `RA 10175, Sec. 4(a)(1), (3), (4), and (5)` provides a supporting anti-cybercrime basis against illegal access, data interference, and system interference. For accessibility, `RA 12254, Sec. 21(e)` and `Sec. 6(j)` require compliance with the Philippine Web Accessibility Policy and inclusive access for persons with disabilities, which makes accessibility an integral legal design consideration for the proposed web-based LYDO platform.
 
 Taken together, these provisions show that the problem addressed by LYDO Connect is not simply the lack of a website. The deeper issue is the lack of a centralized, legally grounded digital mechanism that can operationalize youth-governance planning, participation monitoring, transparency publication, citizen-facing requests, records management, privacy protection, and accessible service delivery in one coherent platform for selected LYDOs in Metro Manila.
 
@@ -282,7 +292,7 @@ Taken together, these provisions show that the problem addressed by LYDO Connect
 
 - `RA 10742` - https://lawphil.net/statutes/repacts/ra2016/ra_10742_2016.html
 - `RA 11768` - https://lawphil.net/statutes/repacts/ra2022/ra_11768_2022.html
-- `2016 IRR of RA 10742` - https://region5.dilg.gov.ph/wp-content/uploads/2018/05/2016-IRR-RA-10742-SK.pdf
+- `Revised IRR of RA 10742` - https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/2/97375
 - `1987 Constitution` - https://lawphil.net/consti/cons1987.html
 - `RA 6713` - https://lawphil.net/statutes/repacts/ra1989/ra_6713_1989.html
 - `RA 11032` - https://lawphil.net/statutes/repacts/ra2018/ra_11032_2018.html
@@ -303,7 +313,7 @@ If the panel asks for the strongest section-to-feature examples, give these:
 
 - `RA 12254, Sec. 9(h)` for the `Citizen Desk`
 - `RA 12254, Sec. 20-22` for the public portal, advisories, and transparency publication
-- `RA 11768, Sec. 10` and `2016 IRR of RA 10742, Rule IV, Sec. 26(d)` for the LYDO and its admin functions
-- `RA 11768, Sec. 7` plus `2016 IRR of RA 10742, Rule I, Sec. 3(h)` for participation monitoring and LYDP-linked records
+- `RA 11768, Sec. 10` and `Revised IRR of RA 10742, Rule IV, Sec. 27(d)` for the LYDO and its admin functions
+- `RA 11768, Sec. 7` plus `Revised IRR of RA 10742, Rule I, Sec. 3(j)` and `Rule III, Sec. 25(m)` for participation monitoring and LYDP-linked records
 - `RA 10173, Sec. 11, 12, 16, 20, and 22` for user data privacy and safe handling
 - `RA 12254, Sec. 11, 23, and 24` plus `RA 10175, Sec. 4(a)` for system security and anti-hacking support
