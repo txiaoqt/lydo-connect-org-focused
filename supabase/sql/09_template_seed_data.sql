@@ -23,9 +23,9 @@ values
     null,
     null,
     '2025-2026 Cycle',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -36,22 +36,22 @@ values
     null,
     null,
     '2025-2026 Cycle',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
     'project-ready-to-serve-2025',
     'Project Ready to Serve',
     'LYDO',
-    'Volunteer-oriented youth initiative highlighted by LYDO San Mateo as part of active community engagement efforts.',
+    'Volunteer-oriented youth initiative highlighted by Metro Manila LYDO as part of active community engagement efforts.',
     date '2025-02-19',
     date '2025-02-19',
     null,
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -62,9 +62,9 @@ values
     date '2025-07-12',
     date '2025-07-13',
     null,
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -75,9 +75,9 @@ values
     null,
     null,
     'July 2025',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -88,9 +88,9 @@ values
     date '2025-08-16',
     date '2025-08-17',
     null,
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -101,9 +101,9 @@ values
     date '2025-10-12',
     date '2025-10-12',
     null,
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -114,9 +114,9 @@ values
     null,
     null,
     'September 2025',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   )
 on conflict (slug) do update set
@@ -151,9 +151,9 @@ values
     'YDAC',
     'Youth arts and culture workshop for beginner dancers.',
     date '2025-07-12',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -162,9 +162,9 @@ values
     'YDAC',
     'Two-day youth environmental learning and engagement event.',
     date '2025-07-01',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -173,31 +173,31 @@ values
     'LYDO',
     'Leadership development training for local youth participants.',
     date '2025-08-16',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
     'smmc-seb-partnership-2025',
     'SMMC Student Executive Board Partnership Event',
     'LYDO',
-    'Campus youth partnership activity recognized by LYDO San Mateo.',
+    'Campus youth partnership activity recognized by Metro Manila LYDO.',
     date '2025-08-20',
-    'San Mateo Municipal College',
+    'Metro Manila Municipal College',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
     'sk-san-mateo-activity-2025',
-    'Sangguniang Kabataan ng San Mateo Activity Highlight',
+    'Sangguniang Kabataan ng Metro Manila Activity Highlight',
     'SK',
     'Municipal-level youth governance activity with barangay SK participation.',
     date '2025-09-01',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -206,9 +206,9 @@ values
     'LYDO',
     'Assembly focused on youth organizations alignment and collaboration.',
     date '2025-10-12',
-    'San Mateo, Rizal',
+    'Metro Manila',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   )
 on conflict (slug) do update set
@@ -238,45 +238,45 @@ values
     'Youth Development Advocate Circle (YDAC) for Arts and Culture',
     'Advocacy Group',
     'Arts, culture, and youth creative engagement',
-    'San Mateo Gov announcement, July 13, 2025',
+    'Metro Manila Gov announcement, July 13, 2025',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
     'ydac-agri-envi',
     'Youth Development Advocate Circle (YDAC) for Agriculture and Environment',
     'Advocacy Group',
     'Environment and agriculture initiatives for youth',
-    'San Mateo Gov announcement, July 18, 2025',
+    'Metro Manila Gov announcement, July 18, 2025',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
     'sk-san-mateo-network',
-    'Sangguniang Kabataan ng San Mateo (Barangay SK network)',
+    'Sangguniang Kabataan ng Metro Manila (Barangay SK network)',
     'Youth Governance',
     'Barangay youth governance and leadership',
-    'San Mateo Gov announcement, September 1, 2025',
+    'Metro Manila Gov announcement, September 1, 2025',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
     'smmc-seb',
     'SMMC Student Executive Board (SEB)',
     'Campus Youth Partner',
     'Campus-led youth representation and programs',
-    'San Mateo Gov announcement, August 20, 2025',
+    'Metro Manila Gov announcement, August 20, 2025',
     'partner',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
     'lydo-youth-org-assembly',
-    'San Mateo LYDO Youth Organizations Assembly Network',
+    'Metro Manila LYDO Youth Organizations Assembly Network',
     'Multi-organization Network',
     'Municipal youth organizations coordination and dialogue',
     'Project Bigkis Kabataan, October 12, 2025',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   )
 on conflict (slug) do update set
   name = excluded.name,
@@ -410,7 +410,7 @@ select
   d.file_size_bytes,
   'application/pdf',
   d.public_url,
-  'https://www.facebook.com/sanmateolydo/'
+  'https://www.facebook.com/metrolydo/'
 from docs d
 left join public.barangays b on b.name = d.barangay_name
 left join public.offices o on o.code = d.office_code

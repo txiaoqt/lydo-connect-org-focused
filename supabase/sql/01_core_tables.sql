@@ -41,7 +41,7 @@ create table if not exists public.user_profiles (
   full_name text,
   display_name text,
   contact_number text,
-  municipality text not null default 'San Mateo, Rizal',
+  municipality text not null default 'Metro Manila',
   barangay_id uuid references public.barangays(id) on delete set null,
   bio text,
   notifications boolean not null default true,

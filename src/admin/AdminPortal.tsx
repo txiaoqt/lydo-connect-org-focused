@@ -148,7 +148,7 @@ export default function AdminPortal() {
         />
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{renderContent()}</div>
         <footer className="mt-auto p-6 border-t border-border text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} LYDO Connect Admin Portal. Municipality of San Mateo, Rizal.
+          &copy; {new Date().getFullYear()} LYDO Connect Admin Portal. Metro Manila LYDOs.
         </footer>
       </main>
     </div>

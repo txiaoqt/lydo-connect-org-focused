@@ -69,8 +69,7 @@ const SignUp = () => {
       const { data, error } = await supabase
         .from("barangays")
         .select("id,name")
-        .order("name", { ascending: true })
-        .limit(16);
+        .order("name", { ascending: true });
 
       if (!mounted) return;
       if (error) {
@@ -253,7 +252,7 @@ const SignUp = () => {
               )}
             </select>
             {barangays.length === 0 && !barangaysLoading && (
-              <p className="text-xs text-warning">Barangay list is empty. Seed the 16 barangays first.</p>
+              <p className="text-xs text-warning">Barangay list is empty. Seed the supported barangays first.</p>
             )}
           </div>
           <div className="space-y-2">

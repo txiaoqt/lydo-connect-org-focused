@@ -35,7 +35,7 @@ begin
     nullif(new.raw_user_meta_data ->> 'full_name', ''),
     nullif(new.raw_user_meta_data ->> 'display_name', ''),
     nullif(new.raw_user_meta_data ->> 'contact_number', ''),
-    coalesce(nullif(new.raw_user_meta_data ->> 'municipality', ''), 'San Mateo, Rizal'),
+    coalesce(nullif(new.raw_user_meta_data ->> 'municipality', ''), 'Metro Manila'),
     selected_barangay_id
   )
   on conflict (user_id) do update

@@ -189,7 +189,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <Label htmlFor="municipality">Municipality</Label>
-                  <Input id="municipality" value={settings.municipality || "San Mateo, Rizal"} readOnly />
+                  <Input id="municipality" value={settings.municipality || "Metro Manila"} readOnly />
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="barangay">Barangay</Label>

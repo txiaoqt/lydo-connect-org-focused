@@ -47,11 +47,11 @@ const Footer = () => {
           <div>
             <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Contact</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
-              <li>Municipality of San Mateo</li>
-              <li>Rizal, Philippines</li>
+              <li>Metro Manila, Philippines</li>
+              <li>Regional LYDO coverage</li>
               <li>
-                <a href="mailto:lydo@sanmateo.gov.ph" className="hover:text-primary transition-colors">
-                  lydo@sanmateo.gov.ph
+                <a href="mailto:lydo@metro-manila.gov.ph" className="hover:text-primary transition-colors">
+                  lydo@metro-manila.gov.ph
                 </a>
               </li>
             </ul>
@@ -60,7 +60,7 @@ const Footer = () => {
 
         <div className="border-t border-secondary-foreground/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-secondary-foreground/50 text-center md:text-left">
-            (c) 2026 Youth Governance Transparency and Accountability System - Municipality of San Mateo, Rizal. Compliant with RA 10742.
+            (c) 2026 Youth Governance Transparency and Accountability System - Metro Manila LYDOs. Compliant with RA 10742.
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-6 text-xs text-secondary-foreground/50">
             <button

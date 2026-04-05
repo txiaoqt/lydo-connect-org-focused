@@ -67,7 +67,7 @@ begin
     coalesce(new.email, new.id::text || '@local.invalid'),
     coalesce(new.raw_user_meta_data ->> 'full_name',''),
     coalesce(new.raw_user_meta_data ->> 'display_name',''),
-    'San Mateo, Rizal'
+    'Metro Manila'
   )
   on conflict (user_id) do update set email = excluded.email, updated_at = now();
 

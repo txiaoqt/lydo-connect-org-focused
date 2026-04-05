@@ -42,7 +42,7 @@ const defaultProfile: UserProfileState = {
     fullName: "",
     email: "",
     contactNumber: "",
-    municipality: "San Mateo, Rizal",
+    municipality: "Metro Manila",
     barangay: "",
     bio: "",
     notifications: true,
@@ -137,7 +137,7 @@ export const useUserProfile = () => {
           fullName: row.full_name ?? "",
           email: row.email ?? "",
           contactNumber: row.contact_number ?? "",
-          municipality: row.municipality ?? "San Mateo, Rizal",
+          municipality: row.municipality ?? "Metro Manila",
           barangay: eventBarangay,
         };
         return acc;
@@ -148,7 +148,7 @@ export const useUserProfile = () => {
           fullName: row.full_name ?? "",
           email: row.email ?? "",
           contactNumber: row.contact_number ?? "",
-          municipality: row.municipality ?? "San Mateo, Rizal",
+          municipality: row.municipality ?? "Metro Manila",
           barangay: programBarangay,
         };
         return acc;
@@ -162,7 +162,7 @@ export const useUserProfile = () => {
           fullName: profileRow?.full_name ?? profileRow?.display_name ?? user.displayName ?? "",
           email: profileRow?.email ?? user.email ?? "",
           contactNumber: profileRow?.contact_number ?? "",
-          municipality: profileRow?.municipality ?? "San Mateo, Rizal",
+          municipality: profileRow?.municipality ?? "Metro Manila",
           barangay: resolvedBarangay,
           bio: profileRow?.bio ?? "",
           notifications: profileRow?.notifications ?? true,

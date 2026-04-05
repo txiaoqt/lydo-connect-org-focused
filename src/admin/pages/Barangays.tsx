@@ -237,7 +237,7 @@ export const Barangays = () => {
         display_name: residentForm.displayName.trim() || null,
         email: residentForm.email.trim(),
         contact_number: residentForm.contactNumber.trim() || null,
-        municipality: residentForm.municipality.trim() || "San Mateo, Rizal",
+        municipality: residentForm.municipality.trim() || "Metro Manila",
         barangay_id: residentForm.barangayId || null,
         bio: residentForm.bio.trim() || null,
         notifications: residentForm.notifications,

@@ -27,9 +27,9 @@ values
     date '2026-04-10',
     date '2026-04-12',
     null,
-    'San Mateo Youth Center',
+    'Metro Manila Youth Center',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -40,9 +40,9 @@ values
     date '2026-05-01',
     date '2026-08-31',
     null,
-    'San Mateo, Rizal',
+    'Metro Manila',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -53,9 +53,9 @@ values
     date '2026-05-15',
     date '2026-07-15',
     null,
-    'Multiple Barangays, San Mateo',
+    'Multiple Metro Manila Barangays',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -66,9 +66,9 @@ values
     date '2026-06-05',
     date '2026-06-30',
     null,
-    'San Mateo MDRRMO Grounds',
+    'Metro Manila DRRM Grounds',
     'published',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   )
 on conflict (slug) do update set
@@ -103,9 +103,9 @@ values
     'LYDO',
     'Showcase of outputs from the digital skills bootcamp.',
     date '2026-04-20',
-    'San Mateo Youth Center',
+    'Metro Manila Youth Center',
     'upcoming',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -116,7 +116,7 @@ values
     date '2026-05-05',
     'Municipal Covered Court',
     'upcoming',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -127,7 +127,7 @@ values
     date '2026-06-02',
     'Sangguniang Bayan Hall',
     'upcoming',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   ),
   (
@@ -138,7 +138,7 @@ values
     date '2026-02-24',
     'Barangay Banaba',
     'past',
-    'https://www.facebook.com/sanmateolydo/',
+    'https://www.facebook.com/metrolydo/',
     now()
   )
 on conflict (slug) do update set
@@ -164,31 +164,31 @@ insert into public.organizations (
 )
 values
   (
-    'san-mateo-youth-tech-club',
-    'San Mateo Youth Tech Club',
+    'metro-manila-youth-tech-club',
+    'Metro Manila Youth Tech Club',
     'Youth Interest Group',
     'Digital literacy, coding circles, and career readiness',
     'Template Pack B',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
-    'rizal-green-youth-coalition',
-    'Rizal Green Youth Coalition',
+    'metro-manila-green-youth-coalition',
+    'Metro Manila Green Youth Coalition',
     'Advocacy Network',
     'Climate action and environmental stewardship',
     'Template Pack B',
     'partner',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
-    'kabataang-lingkod-bayan-san-mateo',
-    'Kabataang Lingkod Bayan - San Mateo',
+    'kabataang-lingkod-bayan-metro-manila',
+    'Kabataang Lingkod Bayan - Metro Manila',
     'Civic Volunteer Group',
     'Community service and civic volunteerism',
     'Template Pack B',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   ),
   (
     'young-creative-media-circle',
@@ -197,7 +197,7 @@ values
     'Youth communications, media production, and storytelling',
     'Template Pack B',
     'active',
-    'https://www.facebook.com/sanmateolydo/'
+    'https://www.facebook.com/metrolydo/'
   )
 on conflict (slug) do update set
   name = excluded.name,
@@ -331,7 +331,7 @@ select
   d.file_size_bytes,
   'application/pdf',
   d.public_url,
-  'https://www.facebook.com/sanmateolydo/'
+  'https://www.facebook.com/metrolydo/'
 from docs d
 left join public.barangays b on b.name = d.barangay_name
 left join public.offices o on o.code = d.office_code

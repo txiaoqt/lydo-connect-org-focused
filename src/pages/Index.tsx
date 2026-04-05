@@ -100,13 +100,13 @@ const Index = () => {
             <div className="animate-fade-up">
               <div className="inline-flex items-center gap-2 bg-secondary-foreground/10 backdrop-blur-sm border border-secondary-foreground/20 rounded-full px-4 py-1.5 mb-6">
                 <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-                <span className="text-xs font-medium text-secondary-foreground/80">Municipality of San Mateo, Rizal</span>
+                <span className="text-xs font-medium text-secondary-foreground/80">Metro Manila Local Youth Development Offices</span>
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-extrabold text-secondary-foreground leading-tight mb-6">
                 Empowering Youth through Programs, Opportunities, and <span className="text-gradient">Transparent Governance</span>
               </h1>
               <p className="text-lg text-secondary-foreground/75 max-w-xl mb-8 leading-relaxed">
-                A centralized digital platform of the Local Youth Development Office of San Mateo, Rizal connecting youth with programs, events, organizations, advocacy groups, and transparency data.
+                A centralized digital platform for Metro Manila LYDOs connecting youth with programs, events, organizations, advocacy groups, and transparency data.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button variant="hero" size="lg" asChild>
@@ -118,7 +118,7 @@ const Index = () => {
               </div>
             </div>
             <div className="hidden md:block animate-float">
-              <img src={heroImage} alt="San Mateo youth participants" className="rounded-2xl shadow-2xl w-full" />
+              <img src={heroImage} alt="Metro Manila youth participants" className="rounded-2xl shadow-2xl w-full" />
             </div>
           </div>
         </div>

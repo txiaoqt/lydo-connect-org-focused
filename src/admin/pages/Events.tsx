@@ -81,7 +81,7 @@ const defaultForm: EventForm = {
   eventDate: "",
   startTime: "",
   endTime: "",
-  location: "San Mateo, Rizal",
+  location: "Metro Manila",
   locationLatitude: "",
   locationLongitude: "",
   capacity: "",
@@ -315,7 +315,7 @@ export const Events = () => {
       event_date: form.eventDate || null,
       start_time: form.startTime || null,
       end_time: form.endTime || null,
-      location: form.location.trim() || "San Mateo, Rizal",
+      location: form.location.trim() || "Metro Manila",
       location_latitude: parsedLatitude,
       location_longitude: parsedLongitude,
       capacity: parsedCapacity,
@@ -478,7 +478,7 @@ export const Events = () => {
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Events Management</h1>
-          <p className="text-muted-foreground mt-1 font-medium">Coordinate and manage community events for the youth.</p>
+          <p className="text-muted-foreground mt-1 font-medium">Coordinate and manage community events for youth across Metro Manila.</p>
         </div>
         <button
           type="button"

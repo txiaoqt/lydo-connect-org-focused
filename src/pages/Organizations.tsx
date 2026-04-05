@@ -74,8 +74,8 @@ export default function Organizations() {
               Youth Organizations
             </h1>
             <p className="text-secondary-foreground/70 max-w-2xl mx-auto">
-              Verified organizations and partners connected to LYDO San Mateo, Rizal based on municipal
-              public announcements.
+              Verified organizations and partners connected to Metro Manila LYDOs based on official public
+              announcements.
             </p>
           </div>
         </section>
@@ -154,8 +154,8 @@ export default function Organizations() {
             <div className="mt-10 bg-muted/40 border rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
               <Building2 className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
-                Organization list is based on publicly posted LYDO-related announcements from the Municipality of San
-                Mateo website (which republishes official LGU updates).
+                Organization list is based on publicly posted LYDO-related announcements and official Metro Manila
+                local government updates.
               </p>
             </div>
           </div>

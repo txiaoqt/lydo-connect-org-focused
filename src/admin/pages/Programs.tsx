@@ -78,7 +78,7 @@ const defaultForm: ProgramForm = {
   sectorOption: "General",
   customSector: "",
   description: "",
-  location: "San Mateo, Rizal",
+  location: "Metro Manila",
   locationLatitude: "",
   locationLongitude: "",
   startDate: "",
@@ -306,7 +306,7 @@ export const Programs = () => {
       title: form.title.trim(),
       sector: selectedSector,
       description: form.description.trim(),
-      location: form.location.trim() || "San Mateo, Rizal",
+      location: form.location.trim() || "Metro Manila",
       location_latitude: parsedLatitude,
       location_longitude: parsedLongitude,
       start_date: form.startDate || null,
@@ -457,7 +457,7 @@ export const Programs = () => {
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Programs Management</h1>
-          <p className="text-muted-foreground mt-1 font-medium">Manage and monitor youth development programs in San Mateo.</p>
+          <p className="text-muted-foreground mt-1 font-medium">Manage and monitor youth development programs across Metro Manila.</p>
         </div>
         <button
           type="button"

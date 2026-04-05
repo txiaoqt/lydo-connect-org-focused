@@ -232,7 +232,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           display_name: fullName ?? "",
           contact_number: contactNumber ?? "",
           barangay_id: barangayId ?? "",
-          municipality: "San Mateo, Rizal",
+          municipality: "Metro Manila",
         },
       },
     });

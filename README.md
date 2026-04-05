@@ -1,6 +1,6 @@
 # LYDO Connect — Youth Engagement Management System
 
-A modern web application for the Municipality of San Mateo, Rizal to centralize youth programs, events, and scholarships.
+A modern web application for Local Youth Development Offices in Metro Manila to centralize youth programs, events, organizations, and transparency workflows.
 
 ## Features
 
