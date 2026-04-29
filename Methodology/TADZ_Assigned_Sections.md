@@ -155,17 +155,17 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK, FK | user_id | uuid | 36 | No | none | must exist in `auth.users(id)` | Unique user identifier | `a3e1e8ee-6f2b-4e43-b99f-a6f58db1c901` |
-|  | email | citext | 254 | No | none | unique, valid email format | User email address | `juan.delacruz@email.com` |
+| PK, FK | user_id | uuid | 36 | No | none | must exist in `auth.users(id)` | Identifier of the user from auth.users associated with this record. | `a3e1e8ee-6f2b-4e43-b99f-a6f58db1c901` |
+|  | email | citext | 254 | No | none | unique, valid email format | Email address used for contact and account identification. | `juan.delacruz@email.com` |
 |  | full_name | text | variable | Yes | null | none | Full legal name | `Juan Dela Cruz` |
 |  | display_name | text | variable | Yes | null | none | Name shown in UI | `Juan` |
-|  | contact_number | text | 13 to 16 | Yes | null | app-level PH mobile format | Mobile/contact number | `+639171234567` |
-| FK | barangay_id | uuid | 36 | Yes | null | references `barangays(id)` | Linked barangay | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
-|  | municipality | text | variable | No | `Metro Manila` | non-empty in UI | Municipality/city | `San Mateo` |
+|  | contact_number | text | 13 to 16 | Yes | null | app-level PH mobile format | Primary mobile number used for communication and verification. | `+639171234567` |
+| FK | barangay_id | uuid | 36 | Yes | null | references `barangays(id)` | Identifier of the related barangay in public.barangays. | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
+|  | municipality | text | variable | No | `Metro Manila` | non-empty in UI | Municipality or city declared by the user or record owner. | `San Mateo` |
 |  | notifications | boolean | 1 | No | `true` | boolean only | Notification preference | `true` |
 |  | show_email_public | boolean | 1 | No | `false` | boolean only | Public profile email visibility | `false` |
-|  | created_at | timestamptz | datetime | No | `now()` | system-generated | Record creation timestamp | `2026-04-29 19:10:24+08` |
-|  | updated_at | timestamptz | datetime | No | `now()` | auto-updated trigger | Last update timestamp | `2026-04-29 19:35:02+08` |
+|  | created_at | timestamptz | datetime | No | `now()` | system-generated | Date and time when this record was first created. | `2026-04-29 19:10:24+08` |
+|  | updated_at | timestamptz | datetime | No | `now()` | auto-updated trigger | Date and time when this record was last modified. | `2026-04-29 19:35:02+08` |
 
 *Table 0. Database Table of user_profiles*
 
@@ -175,15 +175,15 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Program primary key | `f9f6db7f-8f66-4bf6-8b95-83832e5b8c5c` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `f9f6db7f-8f66-4bf6-8b95-83832e5b8c5c` |
 |  | slug | text | variable | No | none | unique | URL-safe program code | `hirayang-kabataan-yep` |
-|  | title | text | variable | No | none | non-empty | Program title | `Hirayang Kabataan Youth Empowerment Program` |
+|  | title | text | variable | No | none | non-empty | Formal title of the program, event, advisory, or document. | `Hirayang Kabataan Youth Empowerment Program` |
 |  | sector | text | variable | No | none | non-empty | Program sector/category | `LYDO` |
-|  | description | text | variable | No | `''` | none | Program details | `Core empowerment program...` |
+|  | description | text | variable | No | `''` | none | Detailed explanation of the purpose or context of this record. | `Core empowerment program...` |
 |  | start_date | date | date | Yes | null | <= `end_date` when both present | Program start date | `2026-05-10` |
 |  | end_date | date | date | Yes | null | >= `start_date` when both present | Program end date | `2026-05-12` |
-|  | status | enum(program_status) | fixed | No | `published` | `draft/published/archived` | Publication state | `published` |
-| FK | barangay_id | uuid | 36 | Yes | null | references `barangays(id)` | Target barangay | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
+|  | status | enum(program_status) | fixed | No | `published` | `draft/published/archived` | Current workflow or lifecycle state of this record. | `published` |
+| FK | barangay_id | uuid | 36 | Yes | null | references `barangays(id)` | Identifier of the related barangay in public.barangays. | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
 | FK | created_by | uuid | 36 | Yes | null | references `auth.users(id)` | Creator account | `2c7eec2a-d9de-4a9e-9185-37e1e5be20d4` |
 |  | start_time | time | hh:mm:ss | Yes | null | <= `end_time` when both present | Start time | `09:00:00` |
 |  | end_time | time | hh:mm:ss | Yes | null | >= `start_time` when both present | End time | `17:00:00` |
@@ -196,13 +196,13 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Event primary key | `d8be3412-20bc-4d75-a895-c3ce1f3c8f67` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `d8be3412-20bc-4d75-a895-c3ce1f3c8f67` |
 |  | slug | text | variable | No | none | unique | URL-safe event code | `siklab-opening-games-2026` |
-|  | title | text | variable | No | none | non-empty | Event title | `SIKLAB Opening Games` |
+|  | title | text | variable | No | none | non-empty | Formal title of the program, event, advisory, or document. | `SIKLAB Opening Games` |
 |  | event_date | date | date | Yes | null | valid date | Event date | `2026-05-05` |
 |  | capacity | integer | up to 10 digits | Yes | null | > 0 when not null | Max registrants | `300` |
-|  | status | enum(event_status) | fixed | No | `upcoming` | `draft/upcoming/past/cancelled` | Event state | `upcoming` |
-| FK | barangay_id | uuid | 36 | Yes | null | references `barangays(id)` | Event barangay scope | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
+|  | status | enum(event_status) | fixed | No | `upcoming` | `draft/upcoming/past/cancelled` | Current workflow or lifecycle state of this record. | `upcoming` |
+| FK | barangay_id | uuid | 36 | Yes | null | references `barangays(id)` | Identifier of the related barangay in public.barangays. | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
 |  | location_latitude | numeric(9,6) | 9,6 | Yes | null | between -90 and 90 | Latitude | `14.683000` |
 |  | location_longitude | numeric(9,6) | 9,6 | Yes | null | between -180 and 180 | Longitude | `121.118000` |
 
@@ -214,12 +214,12 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Registration primary key | `54a08f6f-a20a-4f61-b60a-f9b11ce92c20` |
-| FK | user_id | uuid | 36 | No | none | references `auth.users(id)` | Registrant account | `2c7eec2a-d9de-4a9e-9185-37e1e5be20d4` |
-| FK | event_id | uuid | 36 | No | none | references `events(id)` | Registered event | `d8be3412-20bc-4d75-a895-c3ce1f3c8f67` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `54a08f6f-a20a-4f61-b60a-f9b11ce92c20` |
+| FK | user_id | uuid | 36 | No | none | references `auth.users(id)` | Identifier of the user from auth.users associated with this record. | `2c7eec2a-d9de-4a9e-9185-37e1e5be20d4` |
+| FK | event_id | uuid | 36 | No | none | references `events(id)` | Identifier of the related event in public.events. | `d8be3412-20bc-4d75-a895-c3ce1f3c8f67` |
 |  | full_name | text | variable | No | none | minimum 2 chars (RPC validation) | Registrant name | `Juan Dela Cruz` |
-|  | email | citext | 254 | No | none | valid email format | Registrant email | `juan@email.com` |
-|  | contact_number | text | variable | No | none | PH mobile pattern (RPC validation) | Mobile number | `+639171234567` |
+|  | email | citext | 254 | No | none | valid email format | Email address used for contact and account identification. | `juan@email.com` |
+|  | contact_number | text | variable | No | none | PH mobile pattern (RPC validation) | Primary mobile number used for communication and verification. | `+639171234567` |
 |  | registration_status | enum(registration_status) | fixed | No | `registered` | enum values only | Registration state | `registered` |
 |  | source | text | variable | No | `portal_direct` | one of `portal_direct/admin_csv_sync/imported` | Source of entry | `portal_direct` |
 |  | gform_sync_status | text | variable | No | `pending` | one of `pending/synced/failed/skipped` | External sync status | `pending` |
@@ -232,13 +232,13 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Document primary key | `4f2d8bc9-78fe-4f90-b7aa-82ebef08db7f` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `4f2d8bc9-78fe-4f90-b7aa-82ebef08db7f` |
 |  | doc_code | text | variable | No | none | unique | Human-readable document code | `doc-101` |
-|  | title | text | variable | No | none | non-empty | Document title | `SK Midyear Budget Utilization Statement` |
+|  | title | text | variable | No | none | non-empty | Formal title of the program, event, advisory, or document. | `SK Midyear Budget Utilization Statement` |
 |  | document_type | enum(disclosure_doc_type) | fixed | No | none | enum values only | Disclosure category | `financial_statement` |
 |  | fiscal_year | integer | 4 digits | No | none | between 2000 and 2100 | Covered fiscal year | `2026` |
 |  | quarter | enum(quarter_code) | fixed | No | none | `Q1/Q2/Q3/Q4` | Covered quarter | `Q2` |
-| FK | office_id | uuid | 36 | Yes | null | references `offices(id)` | Issuing office | `8d4f29c0-c7c0-4f46-bf8c-5d9dd0d6f4a9` |
+| FK | office_id | uuid | 36 | Yes | null | references `offices(id)` | Identifier of the office responsible for this record. | `8d4f29c0-c7c0-4f46-bf8c-5d9dd0d6f4a9` |
 |  | public_url | text | variable | Yes | null | URL format expected | Public file URL/path | `/disclosure-registry-test.pdf` |
 |  | document_type_other | text | variable | Yes | null | required if `document_type='other'` | Custom type label | `Memorandum` |
 
@@ -250,12 +250,12 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Ticket primary key | `2f7b8f44-bf5e-4ec4-8773-5e0b60d1942b` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `2f7b8f44-bf5e-4ec4-8773-5e0b60d1942b` |
 |  | reference_no | text | variable | No | generated by trigger | unique | Public tracking reference | `LYDO-100245` |
 | FK | type_id | smallint | up to 5 digits | No | none | references `ticket_types(id)` | Ticket classification | `1` |
 |  | subject | text | variable | No | none | non-empty | Ticket subject | `Request for SK budget breakdown` |
 |  | requester_email | citext | 254 | No | none | valid email required | Requester email | `citizen1@example.com` |
-|  | status | enum(ticket_status) | fixed | No | `received` | enum values only | Ticket workflow status | `in_progress` |
+|  | status | enum(ticket_status) | fixed | No | `received` | enum values only | Current workflow or lifecycle state of this record. | `in_progress` |
 |  | priority | smallint | 1 digit | No | `3` | between 1 and 5 | Service priority | `2` |
 | FK | assigned_to_user_id | uuid | 36 | Yes | null | references `auth.users(id)` | Assigned staff user | `710fc677-f5ae-498e-9ec4-90f343db5d65` |
 |  | resolved_at | timestamptz | datetime | Yes | null | set by trigger when resolved/closed | Resolution timestamp | `2026-06-16 09:05:00+08` |
@@ -268,8 +268,8 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Compliance row primary key | `5d5e6a55-8f59-458d-8caf-f4c4af8db4ba` |
-| FK | barangay_id | uuid | 36 | No | none | references `barangays(id)` | Barangay scope | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `5d5e6a55-8f59-458d-8caf-f4c4af8db4ba` |
+| FK | barangay_id | uuid | 36 | No | none | references `barangays(id)` | Identifier of the related barangay in public.barangays. | `5c7c7cb0-0ff4-4b77-9db0-630f8e1f0f60` |
 |  | fiscal_year | integer | 4 digits | No | none | between 2000 and 2100 | Reporting year | `2026` |
 |  | month_no | smallint | 2 digits | No | none | between 1 and 12 | Reporting month | `6` |
 |  | mfr_status | enum(submission_state) | fixed | No | `missing` | enum values only | MFR submission state | `submitted` |
@@ -285,7 +285,7 @@ The following data dictionary follows the requested thesis-table format.
 
 | Key | Field Name | Data Type | Length | Optional | Default Value | Field Validation | Description | Sample Data |
 |---|---|---|---|---|---|---|---|---|
-| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Audit log primary key | `9f0fd1da-e26c-4856-bb1d-129c1f678882` |
+| PK | id | uuid | 36 | No | `gen_random_uuid()` | unique | Primary unique identifier of this record. | `9f0fd1da-e26c-4856-bb1d-129c1f678882` |
 |  | occurred_at | timestamptz | datetime | No | `now()` | system-generated | When change happened | `2026-04-29 20:03:44+08` |
 | FK | actor_user_id | uuid | 36 | Yes | null | references `auth.users(id)` | User who performed action | `710fc677-f5ae-498e-9ec4-90f343db5d65` |
 |  | operation | text | 6 | No | none | one of `INSERT/UPDATE/DELETE` | Type of change | `UPDATE` |
@@ -376,3 +376,4 @@ Inferential tests (for example, `t-test` or `z-test`) are not required by defaul
 ## Ready-to-Paste Note
 
 If needed, I can also split this file into section-specific `.md` files (`3.2.4`, `3.2.5`, `3.3.1`, `3.3.2`, `3.7.6`) to match your manuscript structure one-to-one.
+

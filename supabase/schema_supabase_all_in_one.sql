@@ -4160,3 +4160,420 @@ commit;
 
 -- END FILE: supabase/sql/26_program_registration_membership_fix.sql
 
+-- ===========================================================================
+-- BEGIN FILE: supabase/sql/27_mock_data_all_tables.sql
+-- ===========================================================================
+
+begin;
+
+-- Ensures there is at least one mock row for every table.
+-- User-dependent tables are seeded only when auth.users has at least one row.
+with sample_users as (
+  select
+    (select id from auth.users order by created_at asc limit 1) as user_a,
+    (select id from auth.users order by created_at asc offset 1 limit 1) as user_b
+)
+insert into public.user_profiles (user_id, email, full_name, display_name, municipality, contact_number)
+select user_a, 'mock.user.a@example.com', 'Mock User A', 'MockA', 'Metro Manila', '+639171111111'
+from sample_users
+where user_a is not null
+on conflict (user_id) do update
+set email = excluded.email,
+    full_name = excluded.full_name,
+    display_name = excluded.display_name,
+    municipality = excluded.municipality,
+    contact_number = excluded.contact_number,
+    updated_at = now();
+
+insert into public.roles (code, label, description)
+values ('admin', 'Administrator', 'Full platform administration')
+on conflict (code) do update
+set label = excluded.label,
+    description = excluded.description;
+
+insert into public.barangays (id, name, latitude, longitude, sk_chairperson, youth_population)
+values ('00000000-0000-0000-0000-00000000b001', 'Mock Barangay One', 14.700000, 121.120000, 'Mock SK Chair', 1200)
+on conflict (id) do update
+set name = excluded.name,
+    latitude = excluded.latitude,
+    longitude = excluded.longitude,
+    sk_chairperson = excluded.sk_chairperson,
+    youth_population = excluded.youth_population,
+    updated_at = now();
+
+insert into public.offices (id, name, code)
+values ('00000000-0000-0000-0000-00000000c001', 'Mock Youth Office', 'MOCK_OFFICE')
+on conflict (id) do update
+set name = excluded.name,
+    code = excluded.code,
+    updated_at = now();
+
+with sample_users as (
+  select (select id from auth.users order by created_at asc limit 1) as user_a
+),
+admin_role as (
+  select id as role_id from public.roles where code = 'admin' limit 1
+)
+insert into public.user_roles (user_id, role_id, assigned_by)
+select su.user_a, ar.role_id, su.user_a
+from sample_users su
+cross join admin_role ar
+where su.user_a is not null
+on conflict (user_id, role_id) do nothing;
+
+insert into public.programs (
+  id, slug, title, sector, description, start_date, end_date, schedule_text, location,
+  status, barangay_id, source_post_url, published_at
+)
+values (
+  '00000000-0000-0000-0000-00000000d001',
+  'mock-program-all-table-seed',
+  'Mock Program Seed',
+  'LYDO',
+  'Mock program for all-table seed coverage.',
+  date '2026-05-10',
+  date '2026-05-12',
+  '8:00 AM to 5:00 PM',
+  'Mock Youth Center',
+  'published',
+  '00000000-0000-0000-0000-00000000b001',
+  'https://www.facebook.com/metrolydo/',
+  now()
+)
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    updated_at = now();
+
+insert into public.events (
+  id, slug, title, sector, description, event_date, location, status, barangay_id, source_post_url,
+  capacity, published_at, start_time, end_time
+)
+values (
+  '00000000-0000-0000-0000-00000000e001',
+  'mock-event-all-table-seed',
+  'Mock Event Seed',
+  'LYDO',
+  'Mock event for all-table seed coverage.',
+  date '2026-05-15',
+  'Mock Covered Court',
+  'upcoming',
+  '00000000-0000-0000-0000-00000000b001',
+  'https://www.facebook.com/metrolydo/',
+  100,
+  now(),
+  time '09:00',
+  time '12:00'
+)
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    capacity = excluded.capacity,
+    updated_at = now();
+
+insert into public.organizations (
+  id, slug, name, type, focus, source_tag, status, barangay_id, source_post_url
+)
+values (
+  '00000000-0000-0000-0000-00000000f001',
+  'mock-org-all-table-seed',
+  'Mock Youth Organization',
+  'Youth Interest Group',
+  'Leadership and volunteerism',
+  'Mock seed',
+  'active',
+  '00000000-0000-0000-0000-00000000b001',
+  'https://www.facebook.com/metrolydo/'
+)
+on conflict (id) do update
+set name = excluded.name,
+    focus = excluded.focus,
+    updated_at = now();
+
+with sample_users as (
+  select (select id from auth.users order by created_at asc limit 1) as user_a
+)
+insert into public.user_program_memberships (id, user_id, program_id, left_at)
+select '00000000-0000-0000-0000-00000000f101', su.user_a, '00000000-0000-0000-0000-00000000d001', null
+from sample_users su
+where su.user_a is not null
+on conflict (id) do nothing;
+
+with sample_users as (
+  select (select id from auth.users order by created_at asc limit 1) as user_a
+)
+insert into public.user_org_memberships (id, user_id, organization_id, left_at)
+select '00000000-0000-0000-0000-00000000f102', su.user_a, '00000000-0000-0000-0000-00000000f001', null
+from sample_users su
+where su.user_a is not null
+on conflict (id) do nothing;
+
+with sample_users as (
+  select (select id from auth.users order by created_at asc limit 1) as user_a
+)
+insert into public.event_registrations (
+  id, user_id, event_id, full_name, email, contact_number, municipality, barangay_id,
+  registration_status, registered_at, cancelled_at, source, gform_sync_status
+)
+select
+  '00000000-0000-0000-0000-00000000f103',
+  su.user_a,
+  '00000000-0000-0000-0000-00000000e001',
+  'Mock User A',
+  'mock.user.a@example.com',
+  '+639171111111',
+  'Metro Manila',
+  '00000000-0000-0000-0000-00000000b001',
+  'registered',
+  now(),
+  null,
+  'portal_direct',
+  'pending'
+from sample_users su
+where su.user_a is not null
+on conflict (id) do update
+set registration_status = excluded.registration_status,
+    updated_at = now();
+
+insert into public.ticket_types (id, name)
+values (9001, 'Mock Ticket Type')
+on conflict (id) do update
+set name = excluded.name;
+
+insert into public.disclosure_documents (
+  id, doc_code, title, document_type, fiscal_year, quarter, barangay_id, applies_to_all_barangays,
+  office_id, published_date, file_size_bytes, file_mime_type, public_url, source_post_url
+)
+values (
+  '00000000-0000-0000-0000-00000000a101',
+  'mock-doc-all-table-seed',
+  'Mock Disclosure Document',
+  'program_outcome',
+  2026,
+  'Q2',
+  '00000000-0000-0000-0000-00000000b001',
+  false,
+  '00000000-0000-0000-0000-00000000c001',
+  date '2026-05-20',
+  1234567,
+  'application/pdf',
+  '/disclosure-registry-test.pdf',
+  'https://www.facebook.com/metrolydo/'
+)
+on conflict (id) do update
+set title = excluded.title,
+    updated_at = now();
+
+with sample_users as (
+  select (select id from auth.users order by created_at asc limit 1) as user_a
+)
+insert into public.document_downloads (id, document_id, user_id, ip_hash, user_agent)
+select
+  '00000000-0000-0000-0000-00000000a102',
+  '00000000-0000-0000-0000-00000000a101',
+  su.user_a,
+  'mock_ip_hash',
+  'mock-browser'
+from sample_users su
+on conflict (id) do nothing;
+
+insert into public.barangay_financials (
+  id, barangay_id, fiscal_year, month_no, allocated_amount, utilized_amount, sk_budget
+)
+values (
+  '00000000-0000-0000-0000-00000000a103',
+  '00000000-0000-0000-0000-00000000b001',
+  2026,
+  4,
+  750000.00,
+  520000.00,
+  900000.00
+)
+on conflict (barangay_id, fiscal_year, month_no) do update
+set allocated_amount = excluded.allocated_amount,
+    utilized_amount = excluded.utilized_amount,
+    sk_budget = excluded.sk_budget,
+    updated_at = now();
+
+insert into public.barangay_youth_metrics (
+  id, barangay_id, fiscal_year, activities, participants, organizations, compliance_status
+)
+values (
+  '00000000-0000-0000-0000-00000000a104',
+  '00000000-0000-0000-0000-00000000b001',
+  2026,
+  11,
+  780,
+  4,
+  'compliant'
+)
+on conflict (barangay_id, fiscal_year) do update
+set activities = excluded.activities,
+    participants = excluded.participants,
+    organizations = excluded.organizations,
+    compliance_status = excluded.compliance_status,
+    updated_at = now();
+
+insert into public.compliance_board_status (
+  id, barangay_id, fiscal_year, quarter, cbydp, abyip, annual_budget, rcb, mil, remarks
+)
+values (
+  '00000000-0000-0000-0000-00000000a105',
+  '00000000-0000-0000-0000-00000000b001',
+  2026,
+  'Q2',
+  'ok',
+  'ok',
+  'partial',
+  'ok',
+  'issue',
+  'Mock board status'
+)
+on conflict (barangay_id, fiscal_year, quarter) do update
+set cbydp = excluded.cbydp,
+    abyip = excluded.abyip,
+    annual_budget = excluded.annual_budget,
+    rcb = excluded.rcb,
+    mil = excluded.mil,
+    remarks = excluded.remarks,
+    updated_at = now();
+
+insert into public.monthly_compliance (
+  id, barangay_id, fiscal_year, month_no, due_date, mfr_status, mil_status, rcb_status,
+  accomplishment_status, census_status, completion_percent, report_document_id
+)
+values (
+  '00000000-0000-0000-0000-00000000a106',
+  '00000000-0000-0000-0000-00000000b001',
+  2026,
+  4,
+  date '2026-04-05',
+  'submitted',
+  'submitted',
+  'late',
+  'submitted',
+  'missing',
+  80,
+  '00000000-0000-0000-0000-00000000a101'
+)
+on conflict (barangay_id, fiscal_year, month_no) do update
+set mfr_status = excluded.mfr_status,
+    mil_status = excluded.mil_status,
+    rcb_status = excluded.rcb_status,
+    accomplishment_status = excluded.accomplishment_status,
+    census_status = excluded.census_status,
+    completion_percent = excluded.completion_percent,
+    report_document_id = excluded.report_document_id,
+    updated_at = now();
+
+with sample_users as (
+  select
+    (select id from auth.users order by created_at asc limit 1) as user_a,
+    (select id from auth.users order by created_at asc offset 1 limit 1) as user_b
+)
+insert into public.citizen_tickets (
+  id, reference_no, type_id, subject, message, requester_email, requester_name, requester_contact,
+  status, priority, created_by_user_id, assigned_to_user_id
+)
+select
+  '00000000-0000-0000-0000-00000000a107',
+  'LYDO-MOCK-900001',
+  9001,
+  'Mock Citizen Ticket',
+  'Mock ticket for all-table seed coverage.',
+  'mock.requester@example.com',
+  'Mock Requester',
+  '+639199999999',
+  'in_progress',
+  3,
+  su.user_a,
+  coalesce(su.user_b, su.user_a)
+from sample_users su
+on conflict (id) do update
+set status = excluded.status,
+    updated_at = now();
+
+insert into public.service_advisories (
+  id, office_id, title, status, message, starts_at, ends_at
+)
+values (
+  '00000000-0000-0000-0000-00000000a108',
+  '00000000-0000-0000-0000-00000000c001',
+  'Mock Service Advisory',
+  'notice',
+  'Mock advisory for all-table seed coverage.',
+  now(),
+  now() + interval '2 hours'
+)
+on conflict (id) do update
+set title = excluded.title,
+    status = excluded.status,
+    message = excluded.message,
+    updated_at = now();
+
+insert into public.admin_accounts (id, username, password_hash, display_name, is_active)
+values (
+  '00000000-0000-0000-0000-00000000a109',
+  'mockadmin',
+  crypt('mockadminpassword', gen_salt('bf')),
+  'Mock Admin',
+  true
+)
+on conflict (id) do update
+set username = excluded.username,
+    password_hash = excluded.password_hash,
+    display_name = excluded.display_name,
+    is_active = excluded.is_active,
+    updated_at = now();
+
+with sample_users as (
+  select (select id from auth.users order by created_at asc limit 1) as user_a
+)
+insert into public.program_registrations (
+  id, user_id, program_id, full_name, email, contact_number, municipality, barangay_id,
+  registration_status, registered_at, cancelled_at, source, gform_sync_status
+)
+select
+  '00000000-0000-0000-0000-00000000a110',
+  su.user_a,
+  '00000000-0000-0000-0000-00000000d001',
+  'Mock User A',
+  'mock.user.a@example.com',
+  '+639171111111',
+  'Metro Manila',
+  '00000000-0000-0000-0000-00000000b001',
+  'registered',
+  now(),
+  null,
+  'portal_direct',
+  'pending'
+from sample_users su
+where su.user_a is not null
+on conflict (id) do update
+set registration_status = excluded.registration_status,
+    updated_at = now();
+
+insert into public.audit_logs (
+  id, actor_user_id, actor_name, actor_email, actor_role, actor_claims, operation,
+  table_schema, table_name, row_pk, changed_fields, old_data, new_data
+)
+values (
+  '00000000-0000-0000-0000-00000000a111',
+  null,
+  'mock-seeder',
+  'mock.seeder@example.com',
+  'service_role',
+  '{"seed":"mock"}'::jsonb,
+  'INSERT',
+  'public',
+  'barangays',
+  '{"id":"00000000-0000-0000-0000-00000000b001"}'::jsonb,
+  array['name','latitude','longitude'],
+  null,
+  '{"name":"Mock Barangay One"}'::jsonb
+)
+on conflict (id) do nothing;
+
+commit;
+
+-- END FILE: supabase/sql/27_mock_data_all_tables.sql
