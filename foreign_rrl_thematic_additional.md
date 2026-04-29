@@ -1,100 +1,69 @@
-# Additional Foreign Literature (Thematic Draft)
+Theme 1: Youth Participation Structures in Local Governance
+Youth participation structures in local governance are important because they provide formal channels through which young people can engage in decision-making, community programs, and civic processes. When participation mechanisms are informal, fragmented, or poorly documented, local governments may struggle to evaluate whether youth engagement efforts are inclusive, consistent, and effective. For this reason, institutional participation structures are not only a representation mechanism, but also a governance mechanism that requires organization, continuity, and measurable outcomes.
 
-This section presents additional **foreign literature** organized thematically in relation to the proposed system, **LYDO Connect: Youth Information, Engagement, and Transparency Management System**. Each study is discussed in terms of its focus, identified gap, and relevance to the present study.
+Augsberger, Collins, and Howard (2024) examined municipal youth councils across multiple countries through a scoping review and found that youth councils are widely used as formal participation mechanisms, but their structures, activities, and outcomes vary significantly by local context. The study emphasizes that while many youth councils produce positive individual-level outcomes, evidence on system-level outcomes and long-term governance effects remains uneven. This indicates a recurring implementation gap between establishing youth participation bodies and sustaining data-supported evaluation of participation quality and impact.
 
-## Theme 1: Youth Participation and Local Governance Mechanisms
+This literature is relevant to the proposed system because it supports the need for a structured platform that does not only host youth information, but also organizes participation records in a way that can be monitored over time. In relation to the identified gap, the proposed LYDO Connect system provides integrated participation workflows and record management features that can support more systematic tracking of youth engagement outcomes at the local level.
 
-### 1.1 Municipal Youth Councils as Participation Structures
-Augsberger, Collins, and Howard (2024) conducted a scoping review of municipal youth councils across different countries and examined their structures, participation processes, and documented outcomes. The review showed that local youth councils are widely used to institutionalize youth participation, but implementation quality varies significantly depending on governance design, representation practices, and administrative support.
 
-**Gap identified:** While the review mapped broad international practices, it also indicated limited standardized evidence on how local governments can systematically monitor youth participation outcomes over time through integrated digital systems.
+Theme 2: Democratic Outcomes and Design Conditions of Youth Participation
+Youth participation in local governance is often presented as inherently beneficial, yet actual democratic outcomes depend on how participation processes are designed, implemented, and linked to decision-making structures. If participation channels are symbolic, disconnected from policy processes, or weakly documented, youth involvement may increase activity levels without producing meaningful governance influence. Because of this, participation systems require both process quality and accountability mechanisms.
 
-**Relevance to the present study:** This gap directly supports the need for LYDO Connect, which is designed to structure youth participation records and provide monitoring features that can support evidence-based youth governance at the local level.
+Ramos, Tavares, and da Cruz (2026) reviewed empirical studies on youth participation in local governance and reported that outcomes are mixed across individual, community, and government levels. Their findings show that positive youth experiences do not always translate into policy-level impact, and that institutional design and gatekeeping conditions strongly influence participation effectiveness. The study therefore reveals a gap between participation intent and measurable governance outcomes, particularly where operational monitoring mechanisms are limited.
 
-### 1.2 Democratic Outcomes of Youth Participation in Local Governance
-Ramos, Tavares, and da Cruz (2026) reviewed empirical studies on youth participation outcomes in local governance and reported that positive participation experiences do not always translate into measurable policy influence. The study emphasized that institutional design, process quality, and governance arrangements affect the depth and impact of youth participation.
+This literature is relevant to the proposed system because LYDO Connect is designed to bridge participation activity and governance documentation through centralized workflows, participation records, and reporting features. In response to the gap identified in the review, the system can help local offices move from participation visibility alone to participation monitoring that is linked to administrative review and transparency outputs.
 
-**Gap identified:** Existing studies report outcomes, but many local systems still lack operational tools that connect participation activities with trackable administrative outputs and public accountability indicators.
 
-**Relevance to the present study:** LYDO Connect addresses this by linking youth engagement workflows (program and event participation) with records and transparency modules, allowing participation data to be documented and reviewed in a governance context.
+Theme 3: E-Government Service Design and Citizen-Facing Quality
+E-government platforms are expected to deliver not only digital access but also service quality through usable interfaces, reliable information, secure transactions, and responsive support functions. When service design dimensions are weak or uneven, users may encounter access barriers, incomplete processes, and low satisfaction, even if services are technically available online. For this reason, e-government quality should be assessed as a multidimensional service design problem rather than a simple availability issue.
 
-## Theme 2: E-Government Service Design and Portal Quality
+Chan, Thong, Brown, and Venkatesh (2021) explain that citizen satisfaction with e-government services is influenced by multiple service design dimensions, including core service quality, facilitating services such as accessibility and security, and supporting services such as transparency and personalization. Their findings indicate that these dimensions function jointly and should be designed as complementary components to improve perceived service quality. However, the study is broad in scope and does not focus on youth-governance contexts where information access, participation, and transparency functions must operate in one integrated platform.
 
-### 2.1 Multidimensional E-Government Service Design
-Chan, Thong, Brown, and Venkatesh (2021) examined how e-government service design dimensions (core service, facilitating services, and supporting services) influence perceived service quality and citizen satisfaction. Their findings confirmed that accessibility, security/privacy, usability, and transparency-related design elements jointly shape e-government outcomes.
+This literature is relevant to the proposed system because LYDO Connect combines exactly these service domains in one local governance environment. Relative to the identified gap, the system contributes a domain-specific application by integrating youth program information, participation workflows, and transparency access in a unified web-based platform for both youth users and administrators.
 
-**Gap identified:** The study validated quality dimensions at a general e-government level but did not focus on youth-governance-specific platforms with combined participation and transparency requirements.
 
-**Relevance to the present study:** The findings provide direct design guidance for LYDO Connect modules, particularly in ensuring that information access, participation workflows, and support features are implemented as complementary components.
+Theme 4: Public Value and Transparency-Oriented E-Government
+Digital governance systems are increasingly evaluated based on public value outcomes such as service improvement, administrative efficiency, transparency, and accountability. In local governance settings, transparency features are especially important because they shape how citizens access official records, understand service performance, and assess institutional responsiveness. When transparency data are fragmented across channels, public information becomes harder to verify and use.
 
-### 2.2 Mandatory E-Government Service Satisfaction
-Alkraiji (2020) developed and tested a model of citizen satisfaction with mandatory e-government services. The study found that service quality and trust-related factors significantly affect user satisfaction in digital government transactions.
+Twizeyimana and Andersson (2019) identify major public value dimensions of e-government and highlight transparency and open government capability as core outputs of effective digital governance. Relatedly, Purwanto, Zuiderwijk-van Eijk, and Janssen (2020) show that trust in open government data is influenced by data quality, system quality, and service quality. Together, these studies indicate that transparency outcomes depend not only on publishing information but also on the quality of the platform through which information is delivered. A practical gap remains in many local contexts where transparency records exist but are not integrated with participation and service datasets in one accessible system.
 
-**Gap identified:** The study context focused on mandatory services and did not cover integrated youth governance ecosystems combining informational, participatory, and transparency services in one platform.
+This literature is relevant to the proposed system because LYDO Connect is designed to consolidate governance information, disclosure-related records, and participation-linked reporting in a centralized digital platform. In relation to the identified gap, the system supports transparency as an operational process rather than as isolated document posting, thereby improving accessibility and usability of public-facing information.
 
-**Relevance to the present study:** LYDO Connect can apply these findings by strengthening system quality and trust-supporting controls (e.g., role-based access, secure data handling, and clear service processes) across modules.
 
-## Theme 3: Transparency, Open Government Data, and Public Value
+Theme 5: Service Request Tracking and Citizen Relationship Management
+Service request systems are important components of digital public service delivery because they provide structured channels for submitting concerns, assigning actions, and monitoring response status. Without structured tracking, service interactions may remain undocumented or difficult to evaluate, which can reduce accountability and weaken service performance analysis. Effective request management therefore requires both workflow structure and interpretive context for performance reporting.
 
-### 3.1 Public Value Perspective of E-Government
-Twizeyimana and Andersson (2019) synthesized literature on the public value of e-government and identified recurring value dimensions, including improved services, administrative efficiency, open government capability, and trust-related outcomes.
+Wu (2021) reports that the use of 311 systems can improve some dimensions of citizens' public service encounter satisfaction, while also increasing expectations for problem resolution quality. White and Trump (2018) further show that request datasets are valuable but should be interpreted carefully because reporting behavior can vary across groups and contexts. These findings reveal an implementation gap in which request-tracking systems are often used as performance indicators without sufficient contextualization of participation and reporting patterns.
 
-**Gap identified:** The review identified value dimensions conceptually, but practical translation into integrated, local-level governance platforms remains uneven across contexts.
+This literature is relevant to the proposed system because LYDO Connect includes citizen desk and request-tracking features that can structure submissions, statuses, and administrative actions in one workflow. In response to the identified gap, the system can support better interpretation of request data by relating service records to broader participation and governance information available within the same platform.
 
-**Relevance to the present study:** LYDO Connect operationalizes these value dimensions through concrete modules for public information access, participation management, and transparency records within one local governance platform.
 
-### 3.2 Open Government Data Quality and Trust Outcomes
-Purwanto, Zuiderwijk-van Eijk, and Janssen (2020) examined how data quality, system quality, and service quality influence trust in open government data environments. Results showed that quality dimensions in both data and platform services are central to trust formation.
+Theme 6: Digital Inclusion, Privacy, and Data-Driven Public Sector Design
+Digital inclusion and data governance are foundational requirements of sustainable e-government systems because public platforms must be both accessible to diverse users and capable of handling records responsibly. If digital services are inaccessible or weak in data governance design, adoption and trust outcomes may remain limited even when systems are fully deployed. For this reason, local digital governance systems need user-centered accessibility and data-driven governance principles at the same time.
 
-**Gap identified:** The study focused on OGD trust mechanisms and did not directly address youth-governance program operations where disclosure records and participation records coexist in the same system.
+Mesa (2023) explains that digital divide conditions continue to affect how citizens engage with e-government services, while OECD (2019) and OECD (2020) provide policy frameworks for data-driven and user-driven digital government transformation. These works collectively emphasize accessibility, interoperability, data governance, and continuous service improvement. However, policy-level frameworks do not provide direct implementation blueprints for youth-focused local governance contexts with integrated participation and transparency requirements.
 
-**Relevance to the present study:** This supports the need for LYDO Connect to maintain both content quality (accurate records) and platform quality (usable and reliable access) in its transparency and reporting components.
+This literature is relevant to the proposed system because LYDO Connect is positioned as a localized implementation of these principles through cross-device web access, centralized records, role-based workflows, and integrated governance modules. In relation to the identified gap, the system translates high-level digital government principles into an operational youth-governance platform suited to local office processes.
 
-## Theme 4: Service Request Tracking and Citizen Relationship Management
 
-### 4.1 311 Use and Public Service Encounter Satisfaction
-Wu (2021) analyzed whether the use of 311 systems improves citizen satisfaction with public service encounters. Findings showed that structured request channels can improve perceived service interaction quality, while also raising user expectations for response effectiveness and issue resolution.
+References
 
-**Gap identified:** The study highlighted interaction-level effects but did not provide a youth-sector-specific service desk model integrated with participation and transparency datasets.
+Augsberger, A., Collins, M. E., & Howard, R. C. (2024). The global context of youth engagement: A scoping review of youth councils in municipal government. Children and Youth Services Review, 156, 107349. https://doi.org/10.1016/j.childyouth.2023.107349
 
-**Relevance to the present study:** LYDO Connect’s citizen desk and request-tracking components align with this evidence by providing structured submission and status monitoring workflows within a youth-governance platform.
+Chan, F. K. Y., Thong, J. Y. L., Brown, S. A., & Venkatesh, V. (2021). Service Design and Citizen Satisfaction with E-Government Services: A Multidimensional Perspective. Public Administration Review, 81(5), 874-894. https://doi.org/10.1111/puar.13308
 
-### 4.2 Design Limits and Interpretive Risks of 311 Data
-White and Trump (2018) discussed both benefits and pitfalls of 311 data as a measure of civic-state interaction. The study emphasized that request data are useful but can be biased by participation patterns and unequal reporting behavior.
+Mesa, D. (2023). Digital divide, e-government and trust in public service: The key role of education. Frontiers in Sociology, 8, 1140416. https://doi.org/10.3389/fsoc.2023.1140416
 
-**Gap identified:** Existing request-tracking systems are often treated as neutral performance indicators without sufficient consideration of participation bias and context-specific interpretation.
+OECD. (2019). The Path to Becoming a Data-Driven Public Sector. OECD Publishing. https://doi.org/10.1787/059814a7-en
 
-**Relevance to the present study:** This is relevant to LYDO Connect because service-request metrics should be interpreted with governance context, and reporting outputs should be complemented by participation and demographic indicators where appropriate.
+OECD. (2020). The OECD Digital Government Policy Framework: Six dimensions of a Digital Government. OECD Publishing. https://doi.org/10.1787/f64fed2a-en
 
-## Theme 5: Digital Inclusion, Privacy, and Data-Driven Government
+Purwanto, A., Zuiderwijk-van Eijk, A., & Janssen, M. (2020). Citizens’ Trust in Open Government Data: A Quantitative Study about the Effects of Data Quality, System Quality and Service Quality. In Proceedings of the 21st Annual International Conference on Digital Government Research (pp. 310-318). https://doi.org/10.1145/3396956.3396958
 
-### 5.1 Digital Divide Effects in E-Government Use
-Mesa (2023) examined links between digital divide conditions and e-government engagement outcomes, showing that access and capability differences affect how citizens benefit from digital public services.
+Ramos, F., Tavares, A. F., & da Cruz, N. F. (2026). Between promise and practice: a scoping review of the democratic outcomes of youth participation in local governance. Children and Youth Services Review, 181, 108738. https://doi.org/10.1016/j.childyouth.2025.108738
 
-**Gap identified:** The study explains structural barriers but does not propose domain-specific implementations for youth-focused local governance platforms.
+Twizeyimana, J. D., & Andersson, A. (2019). The public value of E-Government - A literature review. Government Information Quarterly, 36(2), 167-178. https://doi.org/10.1016/j.giq.2019.01.001
 
-**Relevance to the present study:** This supports the technical rationale for LYDO Connect’s browser-based, cross-device access model and the need to design interfaces and workflows that reduce entry barriers for diverse youth users.
+White, A., & Trump, K.-S. (2018). The Promises and Pitfalls of 311 Data. Urban Affairs Review, 54(4), 794-823. https://doi.org/10.1177/1078087416673202
 
-### 5.2 Data-Driven Public Sector and Digital Government Design Principles
-OECD (2019) and OECD (2020) provided policy-level frameworks for data-driven public sector transformation and digital government design (e.g., digital-by-design, user-driven, open-by-default, and data-driven approaches).
-
-**Gap identified:** These frameworks define strategic principles but do not prescribe detailed implementation patterns for local youth governance operations and participation tracking systems.
-
-**Relevance to the present study:** LYDO Connect can be positioned as a localized implementation of these principles through integrated data handling, transparency access, role-based service workflows, and multi-stakeholder system usability.
-
----
-
-## References (Foreign Literature Added)
-
-- Alkraiji, A. (2020). Citizen Satisfaction With Mandatory E-Government Services: A Conceptual Framework and an Empirical Validation. *IEEE Access, 8*, 117253-117265. https://doi.org/10.1109/ACCESS.2020.3004541  
-- Augsberger, A., Collins, M. E., & Howard, R. C. (2024). The global context of youth engagement: A scoping review of youth councils in municipal government. *Children and Youth Services Review, 156*, 107349. https://doi.org/10.1016/j.childyouth.2023.107349  
-- Chan, F. K. Y., Thong, J. Y. L., Brown, S. A., & Venkatesh, V. (2021). Service Design and Citizen Satisfaction with E-Government Services: A Multidimensional Perspective. *Public Administration Review, 81*(5), 874-894. https://doi.org/10.1111/puar.13308  
-- Mesa, D. (2023). Digital divide, e-government and trust in public service: The key role of education. *Frontiers in Sociology, 8*, 1140416. https://doi.org/10.3389/fsoc.2023.1140416  
-- OECD. (2019). *The Path to Becoming a Data-Driven Public Sector*. OECD Publishing. https://doi.org/10.1787/059814a7-en  
-- OECD. (2020). *The OECD Digital Government Policy Framework: Six dimensions of a Digital Government*. OECD Publishing. https://doi.org/10.1787/f64fed2a-en  
-- Purwanto, A., Zuiderwijk-van Eijk, A., & Janssen, M. (2020). Citizens’ Trust in Open Government Data: A Quantitative Study about the Effects of Data Quality, System Quality and Service Quality. In *Proceedings of the 21st Annual International Conference on Digital Government Research* (pp. 310-318). https://doi.org/10.1145/3396956.3396958  
-- Ramos, F., Tavares, A. F., & da Cruz, N. F. (2026). Between promise and practice: a scoping review of the democratic outcomes of youth participation in local governance. *Children and Youth Services Review, 181*, 108738. https://doi.org/10.1016/j.childyouth.2025.108738  
-- Twizeyimana, J. D., & Andersson, A. (2019). The public value of E-Government – A literature review. *Government Information Quarterly, 36*(2), 167-178. https://doi.org/10.1016/j.giq.2019.01.001  
-- White, A., & Trump, K.-S. (2018). The Promises and Pitfalls of 311 Data. *Urban Affairs Review, 54*(4), 794-823. https://doi.org/10.1177/1078087416673202  
-- Wu, W.-N. (2021). Does Citizens’ 311 System Use Improve Satisfaction with Public Service Encounters? Lessons for Citizen Relationship Management. *International Journal of Public Administration, 44*(8), 665-673. https://doi.org/10.1080/01900692.2020.1744644
-
+Wu, W.-N. (2021). Does Citizens’ 311 System Use Improve Satisfaction with Public Service Encounters? Lessons for Citizen Relationship Management. International Journal of Public Administration, 44(8), 665-673. https://doi.org/10.1080/01900692.2020.1744644
