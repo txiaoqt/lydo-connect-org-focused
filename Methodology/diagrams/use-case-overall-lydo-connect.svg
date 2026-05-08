@@ -1,164 +1,428 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1380" viewBox="0 0 1900 1380">
+<svg xmlns="http://www.w3.org/2000/svg" width="2500" height="1750" viewBox="0 0 2500 1750">
   <defs>
     <style>
-      .title { font: 700 28px Arial, sans-serif; fill: #111; }
-      .system { font: 700 22px Arial, sans-serif; fill: #111; }
-      .label { font: 700 18px Arial, sans-serif; fill: #111; }
-      .text { font: 15px Arial, sans-serif; fill: #111; }
-      .small { font: italic 15px Arial, sans-serif; fill: #111; }
-      .shape { fill: #fff; stroke: #111; stroke-width: 2.3; }
-      .planned { fill: #fff; stroke: #111; stroke-width: 2.3; stroke-dasharray: 12 8; }
-      .line { fill: none; stroke: #111; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-      .plannedLine { fill: none; stroke: #111; stroke-width: 2.1; stroke-dasharray: 10 8; stroke-linecap: round; stroke-linejoin: round; }
+      .title { font: 700 30px Arial, sans-serif; fill: #111827; }
+      .systemTitle { font: 700 22px Arial, sans-serif; fill: #111827; }
+      .section { font: 700 17px Arial, sans-serif; fill: #334155; letter-spacing: .2px; }
+      .actorText { font: 700 17px Arial, sans-serif; fill: #111827; }
+      .text { font: 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 13px Arial, sans-serif; fill: #111827; }
+      .relationText { font: italic 13px Arial, sans-serif; fill: #111827; }
+      .system { fill: #ffffff; stroke: #111827; stroke-width: 2.5; }
+      .band { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.2; }
+      .usecase { fill: #ffffff; stroke: #111827; stroke-width: 2; }
+      .parentUsecase { fill: #ffffff; stroke: #111827; stroke-width: 2.4; }
+      .actorShape { fill: #ffffff; stroke: #111827; stroke-width: 2.2; }
+      .line { fill: none; stroke: #111827; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .thinLine { fill: none; stroke: #111827; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+      .dashed { fill: none; stroke: #111827; stroke-width: 1.8; stroke-dasharray: 9 7; stroke-linecap: round; stroke-linejoin: round; }
+      .gen { fill: none; stroke: #111827; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+      .labelBg { fill: #ffffff; }
+      .legendBox { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.4; }
     </style>
+    <marker id="openArrow" markerWidth="11" markerHeight="11" refX="10" refY="5.5" orient="auto">
+      <path d="M1,1 L10,5.5 L1,10" fill="none" stroke="#111827" stroke-width="1.8"/>
+    </marker>
+    <marker id="inheritArrow" markerWidth="13" markerHeight="13" refX="12" refY="6.5" orient="auto">
+      <path d="M1,1 L12,6.5 L1,12 Z" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    </marker>
   </defs>
 
-  <rect width="1900" height="1380" fill="#fff"/>
+  <rect width="2500" height="1750" fill="#ffffff"/>
+  <text x="1250" y="48" text-anchor="middle" class="title">Figure 1. General Use Case Diagram of LYDO Connect</text>
 
-  <text x="950" y="46" text-anchor="middle" class="title">Figure 1. Overall Use Case Diagram of LYDO Connect</text>
+  <rect x="250" y="85" width="1920" height="1560" rx="12" ry="12" class="system"/>
+  <text x="1210" y="123" text-anchor="middle" class="systemTitle">LYDO Connect: Youth Governance Transparency and Accountability System</text>
 
-  <rect x="330" y="100" width="1240" height="1150" rx="12" ry="12" class="shape"/>
-  <text x="950" y="138" text-anchor="middle" class="system">LYDO Connect</text>
+  <rect x="285" y="145" width="1860" height="210" rx="10" ry="10" class="band"/>
+  <text x="315" y="176" class="section">Account Access and Authentication</text>
 
-  <ellipse cx="690" cy="210" rx="190" ry="38" class="shape"/>
-  <text x="690" y="203" text-anchor="middle" class="text">UC-01</text>
-  <text x="690" y="224" text-anchor="middle" class="text">Sign Up</text>
+  <rect x="285" y="390" width="880" height="1115" rx="10" ry="10" class="band"/>
+  <text x="315" y="421" class="section">Public Portal and Authenticated Youth/Citizen Services</text>
 
-  <ellipse cx="1210" cy="210" rx="165" ry="38" class="shape"/>
-  <text x="1210" y="203" text-anchor="middle" class="text">UC-02</text>
-  <text x="1210" y="224" text-anchor="middle" class="text">Log In</text>
+  <rect x="1205" y="390" width="940" height="1115" rx="10" ry="10" class="band"/>
+  <text x="1235" y="421" class="section">Authorized Admin Portal Services</text>
 
-  <ellipse cx="690" cy="370" rx="265" ry="42" class="shape"/>
-  <text x="690" y="362" text-anchor="middle" class="text">UC-03</text>
-  <text x="690" y="384" text-anchor="middle" class="text">Browse and View Public Information</text>
+  <!-- Actor generalization -->
+  <line x1="95" y1="485" x2="95" y2="292" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="135" y1="800" x2="135" y2="292" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="2270" y1="485" x2="2270" y2="292" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="2328" y1="800" x2="2328" y2="292" class="gen" marker-end="url(#inheritArrow)"/>
 
-  <ellipse cx="1210" cy="370" rx="225" ry="40" class="shape"/>
-  <text x="1210" y="362" text-anchor="middle" class="text">UC-04</text>
-  <text x="1210" y="384" text-anchor="middle" class="text">Register for Program or Event</text>
+  <!-- Actor associations -->
+  <polyline points="145,220 250,220 285,220 500,220" class="line"/>
+  <polyline points="145,220 250,220 250,540 500,540" class="line"/>
+  <polyline points="145,535 220,535 220,220 500,220" class="line"/>
+  <polyline points="145,535 220,535 220,1030 505,1030" class="line"/>
+  <polyline points="145,850 205,850 205,220 500,220" class="line"/>
+  <polyline points="145,850 205,850 205,1030 505,1030" class="line"/>
 
-  <ellipse cx="690" cy="550" rx="275" ry="42" class="shape"/>
-  <text x="690" y="542" text-anchor="middle" class="text">UC-05</text>
-  <text x="690" y="564" text-anchor="middle" class="text">Manage Profile and Participation History</text>
+  <polyline points="2310,220 2170,220 1760,220" class="line"/>
+  <polyline points="2310,220 2170,220 2170,540 1770,540" class="line"/>
+  <polyline points="2310,535 2195,535 2195,1235 1880,1235" class="line"/>
+  <polyline points="2310,535 2185,535 2185,1385 1880,1385" class="line"/>
+  <polyline points="2310,850 2205,850 2205,540 1770,540" class="line"/>
 
-  <ellipse cx="1210" cy="550" rx="250" ry="40" class="shape"/>
-  <text x="1210" y="542" text-anchor="middle" class="text">UC-06</text>
-  <text x="1210" y="564" text-anchor="middle" class="text">Submit and Track Citizen Ticket</text>
+  <!-- Account access relationships -->
+  <line x1="520" y1="220" x2="520" y2="305" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="474" y="257" width="92" height="18" class="labelBg"/>
+  <text x="520" y="271" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="760" y1="220" x2="760" y2="305" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="714" y="257" width="92" height="18" class="labelBg"/>
+  <text x="760" y="271" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1600" y1="220" x2="1030" y2="220" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="1274" y="207" width="92" height="18" class="labelBg"/>
+  <text x="1320" y="221" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1600" y1="220" x2="1865" y2="220" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="1690" y="207" width="92" height="18" class="labelBg"/>
+  <text x="1736" y="221" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
 
-  <ellipse cx="690" cy="730" rx="185" ry="38" class="shape"/>
-  <text x="690" y="723" text-anchor="middle" class="text">UC-07</text>
-  <text x="690" y="744" text-anchor="middle" class="text">Manage Youth Records</text>
+  <!-- Public portal relationships -->
+  <line x1="690" y1="540" x2="430" y2="670" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="690" y1="540" x2="690" y2="670" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="690" y1="540" x2="950" y2="670" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="690" y1="540" x2="430" y2="800" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="520" y="664" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="690" y1="540" x2="690" y2="800" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="728" y="664" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="890" y1="800" x2="430" y2="670" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="736" y="724" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
+  <line x1="890" y1="900" x2="430" y2="670" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="752" y="811" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
+  <line x1="690" y1="900" x2="690" y2="670" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="728" y="785" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
 
-  <ellipse cx="1210" cy="730" rx="265" ry="42" class="shape"/>
-  <text x="1210" y="722" text-anchor="middle" class="text">UC-08</text>
-  <text x="1210" y="744" text-anchor="middle" class="text">Manage Transparency and Financial Records</text>
+  <!-- Authenticated user relationships -->
+  <line x1="690" y1="1030" x2="1030" y2="220" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="812" y="613" width="92" height="18" class="labelBg"/>
+  <text x="858" y="627" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="690" y1="1030" x2="455" y2="1145" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="690" y1="1030" x2="875" y2="1145" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="690" y1="1030" x2="455" y2="1245" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="690" y1="1030" x2="875" y2="1245" class="gen" marker-end="url(#inheritArrow)"/>
 
-  <ellipse cx="690" cy="900" rx="250" ry="40" class="shape"/>
-  <text x="690" y="892" text-anchor="middle" class="text">UC-09</text>
-  <text x="690" y="914" text-anchor="middle" class="text">Monitor Registrations and Retry Sync</text>
+  <line x1="455" y1="1145" x2="405" y2="1370" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="390" y="1260" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="455" y1="1145" x2="610" y2="1370" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="550" y="1260" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="455" y1="1145" x2="820" y2="1370" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="652" y="1260" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="875" y1="1145" x2="820" y2="1370" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="880" y="1260" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="455" y1="1245" x2="1030" y2="1370" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="760" y="1320" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="455" y1="1245" x2="820" y2="1370" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="647" y="1320" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="875" y1="1245" x2="995" y2="1480" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="980" y="1363" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="875" y1="1245" x2="755" y2="1480" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="800" y="1363" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="405" y1="1480" x2="455" y2="1145" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="468" y="1320" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
 
-  <ellipse cx="1210" cy="900" rx="260" ry="42" class="shape"/>
-  <text x="1210" y="892" text-anchor="middle" class="text">UC-10</text>
-  <text x="1210" y="914" text-anchor="middle" class="text">Manage Users, Roles, and Audit Logs</text>
+  <!-- Admin relationships -->
+  <line x1="1600" y1="540" x2="1030" y2="220" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="1272" y="362" width="92" height="18" class="labelBg"/>
+  <text x="1318" y="376" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1600" y1="540" x2="1395" y2="690" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1600" y1="540" x2="1810" y2="690" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1600" y1="540" x2="1395" y2="940" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1600" y1="540" x2="1810" y2="940" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1600" y1="540" x2="1395" y2="1235" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1600" y1="540" x2="1810" y2="1235" class="gen" marker-end="url(#inheritArrow)"/>
 
-  <text x="950" y="1010" text-anchor="middle" class="small">Planned Future Extensions</text>
+  <line x1="1395" y1="690" x2="1345" y2="815" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1334" y="752" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1395" y1="690" x2="1545" y2="815" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1484" y="752" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1600" y1="880" x2="1395" y2="690" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1535" y="790" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
 
-  <ellipse cx="570" cy="1110" rx="170" ry="36" class="planned"/>
-  <text x="570" y="1103" text-anchor="middle" class="text">UC-11</text>
-  <text x="570" y="1124" text-anchor="middle" class="text">Analytics Dashboard</text>
+  <line x1="1810" y1="690" x2="1810" y2="815" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1848" y="752" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1995" y1="815" x2="1810" y2="690" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1930" y="752" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
 
-  <ellipse cx="950" cy="1110" rx="220" ry="38" class="planned"/>
-  <text x="950" y="1102" text-anchor="middle" class="text">UC-12</text>
-  <text x="950" y="1124" text-anchor="middle" class="text">Manage Requests and Feedback</text>
+  <line x1="1395" y1="940" x2="1345" y2="1075" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1332" y="1003" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1395" y1="940" x2="1545" y2="1075" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1487" y="1003" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1535" y1="1165" x2="1395" y2="940" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1498" y="1058" text-anchor="middle" class="relationText">&lt;&lt;extend&gt;&gt;</text>
 
-  <ellipse cx="1330" cy="1110" rx="205" ry="38" class="planned"/>
-  <text x="1330" y="1102" text-anchor="middle" class="text">UC-13</text>
-  <text x="1330" y="1124" text-anchor="middle" class="text">Notifications and Alerts</text>
+  <line x1="1810" y1="940" x2="1810" y2="1075" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1848" y="1003" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
+  <line x1="1810" y1="940" x2="1995" y2="1075" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="1926" y="1003" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
 
-  <circle cx="95" cy="180" r="22" class="shape"/>
-  <line x1="95" y1="202" x2="95" y2="272" class="line"/>
-  <line x1="59" y1="228" x2="131" y2="228" class="line"/>
-  <line x1="95" y1="272" x2="65" y2="322" class="line"/>
-  <line x1="95" y1="272" x2="125" y2="322" class="line"/>
-  <text x="95" y="356" text-anchor="middle" class="label">Youth User</text>
+  <line x1="1395" y1="1235" x2="1345" y2="1375" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1545" y1="1375" x2="1420" y2="1265" class="gen" marker-end="url(#inheritArrow)"/>
+  <line x1="1810" y1="1235" x2="1810" y2="1375" class="dashed" marker-end="url(#openArrow)"/>
+  <rect x="1764" y="1298" width="92" height="18" class="labelBg"/>
+  <text x="1810" y="1312" text-anchor="middle" class="relationText">&lt;&lt;include&gt;&gt;</text>
 
-  <circle cx="95" cy="430" r="22" class="shape"/>
-  <line x1="95" y1="452" x2="95" y2="522" class="line"/>
-  <line x1="59" y1="478" x2="131" y2="478" class="line"/>
-  <line x1="95" y1="522" x2="65" y2="572" class="line"/>
-  <line x1="95" y1="522" x2="125" y2="572" class="line"/>
-  <text x="95" y="606" text-anchor="middle" class="label">Citizen</text>
+  <!-- Account use cases -->
+  <ellipse cx="520" cy="220" rx="125" ry="36" class="usecase"/>
+  <text x="520" y="216" text-anchor="middle" class="text">Register</text>
+  <text x="520" y="235" text-anchor="middle" class="text">Account</text>
 
-  <circle cx="95" cy="720" r="22" class="shape"/>
-  <line x1="95" y1="742" x2="95" y2="812" class="line"/>
-  <line x1="59" y1="768" x2="131" y2="768" class="line"/>
-  <line x1="95" y1="812" x2="65" y2="862" class="line"/>
-  <line x1="95" y1="812" x2="125" y2="862" class="line"/>
-  <text x="95" y="896" text-anchor="middle" class="label">Public Viewer</text>
+  <ellipse cx="760" cy="220" rx="125" ry="36" class="usecase"/>
+  <text x="760" y="216" text-anchor="middle" class="text">Sign In /</text>
+  <text x="760" y="235" text-anchor="middle" class="text">Sign Out</text>
 
-  <circle cx="1805" cy="170" r="22" class="shape"/>
-  <line x1="1805" y1="192" x2="1805" y2="262" class="line"/>
-  <line x1="1769" y1="218" x2="1841" y2="218" class="line"/>
-  <line x1="1805" y1="262" x2="1775" y2="312" class="line"/>
-  <line x1="1805" y1="262" x2="1835" y2="312" class="line"/>
-  <text x="1805" y="346" text-anchor="middle" class="small">&lt;&lt;service&gt;&gt;</text>
-  <text x="1805" y="368" text-anchor="middle" class="label">Authentication</text>
+  <ellipse cx="520" cy="305" rx="135" ry="34" class="usecase"/>
+  <text x="520" y="301" text-anchor="middle" class="text">Validate</text>
+  <text x="520" y="320" text-anchor="middle" class="text">Account Details</text>
 
-  <circle cx="1805" cy="470" r="22" class="shape"/>
-  <line x1="1805" y1="492" x2="1805" y2="562" class="line"/>
-  <line x1="1769" y1="518" x2="1841" y2="518" class="line"/>
-  <line x1="1805" y1="562" x2="1775" y2="612" class="line"/>
-  <line x1="1805" y1="562" x2="1835" y2="612" class="line"/>
-  <text x="1805" y="646" text-anchor="middle" class="label">LYDO</text>
-  <text x="1805" y="670" text-anchor="middle" class="label">Administrator</text>
+  <ellipse cx="760" cy="305" rx="135" ry="34" class="usecase"/>
+  <text x="760" y="301" text-anchor="middle" class="text">Validate</text>
+  <text x="760" y="320" text-anchor="middle" class="text">Credentials</text>
 
-  <circle cx="1805" cy="760" r="22" class="shape"/>
-  <line x1="1805" y1="782" x2="1805" y2="852" class="line"/>
-  <line x1="1769" y1="808" x2="1841" y2="808" class="line"/>
-  <line x1="1805" y1="852" x2="1775" y2="902" class="line"/>
-  <line x1="1805" y1="852" x2="1835" y2="902" class="line"/>
-  <text x="1805" y="936" text-anchor="middle" class="label">LYDO Staff /</text>
-  <text x="1805" y="960" text-anchor="middle" class="label">SK Officer</text>
+  <ellipse cx="1030" cy="220" rx="150" ry="38" class="usecase"/>
+  <text x="1030" y="216" text-anchor="middle" class="text">Verify Active</text>
+  <text x="1030" y="235" text-anchor="middle" class="text">Session</text>
 
-  <line x1="131" y1="228" x2="500" y2="210" class="line"/>
-  <line x1="131" y1="228" x2="1045" y2="210" class="line"/>
-  <line x1="131" y1="228" x2="425" y2="370" class="line"/>
-  <line x1="131" y1="228" x2="985" y2="370" class="line"/>
-  <line x1="131" y1="228" x2="430" y2="550" class="line"/>
-  <line x1="131" y1="228" x2="960" y2="550" class="line"/>
+  <ellipse cx="1600" cy="220" rx="150" ry="38" class="usecase"/>
+  <text x="1600" y="216" text-anchor="middle" class="text">Access Admin</text>
+  <text x="1600" y="235" text-anchor="middle" class="text">Portal</text>
 
-  <line x1="131" y1="478" x2="500" y2="210" class="line"/>
-  <line x1="131" y1="478" x2="1045" y2="210" class="line"/>
-  <line x1="131" y1="478" x2="425" y2="370" class="line"/>
-  <line x1="131" y1="478" x2="960" y2="550" class="line"/>
+  <ellipse cx="1865" cy="220" rx="145" ry="38" class="usecase"/>
+  <text x="1865" y="216" text-anchor="middle" class="text">View Admin</text>
+  <text x="1865" y="235" text-anchor="middle" class="text">Dashboard</text>
 
-  <line x1="131" y1="768" x2="425" y2="370" class="line"/>
+  <!-- Public portal use cases -->
+  <ellipse cx="690" cy="540" rx="190" ry="44" class="parentUsecase"/>
+  <text x="690" y="536" text-anchor="middle" class="text">Browse Public</text>
+  <text x="690" y="556" text-anchor="middle" class="text">Portal</text>
 
-  <line x1="1769" y1="218" x2="880" y2="210" class="line"/>
-  <line x1="1769" y1="218" x2="1375" y2="210" class="line"/>
-  <line x1="1769" y1="218" x2="1435" y2="370" class="line"/>
+  <ellipse cx="430" cy="670" rx="145" ry="36" class="usecase"/>
+  <text x="430" y="666" text-anchor="middle" class="text">View Programs,</text>
+  <text x="430" y="685" text-anchor="middle" class="text">Events, and Orgs</text>
 
-  <line x1="1769" y1="518" x2="875" y2="210" class="line"/>
-  <line x1="1769" y1="518" x2="875" y2="730" class="line"/>
-  <line x1="1769" y1="518" x2="1475" y2="730" class="line"/>
-  <line x1="1769" y1="518" x2="940" y2="900" class="line"/>
-  <line x1="1769" y1="518" x2="1470" y2="900" class="line"/>
+  <ellipse cx="690" cy="670" rx="165" ry="36" class="usecase"/>
+  <text x="690" y="666" text-anchor="middle" class="text">View Transparency</text>
+  <text x="690" y="685" text-anchor="middle" class="text">Docs, Board, Finance/Map</text>
 
-  <line x1="1769" y1="808" x2="875" y2="210" class="line"/>
-  <line x1="1769" y1="808" x2="875" y2="730" class="line"/>
-  <line x1="1769" y1="808" x2="1475" y2="730" class="line"/>
-  <line x1="1769" y1="808" x2="940" y2="900" class="line"/>
+  <ellipse cx="950" cy="670" rx="145" ry="36" class="usecase"/>
+  <text x="950" y="666" text-anchor="middle" class="text">View Service</text>
+  <text x="950" y="685" text-anchor="middle" class="text">Advisories</text>
 
-  <line x1="1769" y1="518" x2="740" y2="1110" class="plannedLine"/>
-  <line x1="1769" y1="518" x2="1170" y2="1110" class="plannedLine"/>
-  <line x1="1769" y1="808" x2="730" y2="1110" class="plannedLine"/>
-  <line x1="1769" y1="808" x2="1130" y2="1110" class="plannedLine"/>
-  <line x1="131" y1="228" x2="1125" y2="1110" class="plannedLine"/>
-  <line x1="131" y1="478" x2="1125" y2="1110" class="plannedLine"/>
-  <line x1="1769" y1="518" x2="1250" y2="1110" class="plannedLine"/>
-  <line x1="1769" y1="808" x2="1250" y2="1110" class="plannedLine"/>
+  <ellipse cx="430" cy="800" rx="145" ry="34" class="usecase"/>
+  <text x="430" y="796" text-anchor="middle" class="text">Load Published</text>
+  <text x="430" y="815" text-anchor="middle" class="text">Records</text>
 
-  <rect x="1380" y="1080" width="150" height="70" rx="8" ry="8" class="shape"/>
-  <line x1="1402" y1="1114" x2="1452" y2="1114" class="plannedLine"/>
-  <text x="1455" y="1119" class="text">Planned UC</text>
+  <ellipse cx="690" cy="800" rx="145" ry="34" class="usecase"/>
+  <text x="690" y="796" text-anchor="middle" class="text">Search and</text>
+  <text x="690" y="815" text-anchor="middle" class="text">Filter Listings</text>
+
+  <ellipse cx="890" cy="800" rx="120" ry="34" class="usecase"/>
+  <text x="890" y="796" text-anchor="middle" class="text">Open Source</text>
+  <text x="890" y="815" text-anchor="middle" class="text">Post</text>
+
+  <ellipse cx="890" cy="900" rx="135" ry="34" class="usecase"/>
+  <text x="890" y="896" text-anchor="middle" class="text">Preview Location</text>
+  <text x="890" y="915" text-anchor="middle" class="text">or Map</text>
+
+  <ellipse cx="690" cy="900" rx="145" ry="34" class="usecase"/>
+  <text x="690" y="896" text-anchor="middle" class="text">Export Disclosure</text>
+  <text x="690" y="915" text-anchor="middle" class="text">Registry</text>
+
+  <!-- Authenticated user use cases -->
+  <ellipse cx="690" cy="1030" rx="190" ry="44" class="parentUsecase"/>
+  <text x="690" y="1026" text-anchor="middle" class="text">Use Authenticated</text>
+  <text x="690" y="1046" text-anchor="middle" class="text">Portal Services</text>
+
+  <ellipse cx="455" cy="1145" rx="145" ry="38" class="usecase"/>
+  <text x="455" y="1141" text-anchor="middle" class="text">Register for</text>
+  <text x="455" y="1161" text-anchor="middle" class="text">Program or Event</text>
+
+  <ellipse cx="875" cy="1145" rx="145" ry="38" class="usecase"/>
+  <text x="875" y="1141" text-anchor="middle" class="text">Join or Leave</text>
+  <text x="875" y="1161" text-anchor="middle" class="text">Organization</text>
+
+  <ellipse cx="455" cy="1245" rx="155" ry="38" class="usecase"/>
+  <text x="455" y="1241" text-anchor="middle" class="text">Manage Profile and</text>
+  <text x="455" y="1261" text-anchor="middle" class="text">Participation History</text>
+
+  <ellipse cx="875" cy="1245" rx="140" ry="38" class="usecase"/>
+  <text x="875" y="1241" text-anchor="middle" class="text">Submit and View</text>
+  <text x="875" y="1261" text-anchor="middle" class="text">Citizen Tickets</text>
+
+  <ellipse cx="405" cy="1370" rx="130" ry="34" class="usecase"/>
+  <text x="405" y="1366" text-anchor="middle" class="text">Validate</text>
+  <text x="405" y="1385" text-anchor="middle" class="text">Registration</text>
+
+  <ellipse cx="610" cy="1370" rx="130" ry="34" class="usecase"/>
+  <text x="610" y="1366" text-anchor="middle" class="text">Save Local</text>
+  <text x="610" y="1385" text-anchor="middle" class="text">Registration</text>
+
+  <ellipse cx="820" cy="1370" rx="145" ry="34" class="usecase"/>
+  <text x="820" y="1366" text-anchor="middle" class="text">Update Membership</text>
+  <text x="820" y="1385" text-anchor="middle" class="text">or History</text>
+
+  <ellipse cx="1030" cy="1370" rx="130" ry="34" class="usecase"/>
+  <text x="1030" y="1366" text-anchor="middle" class="text">Update Profile</text>
+  <text x="1030" y="1385" text-anchor="middle" class="text">Settings</text>
+
+  <ellipse cx="405" cy="1480" rx="130" ry="34" class="usecase"/>
+  <text x="405" y="1476" text-anchor="middle" class="text">Cancel</text>
+  <text x="405" y="1495" text-anchor="middle" class="text">Registration</text>
+
+  <ellipse cx="755" cy="1480" rx="140" ry="34" class="usecase"/>
+  <text x="755" y="1476" text-anchor="middle" class="text">Generate Ticket</text>
+  <text x="755" y="1495" text-anchor="middle" class="text">Reference</text>
+
+  <ellipse cx="995" cy="1480" rx="120" ry="34" class="usecase"/>
+  <text x="995" y="1476" text-anchor="middle" class="text">View Ticket</text>
+  <text x="995" y="1495" text-anchor="middle" class="text">Status</text>
+
+  <!-- Admin portal use cases -->
+  <ellipse cx="1600" cy="540" rx="185" ry="44" class="parentUsecase"/>
+  <text x="1600" y="536" text-anchor="middle" class="text">Manage Admin</text>
+  <text x="1600" y="556" text-anchor="middle" class="text">Portal Data</text>
+
+  <ellipse cx="1395" cy="690" rx="155" ry="38" class="usecase"/>
+  <text x="1395" y="686" text-anchor="middle" class="text">Manage Youth Records</text>
+  <text x="1395" y="706" text-anchor="middle" class="text">(Programs, Events, Orgs, Barangays)</text>
+
+  <ellipse cx="1810" cy="690" rx="155" ry="38" class="usecase"/>
+  <text x="1810" y="686" text-anchor="middle" class="text">Monitor Local</text>
+  <text x="1810" y="706" text-anchor="middle" class="text">Registrations</text>
+
+  <ellipse cx="1345" cy="815" rx="125" ry="34" class="usecase"/>
+  <text x="1345" y="811" text-anchor="middle" class="text">Validate Record</text>
+  <text x="1345" y="830" text-anchor="middle" class="text">Data</text>
+
+  <ellipse cx="1545" cy="815" rx="125" ry="34" class="usecase"/>
+  <text x="1545" y="811" text-anchor="middle" class="text">Save Record</text>
+  <text x="1545" y="830" text-anchor="middle" class="text">Changes</text>
+
+  <ellipse cx="1600" cy="880" rx="125" ry="34" class="usecase"/>
+  <text x="1600" y="876" text-anchor="middle" class="text">Attach Source or</text>
+  <text x="1600" y="895" text-anchor="middle" class="text">Set Location</text>
+
+  <ellipse cx="1810" cy="815" rx="130" ry="34" class="usecase"/>
+  <text x="1810" y="811" text-anchor="middle" class="text">View and Filter</text>
+  <text x="1810" y="830" text-anchor="middle" class="text">Registrations</text>
+
+  <ellipse cx="1995" cy="815" rx="120" ry="34" class="usecase"/>
+  <text x="1995" y="811" text-anchor="middle" class="text">Export</text>
+  <text x="1995" y="830" text-anchor="middle" class="text">CSV</text>
+
+  <ellipse cx="1395" cy="940" rx="165" ry="38" class="usecase"/>
+  <text x="1395" y="936" text-anchor="middle" class="text">Manage Transparency</text>
+  <text x="1395" y="956" text-anchor="middle" class="text">and Financial Records</text>
+
+  <ellipse cx="1810" cy="940" rx="145" ry="38" class="usecase"/>
+  <text x="1810" y="936" text-anchor="middle" class="text">Manage Citizen</text>
+  <text x="1810" y="956" text-anchor="middle" class="text">Desk Tickets</text>
+
+  <ellipse cx="1345" cy="1075" rx="125" ry="34" class="usecase"/>
+  <text x="1345" y="1071" text-anchor="middle" class="text">Validate</text>
+  <text x="1345" y="1090" text-anchor="middle" class="text">Metadata</text>
+
+  <ellipse cx="1545" cy="1075" rx="125" ry="34" class="usecase"/>
+  <text x="1545" y="1071" text-anchor="middle" class="text">Upload or Save</text>
+  <text x="1545" y="1090" text-anchor="middle" class="text">Record</text>
+
+  <ellipse cx="1535" cy="1165" rx="125" ry="34" class="usecase"/>
+  <text x="1535" y="1161" text-anchor="middle" class="text">Export Financial</text>
+  <text x="1535" y="1180" text-anchor="middle" class="text">Reports</text>
+
+  <ellipse cx="1810" cy="1075" rx="125" ry="34" class="usecase"/>
+  <text x="1810" y="1071" text-anchor="middle" class="text">Review Ticket</text>
+  <text x="1810" y="1090" text-anchor="middle" class="text">Details</text>
+
+  <ellipse cx="1995" cy="1075" rx="130" ry="34" class="usecase"/>
+  <text x="1995" y="1071" text-anchor="middle" class="text">Update Status</text>
+  <text x="1995" y="1090" text-anchor="middle" class="text">and Priority</text>
+
+  <ellipse cx="1395" cy="1235" rx="145" ry="38" class="usecase"/>
+  <text x="1395" y="1231" text-anchor="middle" class="text">Manage Users</text>
+  <text x="1395" y="1251" text-anchor="middle" class="text">and Roles</text>
+
+  <ellipse cx="1810" cy="1235" rx="145" ry="38" class="usecase"/>
+  <text x="1810" y="1231" text-anchor="middle" class="text">Review Audit</text>
+  <text x="1810" y="1251" text-anchor="middle" class="text">Logs</text>
+
+  <ellipse cx="1345" cy="1375" rx="120" ry="34" class="usecase"/>
+  <text x="1345" y="1371" text-anchor="middle" class="text">Update User</text>
+  <text x="1345" y="1390" text-anchor="middle" class="text">Profiles</text>
+
+  <ellipse cx="1545" cy="1375" rx="135" ry="34" class="usecase"/>
+  <text x="1545" y="1371" text-anchor="middle" class="text">Maintain Role</text>
+  <text x="1545" y="1390" text-anchor="middle" class="text">Definitions</text>
+
+  <ellipse cx="1810" cy="1375" rx="145" ry="34" class="usecase"/>
+  <text x="1810" y="1371" text-anchor="middle" class="text">Filter and View</text>
+  <text x="1810" y="1390" text-anchor="middle" class="text">Change History</text>
+
+  <!-- Actors -->
+  <g id="public-viewer">
+    <circle cx="115" cy="160" r="24" class="actorShape"/>
+    <line x1="115" y1="184" x2="115" y2="250" class="line"/>
+    <line x1="78" y1="210" x2="152" y2="210" class="line"/>
+    <line x1="115" y1="250" x2="82" y2="305" class="line"/>
+    <line x1="115" y1="250" x2="148" y2="305" class="line"/>
+    <text x="115" y="338" text-anchor="middle" class="actorText">Public Viewer</text>
+  </g>
+
+  <g id="youth-user">
+    <circle cx="115" cy="475" r="24" class="actorShape"/>
+    <line x1="115" y1="499" x2="115" y2="565" class="line"/>
+    <line x1="78" y1="525" x2="152" y2="525" class="line"/>
+    <line x1="115" y1="565" x2="82" y2="620" class="line"/>
+    <line x1="115" y1="565" x2="148" y2="620" class="line"/>
+    <text x="115" y="653" text-anchor="middle" class="actorText">Youth User</text>
+  </g>
+
+  <g id="citizen">
+    <circle cx="115" cy="790" r="24" class="actorShape"/>
+    <line x1="115" y1="814" x2="115" y2="880" class="line"/>
+    <line x1="78" y1="840" x2="152" y2="840" class="line"/>
+    <line x1="115" y1="880" x2="82" y2="935" class="line"/>
+    <line x1="115" y1="880" x2="148" y2="935" class="line"/>
+    <text x="115" y="968" text-anchor="middle" class="actorText">Citizen</text>
+  </g>
+
+  <g id="authorized-admin-user">
+    <circle cx="2325" cy="160" r="24" class="actorShape"/>
+    <line x1="2325" y1="184" x2="2325" y2="250" class="line"/>
+    <line x1="2288" y1="210" x2="2362" y2="210" class="line"/>
+    <line x1="2325" y1="250" x2="2292" y2="305" class="line"/>
+    <line x1="2325" y1="250" x2="2358" y2="305" class="line"/>
+    <text x="2325" y="338" text-anchor="middle" class="actorText">Authorized</text>
+    <text x="2325" y="360" text-anchor="middle" class="actorText">LYDO Personnel</text>
+  </g>
+
+  <g id="lydo-admin">
+    <circle cx="2325" cy="475" r="24" class="actorShape"/>
+    <line x1="2325" y1="499" x2="2325" y2="565" class="line"/>
+    <line x1="2288" y1="525" x2="2362" y2="525" class="line"/>
+    <line x1="2325" y1="565" x2="2292" y2="620" class="line"/>
+    <line x1="2325" y1="565" x2="2358" y2="620" class="line"/>
+    <text x="2325" y="653" text-anchor="middle" class="actorText">LYDO</text>
+    <text x="2325" y="675" text-anchor="middle" class="actorText">Administrator</text>
+  </g>
+
+  <g id="staff-sk">
+    <circle cx="2325" cy="790" r="24" class="actorShape"/>
+    <line x1="2325" y1="814" x2="2325" y2="880" class="line"/>
+    <line x1="2288" y1="840" x2="2362" y2="840" class="line"/>
+    <line x1="2325" y1="880" x2="2292" y2="935" class="line"/>
+    <line x1="2325" y1="880" x2="2358" y2="935" class="line"/>
+    <text x="2325" y="968" text-anchor="middle" class="actorText">Staff /</text>
+    <text x="2325" y="990" text-anchor="middle" class="actorText">SK Officer</text>
+  </g>
+
+  <!-- Legend -->
+  <rect x="310" y="1540" width="720" height="78" rx="8" ry="8" class="legendBox"/>
+  <line x1="340" y1="1567" x2="410" y2="1567" class="line"/>
+  <text x="425" y="1572" class="small">actor association</text>
+  <line x1="570" y1="1567" x2="650" y2="1567" class="dashed" marker-end="url(#openArrow)"/>
+  <text x="665" y="1572" class="small">&lt;&lt;include&gt;&gt; / &lt;&lt;extend&gt;&gt;</text>
+  <line x1="340" y1="1595" x2="420" y2="1595" class="gen" marker-end="url(#inheritArrow)"/>
+  <text x="435" y="1600" class="small">parent-child generalization</text>
+  <text x="665" y="1600" class="small">Scope excludes external attendance automation.</text>
 </svg>
