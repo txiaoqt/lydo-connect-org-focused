@@ -24,10 +24,9 @@ Run these files in order inside Supabase SQL Editor:
 20. `20_events_remove_legacy_time_text.sql` (optional but recommended: ensures `start_time`/`end_time` exist, then removes legacy `events.time_text` so event time comes only from actual time fields)
 21. `21_program_registrations.sql` (optional but recommended: adds `program_registrations` so programs can use form-based registration like events)
 22. `22_audit_logs.sql` (optional but recommended: adds row-level `audit_logs` + triggers so admin changes are traceable by actor, table, and payload diff)
-23. `23_registration_integration.sql` (optional but recommended: adds registration source URLs for events/programs and RPC registration functions with strict validation)
-24. `24_registration_sync_automation.sql` (optional but recommended: adds Google Form sync lifecycle columns + retry RPC + worker-ready automation fields)
-25. `25_admin_portal_anon_registration_policies.sql` (optional: if you use predefined local admin login/anon-manage mode, allows admin registration page to read/retry registration sync records)
-26. `26_program_registration_membership_fix.sql` (recommended if SQL 23/24 was already applied: fixes program registration RPC membership reactivation so historical membership rows do not trigger `uq_user_program_active`)
+23. `23_registration_integration.sql` (optional: adds registration RPC functions with strict validation and legacy registration metadata)
+24. `25_admin_portal_anon_registration_policies.sql` (optional: if you use predefined local admin login/anon-manage mode, allows admin registration page to read/update registration records)
+25. `26_program_registration_membership_fix.sql` (recommended if later registration metadata migrations were already applied: fixes program registration RPC membership reactivation so historical membership rows do not trigger `uq_user_program_active`)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

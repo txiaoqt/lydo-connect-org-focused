@@ -109,8 +109,6 @@ Deploy the same repository into two Vercel projects with different env:
   - `VITE_SUPABASE_ANON_KEY`
   - `SUPABASE_URL`
   - `SUPABASE_SERVICE_ROLE_KEY`
-  - `SYNC_TRIGGER_TOKEN`
-  - optional: `VITE_SYNC_TRIGGER_TOKEN`
 
 Behavior by surface:
 - `user`: admin routes/login are blocked.
