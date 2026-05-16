@@ -1,11 +1,12 @@
 # LYDO Connect — Youth Engagement Management System
 
-A modern web application for Local Youth Development Offices in Metro Manila to centralize youth programs, events, organizations, and transparency workflows.
+A modern web application for Local Youth Development Offices in Metro Manila to centralize youth programs, events, verified Pasig-based organization information, and transparency workflows.
 
 ## Features
 
 - **Programs Management**: Browse and manage youth development programs
 - **Events Calendar**: View and register for community events
+- **Pasig Organization Directory**: View detailed profiles of Pasig-based youth organizations with official source references
 - **Scholarships Portal**: Access scholarship opportunities and application processes
 - **User Authentication**: Secure sign-in and registration system
 - **Responsive Design**: Works seamlessly across all devices

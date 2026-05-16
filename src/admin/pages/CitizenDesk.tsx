@@ -333,8 +333,8 @@ export const CitizenDeskAdmin = () => {
         columns={columns}
         data={filteredTickets}
         isLoading={isLoading}
-        onView={openDetailsModal}
-        onEdit={openStatusModal}
+        onRowClick={openDetailsModal}
+        getRowAriaLabel={(item) => `Open ticket details for ${item.reference_no}`}
       />
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

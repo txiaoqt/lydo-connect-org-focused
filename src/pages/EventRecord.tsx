@@ -1,6 +1,6 @@
-import { ArrowUpRight, Calendar, Clock, FileText, Loader2, MapPin, UserCheck } from "lucide-react";
+import { Calendar, Clock, FileText, Loader2, MapPin, User, UserCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
@@ -32,6 +33,7 @@ export default function EventRecord() {
     programId?: string;
   }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const recordId = programId || eventId;
   const requestedKind = programId ? "program" : "event";
   const requestedView = searchParams.get("view") === "registration" ? "registration" : "details";
@@ -51,6 +53,7 @@ export default function EventRecord() {
   const [formErrors, setFormErrors] = useState<RegistrationFormErrors>({});
   const [isSubmittingRegistration, setIsSubmittingRegistration] = useState(false);
   const [isRegistrationConfirmOpen, setIsRegistrationConfirmOpen] = useState(false);
+  const [isSignInPromptOpen, setIsSignInPromptOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
   const [isLocationSearching, setIsLocationSearching] = useState(false);
@@ -86,8 +89,13 @@ export default function EventRecord() {
   const registrationInfo = isProgramRecord ? programRegistrationInfo : eventRegistrationInfo;
 
   useEffect(() => {
+    if (requestedView === "registration" && !isAuthenticated) {
+      setView("details");
+      setIsSignInPromptOpen(true);
+      return;
+    }
     setView(requestedView);
-  }, [recordId, requestedView]);
+  }, [isAuthenticated, recordId, requestedView]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -171,6 +179,7 @@ export default function EventRecord() {
     : false;
   const recordTypeLabel = isProgramRecord ? "Program" : "Event";
   const sourceTypeLabel = event?.sourcePostUrl ? "Facebook Source" : "Portal Entry";
+  const summaryText = event?.description?.trim() ?? "";
 
   const handleUnregister = () => {
     if (!event) return;
@@ -275,6 +284,14 @@ export default function EventRecord() {
     setIsRegistrationConfirmOpen(true);
   };
 
+  const handleTabChange = (nextView: "details" | "registration") => {
+    if (nextView === "registration" && !isAuthenticated) {
+      setIsSignInPromptOpen(true);
+      return;
+    }
+    setView(nextView);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -285,27 +302,37 @@ export default function EventRecord() {
           </section>
         ) : event ? (
           <>
-            <section className="hero-gradient py-14">
+            <section className="hero-gradient py-12 md:py-14">
               <div className="container">
-                <p className="text-secondary-foreground/70 text-sm mb-3">{isProgramRecord ? "Program Record" : "Event Record"}</p>
-                <h1 className="text-3xl md:text-4xl font-bold text-secondary-foreground max-w-4xl">{event.title}</h1>
+                <div className="max-w-4xl space-y-4">
+                  <p className="text-secondary-foreground/75 text-sm font-medium">{isProgramRecord ? "Program Record" : "Event Record"}</p>
+                  <h1 className="text-3xl md:text-4xl font-bold text-secondary-foreground leading-tight">{event.title}</h1>
+                  {summaryText ? (
+                    <p className="text-secondary-foreground/80 text-base leading-relaxed max-w-3xl line-clamp-3">
+                      {summaryText}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-secondary-foreground/95 text-primary">
+                      {event.sector}
+                    </span>
+                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-secondary-foreground/20 text-secondary-foreground capitalize border border-secondary-foreground/25">
+                      {event.status}
+                    </span>
+                  </div>
+                </div>
               </div>
             </section>
 
-            <section className="container py-10">
-              <div className="grid gap-6 xl:grid-cols-5 items-start">
-                <div className="xl:col-span-3 bg-card border rounded-xl p-6 card-shadow min-w-0">
-                  <div className="flex flex-wrap gap-2 mb-5">
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-primary/10 text-primary">{event.sector}</span>
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-muted-foreground capitalize">{event.status}</span>
-                  </div>
-
-                  <div className="mb-7">
-                    <h2 className="text-base font-semibold mb-3">Official Source Post</h2>
+            <section className="container py-8 md:py-10">
+              <div className="grid gap-5 lg:gap-6 xl:grid-cols-5 items-start">
+                <div className="xl:col-span-3 bg-card border rounded-xl p-5 md:p-6 card-shadow min-w-0">
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-semibold">Official Source Post</h2>
                     {event.sourcePostUrl ? (
                       <SourcePostEmbed sourcePostUrl={event.sourcePostUrl} title={event.title} />
                     ) : (
-                      <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                      <div className="rounded-xl border bg-muted/25 p-5 text-sm text-muted-foreground">
                         No source post URL was provided for this record.
                       </div>
                     )}
@@ -313,87 +340,121 @@ export default function EventRecord() {
                 </div>
 
                 <aside className="xl:col-span-2 space-y-4 xl:sticky xl:top-24">
-                  <div className="bg-card border rounded-xl p-2 card-shadow">
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-card border rounded-xl p-1.5 card-shadow">
+                    <div className="grid grid-cols-2 gap-1.5">
                       <button
                         type="button"
-                        onClick={() => setView("details")}
+                        onClick={() => handleTabChange("details")}
                         className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                          view === "details" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                          view === "details"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        Details
+                        <span className="inline-flex items-center gap-1.5">
+                          <FileText className="h-4 w-4" />
+                          Details
+                        </span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setView("registration")}
+                        onClick={() => handleTabChange("registration")}
                         className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                          view === "registration" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                          view === "registration"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        Registration
+                        <span className="inline-flex items-center gap-1.5">
+                          <User className="h-4 w-4" />
+                          Registration
+                        </span>
                       </button>
                     </div>
                   </div>
 
                   {view === "details" ? (
-                    <div className="bg-card border rounded-xl p-6 card-shadow space-y-5">
+                    <div className="bg-card border rounded-xl p-5 md:p-6 card-shadow space-y-5">
                       <div className="space-y-2">
-                        <p className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                           <FileText className="h-3 w-3" />
-                          {recordTypeLabel} Details
+                          Event Details
                         </p>
-                        <h2 className="text-lg font-semibold">{event.sourcePostUrl ? "Local Summary" : "Description"}</h2>
+                        <h2 className="text-xl font-bold leading-tight">{event.sourcePostUrl ? "Local Summary" : "Description"}</h2>
                         <p className="text-muted-foreground leading-relaxed">
                           {event.description.trim() || "No summary was provided for this record."}
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
-                          <p className="text-sm font-medium mt-1">{recordTypeLabel}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
+                              <p className="text-sm font-semibold text-foreground mt-0.5">{recordTypeLabel}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
-                          <p className="text-sm font-medium mt-1">{sourceTypeLabel}</p>
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
+                              <UserCheck className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
+                              <p className="text-sm font-semibold text-foreground mt-0.5">{sourceTypeLabel}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
+                              <Calendar className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Date</p>
+                              <p className="text-sm font-semibold text-foreground mt-0.5">{event.date || "TBA"}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
+                              <Clock className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time</p>
+                              <p className="text-sm font-semibold text-foreground mt-0.5">{event.time || "TBA"}</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="space-y-3 text-sm">
-                        <div className="rounded-lg border bg-background px-3 py-2.5">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <span className="text-xs font-semibold uppercase tracking-wide">Date</span>
-                          </div>
-                          <p className="mt-1 text-foreground">{event.date || "TBA"}</p>
-                        </div>
-                        <div className="rounded-lg border bg-background px-3 py-2.5">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span className="text-xs font-semibold uppercase tracking-wide">Time</span>
-                          </div>
-                          <p className="mt-1 text-foreground">{event.time || "TBA"}</p>
-                        </div>
-                        <div className="rounded-lg border bg-background px-3 py-2.5">
-                          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                      <div className="rounded-lg border bg-muted/20 p-3.5">
+                        <div className="flex items-start gap-2.5">
+                          <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
                             <MapPin className="h-4 w-4" />
-                            <span className="text-xs font-semibold uppercase tracking-wide">Location</span>
                           </div>
-                          <LocationPreviewButton
-                            location={event.location}
-                            locationLatitude={event.locationLatitude}
-                            locationLongitude={event.locationLongitude}
-                            className="text-sm"
-                          />
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Tip: click the location to open map preview and directions.
-                          </p>
+                          <div className="min-w-0 w-full">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Location</p>
+                            <LocationPreviewButton
+                              location={event.location}
+                              locationLatitude={event.locationLatitude}
+                              locationLongitude={event.locationLongitude}
+                              className="text-sm font-semibold"
+                            />
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Tip: click the location to open map preview and directions.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   ) : !registered ? (
-                    <form onSubmit={handleRegister} className="bg-card border rounded-xl p-6 card-shadow bg-muted/20 space-y-4">
+                    <form onSubmit={handleRegister} className="bg-card border rounded-xl p-5 md:p-6 card-shadow bg-muted/20 space-y-4">
                       <h3 className="font-semibold flex items-center gap-2">
                         <UserCheck className="h-4 w-4 text-primary" />
                         {isProgramRecord ? "Program Registration Details" : "Event Registration Details"}
@@ -529,7 +590,7 @@ export default function EventRecord() {
                       </Button>
                     </form>
                   ) : (
-                    <div className="bg-card border rounded-xl p-6 card-shadow bg-primary/5">
+                    <div className="bg-card border rounded-xl p-5 md:p-6 card-shadow bg-primary/5">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Registered Participant</p>
                       <p className="font-medium">{registrationInfo?.fullName ?? form.fullName}</p>
                       <p className="text-sm text-muted-foreground">{registrationInfo?.email ?? form.email}</p>
@@ -543,30 +604,6 @@ export default function EventRecord() {
                     </div>
                   )}
 
-                  <div className="bg-card border rounded-xl p-6 card-shadow space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</p>
-                    <Button variant="outline" asChild className="w-full justify-between">
-                      <Link to={isProgramRecord ? "/programs" : "/events"}>
-                        {isProgramRecord ? "Back to Programs" : "Back to Events"}
-                        <ArrowUpRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    {isAuthenticated ? (
-                      <Button variant="outline" asChild className="w-full justify-between">
-                        <Link to="/profile">
-                          Go to Profile
-                          <ArrowUpRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    ) : (
-                      <Button variant="outline" asChild className="w-full justify-between">
-                        <Link to="/signin">
-                          Sign In to Participate
-                          <ArrowUpRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
                 </aside>
               </div>
             </section>
@@ -619,6 +656,26 @@ export default function EventRecord() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={isSignInPromptOpen} onOpenChange={setIsSignInPromptOpen}>
+        <DialogContent className="max-w-sm border-primary/20">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Sign in required</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Sign in first to registration
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => {
+              setIsSignInPromptOpen(false);
+              navigate("/signin");
+            }}
+          >
+            Sign In
+          </Button>
+        </DialogContent>
+      </Dialog>
       <Footer />
     </div>
   );

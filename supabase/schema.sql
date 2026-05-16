@@ -29,3 +29,4 @@
 --   supabase/sql/24_registration_sync_automation.sql (optional but recommended for Google Form sync lifecycle fields + retry RPC)
 --   supabase/sql/25_admin_portal_anon_registration_policies.sql (optional for anon-admin registration monitoring/retry in local predefined admin mode)
 --   supabase/sql/26_program_registration_membership_fix.sql (recommended patch for existing DBs: prevents duplicate active program membership conflicts)
+--   supabase/sql/schema_orgs_pasig_update.sql (recommended for Pasig organization-details data model, sources, and references)

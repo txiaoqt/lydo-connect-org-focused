@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Link2Off } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFacebookEmbedIssue, normalizeSourcePostUrl, toFacebookEmbedConfig } from "@/lib/source-post";
 
@@ -40,8 +40,16 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
           />
         </div>
       ) : (
-        <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
-          This URL can be opened as source, but Facebook cannot embed this link format.
+        <div className="rounded-xl border bg-muted/20 p-6 md:p-8">
+          <div className="mx-auto max-w-md text-center">
+            <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-primary/10 text-primary grid place-items-center">
+              <Link2Off className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-semibold text-foreground">Post Preview Unavailable</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This source link can be opened, but Facebook cannot render an embeddable preview for this post format or visibility setting.
+            </p>
+          </div>
         </div>
       )}
       {embedIssue ? (

@@ -27,6 +27,7 @@ Run these files in order inside Supabase SQL Editor:
 23. `23_registration_integration.sql` (optional: adds registration RPC functions with strict validation and legacy registration metadata)
 24. `25_admin_portal_anon_registration_policies.sql` (optional: if you use predefined local admin login/anon-manage mode, allows admin registration page to read/update registration records)
 25. `26_program_registration_membership_fix.sql` (recommended if later registration metadata migrations were already applied: fixes program registration RPC membership reactivation so historical membership rows do not trigger `uq_user_program_active`)
+26. `schema_orgs_pasig_update.sql` (recommended for Pasig organization details: adds expanded organization fields, `organization_references`, RLS, search indexes, and official-source seed records)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

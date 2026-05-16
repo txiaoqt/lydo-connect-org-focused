@@ -1,7 +1,8 @@
 ﻿import React, { FormEvent, useEffect, useMemo, useState } from "react";
-import { Calendar as CalendarIcon, Filter, MapPin, Plus, Search, Users } from "lucide-react";
+import { Calendar as CalendarIcon, CalendarDays, CircleHelp, FileText, Filter, Info, Link2, MapPin, Plus, Search, Users } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
+import { StatusBadge } from "../components/StatusBadge";
 import { Event, EventStatus } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +64,9 @@ const EVENT_SECTOR_OPTIONS = [
   "General",
 ] as const;
 const OTHER_SECTOR_VALUE = "other";
+const CREATE_EVENT_STATUS_OPTIONS: EventStatus[] = ["draft", "upcoming", "ongoing"];
+const EDIT_EVENT_STATUS_OPTIONS: EventStatus[] = ["past", "archived", "draft", "postponed", "upcoming", "ongoing", "cancelled"];
+const EVENT_FILTER_STATUS_OPTIONS: EventStatus[] = ["draft", "upcoming", "ongoing", "past", "archived", "postponed", "cancelled", "published"];
 
 const getSectorFormValue = (sector?: string | null) => {
   const normalized = (sector ?? "").trim();
@@ -123,6 +127,8 @@ const formatTimeRange = (startTime?: string | null, endTime?: string | null) => 
   return "TBD";
 };
 
+const toStatusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
 export const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,10 +139,15 @@ export const Events = () => {
   const [sectorFilter, setSectorFilter] = useState("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [viewingEvent, setViewingEvent] = useState<Event | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isLinksExpanded, setIsLinksExpanded] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState<Event | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+  const [isLinksGuideOpen, setIsLinksGuideOpen] = useState(false);
+  const [isSyncGuideOpen, setIsSyncGuideOpen] = useState(false);
   const [form, setForm] = useState<EventForm>(defaultForm);
   const { toast } = useToast();
 
@@ -197,6 +208,12 @@ export const Events = () => {
   const openDeleteModal = (event: Event) => {
     setDeletingEvent(event);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openDetailsModal = (event: Event) => {
+    setViewingEvent(event);
+    setIsLinksExpanded(false);
+    setIsDetailsOpen(true);
   };
 
   const applyLocationFromMap = (value: LocationPickerResult) => {
@@ -324,7 +341,7 @@ export const Events = () => {
       registration_form_url: registrationFormUrl || null,
       registration_sheet_url: registrationSheetUrl || null,
       external_attendance_enabled: form.externalAttendanceEnabled,
-      published_at: form.status === "upcoming" || form.status === "past" ? new Date().toISOString() : null,
+      published_at: form.status === "upcoming" || form.status === "ongoing" ? new Date().toISOString() : null,
     };
 
     let error: { message: string } | null = null;
@@ -416,21 +433,7 @@ export const Events = () => {
     },
     {
       header: "Status",
-      accessor: (e: Event) => (
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-            e.status === "upcoming"
-              ? "bg-primary/10 text-primary"
-              : e.status === "draft"
-                ? "bg-warning/20 text-warning"
-                : e.status === "past"
-                  ? "bg-muted text-muted-foreground"
-                  : "bg-destructive/15 text-destructive"
-          }`}
-        >
-          {e.status}
-        </span>
-      ),
+      accessor: (e: Event) => <StatusBadge status={e.status} />,
     },
     {
       header: "Location",
@@ -525,10 +528,11 @@ export const Events = () => {
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="all">All Statuses</option>
-              <option value="upcoming">Upcoming</option>
-              <option value="past">Past</option>
-              <option value="draft">Draft</option>
-              <option value="cancelled">Cancelled</option>
+              {EVENT_FILTER_STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {toStatusLabel(status)}
+                </option>
+              ))}
             </select>
           </div>
           <div className="space-y-1">
@@ -560,197 +564,380 @@ export const Events = () => {
         </div>
       )}
 
-      <DataTable columns={columns} data={filteredEvents} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
+      <DataTable
+        columns={columns}
+        data={filteredEvents}
+        isLoading={isLoading}
+        onRowClick={openDetailsModal}
+        getRowAriaLabel={(item) => `Open details for ${item.title}`}
+      />
 
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle>
-            <DialogDescription>Changes here are saved directly to Supabase.</DialogDescription>
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="flex w-[min(900px,calc(100vw-1.5rem))] max-h-[90vh] flex-col overflow-hidden p-0 gap-0">
+          <DialogHeader className="border-b border-border/80 px-6 py-5 pr-12 text-left">
+            <DialogTitle>Event Details</DialogTitle>
+            <DialogDescription>Read-only record view.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={saveEvent} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="event-title">Title</Label>
-                <Input
-                  id="event-title"
-                  value={form.title}
-                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-sector">Sector</Label>
-                <select
-                  id="event-sector"
-                  value={form.sectorOption}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sectorOption: e.target.value }))}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  {EVENT_SECTOR_OPTIONS.map((sector) => (
-                    <option key={sector} value={sector}>
-                      {sector}
-                    </option>
-                  ))}
-                  <option value={OTHER_SECTOR_VALUE}>Other</option>
-                </select>
-              </div>
-              {form.sectorOption === OTHER_SECTOR_VALUE ? (
-                <div className="space-y-2">
-                  <Label htmlFor="event-custom-sector">Custom Sector</Label>
-                  <Input
-                    id="event-custom-sector"
-                    value={form.customSector}
-                    onChange={(e) => setForm((prev) => ({ ...prev, customSector: e.target.value }))}
-                    placeholder="Type custom sector"
-                    required
-                  />
+          {viewingEvent && (
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">1. Basic Information</h3>
+                <div className="grid grid-cols-1 divide-y divide-border rounded-lg border border-border/70 bg-background/60 md:grid-cols-3 md:divide-x md:divide-y-0">
+                  <div className="p-3"><p className="text-xs text-muted-foreground">Title</p><p className="text-sm font-medium">{viewingEvent.title || "N/A"}</p></div>
+                  <div className="p-3"><p className="text-xs text-muted-foreground">Sector</p><p className="text-sm font-medium">{viewingEvent.sector || "N/A"}</p></div>
+                  <div className="p-3"><p className="text-xs text-muted-foreground">Status</p><StatusBadge status={viewingEvent.status} /></div>
                 </div>
-              ) : (
-                <div />
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="event-status">Status</Label>
-                <select
-                  id="event-status"
-                  value={form.status}
-                  onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value as EventStatus }))}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="draft">draft</option>
-                  <option value="upcoming">upcoming</option>
-                  <option value="past">past</option>
-                  <option value="cancelled">cancelled</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-date">Event Date</Label>
-                <Input
-                  id="event-date"
-                  type="date"
-                  value={form.eventDate}
-                  onChange={(e) => setForm((prev) => ({ ...prev, eventDate: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-capacity">Capacity</Label>
-                <Input
-                  id="event-capacity"
-                  type="number"
-                  min={1}
-                  value={form.capacity}
-                  onChange={(e) => setForm((prev) => ({ ...prev, capacity: e.target.value }))}
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-start-time">Start Time</Label>
-                <Input
-                  id="event-start-time"
-                  type="time"
-                  value={form.startTime}
-                  onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-end-time">End Time</Label>
-                <Input
-                  id="event-end-time"
-                  type="time"
-                  value={form.endTime}
-                  onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="event-location">Location</Label>
-                <div className="flex flex-col md:flex-row gap-2">
-                  <Input
-                    id="event-location"
-                    value={form.location}
-                    onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
-                    required
-                  />
-                  <Button type="button" variant="outline" onClick={() => setIsLocationPickerOpen(true)} className="md:w-44">
-                    Pick on Map
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {!EVENT_SECTOR_OPTIONS.includes((viewingEvent.sector ?? "").trim() as (typeof EVENT_SECTOR_OPTIONS)[number]) && (
+                    <div><p className="text-xs text-muted-foreground">Custom Sector</p><p className="text-sm font-medium">{viewingEvent.sector || "N/A"}</p></div>
+                  )}
+                  <div><p className="text-xs text-muted-foreground">Capacity</p><p className="text-sm font-medium">{viewingEvent.capacity ?? "N/A"}</p></div>
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">2. Schedule</h3>
+                <div className="grid grid-cols-1 divide-y divide-border rounded-lg border border-border/70 bg-background/60 md:grid-cols-3 md:divide-x md:divide-y-0">
+                  <div className="p-3"><p className="text-xs text-muted-foreground">Event Date</p><p className="text-sm font-medium">{viewingEvent.event_date ? format(new Date(viewingEvent.event_date), "MMM d, yyyy") : "N/A"}</p></div>
+                  <div className="p-3"><p className="text-xs text-muted-foreground">Start Time</p><p className="text-sm font-medium">{formatTimeLabel(viewingEvent.start_time) || "N/A"}</p></div>
+                  <div className="p-3"><p className="text-xs text-muted-foreground">End Time</p><p className="text-sm font-medium">{formatTimeLabel(viewingEvent.end_time) || "N/A"}</p></div>
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">3. Location</h3>
+                <p className="text-sm font-medium">{viewingEvent.location || "N/A"}</p>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">4. Links and Registration</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setIsLinksExpanded((prev) => !prev)}>
+                    {isLinksExpanded ? "Collapse" : "Expand"}
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <Input value={form.locationLatitude || "Latitude not set"} readOnly className="bg-muted/40" />
-                  <Input value={form.locationLongitude || "Longitude not set"} readOnly className="bg-muted/40" />
+                <div className="grid grid-cols-1 gap-3">
+                  <div><p className="text-xs text-muted-foreground">Source Post URL</p><p className="text-sm font-medium break-all">{viewingEvent.source_post_url || "N/A"}</p></div>
+                  {isLinksExpanded && (
+                    <>
+                      <div><p className="text-xs text-muted-foreground">Registration Form URL</p><p className="text-sm font-medium break-all">{viewingEvent.registration_form_url || "N/A"}</p></div>
+                      <div><p className="text-xs text-muted-foreground">Registration Sheet URL</p><p className="text-sm font-medium break-all">{viewingEvent.registration_sheet_url || "N/A"}</p></div>
+                      <div><p className="text-xs text-muted-foreground">Automated Google Form Sync</p><StatusBadge status={viewingEvent.external_attendance_enabled ? "enabled" : "disabled"} /></div>
+                    </>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Use the map picker for precise coordinates. Drag pin or type location and confirm.
-                </p>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="event-source">Source Post URL</Label>
-                <Input
-                  id="event-source"
-                  value={form.sourcePostUrl}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sourcePostUrl: e.target.value }))}
-                  placeholder="https://www.facebook.com/..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use the direct public post permalink (not `/share/...`) so it can be embedded on the event details page.
-                </p>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="event-registration-form-url">Registration Form URL (Optional)</Label>
-                <Input
-                  id="event-registration-form-url"
-                  value={form.registrationFormUrl}
-                  onChange={(e) => setForm((prev) => ({ ...prev, registrationFormUrl: e.target.value }))}
-                  placeholder="https://docs.google.com/forms/..."
-                />
-                <p className="text-xs text-muted-foreground">
-                  External Google Form link only. The portal does not embed GForm preview.
-                </p>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="event-registration-sheet-url">Registration Sheet URL (Optional)</Label>
-                <Input
-                  id="event-registration-sheet-url"
-                  value={form.registrationSheetUrl}
-                  onChange={(e) => setForm((prev) => ({ ...prev, registrationSheetUrl: e.target.value }))}
-                  placeholder="https://docs.google.com/spreadsheets/.../pubhtml"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use the published Google Sheet URL so admin can preview external attendance.
-                </p>
-              </div>
-              <div className="md:col-span-2 rounded-lg border bg-muted/30 px-3 py-2.5">
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-border"
-                    checked={form.externalAttendanceEnabled}
-                    onChange={(e) => setForm((prev) => ({ ...prev, externalAttendanceEnabled: e.target.checked }))}
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">5. Description</h3>
+                <p className="text-sm font-medium whitespace-pre-wrap break-words">{viewingEvent.description || "N/A"}</p>
+              </section>
+            </div>
+          )}
+          <DialogFooter className="border-t border-border/80 px-6 py-3 sm:justify-between">
+            <p className="text-xs text-muted-foreground">Read-only record view.</p>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!viewingEvent) return;
+                  setIsDetailsOpen(false);
+                  openEditModal(viewingEvent);
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  if (!viewingEvent) return;
+                  setIsDetailsOpen(false);
+                  openDeleteModal(viewingEvent);
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="w-[min(960px,calc(100vw-1.5rem))] max-h-[92vh] overflow-hidden p-0 gap-0">
+          <form onSubmit={saveEvent} className="flex max-h-[92vh] flex-col">
+            <DialogHeader className="border-b border-border/80 px-6 py-5 pr-12 text-left">
+              <DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle>
+              <DialogDescription>
+                {editingEvent
+                  ? "Changes here are saved directly to Supabase."
+                  : "Create a new record that will be saved to Supabase."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Info size={14} />
+                  </span>
+                  1. Basic Information
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="event-title">
+                      Title <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="event-title"
+                      value={form.title}
+                      onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-sector">
+                      Sector <span className="text-destructive">*</span>
+                    </Label>
+                    <select
+                      id="event-sector"
+                      value={form.sectorOption}
+                      onChange={(e) => setForm((prev) => ({ ...prev, sectorOption: e.target.value }))}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {EVENT_SECTOR_OPTIONS.map((sector) => (
+                        <option key={sector} value={sector}>
+                          {sector}
+                        </option>
+                      ))}
+                      <option value={OTHER_SECTOR_VALUE}>Other</option>
+                    </select>
+                  </div>
+                  {form.sectorOption === OTHER_SECTOR_VALUE ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="event-custom-sector">
+                        Custom Sector <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="event-custom-sector"
+                        value={form.customSector}
+                        onChange={(e) => setForm((prev) => ({ ...prev, customSector: e.target.value }))}
+                        placeholder="Type custom sector"
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div className="hidden md:block" />
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="event-status">
+                      Status <span className="text-destructive">*</span>
+                    </Label>
+                    <select
+                      id="event-status"
+                      value={form.status}
+                      onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value as EventStatus }))}
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {(editingEvent ? EDIT_EVENT_STATUS_OPTIONS : CREATE_EVENT_STATUS_OPTIONS).map((status) => (
+                        <option key={status} value={status}>
+                          {toStatusLabel(status)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-capacity">Capacity</Label>
+                    <Input
+                      id="event-capacity"
+                      type="number"
+                      min={1}
+                      value={form.capacity}
+                      onChange={(e) => setForm((prev) => ({ ...prev, capacity: e.target.value }))}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <CalendarDays size={14} />
+                  </span>
+                  2. Schedule
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="event-date">Event Date</Label>
+                    <Input
+                      id="event-date"
+                      type="date"
+                      value={form.eventDate}
+                      onChange={(e) => setForm((prev) => ({ ...prev, eventDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-start-time">Start Time</Label>
+                    <Input
+                      id="event-start-time"
+                      type="time"
+                      value={form.startTime}
+                      onChange={(e) => setForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-end-time">End Time</Label>
+                    <Input
+                      id="event-end-time"
+                      type="time"
+                      value={form.endTime}
+                      onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <MapPin size={14} />
+                  </span>
+                  3. Location
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="event-location">
+                    Location <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex flex-col gap-2 md:flex-row">
+                    <Input
+                      id="event-location"
+                      value={form.location}
+                      onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
+                      required
+                    />
+                    <Button type="button" variant="outline" onClick={() => setIsLocationPickerOpen(true)} className="md:w-44">
+                      Pick on Map
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <Input value={form.locationLatitude || "Latitude not set"} readOnly className="bg-muted/40" />
+                    <Input value={form.locationLongitude || "Longitude not set"} readOnly className="bg-muted/40" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use the map picker to set accurate coordinates. Drag the pin or type a location, then confirm.
+                  </p>
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Link2 size={14} />
+                    </span>
+                    4. Links and Registration
+                  </h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    aria-label="Open links and registration guide"
+                    onClick={() => setIsLinksGuideOpen(true)}
+                  >
+                    <CircleHelp size={15} />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="event-source">Source Post URL</Label>
+                    <Input
+                      id="event-source"
+                      value={form.sourcePostUrl}
+                      onChange={(e) => setForm((prev) => ({ ...prev, sourcePostUrl: e.target.value }))}
+                      placeholder="https://www.facebook.com/..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-registration-form-url">Registration Form URL (Optional)</Label>
+                    <Input
+                      id="event-registration-form-url"
+                      value={form.registrationFormUrl}
+                      onChange={(e) => setForm((prev) => ({ ...prev, registrationFormUrl: e.target.value }))}
+                      placeholder="https://docs.google.com/forms/..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-registration-sheet-url">Registration Sheet URL (Optional)</Label>
+                    <Input
+                      id="event-registration-sheet-url"
+                      value={form.registrationSheetUrl}
+                      onChange={(e) => setForm((prev) => ({ ...prev, registrationSheetUrl: e.target.value }))}
+                      placeholder="https://docs.google.com/spreadsheets/.../pubhtml"
+                    />
+                  </div>
+                  <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-3">
+                    <label className="flex items-start gap-2 text-sm font-medium text-foreground">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-border"
+                        checked={form.externalAttendanceEnabled}
+                        onChange={(e) => setForm((prev) => ({ ...prev, externalAttendanceEnabled: e.target.checked }))}
+                      />
+                      <span className="flex items-center gap-1.5">
+                        <span>Enable automated Google Form sync</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                          aria-label="Open automated Google Form sync guide"
+                          onClick={() => setIsSyncGuideOpen(true)}
+                        >
+                          <CircleHelp size={14} />
+                        </Button>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <FileText size={14} />
+                  </span>
+                  5. Description
+                </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="event-description">Description</Label>
+                  <Textarea
+                    id="event-description"
+                    value={form.description}
+                    onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                    rows={5}
                   />
-                  Enable automated Google Form sync
-                </label>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  When enabled, portal registrations are queued for worker sync to Google Form, which then updates Google Sheet.
-                </p>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="event-description">Description</Label>
-                <Textarea
-                  id="event-description"
-                  value={form.description}
-                  onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                  rows={4}
-                />
-              </div>
+                  <p className="text-right text-xs text-muted-foreground">{form.description.length}/1000</p>
+                </div>
+              </section>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSaving}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : editingEvent ? "Save Changes" : "Create Event"}
-              </Button>
+            <DialogFooter className="border-t border-border/80 px-6 py-3 sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {editingEvent ? "All changes are saved directly to Supabase." : "New records will be saved to Supabase."}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "Saving..." : editingEvent ? "Save Changes" : "Create Event"}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -766,6 +953,64 @@ export const Events = () => {
         title="Pick Event Location"
         description="Search address or drag the pin to set the exact location for this event."
       />
+
+      <Dialog open={isLinksGuideOpen} onOpenChange={setIsLinksGuideOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Links and Registration Guide</DialogTitle>
+            <DialogDescription>
+              Use these fields to connect this record with its public source and external registration references.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              <span className="font-semibold text-foreground">Source Post URL:</span> Use the direct public source post link.
+              Avoid shared or private links because they may not embed correctly on the public details page.
+            </p>
+            <p>
+              <span className="font-semibold text-foreground">Registration Form URL:</span> Add the external Google Form link
+              for users who need to register outside the portal.
+            </p>
+            <p>
+              <span className="font-semibold text-foreground">Registration Sheet URL:</span> Add the published Google Sheet link
+              so admins can preview or verify external attendance records.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsLinksGuideOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSyncGuideOpen} onOpenChange={setIsSyncGuideOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Automated Google Form Sync</DialogTitle>
+            <DialogDescription>How this setting works for external registration tracking.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>When enabled, portal registrations are queued for syncing.</p>
+            <p>
+              The worker or sync process sends registration data to the linked Google Form when integration is configured, and
+              the connected Google Sheet is then updated based on the response flow.
+            </p>
+            <p>This helps admins keep portal registrations and external attendance records aligned.</p>
+            <p>When disabled, the portal will not automatically queue registrations for Google Form sync.</p>
+            <p>Admins may need to manually check or update external forms and sheets when needed.</p>
+            <p>
+              <span className="font-semibold text-foreground">Note:</span> Only enable this if the Registration Form URL and
+              Registration Sheet URL are correct and the sync integration is configured.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsSyncGuideOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={isDeleteDialogOpen}

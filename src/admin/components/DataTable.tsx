@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MoreVertical, Edit2, Trash2, Eye } from 'lucide-react';
+import { Edit2, Trash2, Eye } from 'lucide-react';
 
 interface Column<T> {
   header: string;
@@ -14,6 +14,11 @@ interface DataTableProps<T> {
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   onView?: (item: T) => void;
+  onRowClick?: (item: T) => void;
+  getRowAriaLabel?: (item: T) => string;
+  getEditAriaLabel?: (item: T) => string;
+  getDeleteAriaLabel?: (item: T) => string;
+  getViewAriaLabel?: (item: T) => string;
   isLoading?: boolean;
 }
 
@@ -23,6 +28,11 @@ export function DataTable<T extends { id: string | number }>({
   onEdit, 
   onDelete, 
   onView,
+  onRowClick,
+  getRowAriaLabel,
+  getEditAriaLabel,
+  getDeleteAriaLabel,
+  getViewAriaLabel,
   isLoading 
 }: DataTableProps<T>) {
   if (isLoading) {
@@ -63,7 +73,23 @@ export function DataTable<T extends { id: string | number }>({
               </tr>
             ) : (
               data.map((item) => (
-                <tr key={item.id} className="hover:bg-muted/30 transition-colors group">
+                <tr
+                  key={item.id}
+                  className={`group transition-colors ${onRowClick ? "cursor-pointer hover:bg-muted/30" : "hover:bg-muted/20"}`}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(item);
+                          }
+                        }
+                      : undefined
+                  }
+                  tabIndex={onRowClick ? 0 : undefined}
+                  aria-label={onRowClick ? (getRowAriaLabel?.(item) ?? "Open details") : undefined}
+                >
                   {columns.map((column, idx) => (
                     <td key={idx} className={`px-6 py-4 text-sm text-foreground ${column.className || ''}`}>
                       {typeof column.accessor === 'function' 
@@ -76,24 +102,36 @@ export function DataTable<T extends { id: string | number }>({
                       <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {onView && (
                           <button 
-                            onClick={() => onView(item)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onView(item);
+                            }}
                             className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                            aria-label={getViewAriaLabel?.(item) ?? "View details"}
                           >
                             <Eye size={16} />
                           </button>
                         )}
                         {onEdit && (
                           <button 
-                            onClick={() => onEdit(item)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onEdit(item);
+                            }}
                             className="p-2 text-muted-foreground hover:text-info hover:bg-info/10 rounded-lg transition-all"
+                            aria-label={getEditAriaLabel?.(item) ?? "Edit record"}
                           >
                             <Edit2 size={16} />
                           </button>
                         )}
                         {onDelete && (
                           <button 
-                            onClick={() => onDelete(item)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDelete(item);
+                            }}
                             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                            aria-label={getDeleteAriaLabel?.(item) ?? "Delete record"}
                           >
                             <Trash2 size={16} />
                           </button>

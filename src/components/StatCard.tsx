@@ -29,29 +29,29 @@ export default function StatCard({
   }
 
   const variantStyles = {
-    default: "bg-card",
-    primary: "bg-primary/5 border-primary/20",
-    accent: "bg-accent/5 border-accent/20",
-    warning: "bg-warning/5 border-warning/20",
+    default: "bg-card border-border",
+    primary: "bg-card border-primary/20",
+    accent: "bg-card border-accent/25",
+    warning: "bg-card border-warning/30",
   };
 
   const iconStyles = {
-    default: "bg-muted text-muted-foreground",
+    default: "bg-primary/10 text-primary",
     primary: "bg-primary/10 text-primary",
-    accent: "bg-accent/10 text-accent",
+    accent: "bg-accent/15 text-accent",
     warning: "bg-warning/10 text-warning",
   };
 
   return (
-    <div className={`rounded-lg border p-5 card-shadow transition-all hover:card-shadow-hover ${variantStyles[variant]}`}>
+    <div className={`rounded-lg border p-5 card-shadow transition-all duration-200 hover:card-shadow-hover ${variantStyles[variant]}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-muted-foreground font-medium">{label}</p>
+          <p className="text-sm text-muted-foreground font-semibold">{label}</p>
           <p className="text-2xl font-bold font-heading mt-1">{value}</p>
           {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
         </div>
         {Icon && (
-          <div className={`p-2.5 rounded-lg ${iconStyles[variant]}`}>
+          <div className={`p-2.5 rounded-lg border border-current/15 ${iconStyles[variant]}`}>
             <Icon className="h-5 w-5" />
           </div>
         )}

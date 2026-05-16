@@ -1,6 +1,6 @@
 
-export type ProgramStatus = 'published' | 'draft' | 'archived';
-export type EventStatus = 'draft' | 'upcoming' | 'past' | 'cancelled';
+export type ProgramStatus = 'draft' | 'upcoming' | 'ongoing' | 'past' | 'archived' | 'postponed' | 'cancelled' | 'published';
+export type EventStatus = 'draft' | 'upcoming' | 'ongoing' | 'past' | 'archived' | 'postponed' | 'cancelled' | 'published';
 export type OrganizationStatus = 'active' | 'partner' | 'inactive';
 export type RegistrationStatus = 'registered' | 'attended' | 'cancelled';
 export type DocState = 'ok' | 'partial' | 'issue';

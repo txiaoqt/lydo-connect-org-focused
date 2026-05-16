@@ -304,23 +304,106 @@ export async function fetchEventById(
 export async function fetchOrganizations(): Promise<YouthOrganization[]> {
   if (!supabase) return [];
 
+  const pickFirstString = (row: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const value = row[key];
+      if (typeof value === "string" && value.trim().length > 0) return value;
+    }
+    return null;
+  };
+  const pickFirstArray = (row: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const value = row[key];
+      if (Array.isArray(value)) return value;
+    }
+    return [];
+  };
+
   const { data, error } = await supabase
     .from("organizations")
-    .select("id,name,type,focus,source_tag,status,source_post_url")
+    .select("*, organization_references(reference_title, reference_url, published_on)")
     .in("status", ["active", "partner"])
     .order("created_at", { ascending: false });
 
   if (error || !data || data.length === 0) return [];
 
-  return data.map((row) => ({
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    focus: row.focus,
-    sourceTag: row.source_tag ?? "",
-    status: row.status === "partner" ? "partner" : "active",
-    sourcePostUrl: row.source_post_url ?? undefined,
-  }));
+  return data.map((row) => {
+    const raw = row as Record<string, unknown>;
+    const rawInitiatives = pickFirstArray(raw, ["related_initiatives", "initiatives", "organization_initiatives"]);
+    const relatedInitiativesList = rawInitiatives
+      .map((item) => {
+        if (typeof item === "string") return { name: item, year: null, sourceUrl: null };
+        if (!item || typeof item !== "object") return null;
+        const typed = item as Record<string, unknown>;
+        const name = pickFirstString(typed, ["name", "title", "initiative"]);
+        if (!name) return null;
+        return {
+          name,
+          year: pickFirstString(typed, ["year", "activity_year", "date"]),
+          sourceUrl: pickFirstString(typed, ["source_url", "url", "reference_url"]),
+        };
+      })
+      .filter((entry): entry is { name: string; year?: string | null; sourceUrl?: string | null } => Boolean(entry));
+
+    const referenceRows = pickFirstArray(raw, ["organization_references"]);
+    const rawSources = pickFirstArray(raw, ["source_links", "sources", "organization_sources"]);
+    const normalizedReferenceSources = referenceRows
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return null;
+        const typed = entry as Record<string, unknown>;
+        const url = pickFirstString(typed, ["reference_url", "url"]);
+        if (!url) return null;
+        return {
+          label: pickFirstString(typed, ["reference_title", "label", "name", "title"]) ?? "Official Reference",
+          url,
+        };
+      })
+      .filter((entry): entry is { label: string; url: string } => Boolean(entry));
+      const sourceLinks = [
+        ...normalizedReferenceSources,
+        ...rawSources
+        .map((item) => {
+          if (typeof item === "string") {
+            return item.trim().length > 0 ? { label: "Reference", url: item } : null;
+        }
+        if (!item || typeof item !== "object") return null;
+        const typed = item as Record<string, unknown>;
+          const url = pickFirstString(typed, ["url", "source_url", "link"]);
+          if (!url) return null;
+          return { label: pickFirstString(typed, ["label", "name", "title"]) ?? "Reference", url };
+        })
+        .filter((entry): entry is { label: string; url: string } => Boolean(entry)),
+      ];
+
+    return {
+      id: String(raw.id ?? ""),
+      name: String(raw.name ?? "Unnamed Organization"),
+      type: String(raw.type ?? pickFirstString(raw, ["category", "organization_type"]) ?? "Organization"),
+      focus: String(raw.focus ?? pickFirstString(raw, ["overview", "description", "mission"]) ?? "N/A"),
+      sourceTag: String(raw.source_tag ?? pickFirstString(raw, ["source_name", "source_reference", "source_reference_title"]) ?? ""),
+      status: raw.status === "partner" ? "partner" : "active",
+      sourcePostUrl: pickFirstString(raw, ["source_post_url", "source_reference_url", "source_link", "official_source_url"]) ?? undefined,
+      category: pickFirstString(raw, ["category", "organization_type"]),
+      overview: pickFirstString(raw, ["overview", "description"]),
+      mission: pickFirstString(raw, ["mission", "purpose"]),
+      objectives: pickFirstString(raw, ["objectives"]),
+      programs: pickFirstString(raw, ["programs_projects", "programs", "projects"]),
+      activities: pickFirstString(raw, ["activities"]),
+      location: pickFirstString(raw, ["location", "address"]),
+      coverageArea: pickFirstString(raw, ["coverage_area"]),
+      targetBeneficiaries: pickFirstString(raw, ["target_beneficiaries", "beneficiaries"]),
+      contactEmail: pickFirstString(raw, ["contact_email", "email"]),
+      contactPhone: pickFirstString(raw, ["contact_phone", "phone"]),
+      contactPerson: pickFirstString(raw, ["contact_person"]),
+      relatedInitiatives: pickFirstString(raw, ["related_initiatives_summary", "initiatives_summary", "related_initiatives", "initiatives"]),
+      activityYear: pickFirstString(raw, ["activity_year", "related_activity_year", "source_reference_published_on"]),
+      credibilityNotes: pickFirstString(raw, ["credibility_notes", "verification_notes"]),
+      sourceName: pickFirstString(raw, ["source_reference_title", "source_name"]),
+      sourceDate: pickFirstString(raw, ["source_reference_published_on", "source_date"]),
+      relatedInitiativesList,
+      sourceLinks,
+    };
+  }).filter((row) => row.id);
 }
 
 export async function fetchDisclosureRegistry(): Promise<DisclosureDocument[]> {

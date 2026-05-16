@@ -21,8 +21,19 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { EFFECTIVE_ADMIN_SIGNIN_PATH } from "@/lib/deployment-surface";
+import { useState } from "react";
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -72,6 +83,7 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
   const menuGroups = [
     {
       id: "overview",
@@ -188,7 +200,7 @@ export const Sidebar = ({
         )}
 
         <button
-          onClick={() => void handleSignOut()}
+          onClick={() => setIsSignOutDialogOpen(true)}
           title={collapsed ? "Sign Out" : undefined}
           className={cn(
             "flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 w-full text-left font-medium",
@@ -199,6 +211,26 @@ export const Sidebar = ({
           {!collapsed && <span>Sign Out</span>}
         </button>
       </div>
+
+      <AlertDialog open={isSignOutDialogOpen} onOpenChange={setIsSignOutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleSignOut()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 };

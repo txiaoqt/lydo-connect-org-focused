@@ -145,6 +145,7 @@ export default function AdminPortal() {
         <TopNav
           title={tabLabelMap[activeTab] ?? "Admin Portal"}
           onMenuToggle={() => setIsSidebarOpen((previous) => !previous)}
+          onNavigateTab={setActiveTab}
         />
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{renderContent()}</div>
         <footer className="mt-auto p-6 border-t border-border text-center text-sm text-muted-foreground">

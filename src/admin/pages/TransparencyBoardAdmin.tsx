@@ -85,6 +85,8 @@ export const TransparencyBoardAdmin = () => {
   const [isSavingBoard, setIsSavingBoard] = useState(false);
   const [deletingBoard, setDeletingBoard] = useState<BoardRow | null>(null);
   const [isDeletingBoard, setIsDeletingBoard] = useState(false);
+  const [viewingBoard, setViewingBoard] = useState<BoardRow | null>(null);
+  const [isBoardDetailsOpen, setIsBoardDetailsOpen] = useState(false);
 
   const [isMonthlyDialog, setIsMonthlyDialog] = useState(false);
   const [editingMonthly, setEditingMonthly] = useState<MonthlyRow | null>(null);
@@ -92,6 +94,8 @@ export const TransparencyBoardAdmin = () => {
   const [isSavingMonthly, setIsSavingMonthly] = useState(false);
   const [deletingMonthly, setDeletingMonthly] = useState<MonthlyRow | null>(null);
   const [isDeletingMonthly, setIsDeletingMonthly] = useState(false);
+  const [viewingMonthly, setViewingMonthly] = useState<MonthlyRow | null>(null);
+  const [isMonthlyDetailsOpen, setIsMonthlyDetailsOpen] = useState(false);
   const { toast } = useToast();
 
   const loadData = async () => {
@@ -159,6 +163,10 @@ export const TransparencyBoardAdmin = () => {
     }
     setIsBoardDialog(true);
   };
+  const openBoardDetails = (row: BoardRow) => {
+    setViewingBoard(row);
+    setIsBoardDetailsOpen(true);
+  };
 
   const saveBoard = async (event: FormEvent) => {
     event.preventDefault();
@@ -199,6 +207,26 @@ export const TransparencyBoardAdmin = () => {
     setIsSavingMonthly(false);
     if (resp.error) { toast({ title: "Save Failed", description: resp.error.code === "23505" ? "Duplicate month row for this barangay and fiscal year." : resp.error.message }); return; }
     setIsMonthlyDialog(false); setEditingMonthly(null); setMonthlyForm(monthlyDefaults); toast({ title: "Saved", description: "Monthly row saved." }); void loadData();
+  };
+  const openEditMonthlyDialog = (row: MonthlyRow) => {
+    setEditingMonthly(row);
+    setMonthlyForm({
+      barangayId: row.barangay_id,
+      fiscalYear: String(row.fiscal_year),
+      monthNo: String(row.month_no),
+      dueDate: row.due_date,
+      mfrStatus: row.mfr_status,
+      milStatus: row.mil_status,
+      rcbStatus: row.rcb_status,
+      accomplishmentStatus: row.accomplishment_status,
+      censusStatus: row.census_status,
+      reportDocumentId: row.report_document_id ?? "",
+    });
+    setIsMonthlyDialog(true);
+  };
+  const openMonthlyDetails = (row: MonthlyRow) => {
+    setViewingMonthly(row);
+    setIsMonthlyDetailsOpen(true);
   };
 
   const deleteBoard = async () => {
@@ -278,8 +306,8 @@ export const TransparencyBoardAdmin = () => {
               ]}
               data={filteredBoard}
               isLoading={isLoading}
-              onEdit={openEditBoardDialog}
-              onDelete={setDeletingBoard}
+              onRowClick={openBoardDetails}
+              getRowAriaLabel={(row) => `Open details for ${row.barangay_name} ${row.quarter} FY ${row.fiscal_year}`}
             />
           </section>
         </TabsContent>
@@ -332,8 +360,8 @@ export const TransparencyBoardAdmin = () => {
               ]}
               data={filteredMonthly}
               isLoading={isLoading}
-              onEdit={(row) => { setEditingMonthly(row); setMonthlyForm({ barangayId: row.barangay_id, fiscalYear: String(row.fiscal_year), monthNo: String(row.month_no), dueDate: row.due_date, mfrStatus: row.mfr_status, milStatus: row.mil_status, rcbStatus: row.rcb_status, accomplishmentStatus: row.accomplishment_status, censusStatus: row.census_status, reportDocumentId: row.report_document_id ?? "" }); setIsMonthlyDialog(true); }}
-              onDelete={setDeletingMonthly}
+              onRowClick={openMonthlyDetails}
+              getRowAriaLabel={(row) => `Open monthly details for ${row.barangay_name} month ${row.month_no}`}
             />
           </section>
         </TabsContent>
@@ -414,6 +442,58 @@ export const TransparencyBoardAdmin = () => {
             </div>
             <DialogFooter><Button type="button" variant="outline" onClick={() => setIsMonthlyDialog(false)} disabled={isSavingMonthly}>Cancel</Button><Button type="submit" disabled={isSavingMonthly}>{isSavingMonthly ? "Saving..." : editingMonthly ? "Save Changes" : "Create Row"}</Button></DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBoardDetailsOpen} onOpenChange={setIsBoardDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Board Row Details</DialogTitle><DialogDescription>Read-only record view.</DialogDescription></DialogHeader>
+          {viewingBoard && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><p className="text-muted-foreground">Barangay</p><p className="font-medium">{viewingBoard.barangay_name}</p></div>
+                <div><p className="text-muted-foreground">Period</p><p className="font-medium">FY {viewingBoard.fiscal_year} - {viewingBoard.quarter}</p></div>
+                <div><p className="text-muted-foreground">CBYDP</p><p className="font-medium">{DOC_LABEL[viewingBoard.cbydp]}</p></div>
+                <div><p className="text-muted-foreground">ABYIP</p><p className="font-medium">{DOC_LABEL[viewingBoard.abyip]}</p></div>
+                <div><p className="text-muted-foreground">Annual Budget</p><p className="font-medium">{DOC_LABEL[viewingBoard.annual_budget]}</p></div>
+                <div><p className="text-muted-foreground">RCB</p><p className="font-medium">{DOC_LABEL[viewingBoard.rcb]}</p></div>
+                <div><p className="text-muted-foreground">MIL</p><p className="font-medium">{DOC_LABEL[viewingBoard.mil]}</p></div>
+                <div className="md:col-span-2"><p className="text-muted-foreground">Remarks</p><p className="font-medium">{viewingBoard.remarks || "N/A"}</p></div>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                <p className="text-xs text-muted-foreground">Read-only record view.</p>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsBoardDetailsOpen(false)}>Close</Button>
+                  <Button type="button" onClick={() => { setIsBoardDetailsOpen(false); openEditBoardDialog(viewingBoard); }}>Edit</Button>
+                  <Button type="button" variant="destructive" onClick={() => { setIsBoardDetailsOpen(false); setDeletingBoard(viewingBoard); }}>Delete</Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isMonthlyDetailsOpen} onOpenChange={setIsMonthlyDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Monthly Row Details</DialogTitle><DialogDescription>Read-only record view.</DialogDescription></DialogHeader>
+          {viewingMonthly && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><p className="text-muted-foreground">Barangay</p><p className="font-medium">{viewingMonthly.barangay_name}</p></div>
+                <div><p className="text-muted-foreground">Period</p><p className="font-medium">FY {viewingMonthly.fiscal_year} - {MONTH_NAMES[viewingMonthly.month_no - 1] ?? viewingMonthly.month_no}</p></div>
+                <div><p className="text-muted-foreground">Due Date</p><p className="font-medium">{new Date(viewingMonthly.due_date).toLocaleDateString()}</p></div>
+                <div><p className="text-muted-foreground">Completion</p><p className="font-medium">{viewingMonthly.completion_percent}%</p></div>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                <p className="text-xs text-muted-foreground">Read-only record view.</p>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsMonthlyDetailsOpen(false)}>Close</Button>
+                  <Button type="button" onClick={() => { setIsMonthlyDetailsOpen(false); openEditMonthlyDialog(viewingMonthly); }}>Edit</Button>
+                  <Button type="button" variant="destructive" onClick={() => { setIsMonthlyDetailsOpen(false); setDeletingMonthly(viewingMonthly); }}>Delete</Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

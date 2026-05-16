@@ -1,6 +1,7 @@
 ﻿import React, { FormEvent, useEffect, useState } from "react";
 import { Building2, Filter, Plus, Search, Tag } from "lucide-react";
 import { DataTable } from "../components/DataTable";
+import { StatusBadge } from "../components/StatusBadge";
 import { Organization, OrganizationStatus } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,8 @@ export const Organizations = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [viewingOrg, setViewingOrg] = useState<Organization | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [deletingOrg, setDeletingOrg] = useState<Organization | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -111,6 +114,11 @@ export const Organizations = () => {
   const openDeleteModal = (org: Organization) => {
     setDeletingOrg(org);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openDetailsModal = (org: Organization) => {
+    setViewingOrg(org);
+    setIsDetailsOpen(true);
   };
 
   const saveOrganization = async (event: FormEvent) => {
@@ -231,19 +239,7 @@ export const Organizations = () => {
     },
     {
       header: "Status",
-      accessor: (o: Organization) => (
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-            o.status === "active"
-              ? "bg-accent/15 text-accent"
-              : o.status === "partner"
-                ? "bg-primary/10 text-primary"
-                : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {o.status}
-        </span>
-      ),
+      accessor: (o: Organization) => <StatusBadge status={o.status} />,
     },
   ];
 
@@ -287,7 +283,56 @@ export const Organizations = () => {
         </button>
       </div>
 
-      <DataTable columns={columns} data={filteredOrgs} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
+      <DataTable
+        columns={columns}
+        data={filteredOrgs}
+        isLoading={isLoading}
+        onRowClick={openDetailsModal}
+        getRowAriaLabel={(item) => `Open details for ${item.name}`}
+      />
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="flex w-[min(860px,calc(100vw-1.5rem))] max-h-[90vh] flex-col overflow-hidden p-0 gap-0">
+          <DialogHeader className="border-b border-border/80 px-6 py-5 pr-12 text-left">
+            <DialogTitle>Organization Details</DialogTitle>
+            <DialogDescription>Read-only record view.</DialogDescription>
+          </DialogHeader>
+          {viewingOrg && (
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">1. Basic Information</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div><p className="text-xs text-muted-foreground">Name</p><p className="text-sm font-medium">{viewingOrg.name || "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Type</p><p className="text-sm font-medium">{viewingOrg.type || "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Focus Area</p><p className="text-sm font-medium">{viewingOrg.focus || "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Status</p><StatusBadge status={viewingOrg.status} /></div>
+                </div>
+              </section>
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">2. Source</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <div><p className="text-xs text-muted-foreground">Source Tag</p><p className="text-sm font-medium">{viewingOrg.source_tag || "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Source Post URL</p><p className="text-sm font-medium break-all">{viewingOrg.source_post_url || "N/A"}</p></div>
+                </div>
+              </section>
+            </div>
+          )}
+          <DialogFooter className="border-t border-border/80 px-6 py-3 sm:justify-between">
+            <p className="text-xs text-muted-foreground">Read-only record view.</p>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                Close
+              </Button>
+              <Button type="button" onClick={() => { if (!viewingOrg) return; setIsDetailsOpen(false); openEditModal(viewingOrg); }}>
+                Edit
+              </Button>
+              <Button type="button" variant="destructive" onClick={() => { if (!viewingOrg) return; setIsDetailsOpen(false); openDeleteModal(viewingOrg); }}>
+                Delete
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-xl">

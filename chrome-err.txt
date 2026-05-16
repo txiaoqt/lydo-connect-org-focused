@@ -1,0 +1,3 @@
+[0516/164841.399:ERROR:third_party\crashpad\crashpad\util\file\file_io_win.cc:181] CreateFile C:\Users\Christopher x Angel\AppData\Local\Google\Chrome\User Data\Crashpad\settings.dat: Access is denied. (0x5)
+[0516/164841.402:ERROR:third_party\crashpad\crashpad\util\file\file_io_win.cc:181] CreateFile C:\Users\Christopher x Angel\AppData\Local\Google\Chrome\User Data\Crashpad\settings.dat: Access is denied. (0x5)
+[0516/164841.471:ERROR:chrome\app\chrome_main.cc:171] Multiple targets are not supported in headless mode.

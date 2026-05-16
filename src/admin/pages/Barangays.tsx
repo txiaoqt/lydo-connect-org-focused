@@ -77,6 +77,8 @@ export const Barangays = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBarangay, setEditingBarangay] = useState<Barangay | null>(null);
+  const [viewingBarangay, setViewingBarangay] = useState<Barangay | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [deletingBarangay, setDeletingBarangay] = useState<Barangay | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -137,6 +139,11 @@ export const Barangays = () => {
   const openDeleteModal = (barangay: Barangay) => {
     setDeletingBarangay(barangay);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openDetailsModal = (barangay: Barangay) => {
+    setViewingBarangay(barangay);
+    setIsDetailsOpen(true);
   };
 
   const loadResidents = async (barangay: Barangay) => {
@@ -367,16 +374,12 @@ export const Barangays = () => {
     {
       header: "Barangay Name",
       accessor: (b: Barangay) => (
-        <button
-          type="button"
-          onClick={() => openResidentsModal(b)}
-          className="flex items-center gap-3 text-left hover:opacity-90 transition-opacity"
-        >
+        <div className="flex items-center gap-3 text-left">
           <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
             <MapPin size={16} />
           </div>
-          <span className="font-bold text-foreground underline-offset-2 hover:underline">{b.name}</span>
-        </button>
+          <span className="font-bold text-foreground">{b.name}</span>
+        </div>
       ),
     },
     {
@@ -442,7 +445,42 @@ export const Barangays = () => {
         </div>
       </div>
 
-      <DataTable columns={columns} data={filteredBarangays} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
+      <DataTable
+        columns={columns}
+        data={filteredBarangays}
+        isLoading={isLoading}
+        onRowClick={openDetailsModal}
+        getRowAriaLabel={(item) => `Open details for ${item.name}`}
+      />
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Barangay Details</DialogTitle>
+            <DialogDescription>Read-only record view.</DialogDescription>
+          </DialogHeader>
+          {viewingBarangay && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><p className="text-muted-foreground">Barangay Name</p><p className="font-medium">{viewingBarangay.name || "N/A"}</p></div>
+                <div><p className="text-muted-foreground">SK Chairperson</p><p className="font-medium">{viewingBarangay.sk_chairperson || "N/A"}</p></div>
+                <div><p className="text-muted-foreground">Youth Population</p><p className="font-medium">{(viewingBarangay.youth_population ?? 0).toLocaleString()}</p></div>
+                <div><p className="text-muted-foreground">Latitude</p><p className="font-medium">{viewingBarangay.latitude ?? "N/A"}</p></div>
+                <div><p className="text-muted-foreground">Longitude</p><p className="font-medium">{viewingBarangay.longitude ?? "N/A"}</p></div>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                <p className="text-xs text-muted-foreground">Read-only record view.</p>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+                  <Button type="button" variant="outline" onClick={() => { setIsDetailsOpen(false); openResidentsModal(viewingBarangay); }}>View Residents</Button>
+                  <Button type="button" onClick={() => { setIsDetailsOpen(false); openEditModal(viewingBarangay); }}>Edit</Button>
+                  <Button type="button" variant="destructive" onClick={() => { setIsDetailsOpen(false); openDeleteModal(viewingBarangay); }}>Delete</Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isResidentsOpen}

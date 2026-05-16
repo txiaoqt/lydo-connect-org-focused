@@ -42,7 +42,7 @@ const Navbar = () => {
   const isTransparencyPath = location.pathname.startsWith("/transparency") || location.pathname === "/feedback";
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-primary/15">
       <div className="container mx-auto flex items-center justify-between h-16 px-3 sm:px-4 gap-2">
         <Link to="/" className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
@@ -62,7 +62,7 @@ const Navbar = () => {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === item.href
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
               {item.label}
@@ -73,7 +73,7 @@ const Navbar = () => {
               className={`inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isTransparencyPath
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
               Transparency <ChevronDown className="h-3.5 w-3.5" />
@@ -119,7 +119,7 @@ const Navbar = () => {
       </div>
 
       {mobileOpen && (
-        <div className="md:hidden bg-card border-b border-border px-4 pb-4">
+        <div className="md:hidden bg-background border-b border-primary/15 px-4 pb-4">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -128,7 +128,7 @@ const Navbar = () => {
               className={`block px-4 py-3 rounded-lg text-sm font-medium ${
                 location.pathname === item.href
                   ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
               {item.label}
@@ -138,7 +138,7 @@ const Navbar = () => {
             type="button"
             onClick={() => setMobileTransparencyOpen(!mobileTransparencyOpen)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium ${
-              isTransparencyPath ? "bg-primary/10 text-primary" : "text-muted-foreground"
+              isTransparencyPath ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
             }`}
           >
             <span>Transparency</span>
@@ -152,7 +152,7 @@ const Navbar = () => {
                   to={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={`block px-4 py-2 rounded-lg text-sm ${
-                    location.pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    location.pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                   }`}
                 >
                   {item.label}

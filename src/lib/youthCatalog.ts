@@ -39,6 +39,25 @@ export type YouthOrganization = {
   sourceTag: string;
   status: "active" | "partner";
   sourcePostUrl?: string;
+  category?: string | null;
+  overview?: string | null;
+  mission?: string | null;
+  objectives?: string | null;
+  programs?: string | null;
+  activities?: string | null;
+  location?: string | null;
+  coverageArea?: string | null;
+  targetBeneficiaries?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  contactPerson?: string | null;
+  relatedInitiatives?: string | null;
+  activityYear?: string | null;
+  credibilityNotes?: string | null;
+  sourceName?: string | null;
+  sourceDate?: string | null;
+  relatedInitiativesList?: Array<{ name: string; year?: string | null; sourceUrl?: string | null }>;
+  sourceLinks?: Array<{ label: string; url: string }>;
 };
 
 export const youthEvents: YouthEvent[] = [

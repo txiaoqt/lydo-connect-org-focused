@@ -146,6 +146,8 @@ export const Documents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DisclosureDocument | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<DisclosureDocument | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [deletingDoc, setDeletingDoc] = useState<DisclosureDocument | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -250,6 +252,11 @@ export const Documents = () => {
   const openDeleteModal = (doc: DisclosureDocument) => {
     setDeletingDoc(doc);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openDetailsModal = (doc: DisclosureDocument) => {
+    setViewingDoc(doc);
+    setIsDetailsOpen(true);
   };
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -435,6 +442,7 @@ export const Documents = () => {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(event) => event.stopPropagation()}
                   className="font-bold text-foreground hover:text-primary underline-offset-2 hover:underline inline-flex items-center gap-1"
                 >
                   {d.title}
@@ -485,7 +493,13 @@ export const Documents = () => {
             <span>{formatMimeType(d.file_mime_type)}</span>
             <span>{formatFileSize(d.file_size_bytes)}</span>
             {href ? (
-              <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline mt-1 inline-flex items-center gap-1">
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+                className="text-primary hover:underline mt-1 inline-flex items-center gap-1"
+              >
                 Open file
                 <ExternalLink size={12} />
               </a>
@@ -557,7 +571,58 @@ export const Documents = () => {
         </div>
       </div>
 
-      <DataTable columns={columns} data={filteredDocs} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
+      <DataTable
+        columns={columns}
+        data={filteredDocs}
+        isLoading={isLoading}
+        onRowClick={openDetailsModal}
+        getRowAriaLabel={(item) => `Open details for document ${item.title}`}
+      />
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="flex w-[min(900px,calc(100vw-1.5rem))] max-h-[90vh] flex-col overflow-hidden p-0 gap-0">
+          <DialogHeader className="border-b border-border/80 px-6 py-5 pr-12 text-left">
+            <DialogTitle>Document Details</DialogTitle>
+            <DialogDescription>Read-only record view.</DialogDescription>
+          </DialogHeader>
+          {viewingDoc && (
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">1. Basic Information</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div><p className="text-xs text-muted-foreground">Document Code</p><p className="text-sm font-medium">{viewingDoc.doc_code || "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Title</p><p className="text-sm font-medium">{viewingDoc.title || "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Type</p><p className="text-sm font-medium">{getDocumentTypeLabel(viewingDoc)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Published</p><p className="text-sm font-medium">{viewingDoc.published_date ? format(new Date(viewingDoc.published_date), "MMM d, yyyy") : "N/A"}</p></div>
+                </div>
+              </section>
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">2. Fiscal Scope</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div><p className="text-xs text-muted-foreground">Fiscal Year</p><p className="text-sm font-medium">{viewingDoc.fiscal_year ?? "N/A"}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Quarter</p><p className="text-sm font-medium">{viewingDoc.quarter || "N/A"}</p></div>
+                </div>
+              </section>
+              <section className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">3. File</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <div><p className="text-xs text-muted-foreground">MIME Type</p><p className="text-sm font-medium">{formatMimeType(viewingDoc.file_mime_type)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">File Size</p><p className="text-sm font-medium">{formatFileSize(viewingDoc.file_size_bytes)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Public URL</p><p className="text-sm font-medium break-all">{getDocumentFileUrl(viewingDoc) || "N/A"}</p></div>
+                </div>
+              </section>
+            </div>
+          )}
+          <DialogFooter className="border-t border-border/80 px-6 py-3 sm:justify-between">
+            <p className="text-xs text-muted-foreground">Read-only record view.</p>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+              <Button type="button" onClick={() => { if (!viewingDoc) return; setIsDetailsOpen(false); openEditModal(viewingDoc); }}>Edit</Button>
+              <Button type="button" variant="destructive" onClick={() => { if (!viewingDoc) return; setIsDetailsOpen(false); openDeleteModal(viewingDoc); }}>Delete</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">

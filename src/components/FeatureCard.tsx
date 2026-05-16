@@ -10,14 +10,14 @@ interface FeatureCardProps {
 const FeatureCard = ({ icon: Icon, title, description, delay = 0 }: FeatureCardProps) => {
   return (
     <div
-      className="group bg-card rounded-xl p-6 card-shadow hover:card-shadow-hover transition-all duration-300 border border-border hover:border-primary/20"
+      className="group h-full rounded-lg border border-border bg-card p-5 card-shadow hover:card-shadow-hover transition-all duration-200 hover:border-primary/30"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-        <Icon className="h-6 w-6 text-primary" />
+      <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/15 transition-colors">
+        <Icon className="h-5 w-5 text-primary" />
       </div>
-      <h3 className="font-heading font-semibold text-lg text-foreground mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+      <h3 className="font-heading font-bold text-lg leading-snug text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground text-sm leading-6">{description}</p>
     </div>
   );
 };

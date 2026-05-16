@@ -1,4 +1,4 @@
-import { Calendar, Clock } from "lucide-react";
+import { ArrowRight, Calendar, Clock, FileText, Info, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, isValid, parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,14 @@ interface ProgramCardProps {
   recordHref?: string;
   showModeActions?: boolean;
   isJoined?: boolean;
+  joinedLabel?: string;
   onToggleJoin?: () => void;
 }
 
 const typeColors: Record<string, string> = {
   program: "bg-primary/10 text-primary",
-  event: "bg-accent/20 text-accent-foreground",
-  organization: "bg-secondary/80 text-secondary-foreground",
+  event: "bg-primary/10 text-primary",
+  organization: "bg-primary/10 text-primary",
 };
 
 const formatSingleDate = (value: string) => {
@@ -59,6 +60,7 @@ const ProgramCard = ({
   recordHref,
   showModeActions = false,
   isJoined,
+  joinedLabel = "Joined",
   onToggleJoin,
 }: ProgramCardProps) => {
   const displayDate = formatCardDate(date);
@@ -66,33 +68,42 @@ const ProgramCard = ({
   const registrationHref = recordHref ? `${recordHref}${recordHref.includes("?") ? "&" : "?"}view=registration` : "";
 
   return (
-    <div className="h-full bg-card rounded-xl border border-border card-shadow hover:card-shadow-hover transition-all duration-300 overflow-hidden group">
-      <div className="p-6 h-full flex flex-col">
-        <div className="flex items-center gap-2 mb-3">
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${typeColors[type]}`}>
+    <div className="h-full rounded-lg border border-border bg-card card-shadow hover:card-shadow-hover transition-all duration-200 overflow-hidden group">
+      <div className="p-5 h-full flex flex-col">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${typeColors[type]}`}>
             {type.charAt(0).toUpperCase() + type.slice(1)}
           </span>
-          <span className="text-xs text-muted-foreground">{sector}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{sector}</span>
+          {isJoined && (
+            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-accent/15 text-accent">
+              {joinedLabel}
+            </span>
+          )}
         </div>
-        <h3 className="font-heading font-semibold text-foreground text-lg mb-2 min-h-[3.5rem] line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="font-heading font-bold text-foreground text-lg leading-snug mb-2 min-h-[3.25rem] line-clamp-2 group-hover:text-primary transition-colors">
           {title}
         </h3>
-        <p className="text-muted-foreground text-sm mb-2 leading-relaxed h-20 line-clamp-3">{description}</p>
+        <p className="text-muted-foreground text-sm mb-3 leading-6 min-h-[4.5rem] line-clamp-3">{description}</p>
         {recordHref && (
-          <Link to={showModeActions ? detailsHref : recordHref} className="text-xs text-primary hover:underline mb-3 block">
+          <Link
+            to={showModeActions ? detailsHref : recordHref}
+            className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80 mb-4"
+          >
             See more
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         )}
-        <div className="space-y-2 text-xs text-muted-foreground mb-4 min-h-[5rem]">
+        <div className="space-y-3 text-sm text-muted-foreground mb-4 border-t border-border pt-4">
           {displayDate && (
-            <div className="flex items-start gap-1.5 leading-relaxed">
-              <Calendar className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3 leading-relaxed">
+              <Calendar className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
               <span className="line-clamp-2 break-words">{displayDate}</span>
             </div>
           )}
           {time && (
-            <div className="flex items-start gap-1.5 leading-relaxed">
-              <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3 leading-relaxed">
+              <Clock className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
               <span className="line-clamp-2 break-words">{time}</span>
             </div>
           )}
@@ -101,40 +112,52 @@ const ProgramCard = ({
               location={location}
               locationLatitude={locationLatitude}
               locationLongitude={locationLongitude}
-              className="w-full text-xs leading-relaxed"
-              iconClassName="mt-0.5 shrink-0"
+              className="w-full gap-3 text-sm leading-relaxed"
+              iconClassName="mt-0.5 shrink-0 text-primary h-4 w-4"
               labelClassName="line-clamp-2 break-words"
             />
           )}
-        </div>
-        <div className="mb-3 min-h-5">
           {sourcePostUrl ? (
-            <a href={sourcePostUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline block">
+            <a
+              href={sourcePostUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-3 font-semibold text-primary hover:text-primary/80"
+            >
+              <FileText className="h-4 w-4 shrink-0" />
               Source Post
             </a>
-          ) : (
-            <span className="invisible text-xs">Source Post</span>
-          )}
+          ) : null}
         </div>
-        <div className="grid grid-cols-1 gap-2 mt-auto">
+        <div className="grid grid-cols-1 gap-2 mt-auto pt-1">
           {recordHref && (
             showModeActions ? (
               <div className="grid grid-cols-2 gap-2">
                 <Button type="button" variant="outline" size="sm" className="w-full" asChild>
-                  <Link to={detailsHref}>Details</Link>
+                  <Link to={detailsHref}>
+                    <Info className="h-4 w-4" />
+                    Details
+                  </Link>
                 </Button>
-                <Button type="button" variant="outline" size="sm" className="w-full" asChild>
-                  <Link to={registrationHref}>Registration</Link>
+                <Button type="button" size="sm" className="w-full" asChild>
+                  <Link to={registrationHref}>
+                    <UserPlus className="h-4 w-4" />
+                    Registration
+                  </Link>
                 </Button>
               </div>
             ) : (
               <Button type="button" variant="outline" size="sm" className="w-full" asChild>
-                <Link to={recordHref}>{type === "program" ? "View Program Record" : "View Event Record"}</Link>
+                <Link to={recordHref}>
+                  <Info className="h-4 w-4" />
+                  {type === "program" ? "View Program Record" : "View Event Record"}
+                </Link>
               </Button>
             )
           )}
           {onToggleJoin && (
             <Button type="button" size="sm" className="w-full" onClick={onToggleJoin}>
+              <UserPlus className="h-4 w-4" />
               {isJoined ? "Joined (Click to Leave)" : "Join Program"}
             </Button>
           )}

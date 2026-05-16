@@ -457,9 +457,8 @@ export const UsersPage = () => {
         columns={columns}
         data={filteredUsers}
         isLoading={isLoading}
-        onView={openUserDetails}
-        onEdit={openEditModal}
-        onDelete={openDeleteModal}
+        onRowClick={openUserDetails}
+        getRowAriaLabel={(item) => `Open details for ${item.email}`}
       />
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

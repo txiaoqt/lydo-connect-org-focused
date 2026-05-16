@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { EFFECTIVE_ADMIN_SIGNIN_PATH, IS_ADMIN_SURFACE, IS_USER_SURFACE } from "@/lib/deployment-surface";
+import { IS_ADMIN_SURFACE, IS_USER_SURFACE } from "@/lib/deployment-surface";
 import { supabase } from "@/lib/supabase";
 
 type SignInProps = {
@@ -52,7 +52,13 @@ const SignIn = ({ forcedMode }: SignInProps) => {
       return;
     }
 
-    toast({ title: "Signed In", description: isAdminMode ? "Welcome, administrator." : "Welcome back." });
+    const signInToast = toast({
+      title: "Signed In",
+      description: isAdminMode ? "Welcome, administrator." : "Welcome back.",
+    });
+    window.setTimeout(() => {
+      signInToast.dismiss();
+    }, 1000);
     setUsername("");
     setEmail("");
     setPassword("");
@@ -186,25 +192,15 @@ const SignIn = ({ forcedMode }: SignInProps) => {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          {isAdminMode ? (
-            "Admin accounts are predefined and cannot be created from this page."
-          ) : (
-            <>
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary font-medium hover:text-primary/90">
-                Create one
-              </Link>
-            </>
-          )}
-        </p>
-        {isAdminMode ? (
-          <p className="text-center mt-3">
-            <Link to={EFFECTIVE_ADMIN_SIGNIN_PATH} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Stay on admin login
+        {!isAdminMode && (
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-primary font-medium hover:text-primary/90">
+              Create one
             </Link>
           </p>
-        ) : (
+        )}
+        {!isAdminMode && (
           <p className="text-center mt-3">
             <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">&lt;- Back to home</Link>
           </p>

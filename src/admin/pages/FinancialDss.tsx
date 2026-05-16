@@ -90,6 +90,8 @@ export const FinancialDss = () => {
 
   const [isFinancialDialog, setIsFinancialDialog] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState<FinancialRow | null>(null);
+  const [viewingFinancial, setViewingFinancial] = useState<FinancialRow | null>(null);
+  const [isFinancialDetailsOpen, setIsFinancialDetailsOpen] = useState(false);
   const [financialForm, setFinancialForm] = useState<FinancialForm>(financialDefaults);
   const [isSavingFinancial, setIsSavingFinancial] = useState(false);
   const [deletingFinancial, setDeletingFinancial] = useState<FinancialRow | null>(null);
@@ -200,6 +202,10 @@ export const FinancialDss = () => {
       utilizedAmount: String(row.utilized_amount ?? 0),
     });
     setIsFinancialDialog(true);
+  };
+  const openFinancialDetails = (row: FinancialRow) => {
+    setViewingFinancial(row);
+    setIsFinancialDetailsOpen(true);
   };
 
   const openCreateBudgetDialog = () => {
@@ -867,11 +873,40 @@ export const FinancialDss = () => {
             ]}
             data={filteredFinancial}
             isLoading={isLoading}
-            onEdit={openEditFinancialDialog}
-            onDelete={setDeletingFinancial}
+            onRowClick={openFinancialDetails}
+            getRowAriaLabel={(row) => `Open financial details for ${row.barangay_name} month ${row.month_no}`}
           />
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isFinancialDetailsOpen} onOpenChange={setIsFinancialDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Financial Row Details</DialogTitle>
+            <DialogDescription>Read-only record view.</DialogDescription>
+          </DialogHeader>
+          {viewingFinancial && (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><p className="text-muted-foreground">Barangay</p><p className="font-medium">{viewingFinancial.barangay_name}</p></div>
+                <div><p className="text-muted-foreground">Period</p><p className="font-medium">FY {viewingFinancial.fiscal_year} - {MONTH_NAMES[viewingFinancial.month_no - 1] ?? viewingFinancial.month_no}</p></div>
+                <div><p className="text-muted-foreground">Total Budget</p><p className="font-medium">{asCurrency(Number(viewingFinancial.sk_budget ?? 0))}</p></div>
+                <div><p className="text-muted-foreground">Allocated</p><p className="font-medium">{asCurrency(Number(viewingFinancial.allocated_amount ?? 0))}</p></div>
+                <div><p className="text-muted-foreground">Utilized</p><p className="font-medium">{asCurrency(Number(viewingFinancial.utilized_amount ?? 0))}</p></div>
+                <div><p className="text-muted-foreground">Remaining</p><p className="font-medium">{asCurrency(Math.max(Number(viewingFinancial.sk_budget ?? 0) - Number(viewingFinancial.utilized_amount ?? 0), 0))}</p></div>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                <p className="text-xs text-muted-foreground">Read-only record view.</p>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsFinancialDetailsOpen(false)}>Close</Button>
+                  <Button type="button" onClick={() => { setIsFinancialDetailsOpen(false); openEditFinancialDialog(viewingFinancial); }}>Edit</Button>
+                  <Button type="button" variant="destructive" onClick={() => { setIsFinancialDetailsOpen(false); setDeletingFinancial(viewingFinancial); }}>Delete</Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isBudgetDialog} onOpenChange={setIsBudgetDialog}>
         <DialogContent className="max-w-xl">

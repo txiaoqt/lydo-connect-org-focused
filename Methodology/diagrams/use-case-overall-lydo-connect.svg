@@ -121,8 +121,8 @@
 
   <ellipse cx="455" cy="585" rx="150" ry="44" class="mainUsecase"/>
   <text x="455" y="574" text-anchor="middle" class="ucId">UC-04</text>
-  <text x="455" y="594" text-anchor="middle" class="text">View Programs,</text>
-  <text x="455" y="613" text-anchor="middle" class="text">Events, and Orgs</text>
+  <text x="455" y="594" text-anchor="middle" class="text">View Programs, Events,</text>
+  <text x="455" y="613" text-anchor="middle" class="text">and Organization Info</text>
 
   <ellipse cx="930" cy="585" rx="160" ry="44" class="mainUsecase"/>
   <text x="930" y="574" text-anchor="middle" class="ucId">UC-05</text>
@@ -138,8 +138,8 @@
   <text x="665" y="704" text-anchor="middle" class="text">Filter Listings</text>
 
   <ellipse cx="915" cy="690" rx="115" ry="33" class="helperUsecase"/>
-  <text x="915" y="686" text-anchor="middle" class="text">Open Source</text>
-  <text x="915" y="704" text-anchor="middle" class="text">Post</text>
+  <text x="915" y="686" text-anchor="middle" class="text">Inspect Verified</text>
+  <text x="915" y="704" text-anchor="middle" class="text">Source Reference</text>
 
   <ellipse cx="1140" cy="690" rx="115" ry="33" class="helperUsecase"/>
   <text x="1140" y="686" text-anchor="middle" class="text">Preview Location</text>

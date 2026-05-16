@@ -54,6 +54,8 @@ export const Roles = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [viewingRole, setViewingRole] = useState<Role | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [deletingRole, setDeletingRole] = useState<Role | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -103,6 +105,11 @@ export const Roles = () => {
   const openDeleteModal = (role: Role) => {
     setDeletingRole(role);
     setIsDeleteDialogOpen(true);
+  };
+
+  const openDetailsModal = (role: Role) => {
+    setViewingRole(role);
+    setIsDetailsOpen(true);
   };
 
   const saveRole = async (event: FormEvent) => {
@@ -240,7 +247,40 @@ export const Roles = () => {
         </button>
       </header>
 
-      <DataTable columns={columns} data={roles} isLoading={isLoading} onEdit={openEditModal} onDelete={openDeleteModal} />
+      <DataTable
+        columns={columns}
+        data={roles}
+        isLoading={isLoading}
+        onRowClick={openDetailsModal}
+        getRowAriaLabel={(item) => `Open details for role ${item.label}`}
+      />
+
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Role Details</DialogTitle>
+            <DialogDescription>Read-only record view.</DialogDescription>
+          </DialogHeader>
+          {viewingRole && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div><p className="text-muted-foreground">Role Code</p><p className="font-medium uppercase">{viewingRole.code}</p></div>
+                <div><p className="text-muted-foreground">Label</p><p className="font-medium">{viewingRole.label || "N/A"}</p></div>
+                <div className="md:col-span-2"><p className="text-muted-foreground">Description</p><p className="font-medium">{viewingRole.description || "N/A"}</p></div>
+                <div><p className="text-muted-foreground">Created</p><p className="font-medium">{new Date(viewingRole.created_at).toLocaleString()}</p></div>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                <p className="text-xs text-muted-foreground">Read-only record view.</p>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+                  <Button type="button" onClick={() => { setIsDetailsOpen(false); openEditModal(viewingRole); }}>Edit</Button>
+                  <Button type="button" variant="destructive" onClick={() => { setIsDetailsOpen(false); openDeleteModal(viewingRole); }}>Delete</Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-xl">
