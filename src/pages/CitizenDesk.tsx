@@ -266,19 +266,19 @@ export default function CitizenDesk() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-12">
+        <section className="hero-gradient py-10 sm:py-12">
           <div className="container">
-            <h1 className="text-2xl md:text-4xl font-bold text-secondary-foreground">Citizen Desk (FOI / Ugnayan)</h1>
-            <p className="text-secondary-foreground/70 mt-2 max-w-2xl text-sm">
+            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Citizen Desk (FOI / Ugnayan)</h1>
+            <p className="text-secondary-foreground/70 mt-2 max-w-2xl text-sm leading-relaxed">
               File information requests, complaints, suggestions, and service requests linked to your account.
             </p>
           </div>
         </section>
 
-        <section className="container py-8 grid gap-6 items-stretch lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-          <form onSubmit={handleSubmit} className="bg-card border rounded-xl p-6 lg:p-7 card-shadow h-auto lg:h-[42rem] flex flex-col">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-foreground">Submit Ticket</h2>
+        <section className="container py-6 sm:py-8 grid gap-4 sm:gap-6 items-stretch lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          <form onSubmit={handleSubmit} className="bg-card border rounded-xl p-4 sm:p-6 lg:p-7 card-shadow h-auto lg:h-[42rem] flex flex-col">
+            <div className="mb-3 sm:mb-4">
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground">Submit Ticket</h2>
               <p className="text-sm text-muted-foreground mt-1">Provide complete details so your concern can be processed faster.</p>
             </div>
 
@@ -288,8 +288,8 @@ export default function CitizenDesk() {
               </p>
             )}
 
-            <div className="space-y-5">
-              <div className="space-y-2">
+            <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-sm font-semibold text-foreground">Request Type</label>
                 <Select value={type} onValueChange={(value: TicketTypeOption) => setType(value)}>
                   <SelectTrigger>
@@ -305,12 +305,12 @@ export default function CitizenDesk() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-sm font-semibold text-foreground">Subject</label>
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} required />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-sm font-semibold text-foreground">Email</label>
                 <Input
                   type="email"
@@ -347,13 +347,13 @@ export default function CitizenDesk() {
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 <label className="text-sm font-semibold text-foreground">Details</label>
                 <Textarea rows={5} value={message} onChange={(e) => setMessage(e.target.value)} required />
               </div>
             </div>
 
-            <div className="mt-8 lg:mt-auto lg:pt-6">
+            <div className="mt-6 sm:mt-8 lg:mt-auto lg:pt-6">
               <Button type="submit" disabled={ticketOptions.length === 0 || !isAuthenticated} className="w-full sm:w-auto">
                 Submit Ticket
               </Button>
@@ -363,9 +363,9 @@ export default function CitizenDesk() {
             </div>
           </form>
 
-          <div className="bg-card border rounded-xl p-6 lg:p-7 card-shadow h-auto lg:h-[42rem] flex flex-col overflow-hidden lg:border-l-4 lg:border-l-primary/20">
+          <div className="bg-card border rounded-xl p-4 sm:p-6 lg:p-7 card-shadow h-auto lg:h-[42rem] flex flex-col overflow-hidden lg:border-l-4 lg:border-l-primary/20">
             <div className="pb-4 border-b">
-              <h2 className="text-2xl font-semibold text-foreground">My Tickets</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-foreground">My Tickets</h2>
               <p className="text-sm text-muted-foreground mt-1">View your ticket history and latest status changes.</p>
 
               <div className="mt-3 rounded-md border bg-muted/40 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
@@ -383,7 +383,7 @@ export default function CitizenDesk() {
               </div>
             </div>
 
-            <div className="py-4 flex flex-wrap gap-2">
+            <div className="py-3 sm:py-4 flex flex-wrap gap-1.5 sm:gap-2">
               {ticketFilterOptions.map((filterOption) => {
                 const isActive = ticketFilter === filterOption.value;
                 return (
@@ -412,7 +412,7 @@ export default function CitizenDesk() {
                 <p className="text-muted-foreground">Sign in to view your account-based ticket history.</p>
               ) : filteredTickets.length > 0 ? (
                 filteredTickets.map((ticket) => (
-                  <div key={ticket.id} className="rounded-lg border border-border/80 bg-background/70 p-4">
+                  <div key={ticket.id} className="rounded-lg border border-border/80 bg-background/70 p-3 sm:p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 font-mono text-sm font-semibold tracking-wide text-foreground">
                         {ticket.referenceNo}

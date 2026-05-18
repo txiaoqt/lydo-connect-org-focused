@@ -48,23 +48,29 @@ const Programs = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-16">
+        <section className="hero-gradient py-10 sm:py-12 md:py-16">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl md:text-5xl font-heading font-bold text-secondary-foreground mb-4">Youth Programs</h1>
-            <p className="text-secondary-foreground/70 max-w-2xl mx-auto">Includes core LYDO initiatives such as Hirayang Kabataan and Simula, alongside published local youth development activities.</p>
+            <h1 className="text-[1.9rem] sm:text-4xl md:text-5xl font-heading font-bold text-secondary-foreground mb-3 sm:mb-4">Youth Programs</h1>
+            <p className="text-sm sm:text-base text-secondary-foreground/70 max-w-xl md:max-w-2xl mx-auto leading-relaxed">Includes core LYDO initiatives such as Hirayang Kabataan and Simula, alongside published local youth development activities.</p>
           </div>
         </section>
 
-        <section className="py-12">
+        <section className="py-6 sm:py-8 md:py-12">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row gap-4 mb-8">
+            <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-6 md:mb-8">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search programs..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Input placeholder="Search programs..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-10 sm:h-11 text-sm" />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {sectorOptions.map((sector) => (
-                  <Button key={sector} variant={activeSector === sector ? "default" : "outline"} size="sm" onClick={() => setActiveSector(sector)}>
+                  <Button
+                    key={sector}
+                    variant={activeSector === sector ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                    onClick={() => setActiveSector(sector)}
+                  >
                     {sector}
                   </Button>
                 ))}
@@ -72,11 +78,11 @@ const Programs = () => {
             </div>
 
             {isLoadingPrograms ? (
-              <div className="text-center py-16 text-muted-foreground">
+              <div className="text-center py-12 sm:py-16 text-muted-foreground">
                 <p className="text-sm">Loading programs...</p>
               </div>
             ) : filtered.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 lg:gap-6 items-stretch">
                 {filtered.map((program) => (
                   <ProgramCard
                     key={program.id}

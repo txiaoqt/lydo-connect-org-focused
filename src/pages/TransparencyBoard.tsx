@@ -212,17 +212,17 @@ export default function TransparencyBoard() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="container py-8 md:py-10 space-y-6">
+        <section className="container py-6 sm:py-8 md:py-10 space-y-4 sm:space-y-6">
           <div className="text-center">
-            <div className="inline-flex flex-wrap justify-center items-center gap-2 rounded-full bg-muted p-1 mb-4">
+            <div className="inline-flex flex-wrap justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-muted p-1 mb-3 sm:mb-4">
               {[{ label: "SM", active: false }, { label: "LYDO", active: false }, { label: "LYDC", active: false }, { label: "SK", active: true }].map((item) => (
-                <span key={item.label} className={`rounded-full px-4 py-1.5 text-sm font-medium ${item.active ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground"}`}>
+                <span key={item.label} className={`rounded-full px-3 sm:px-4 py-1 text-xs sm:text-sm font-medium ${item.active ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground"}`}>
                   {item.label}
                 </span>
               ))}
             </div>
-            <h1 className="text-2xl md:text-5xl font-heading font-extrabold text-foreground">SK Full Disclosure Board</h1>
-            <p className="text-muted-foreground mt-2">{boardTitle}</p>
+            <h1 className="text-[1.9rem] sm:text-4xl md:text-5xl font-heading font-extrabold text-foreground">SK Full Disclosure Board</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-2">{boardTitle}</p>
           </div>
 
           <div className="flex justify-center">
@@ -230,7 +230,7 @@ export default function TransparencyBoard() {
               <button
                 type="button"
                 onClick={() => setView("board")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   view === "board" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -239,7 +239,7 @@ export default function TransparencyBoard() {
               <button
                 type="button"
                 onClick={() => setView("monthly")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                   view === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -250,10 +250,10 @@ export default function TransparencyBoard() {
 
           {view === "board" ? (
             <>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="rounded-xl border bg-card p-5 card-shadow"><p className="text-sm text-muted-foreground">Total Barangays</p><p className="text-3xl font-bold mt-1">{rows.length}</p></div>
-                <div className="rounded-xl border bg-card p-5 card-shadow"><p className="text-sm text-muted-foreground">Fully Compliant</p><p className="text-3xl font-bold mt-1 text-accent">{fullyCompliant}</p></div>
-                <div className="rounded-xl border bg-card p-5 card-shadow"><p className="text-sm text-muted-foreground">Partially Compliant</p><p className="text-3xl font-bold mt-1 text-warning">{partiallyCompliant}</p></div>
+              <div className="grid md:grid-cols-3 gap-3 sm:gap-4">
+                <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Total Barangays</p><p className="text-2xl sm:text-3xl font-bold mt-1">{rows.length}</p></div>
+                <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Fully Compliant</p><p className="text-2xl sm:text-3xl font-bold mt-1 text-accent">{fullyCompliant}</p></div>
+                <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Partially Compliant</p><p className="text-2xl sm:text-3xl font-bold mt-1 text-warning">{partiallyCompliant}</p></div>
               </div>
 
               <div className="rounded-xl border bg-card overflow-hidden card-shadow">
@@ -295,7 +295,7 @@ export default function TransparencyBoard() {
             </>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Rows</p><p className="text-2xl font-bold">{monthlyTotals.total}</p></div>
                 <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Completed</p><p className="text-2xl font-bold text-accent">{monthlyTotals.completed}</p></div>
                 <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Late</p><p className="text-2xl font-bold text-destructive">{monthlyTotals.late}</p></div>

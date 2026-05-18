@@ -1,10 +1,11 @@
 begin;
 
--- Organizations: expand to a details-first model for Pasig youth information.
+-- Organizations: prototype-friendly details-first model.
 alter table if exists public.organizations
   add column if not exists category text,
   add column if not exists overview text,
   add column if not exists mission text,
+  add column if not exists purpose text,
   add column if not exists objectives text,
   add column if not exists programs_projects text,
   add column if not exists coverage_area text,
@@ -16,20 +17,20 @@ alter table if exists public.organizations
   add column if not exists related_initiatives text,
   add column if not exists related_events text,
   add column if not exists activity_year integer check (activity_year is null or activity_year between 1900 and 2100),
-  add column if not exists is_pasig_based boolean not null default true,
+  add column if not exists is_pasig_based boolean not null default false,
   add column if not exists data_status text not null default 'verified',
+  add column if not exists source_label text,
   add column if not exists source_reference_title text,
   add column if not exists source_reference_url text,
   add column if not exists source_reference_published_on date,
+  add column if not exists prototype_note text,
   add column if not exists credibility_notes text,
   add column if not exists last_verified_at timestamptz;
 
 do $$
 begin
   if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'organizations_data_status_check'
+    select 1 from pg_constraint where conname = 'organizations_data_status_check'
   ) then
     alter table public.organizations
       add constraint organizations_data_status_check
@@ -37,7 +38,6 @@ begin
   end if;
 end $$;
 
--- Normalized references: supports multiple official sources per organization.
 create table if not exists public.organization_references (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
@@ -47,7 +47,7 @@ create table if not exists public.organization_references (
   published_on date,
   reference_type text,
   credibility_notes text,
-  is_official boolean not null default true,
+  is_official boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -55,8 +55,23 @@ create table if not exists public.organization_references (
 create unique index if not exists uq_org_references_org_url
   on public.organization_references(organization_id, reference_url);
 
-create index if not exists idx_orgs_pasig_status_type
-  on public.organizations(is_pasig_based, status, type);
+create table if not exists public.organization_projects (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  title text not null,
+  description text,
+  activity_type text,
+  date_label text,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_organization_projects_org
+  on public.organization_projects(organization_id, created_at desc);
+
+create index if not exists idx_orgs_status_type
+  on public.organizations(status, type);
 
 create index if not exists idx_orgs_category
   on public.organizations(category);
@@ -98,6 +113,7 @@ create index if not exists idx_orgs_search_tsv
   );
 
 alter table if exists public.organization_references enable row level security;
+alter table if exists public.organization_projects enable row level security;
 
 drop policy if exists public_read_organization_references on public.organization_references;
 create policy public_read_organization_references
@@ -112,7 +128,19 @@ for all
 using (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]))
 with check (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
--- Pasig-based, source-backed organization records.
+drop policy if exists public_read_organization_projects on public.organization_projects;
+create policy public_read_organization_projects
+on public.organization_projects
+for select
+using (true);
+
+drop policy if exists manage_organization_projects on public.organization_projects;
+create policy manage_organization_projects
+on public.organization_projects
+for all
+using (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]))
+with check (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
+
 insert into public.organizations (
   slug,
   name,
@@ -121,22 +149,20 @@ insert into public.organizations (
   focus,
   overview,
   mission,
+  purpose,
   objectives,
   programs_projects,
   coverage_area,
   target_beneficiaries,
   contact_email,
   contact_phone,
-  contact_facebook,
-  contact_website,
-  related_initiatives,
-  related_events,
-  activity_year,
+  source_label,
   source_tag,
   source_post_url,
   source_reference_title,
   source_reference_url,
   source_reference_published_on,
+  prototype_note,
   credibility_notes,
   is_pasig_based,
   data_status,
@@ -145,154 +171,171 @@ insert into public.organizations (
 )
 values
   (
-    'pasig-city-youth-development-office',
-    'Pasig City Youth Development Office (PCYDO / LYDO)',
-    'City Government Office',
-    'Local Youth Development Office',
-    'Youth governance support, YORP implementation, youth program coordination',
-    'Pasig City office under the Office of the Mayor that manages youth and youth-serving program coordination and organization registration support.',
-    null,
-    'Facilitate Youth Organization Registration Program and support youth-sector coordination in Pasig City.',
-    'Youth Organization Registration Program (YORP); correspondence support for youth, scholarship, CSO, and sports/youth concerns.',
-    'Pasig City',
-    'Youth organizations and youth-serving organizations in Pasig City',
-    'lydo@pasigcity.gov.ph',
-    null,
-    'https://www.facebook.com/Local-Youth-Development-Office-Pasig-City-104618617612581',
-    'https://pasigcity.gov.ph',
-    'YORP implementation under RA 10742',
-    null,
-    2026,
-    'Pasig City official services and YORP policy context',
-    'https://pasigcity.gov.ph/services/infrastructure-development-sector',
-    'YORP Registration Bukas na para sa mga Kabataang Pasigueno!',
-    'https://pasigcity.gov.ph/news-and-releases/yorp-registration-bukas-na-para-sa-mga-kabataang-pasigueno-670',
-    date '2025-03-19',
-    null,
-    'Official Pasig City government page and city-hosted LYDO charter PDF.',
-    true,
+    'testing-youth-organization-i',
+    'Testing Youth Organization I',
+    'Civic Volunteer Group',
+    'Prototype Civic Group',
+    'Community service and civic volunteerism',
+    'Prototype youth organization focused on community service and civic participation.',
+    'Encourage prototype volunteerism among youth communities.',
+    'Provide prototype services and engagement opportunities.',
+    'Coordinate outreach and youth support activities for testing flows.',
+    'Testing Community Outreach Project I; Testing Volunteer Activity I',
+    'Barangay-wide',
+    'Prototype youth volunteers',
+    'prototype.org1@example.com',
+    '+639100200001',
+    'Prototype Data',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-i',
+    'Prototype Organization Reference I',
+    'https://example.com/prototype-organization-i/reference',
+    date '2026-04-01',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
     'verified',
     'active',
     now()
   ),
   (
-    'pasig-sk-federation',
-    'Pasig City Sangguniang Kabataan Federation',
-    'Youth Governance',
-    'SK Federation',
-    'City-level youth council federation and youth policy/program leadership',
-    'City-wide SK federation recognized in official Pasig City announcements and youth governance activities.',
-    null,
-    'Represent barangay SK councils and lead city-level youth activities with LGU partners.',
-    'Linggo ng Kabataan 2025 activities; city youth governance and recognition initiatives.',
-    'Pasig City',
-    'Kabataang Pasigueno and barangay youth councils',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'Linggo ng Kabataan 2025; SK Awards participation',
-    null,
-    2025,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    null,
-    'Official city release references Pasig SK Federation in SGYG/GKA 2025 implementation.',
-    true,
+    'testing-youth-organization-ii',
+    'Testing Youth Organization II',
+    'Advocacy Network',
+    'Prototype Advocacy Group',
+    'Environmental awareness',
+    'Prototype advocacy network created for testing organization information display.',
+    'Promote prototype awareness campaigns and civic engagement.',
+    'Support awareness-driven youth collaboration.',
+    'Run prototype campaigns across youth groups.',
+    'Testing Environmental Action Drive I; Testing Advocacy Session I',
+    'Multi-barangay coverage',
+    'Prototype youth advocates',
+    'prototype.org2@example.com',
+    '+639100200002',
+    'Demo Record',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-ii',
+    'Prototype Organization Reference II',
+    'https://example.com/prototype-organization-ii/reference',
+    date '2026-04-05',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
     'verified',
-    'active',
+    'partner',
     now()
   ),
   (
-    'pasig-city-youth-development-council',
-    'Pasig City Youth Development Council (PCYDC)',
-    'Youth Governance',
-    'Youth Development Council',
-    'Multi-stakeholder youth development coordination',
-    'Youth development council referenced in official Pasig SGYG/GKA 2025 ecosystem.',
-    null,
-    null,
-    null,
-    'Pasig City',
-    'Kabataang Pasigueno and youth sector stakeholders',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'SGYG 2025 validation process',
-    'SGYG and GKA 2025',
-    2025,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    null,
-    'Official city announcement references PCYDC; additional structural details not explicitly published in source pack.',
-    true,
-    'partially_verified',
-    'active',
-    now()
-  ),
-  (
-    'pasiglaban-kabataan',
-    'PasigLaban Kabataan',
-    'Youth/Youth-Serving Organization',
-    'YO/YSO',
-    'Positive youth development and youth-serving initiatives',
-    'Youth/youth-serving organization cited by Pasig City as a national finalist in an official youth development-related announcement.',
-    null,
-    null,
-    null,
-    'Pasig City',
-    'Kabataang Pasigueno',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'Positive Youth Development Awards participation',
-    null,
-    2024,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/national-finalists-outstanding-sk-council-category-federation-724',
-    'National Finalists | Outstanding SK Council Category - Federation',
-    'https://pasigcity.gov.ph/news-and-releases/national-finalists-outstanding-sk-council-category-federation-724',
-    date '2024-08-06',
-    'Entity mentioned by official Pasig City announcement; unavailable details are intentionally null.',
-    true,
-    'partially_verified',
-    'active',
-    now()
-  ),
-  (
-    'pasig-yo-yso-network',
-    'Pasig Youth/Youth-Serving Organizations Network (YO/YSO sector)',
+    'testing-youth-organization-iii',
+    'Testing Youth Organization III',
     'Multi-organization Network',
-    'Youth Organization Network',
-    'Coordination network of youth and youth-serving organizations in Pasig',
-    'Sector-level representation referenced by Pasig City in youth agenda convenings.',
-    null,
-    'Support youth agenda alignment and participation through coordinated city-level activities.',
-    null,
-    'Pasig City',
-    'Registered and participating youth/youth-serving organizations in Pasig',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'S1NCRO One Pasig, One Agenda',
-    'S1NCRO: One Pasig, One Agenda',
-    2026,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/s1ncro-one-pasig-one-agenda-idinaos-para-sa-pagpapalakas-ng-sektor-ng-kabataan-sa-lungsod-ng-pasig-209',
-    'S1NCRO: One Pasig, One Agenda',
-    'https://pasigcity.gov.ph/news-and-releases/s1ncro-one-pasig-one-agenda-idinaos-para-sa-pagpapalakas-ng-sektor-ng-kabataan-sa-lungsod-ng-pasig-209',
-    null,
-    'Official city announcement references 51 YO/YSOs and participation counts; organization-level specifics not individually published.',
-    true,
+    'Prototype Network',
+    'Youth leadership and governance',
+    'Prototype multi-organization network for profile and details-view testing.',
+    'Build collaborative leadership pathways for prototype records.',
+    'Coordinate prototype organizations under one umbrella workflow.',
+    'Facilitate shared activities and records for demo use.',
+    'Testing Youth Leadership Activity I; Testing Network Assembly I',
+    'Prototype Municipality',
+    'Prototype youth leaders',
+    'prototype.org3@example.com',
+    '+639100200003',
+    'Prototype Data',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-iii',
+    'Prototype Organization Reference III',
+    'https://example.com/prototype-organization-iii/reference',
+    date '2026-04-09',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
     'partially_verified',
     'active',
+    now()
+  ),
+  (
+    'testing-youth-organization-iv',
+    'Testing Youth Organization IV',
+    'Youth Interest Group',
+    'Prototype Interest Group',
+    'Digital literacy and skills development',
+    'Prototype youth interest group used for digital literacy record testing.',
+    'Promote prototype digital skills and technology awareness.',
+    'Offer prototype learning sessions for youth.',
+    'Support digital skills development demos.',
+    'Testing Digital Skills Workshop I',
+    'Youth community coverage',
+    'Prototype student participants',
+    'prototype.org4@example.com',
+    '+639100200004',
+    'Demo Record',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-iv',
+    'Prototype Organization Reference IV',
+    'https://example.com/prototype-organization-iv/reference',
+    date '2026-04-12',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
+    'verified',
+    'inactive',
+    now()
+  ),
+  (
+    'testing-youth-organization-v',
+    'Testing Youth Organization V',
+    'Youth Governance',
+    'Prototype Governance Group',
+    'Education support',
+    'Prototype governance-oriented organization profile for testing.',
+    'Encourage structured youth participation in prototype policy activities.',
+    'Demonstrate governance workflows and role-based records.',
+    'Facilitate prototype education support planning.',
+    'Testing Education Support Activity I',
+    'Barangay-wide',
+    'Prototype youth councils',
+    'prototype.org5@example.com',
+    '+639100200005',
+    'Prototype Data',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-v',
+    'Prototype Organization Reference V',
+    'https://example.com/prototype-organization-v/reference',
+    date '2026-04-15',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
+    'verified',
+    'active',
+    now()
+  ),
+  (
+    'testing-youth-organization-vi',
+    'Testing Youth Organization VI',
+    'Campus Youth Partner',
+    'Prototype Campus Partner',
+    'Sports and wellness',
+    'Prototype campus youth partner used for demonstrating organization profiles.',
+    'Promote balanced prototype activities for wellness and participation.',
+    'Support prototype wellness and sports engagement.',
+    'Coordinate campus-oriented demo activities.',
+    'Testing Sports and Wellness Activity I',
+    'Campus-based coverage',
+    'Prototype campus members',
+    'prototype.org6@example.com',
+    '+639100200006',
+    'Demo Record',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-vi',
+    'Prototype Organization Reference VI',
+    'https://example.com/prototype-organization-vi/reference',
+    date '2026-04-18',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
+    'verified',
+    'partner',
     now()
   )
 on conflict (slug) do update set
@@ -302,22 +345,20 @@ on conflict (slug) do update set
   focus = excluded.focus,
   overview = excluded.overview,
   mission = excluded.mission,
+  purpose = excluded.purpose,
   objectives = excluded.objectives,
   programs_projects = excluded.programs_projects,
   coverage_area = excluded.coverage_area,
   target_beneficiaries = excluded.target_beneficiaries,
   contact_email = excluded.contact_email,
   contact_phone = excluded.contact_phone,
-  contact_facebook = excluded.contact_facebook,
-  contact_website = excluded.contact_website,
-  related_initiatives = excluded.related_initiatives,
-  related_events = excluded.related_events,
-  activity_year = excluded.activity_year,
+  source_label = excluded.source_label,
   source_tag = excluded.source_tag,
   source_post_url = excluded.source_post_url,
   source_reference_title = excluded.source_reference_title,
   source_reference_url = excluded.source_reference_url,
   source_reference_published_on = excluded.source_reference_published_on,
+  prototype_note = excluded.prototype_note,
   credibility_notes = excluded.credibility_notes,
   is_pasig_based = excluded.is_pasig_based,
   data_status = excluded.data_status,
@@ -347,97 +388,42 @@ select
 from public.organizations o
 join (
   values
-    (
-      'pasig-city-youth-development-office',
-      'Pasig City Services: Pasig City Youth Development Office',
-      'https://pasigcity.gov.ph/services/infrastructure-development-sector',
-      'Pasig City Government',
-      null::date,
-      'official_page',
-      'Office profile and service summary for Pasig City Youth Development Office.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-office',
-      'Pasig City Directory',
-      'https://pasigcity.gov.ph/about-pasig-city/directory',
-      'Pasig City Government',
-      null::date,
-      'directory',
-      'Official city directory page used for office listings and contact references.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-office',
-      'LYDO Citizens Charter (Tagalog)',
-      'https://assets.pasigcity.gov.ph/storage/attachments/local_youth_development_office/686b66e11a2fb1751869153Citizen_s%20Charter%20Tagalog.pdf',
-      'Pasig City Government',
-      null::date,
-      'citizen_charter',
-      'Contains YORP process, office details, and official contact channels.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-office',
-      'YORP Registration Bukas na para sa mga Kabataang Pasigueno!',
-      'https://pasigcity.gov.ph/news-and-releases/yorp-registration-bukas-na-para-sa-mga-kabataang-pasigueno-670',
-      'Pasig City Government',
-      date '2025-03-19',
-      'news_release',
-      'References NYC mandate, Pasig Ordinance 14-2018 and 50-2024, and LYDO verification role.',
-      true
-    ),
-    (
-      'pasig-sk-federation',
-      'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-      'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-      'Pasig City Government',
-      null::date,
-      'news_release',
-      'Official city release referencing Pasig SK Federation in SGYG/GKA collaboration.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-council',
-      'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-      'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-      'Pasig City Government',
-      null::date,
-      'news_release',
-      'Official city release includes PCYDC among SGYG 2025 validation stakeholders.',
-      true
-    ),
-    (
-      'pasiglaban-kabataan',
-      'National Finalists | Outstanding SK Council Category - Federation',
-      'https://pasigcity.gov.ph/news-and-releases/national-finalists-outstanding-sk-council-category-federation-724',
-      'Pasig City Government',
-      date '2024-08-06',
-      'news_release',
-      'Official city announcement naming PasigLaban Kabataan as national finalist.',
-      true
-    ),
-    (
-      'pasig-yo-yso-network',
-      'S1NCRO: One Pasig, One Agenda',
-      'https://pasigcity.gov.ph/news-and-releases/s1ncro-one-pasig-one-agenda-idinaos-para-sa-pagpapalakas-ng-sektor-ng-kabataan-sa-lungsod-ng-pasig-209',
-      'Pasig City Government',
-      null::date,
-      'news_release',
-      'Official city release referencing participation from 51 youth/youth-serving organizations.',
-      true
-    )
-) as v(
-  slug,
-  reference_title,
-  reference_url,
-  publisher,
-  published_on,
-  reference_type,
-  credibility_notes,
-  is_official
-)
+    ('testing-youth-organization-i', 'Prototype Organization Reference I', 'https://example.com/prototype-organization-i/reference', 'Prototype Publisher', date '2026-04-01', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-ii', 'Prototype Organization Reference II', 'https://example.com/prototype-organization-ii/reference', 'Prototype Publisher', date '2026-04-05', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-iii', 'Prototype Organization Reference III', 'https://example.com/prototype-organization-iii/reference', 'Prototype Publisher', date '2026-04-09', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-iv', 'Prototype Organization Reference IV', 'https://example.com/prototype-organization-iv/reference', 'Prototype Publisher', date '2026-04-12', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-v', 'Prototype Organization Reference V', 'https://example.com/prototype-organization-v/reference', 'Prototype Publisher', date '2026-04-15', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-vi', 'Prototype Organization Reference VI', 'https://example.com/prototype-organization-vi/reference', 'Prototype Publisher', date '2026-04-18', 'prototype_reference', 'Prototype reference record.', false)
+) as v(slug, reference_title, reference_url, publisher, published_on, reference_type, credibility_notes, is_official)
   on o.slug = v.slug
+on conflict do nothing;
+
+insert into public.organization_projects (
+  organization_id,
+  title,
+  description,
+  activity_type,
+  date_label,
+  status
+)
+select
+  o.id,
+  p.title,
+  p.description,
+  p.activity_type,
+  p.date_label,
+  p.status
+from public.organizations o
+join (
+  values
+    ('testing-youth-organization-i', 'Testing Community Outreach Project I', 'Prototype community outreach project for demo display.', 'project', 'Q2 2026', 'active'),
+    ('testing-youth-organization-ii', 'Testing Environmental Action Drive I', 'Prototype environmental action activity for demo display.', 'activity', 'Q2 2026', 'active'),
+    ('testing-youth-organization-iii', 'Testing Youth Leadership Activity I', 'Prototype leadership activity for demo display.', 'activity', 'Q2 2026', 'active'),
+    ('testing-youth-organization-iv', 'Testing Digital Skills Workshop I', 'Prototype digital skills workshop for demo display.', 'workshop', 'Q2 2026', 'planned'),
+    ('testing-youth-organization-v', 'Testing Education Support Activity I', 'Prototype education support activity for demo display.', 'activity', 'Q3 2026', 'active'),
+    ('testing-youth-organization-vi', 'Testing Sports and Wellness Activity I', 'Prototype sports and wellness activity for demo display.', 'activity', 'Q3 2026', 'active')
+) as p(slug, title, description, activity_type, date_label, status)
+  on o.slug = p.slug
 on conflict do nothing;
 
 commit;

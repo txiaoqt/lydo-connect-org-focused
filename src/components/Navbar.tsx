@@ -23,7 +23,6 @@ const transparencyItems = [
   { label: "Transparency Board", href: "/transparency/board" },
   { label: "Financial Disclosure", href: "/transparency/financial-disclosure" },
   { label: "Barangay Map", href: "/transparency/barangay-map" },
-  { label: "Service Advisories", href: "/transparency/service-advisories" },
 ];
 
 const Navbar = () => {

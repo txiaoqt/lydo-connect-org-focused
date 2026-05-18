@@ -56,24 +56,24 @@ export default function FinancialDisclosure() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-12">
+        <section className="hero-gradient py-10 sm:py-12">
           <div className="container">
-            <h1 className="text-2xl md:text-4xl font-bold text-secondary-foreground">Financial Disclosure</h1>
-            <p className="text-secondary-foreground/70 mt-2 max-w-2xl text-sm">
+            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Financial Disclosure</h1>
+            <p className="text-secondary-foreground/70 mt-2 max-w-xl md:max-w-2xl text-sm leading-relaxed">
               Modern snapshot of allocations, utilization, and remaining budgets across barangay SK offices.
             </p>
           </div>
         </section>
 
-        <section className="container py-8 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <section className="container py-6 sm:py-8 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <StatCard icon={DollarSign} label="Total Budget" value={`PHP ${(totals.totalBudget / 1000000).toFixed(1)}M`} variant="primary" />
             <StatCard icon={TrendingUp} label="Utilized" value={`PHP ${(totals.totalUtilized / 1000000).toFixed(1)}M`} variant="accent" />
             <StatCard icon={TrendingDown} label="Remaining" value={`PHP ${(totals.totalRemaining / 1000000).toFixed(1)}M`} variant="warning" />
             <StatCard icon={BarChart3} label="Utilization Rate" value={`${totals.utilizationRate}%`} description="Overall SK utilization" variant="primary" />
           </div>
 
-          <div className="bg-card rounded-xl border p-6 card-shadow">
+          <div className="bg-card rounded-xl border p-4 sm:p-6 card-shadow">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <h3 className="font-heading font-semibold text-lg">Monthly Budget Trend</h3>
@@ -84,7 +84,7 @@ export default function FinancialDisclosure() {
                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" />Utilized</span>
               </div>
             </div>
-            <div className="h-72">
+            <div className="h-64 sm:h-72">
               {monthlyTrend.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyTrend}>
@@ -104,7 +104,7 @@ export default function FinancialDisclosure() {
           </div>
 
           <div className="bg-card rounded-xl border card-shadow overflow-hidden">
-            <div className="p-5 border-b flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b flex items-center justify-between">
               <div>
                 <h3 className="font-heading font-semibold text-lg">Barangay Budget Overview</h3>
                 <p className="text-sm text-muted-foreground">Sorted by utilization rate (highest to lowest)</p>
@@ -119,7 +119,7 @@ export default function FinancialDisclosure() {
                 <table className="w-full min-w-[860px] text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-muted/50 text-left">
-                      <th className="px-5 py-3 font-medium">Barangay</th>
+                      <th className="px-3 sm:px-5 py-3 font-medium">Barangay</th>
                       <th className="px-5 py-3 font-medium text-right">SK Budget</th>
                       <th className="px-5 py-3 font-medium text-right">Utilized</th>
                       <th className="px-5 py-3 font-medium text-right">Remaining</th>
@@ -132,7 +132,7 @@ export default function FinancialDisclosure() {
                       const status = getUtilizationStatus(row.percent);
                       return (
                         <tr key={row.name} className="border-t hover:bg-muted/20 transition-colors">
-                          <td className="px-5 py-3 font-medium">{row.name}</td>
+                          <td className="px-3 sm:px-5 py-3 font-medium">{row.name}</td>
                           <td className="px-5 py-3 text-right">PHP {row.skBudget.toLocaleString()}</td>
                           <td className="px-5 py-3 text-right">PHP {row.utilizedBudget.toLocaleString()}</td>
                           <td className="px-5 py-3 text-right">PHP {row.remaining.toLocaleString()}</td>

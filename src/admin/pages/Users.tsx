@@ -188,7 +188,7 @@ export const UsersPage = () => {
         display_name: form.displayName.trim() || null,
         email: form.email.trim(),
         contact_number: form.contactNumber.trim() || null,
-        municipality: form.municipality.trim() || "Metro Manila",
+        municipality: form.municipality.trim() || "Prototype Municipality",
         barangay_id: form.barangayId || null,
         bio: form.bio.trim() || null,
         notifications: form.notifications,

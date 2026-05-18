@@ -1,6 +1,7 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
-import { Mail, MapPin, Pencil, Phone, Plus, Search, User, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, Mail, MapPin, Pencil, Phone, Plus, Search, User, Users } from "lucide-react";
 import { DataTable } from "../components/DataTable";
+import { StatusBadge } from "../components/StatusBadge";
 import { Barangay, UserProfile } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -92,6 +93,7 @@ export const Barangays = () => {
   const [editingResident, setEditingResident] = useState<ResidentRow | null>(null);
   const [residentForm, setResidentForm] = useState<ResidentForm>(defaultResidentForm);
   const [isResidentSaving, setIsResidentSaving] = useState(false);
+  const [expandedResidentId, setExpandedResidentId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadBarangays = async () => {
@@ -199,6 +201,7 @@ export const Barangays = () => {
     setSelectedBarangay(barangay);
     setResidents([]);
     setResidentSearchTerm("");
+    setExpandedResidentId(null);
     setIsResidentsOpen(true);
     void loadResidents(barangay);
   };
@@ -244,7 +247,7 @@ export const Barangays = () => {
         display_name: residentForm.displayName.trim() || null,
         email: residentForm.email.trim(),
         contact_number: residentForm.contactNumber.trim() || null,
-        municipality: residentForm.municipality.trim() || "Metro Manila",
+        municipality: residentForm.municipality.trim() || "Prototype Municipality",
         barangay_id: residentForm.barangayId || null,
         bio: residentForm.bio.trim() || null,
         notifications: residentForm.notifications,
@@ -403,6 +406,22 @@ export const Barangays = () => {
   ];
 
   const filteredBarangays = barangays.filter((b) => b.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "N/A";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "N/A";
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+  const formatCoordinate = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "N/A";
+    return value.toFixed(6);
+  };
   const filteredResidents = useMemo(() => {
     const q = residentSearchTerm.toLowerCase().trim();
     if (!q) return residents;
@@ -454,31 +473,109 @@ export const Barangays = () => {
       />
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="flex w-[min(960px,calc(100vw-1.5rem))] max-h-[90vh] flex-col overflow-hidden p-0 gap-0">
+          <DialogHeader className="border-b border-border/80 px-6 py-5 pr-12 text-left">
             <DialogTitle>Barangay Details</DialogTitle>
             <DialogDescription>Read-only record view.</DialogDescription>
           </DialogHeader>
           {viewingBarangay && (
-            <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><p className="text-muted-foreground">Barangay Name</p><p className="font-medium">{viewingBarangay.name || "N/A"}</p></div>
-                <div><p className="text-muted-foreground">SK Chairperson</p><p className="font-medium">{viewingBarangay.sk_chairperson || "N/A"}</p></div>
-                <div><p className="text-muted-foreground">Youth Population</p><p className="font-medium">{(viewingBarangay.youth_population ?? 0).toLocaleString()}</p></div>
-                <div><p className="text-muted-foreground">Latitude</p><p className="font-medium">{viewingBarangay.latitude ?? "N/A"}</p></div>
-                <div><p className="text-muted-foreground">Longitude</p><p className="font-medium">{viewingBarangay.longitude ?? "N/A"}</p></div>
-              </div>
-              <DialogFooter className="sm:justify-between">
-                <p className="text-xs text-muted-foreground">Read-only record view.</p>
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
-                  <Button type="button" variant="outline" onClick={() => { setIsDetailsOpen(false); openResidentsModal(viewingBarangay); }}>View Residents</Button>
-                  <Button type="button" onClick={() => { setIsDetailsOpen(false); openEditModal(viewingBarangay); }}>Edit</Button>
-                  <Button type="button" variant="destructive" onClick={() => { setIsDetailsOpen(false); openDeleteModal(viewingBarangay); }}>Delete</Button>
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-6 text-sm">
+              <section className="rounded-xl border border-border bg-card p-5">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Barangay</p>
+                    <p className="mt-1 truncate text-lg font-semibold text-foreground">{viewingBarangay.name || "N/A"}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Youth Population</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">
+                      {(viewingBarangay.youth_population ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Date Added</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">{formatDateTime(viewingBarangay.created_at)}</p>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-muted/20 px-3 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Added By</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">N/A</p>
+                  </div>
                 </div>
-              </DialogFooter>
+              </section>
+
+              <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+                <h3 className="text-base font-semibold text-foreground">Barangay Information</h3>
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Barangay Name</p>
+                    <p className="text-sm font-medium text-foreground">{viewingBarangay.name || "N/A"}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">SK Chairperson</p>
+                    <p className="text-sm font-medium text-foreground">{viewingBarangay.sk_chairperson || "N/A"}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Youth Population</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {(viewingBarangay.youth_population ?? 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Latitude</p>
+                    <p className="text-sm font-medium text-foreground">{formatCoordinate(viewingBarangay.latitude)}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Longitude</p>
+                    <p className="text-sm font-medium text-foreground">{formatCoordinate(viewingBarangay.longitude)}</p>
+                  </div>
+                </div>
+              </section>
             </div>
           )}
+          <DialogFooter className="border-t border-border/80 px-6 py-4 sm:justify-between">
+            <p className="hidden text-xs text-muted-foreground sm:block">Read-only record view.</p>
+            <div className="mt-2 flex w-full flex-col gap-2 sm:mt-0 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+              <Button type="button" variant="outline" className="h-10 w-full sm:w-auto" onClick={() => setIsDetailsOpen(false)}>
+                Close
+              </Button>
+              {viewingBarangay && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 w-full sm:w-auto"
+                    onClick={() => {
+                      setIsDetailsOpen(false);
+                      openResidentsModal(viewingBarangay);
+                    }}
+                  >
+                    View Residents
+                  </Button>
+                  <Button
+                    type="button"
+                    className="h-10 w-full sm:w-auto"
+                    onClick={() => {
+                      setIsDetailsOpen(false);
+                      openEditModal(viewingBarangay);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="h-10 w-full sm:w-auto"
+                    onClick={() => {
+                      setIsDetailsOpen(false);
+                      openDeleteModal(viewingBarangay);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -490,14 +587,15 @@ export const Barangays = () => {
             setSelectedBarangay(null);
             setResidents([]);
             setResidentSearchTerm("");
+            setExpandedResidentId(null);
             setIsResidentFormOpen(false);
             setEditingResident(null);
             setResidentForm(defaultResidentForm);
           }
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex w-[min(1040px,calc(100vw-1.5rem))] max-h-[90vh] flex-col overflow-hidden p-0 gap-0">
+          <DialogHeader className="border-b border-border/80 px-6 py-5 pr-12 text-left">
             <DialogTitle>{selectedBarangay ? `${selectedBarangay.name} Residents` : "Barangay Residents"}</DialogTitle>
             <DialogDescription>
               {selectedBarangay
@@ -506,83 +604,132 @@ export const Barangays = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm text-muted-foreground">
-                Total Residents: <span className="font-semibold text-foreground">{residents.length}</span>
-              </div>
-              <div className="w-full max-w-sm">
-                <Input
-                  value={residentSearchTerm}
-                  onChange={(event) => setResidentSearchTerm(event.target.value)}
-                  placeholder="Search resident name, email, or contact..."
-                />
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Total Residents</span>
+                  <span className="text-base font-semibold text-foreground">{residents.length}</span>
+                </div>
+                <div className="w-full md:flex-1">
+                  <Input
+                    value={residentSearchTerm}
+                    onChange={(event) => setResidentSearchTerm(event.target.value)}
+                    placeholder="Search resident name, email, or contact..."
+                  />
+                </div>
               </div>
             </div>
 
             {isResidentsLoading ? (
               <div className="h-44 grid place-items-center text-sm text-muted-foreground">Loading residents...</div>
+            ) : residents.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-muted/10 px-6 py-10 text-center">
+                <p className="text-lg font-semibold text-foreground">No residents linked yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  There are no user profiles linked to this barangay.
+                </p>
+              </div>
             ) : filteredResidents.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-                No resident users found for this barangay.
+              <div className="rounded-xl border border-dashed border-border bg-muted/10 px-6 py-10 text-center">
+                <p className="text-lg font-semibold text-foreground">No residents found</p>
+                <p className="mt-1 text-sm text-muted-foreground">Try adjusting your search.</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-[56vh] overflow-y-auto pr-1">
+              <div className="space-y-3">
                 {filteredResidents.map((resident) => (
-                  <div key={resident.user_id} className="rounded-xl border border-border bg-muted/10 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="text-base font-semibold text-foreground">
-                          {resident.full_name || resident.display_name || "Unnamed User"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{resident.display_name || "No display name"}</p>
-                      </div>
-                      <div className="flex flex-col items-start gap-2 sm:items-end">
-                        <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                          {(resident.role_codes.length > 0 ? resident.role_codes : ["youth"]).map((role) => (
-                            <span key={`${resident.user_id}-${role}`} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                              {role}
-                            </span>
-                          ))}
+                  <div key={resident.user_id} className="rounded-xl border border-border bg-card shadow-sm">
+                    <button
+                      type="button"
+                      className="w-full px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                      onClick={() =>
+                        setExpandedResidentId((prev) => (prev === resident.user_id ? null : resident.user_id))
+                      }
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-base font-semibold text-foreground">
+                            {resident.full_name || resident.display_name || "Unnamed User"}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {resident.display_name || resident.email || "N/A"}
+                          </p>
                         </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-3"
-                          onClick={() => openResidentEditModal(resident)}
-                        >
-                          <Pencil size={14} className="mr-1.5" />
-                          Edit
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {(resident.role_codes.length > 0 ? resident.role_codes : ["youth"]).map((role) => (
+                              <span
+                                key={`${resident.user_id}-${role}`}
+                                className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
+                              >
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background">
+                            {expandedResidentId === resident.user_id ? (
+                              <ChevronUp size={16} className="text-muted-foreground" />
+                            ) : (
+                              <ChevronDown size={16} className="text-muted-foreground" />
+                            )}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </button>
 
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail size={14} />
-                        <span className="text-foreground">{resident.email || "N/A"}</span>
+                    {expandedResidentId === resident.user_id && (
+                      <div className="border-t border-border/80 px-4 py-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Email</p>
+                            <p className="text-sm font-medium text-foreground break-all">{resident.email || "N/A"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Contact</p>
+                            <p className="text-sm font-medium text-foreground">{resident.contact_number || "N/A"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Municipality</p>
+                            <p className="text-sm font-medium text-foreground">{resident.municipality || "N/A"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Joined Date</p>
+                            <p className="text-sm font-medium text-foreground">{formatDateTime(resident.created_at)}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Barangay</p>
+                            <p className="text-sm font-medium text-foreground">{selectedBarangay?.name || "N/A"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Notifications</p>
+                            <StatusBadge status={resident.notifications ? "enabled" : "disabled"} />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Public Email</p>
+                            <p className="text-sm font-medium text-foreground">
+                              {resident.show_email_public ? "Visible on public profile" : "Hidden from public profile"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Bio</p>
+                            <p className="text-sm font-medium text-foreground">{resident.bio || "N/A"}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                          <Button type="button" size="sm" variant="outline" onClick={() => openResidentEditModal(resident)}>
+                            <Pencil size={14} className="mr-1.5" />
+                            Edit
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone size={14} />
-                        <span className="text-foreground">{resident.contact_number || "N/A"}</span>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Municipality</p>
-                        <p className="font-medium text-foreground">{resident.municipality || "N/A"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Joined</p>
-                        <p className="font-medium text-foreground">{new Date(resident.created_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t border-border/80 px-6 py-3">
             <Button type="button" variant="outline" onClick={() => setIsResidentsOpen(false)}>
               Close
             </Button>

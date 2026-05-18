@@ -1,9 +1,5 @@
 import { Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-
 const Footer = () => {
-  const { toast } = useToast();
-
   return (
     <footer className="hero-gradient text-secondary-foreground">
       <div className="container mx-auto px-4 py-16">
@@ -47,11 +43,11 @@ const Footer = () => {
           <div>
             <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Contact</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
-              <li>Metro Manila, Philippines</li>
+              <li>Prototype Municipality, Philippines</li>
               <li>Regional LYDO coverage</li>
               <li>
-                <a href="mailto:lydo@metro-manila.gov.ph" className="hover:text-primary transition-colors">
-                  lydo@metro-manila.gov.ph
+                <a href="mailto:lydo@prototype-lydo.demo" className="hover:text-primary transition-colors">
+                  lydo@prototype-lydo.demo
                 </a>
               </li>
             </ul>
@@ -60,33 +56,15 @@ const Footer = () => {
 
         <div className="border-t border-secondary-foreground/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-secondary-foreground/50 text-center md:text-left">
-            (c) 2026 Youth Governance Transparency and Accountability System - Metro Manila LYDOs. Compliant with RA 10742.
+            (c) 2026 Youth Governance Transparency and Accountability System - Prototype LYDO Portal. Compliant with RA 10742.
           </p>
           <div className="flex flex-wrap justify-center md:justify-end gap-6 text-xs text-secondary-foreground/50">
-            <button
-              type="button"
-              className="hover:text-secondary-foreground/80 transition-colors"
-              onClick={() =>
-                toast({
-                  title: "Privacy Policy",
-                  description: "This page is coming soon.",
-                })
-              }
-            >
+            <Link to="/privacy" className="hover:text-secondary-foreground/80 transition-colors">
               Privacy Policy
-            </button>
-            <button
-              type="button"
-              className="hover:text-secondary-foreground/80 transition-colors"
-              onClick={() =>
-                toast({
-                  title: "Terms of Service",
-                  description: "This page is coming soon.",
-                })
-              }
-            >
+            </Link>
+            <Link to="/terms" className="hover:text-secondary-foreground/80 transition-colors">
               Terms of Service
-            </button>
+            </Link>
           </div>
         </div>
       </div>

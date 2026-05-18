@@ -20,19 +20,41 @@ end $$;
 
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='program_status' and n.nspname='public') then
-    create type public.program_status as enum ('draft','published','archived');
+    create type public.program_status as enum (
+      'draft',
+      'published',
+      'upcoming',
+      'ongoing',
+      'completed',
+      'pending',
+      'past',
+      'postponed',
+      'cancelled',
+      'archived'
+    );
   end if;
 end $$;
 
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='event_status' and n.nspname='public') then
-    create type public.event_status as enum ('draft','upcoming','past','cancelled');
+    create type public.event_status as enum (
+      'draft',
+      'published',
+      'upcoming',
+      'ongoing',
+      'completed',
+      'pending',
+      'past',
+      'postponed',
+      'cancelled',
+      'archived'
+    );
   end if;
 end $$;
 
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='organization_status' and n.nspname='public') then
-    create type public.organization_status as enum ('active','partner','inactive');
+    create type public.organization_status as enum ('active','partner','pending','inactive','archived');
   end if;
 end $$;
 
@@ -69,12 +91,6 @@ end $$;
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='ticket_status' and n.nspname='public') then
     create type public.ticket_status as enum ('received','in_progress','resolved','closed');
-  end if;
-end $$;
-
-do $$ begin
-  if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='service_status' and n.nspname='public') then
-    create type public.service_status as enum ('operational','maintenance','notice');
   end if;
 end $$;
 
@@ -135,7 +151,7 @@ create table if not exists public.user_profiles (
   full_name text,
   display_name text,
   contact_number text,
-  municipality text not null default 'Metro Manila',
+  municipality text not null default 'Prototype Municipality',
   barangay_id uuid references public.barangays(id) on delete set null,
   bio text,
   notifications boolean not null default true,
@@ -143,6 +159,31 @@ create table if not exists public.user_profiles (
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table if not exists public.policy_versions (
+  id uuid primary key default gen_random_uuid(),
+  version text not null unique,
+  title text not null,
+  terms_content text not null,
+  privacy_content text not null,
+  is_active boolean not null default false,
+  effective_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.user_policy_acceptance (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  policy_version_id uuid not null references public.policy_versions(id) on delete restrict,
+  accepted_terms boolean not null default true,
+  accepted_privacy boolean not null default true,
+  accepted_at timestamptz not null default now(),
+  accepted_ip text,
+  user_agent text,
+  created_at timestamptz not null default now(),
+  constraint uq_user_policy_acceptance unique (user_id, policy_version_id)
 );
 
 commit;
@@ -374,19 +415,6 @@ create table if not exists public.citizen_tickets (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.service_advisories (
-  id uuid primary key default gen_random_uuid(),
-  office_id uuid references public.offices(id) on delete set null,
-  title text not null,
-  status public.service_status not null default 'notice',
-  message text not null,
-  starts_at timestamptz,
-  ends_at timestamptz,
-  updated_by uuid references auth.users(id) on delete set null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 commit;
 
 -- END FILE: supabase/sql/03_transparency_tables.sql
@@ -464,7 +492,7 @@ begin
     coalesce(new.email, new.id::text || '@local.invalid'),
     coalesce(new.raw_user_meta_data ->> 'full_name',''),
     coalesce(new.raw_user_meta_data ->> 'display_name',''),
-    'Metro Manila'
+    'Prototype Municipality'
   )
   on conflict (user_id) do update set email = excluded.email, updated_at = now();
 
@@ -524,7 +552,7 @@ declare
     'barangays','offices','user_profiles','programs','events','organizations',
     'user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','citizen_tickets','service_advisories'
+    'monthly_compliance','citizen_tickets','policy_versions'
   ];
 begin
   foreach t in array tables loop
@@ -564,6 +592,9 @@ create index if not exists idx_youth_metrics_lookup on public.barangay_youth_met
 create index if not exists idx_monthly_lookup on public.monthly_compliance(barangay_id,fiscal_year,month_no);
 create index if not exists idx_tickets_status_created on public.citizen_tickets(status,created_at desc);
 create index if not exists idx_tickets_ref_lower on public.citizen_tickets(lower(reference_no));
+create index if not exists idx_policy_versions_is_active on public.policy_versions(is_active);
+create index if not exists idx_user_policy_acceptance_user_id on public.user_policy_acceptance(user_id);
+create index if not exists idx_user_policy_acceptance_policy_version_id on public.user_policy_acceptance(policy_version_id);
 
 create unique index if not exists uq_user_program_active
   on public.user_program_memberships(user_id, program_id) where left_at is null;
@@ -591,7 +622,7 @@ declare
     'roles','user_roles','barangays','offices','user_profiles','programs','events',
     'organizations','user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','document_downloads','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','ticket_types','citizen_tickets','service_advisories'
+    'monthly_compliance','ticket_types','citizen_tickets','policy_versions','user_policy_acceptance'
   ];
 begin
   foreach t in array all_tables loop
@@ -605,7 +636,7 @@ declare
   t text;
   public_read_tables text[] := array[
     'barangays','offices','programs','events','organizations','disclosure_documents',
-    'barangay_financials','barangay_youth_metrics','compliance_board_status','monthly_compliance','service_advisories','ticket_types'
+    'barangay_financials','barangay_youth_metrics','compliance_board_status','monthly_compliance','ticket_types'
   ];
 begin
   foreach t in array public_read_tables loop
@@ -752,28 +783,123 @@ insert into public.offices (name, code) values
 on conflict (code) do update set name = excluded.name;
 
 insert into public.barangays (name, latitude, longitude, sk_chairperson, youth_population) values
-  ('Ampid I', 14.724000, 121.153000, 'Maria Santos', 2340),
-  ('Ampid II', 14.720000, 121.146000, 'Juan Dela Cruz', 1890),
-  ('Banaba', 14.697000, 121.147000, 'Ana Reyes', 3100),
-  ('Dulong Bayan I', 14.687000, 121.125000, 'Pedro Garcia', 1560),
-  ('Dulong Bayan II', 14.689000, 121.130000, 'Rosa Mendoza', 1420),
-  ('Guinayang', 14.705000, 121.101000, 'Carlos Bautista', 2780),
-  ('Guitnang Bayan I', 14.683000, 121.118000, 'Luz Villanueva', 2100),
-  ('Guitnang Bayan II', 14.685000, 121.121000, 'Miguel Torres', 1950),
-  ('Gulod Malaya', 14.708000, 121.134000, 'Elena Cruz', 2450),
-  ('Malanday', 14.678000, 121.102000, 'Roberto Aquino', 3500),
-  ('Maly', 14.676000, 121.110000, 'Diana Ramos', 1680),
-  ('Pintong Bocaue', 14.671000, 121.119000, 'Fernando Lopez', 1350),
-  ('San Jose', 14.690000, 121.139000, 'Grace Tan', 2200),
-  ('San Rafael', 14.668000, 121.097000, 'Mark Rivera', 1890),
-  ('Santa Ana', 14.667000, 121.107000, 'Linda Pascual', 2650),
-  ('Santo Nino', 14.674000, 121.115000, 'Antonio Diaz', 1780)
+  ('Barangay I', 14.510100, 121.010100, 'SK Chairperson I', 1200),
+  ('Barangay II', 14.511200, 121.011200, 'SK Chairperson II', 1450),
+  ('Barangay III', 14.512300, 121.012300, 'SK Chairperson III', 1780),
+  ('Barangay IV', 14.513400, 121.013400, 'SK Chairperson IV', 2100),
+  ('Barangay V', 14.514500, 121.014500, 'SK Chairperson V', 2340),
+  ('Barangay VI', 14.515600, 121.015600, 'SK Chairperson VI', 1600),
+  ('Barangay VII', 14.516700, 121.016700, 'SK Chairperson VII', 1890),
+  ('Barangay VIII', 14.517800, 121.017800, 'SK Chairperson VIII', 1720),
+  ('Barangay IX', 14.518900, 121.018900, 'SK Chairperson IX', 2050),
+  ('Barangay X', 14.520000, 121.020000, 'SK Chairperson X', 1980)
 on conflict (name) do update
 set latitude = excluded.latitude,
     longitude = excluded.longitude,
     sk_chairperson = excluded.sk_chairperson,
     youth_population = excluded.youth_population,
     updated_at = now();
+
+insert into public.policy_versions (
+  version,
+  title,
+  terms_content,
+  privacy_content,
+  is_active,
+  effective_date
+) values (
+  'v1.0',
+  'Terms of Service and Privacy Policy',
+  $$# Terms of Service
+
+## Draft Notice
+This Terms of Service content is a draft and should be reviewed before production use.
+
+## 1. Purpose of the Platform
+This platform provides youth-facing information and services, including programs, events, organization information, transparency records, barangay youth data, and related accountability tools.
+
+## 2. User Accounts
+Users are responsible for providing accurate account information and keeping account credentials secure.
+
+## 3. Programs and Events
+Users may browse programs and events and submit registrations where available. Registration details must be accurate and respectful.
+
+## 4. Organization Information
+Organization records are shown for information and public awareness. Users may view organization profiles, focus areas, activities, and related details.
+
+## 5. Transparency Records
+Transparency records and disclosures are provided for accountability and public information. Users must not falsify, misrepresent, or misuse public records.
+
+## 6. Barangay Youth Data
+Barangay youth metrics are provided for informational and monitoring purposes and may be updated over time.
+
+## 7. Proper Use of the Platform
+Users must not attempt unauthorized access, submit harmful or false content, harass others, or interfere with system operations.
+
+## 8. User Submissions
+If users submit registrations, forms, or requests, they are responsible for the accuracy and appropriateness of submitted content.
+
+## 9. Prototype and Demonstration Records
+Some records may be prototype or demonstration data intended for testing, presentation, and system validation.
+
+## 10. Account Restrictions
+Access may be limited or restricted when platform rules are violated or when system safety requires enforcement.
+
+## 11. Updates to the Terms
+These terms may be updated. Users may be required to accept the latest version before continuing authenticated use.
+
+## 12. Agreement Confirmation
+By accepting these terms, the user confirms understanding and agreement with these platform rules.$$,
+  $$# Privacy Policy
+
+## Draft Notice
+This Privacy Policy content is a draft and should be reviewed before production use.
+
+## 1. Information We Collect
+We may collect account and profile information (such as name, email, role, barangay, municipality, contact details), registration data for programs/events, request submissions, and policy acceptance records. Technical data may also be processed for security and audit purposes.
+
+## 2. How We Use Information
+Information is used to operate user accounts, process registrations, support youth services, maintain transparency workflows, support auditability, and improve reliability and security.
+
+## 3. Public Information
+Some records (such as published programs, events, organizations, transparency documents, and barangay-level public data) may be visible publicly. Personal account data is not intended for public display unless explicitly enabled by system settings.
+
+## 4. Admin Access
+Authorized administrators may access and manage data necessary for operations, reporting, moderation, and accountability.
+
+## 5. Data Storage
+Data is stored in Supabase or configured backend services. Public files and uploaded documents may be stored in associated storage systems.
+
+## 6. Data Sharing
+User data is not sold. Data may be used only for platform operations, reporting, compliance, and legitimate administrative functions.
+
+## 7. User Responsibilities
+Users should provide accurate information and avoid submitting unnecessary sensitive personal data.
+
+## 8. Security
+The platform uses authentication, access controls, and database security policies where applicable. No system can guarantee absolute security.
+
+## 9. Data Retention
+Records may be retained for administration, reporting, accountability, and audit requirements.
+
+## 10. Changes to this Privacy Policy
+This policy may be updated. Users may be asked to accept the latest version before using authenticated features.
+
+## 11. Contact
+For questions, contact the platform administrators through the official support channel provided in the app.$$,
+  true,
+  date '2026-05-18'
+)
+on conflict (version) do update set
+  title = excluded.title,
+  terms_content = excluded.terms_content,
+  privacy_content = excluded.privacy_content,
+  is_active = excluded.is_active,
+  effective_date = excluded.effective_date,
+  updated_at = now();
+
+update public.policy_versions
+set is_active = case when version = 'v1.0' then true else false end;
 
 commit;
 
@@ -819,731 +945,9 @@ commit;
 
 begin;
 
--- Seed youth programs currently shown in the portal.
-insert into public.programs (
-  slug,
-  title,
-  sector,
-  description,
-  start_date,
-  end_date,
-  schedule_text,
-  location,
-  status,
-  source_post_url,
-  published_at
-)
-values
-  (
-    'hirayang-kabataan-yep',
-    'Hirayang Kabataan Youth Empowerment Program',
-    'LYDO',
-    'Core empowerment program for civic participation, youth engagement, and leadership development.',
-    null,
-    null,
-    '2025-2026 Cycle',
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'simula-youth-leadership',
-    'Simula Youth Leadership Program',
-    'LYDO',
-    'Leadership and governance pathway for emerging youth leaders in barangays and organizations.',
-    null,
-    null,
-    '2025-2026 Cycle',
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-ready-to-serve-2025',
-    'Project Ready to Serve',
-    'LYDO',
-    'Volunteer-oriented youth initiative highlighted by Metro Manila LYDO as part of active community engagement efforts.',
-    date '2025-02-19',
-    date '2025-02-19',
-    null,
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-ka-art-ihan-program',
-    'Project Ka-ART-ihan',
-    'YDAC',
-    'Hataw Na beginner dance workshop under the Youth Development Advocate Circle for Arts and Culture.',
-    date '2025-07-12',
-    date '2025-07-13',
-    null,
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-sibol-program',
-    'Project Sibol',
-    'YDAC',
-    'Tinig ng Kabataang Bayan para sa Kalikasan, a two-day environmental youth program.',
-    null,
-    null,
-    'July 2025',
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-tuklas-program',
-    'Project Tuklas',
-    'LYDO',
-    'Youth-led leadership training and workshop designed to develop local youth leaders.',
-    date '2025-08-16',
-    date '2025-08-17',
-    null,
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-bigkis-kabataan-program',
-    'Project Bigkis Kabataan',
-    'LYDO',
-    'Youth leaders and organizations assembly focused on alignment, collaboration, and strengthening youth participation.',
-    date '2025-10-12',
-    date '2025-10-12',
-    null,
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'sk-capacity-compliance-sessions-2025',
-    'SK Capacity and Compliance Sessions',
-    'SK',
-    'Barangay SK-focused sessions and monitoring activities connected to LYDO accountability and governance support.',
-    null,
-    null,
-    'September 2025',
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  )
-on conflict (slug) do update set
-  title = excluded.title,
-  sector = excluded.sector,
-  description = excluded.description,
-  start_date = excluded.start_date,
-  end_date = excluded.end_date,
-  schedule_text = excluded.schedule_text,
-  location = excluded.location,
-  status = excluded.status,
-  source_post_url = excluded.source_post_url,
-  published_at = excluded.published_at,
-  updated_at = now();
-
--- Seed events currently shown in the portal.
-insert into public.events (
-  slug,
-  title,
-  sector,
-  description,
-  event_date,
-  location,
-  status,
-  source_post_url,
-  published_at
-)
-values
-  (
-    'project-ka-art-ihan-2025',
-    'Project Ka-ART-ihan: Hataw Na Beginner''s Dance Workshop',
-    'YDAC',
-    'Youth arts and culture workshop for beginner dancers.',
-    date '2025-07-12',
-    'Metro Manila',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-sibol-2025',
-    'Project Sibol: Tinig ng Kabataang Bayan para sa Kalikasan',
-    'YDAC',
-    'Two-day youth environmental learning and engagement event.',
-    date '2025-07-01',
-    'Metro Manila',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-tuklas-2025',
-    'Project Tuklas: Youth-led Leadership Training and Workshop',
-    'LYDO',
-    'Leadership development training for local youth participants.',
-    date '2025-08-16',
-    'Metro Manila',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'smmc-seb-partnership-2025',
-    'SMMC Student Executive Board Partnership Event',
-    'LYDO',
-    'Campus youth partnership activity recognized by Metro Manila LYDO.',
-    date '2025-08-20',
-    'Metro Manila Municipal College',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'sk-san-mateo-activity-2025',
-    'Sangguniang Kabataan ng Metro Manila Activity Highlight',
-    'SK',
-    'Municipal-level youth governance activity with barangay SK participation.',
-    date '2025-09-01',
-    'Metro Manila',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'project-bigkis-kabataan-2025',
-    'Project Bigkis Kabataan: Youth Leaders and Organizations Assembly',
-    'LYDO',
-    'Assembly focused on youth organizations alignment and collaboration.',
-    date '2025-10-12',
-    'Metro Manila',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  )
-on conflict (slug) do update set
-  title = excluded.title,
-  sector = excluded.sector,
-  description = excluded.description,
-  event_date = excluded.event_date,
-  location = excluded.location,
-  status = excluded.status,
-  source_post_url = excluded.source_post_url,
-  published_at = excluded.published_at,
-  updated_at = now();
-
--- Seed organizations currently shown in the portal.
-insert into public.organizations (
-  slug,
-  name,
-  type,
-  focus,
-  source_tag,
-  status,
-  source_post_url
-)
-values
-  (
-    'ydac-arts-culture',
-    'Youth Development Advocate Circle (YDAC) for Arts and Culture',
-    'Advocacy Group',
-    'Arts, culture, and youth creative engagement',
-    'Metro Manila Gov announcement, July 13, 2025',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'ydac-agri-envi',
-    'Youth Development Advocate Circle (YDAC) for Agriculture and Environment',
-    'Advocacy Group',
-    'Environment and agriculture initiatives for youth',
-    'Metro Manila Gov announcement, July 18, 2025',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'sk-san-mateo-network',
-    'Sangguniang Kabataan ng Metro Manila (Barangay SK network)',
-    'Youth Governance',
-    'Barangay youth governance and leadership',
-    'Metro Manila Gov announcement, September 1, 2025',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'smmc-seb',
-    'SMMC Student Executive Board (SEB)',
-    'Campus Youth Partner',
-    'Campus-led youth representation and programs',
-    'Metro Manila Gov announcement, August 20, 2025',
-    'partner',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'lydo-youth-org-assembly',
-    'Metro Manila LYDO Youth Organizations Assembly Network',
-    'Multi-organization Network',
-    'Municipal youth organizations coordination and dialogue',
-    'Project Bigkis Kabataan, October 12, 2025',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  )
-on conflict (slug) do update set
-  name = excluded.name,
-  type = excluded.type,
-  focus = excluded.focus,
-  source_tag = excluded.source_tag,
-  status = excluded.status,
-  source_post_url = excluded.source_post_url,
-  updated_at = now();
-
--- Seed disclosure registry documents currently shown in the portal.
-with docs as (
-  select * from (values
-    (
-      'doc-001',
-      'SK Budget Utilization and Disbursement Summary',
-      'financial_statement',
-      2026,
-      'Q1',
-      'Malanday',
-      false,
-      'LYDO',
-      date '2026-03-01',
-      1572864::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-002',
-      'Hirayang Kabataan Program Outcome Report',
-      'program_outcome',
-      2026,
-      'Q1',
-      null,
-      true,
-      'LYDO',
-      date '2026-03-03',
-      2202009::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-003',
-      'Quarterly Procurement Posting',
-      'bac_document',
-      2026,
-      'Q1',
-      null,
-      true,
-      'MUNICIPAL_BAC',
-      date '2026-02-22',
-      552960::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-004',
-      'Executive Order on Youth Program Monitoring',
-      'executive_order',
-      2025,
-      'Q4',
-      null,
-      true,
-      'MAYOR_OFFICE',
-      date '2025-11-10',
-      501760::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-005',
-      'Resolution Adopting Quarterly LYDC Monitoring Matrix',
-      'resolution',
-      2025,
-      'Q4',
-      null,
-      true,
-      'LYDC',
-      date '2025-12-02',
-      829440::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-006',
-      'Barangay Youth Activity Appropriations Ordinance',
-      'ordinance',
-      2025,
-      'Q3',
-      'Santa Ana',
-      false,
-      'SANGGUNIANG_BAYAN',
-      date '2025-09-20',
-      962560::bigint,
-      '/disclosure-registry-test.pdf'
-    )
-  ) as v(
-    doc_code,
-    title,
-    document_type,
-    fiscal_year,
-    quarter,
-    barangay_name,
-    applies_to_all_barangays,
-    office_code,
-    published_date,
-    file_size_bytes,
-    public_url
-  )
-)
-insert into public.disclosure_documents (
-  doc_code,
-  title,
-  document_type,
-  fiscal_year,
-  quarter,
-  barangay_id,
-  applies_to_all_barangays,
-  office_id,
-  published_date,
-  file_size_bytes,
-  file_mime_type,
-  public_url,
-  source_post_url
-)
-select
-  d.doc_code,
-  d.title,
-  d.document_type::public.disclosure_doc_type,
-  d.fiscal_year,
-  d.quarter::public.quarter_code,
-  case when d.applies_to_all_barangays then null else b.id end,
-  d.applies_to_all_barangays,
-  o.id,
-  d.published_date,
-  d.file_size_bytes,
-  'application/pdf',
-  d.public_url,
-  'https://www.facebook.com/metrolydo/'
-from docs d
-left join public.barangays b on b.name = d.barangay_name
-left join public.offices o on o.code = d.office_code
-on conflict (doc_code) do update set
-  title = excluded.title,
-  document_type = excluded.document_type,
-  fiscal_year = excluded.fiscal_year,
-  quarter = excluded.quarter,
-  barangay_id = excluded.barangay_id,
-  applies_to_all_barangays = excluded.applies_to_all_barangays,
-  office_id = excluded.office_id,
-  published_date = excluded.published_date,
-  file_size_bytes = excluded.file_size_bytes,
-  file_mime_type = excluded.file_mime_type,
-  public_url = excluded.public_url,
-  source_post_url = excluded.source_post_url,
-  updated_at = now();
-
--- Seed service advisories currently shown in the portal.
-insert into public.service_advisories (
-  id,
-  office_id,
-  title,
-  status,
-  message,
-  created_at,
-  updated_at
-)
-select
-  v.id::uuid,
-  o.id,
-  v.title,
-  v.status::public.service_status,
-  v.message,
-  v.updated_at::timestamptz,
-  v.updated_at::timestamptz
-from (
-  values
-    (
-      '00000000-0000-0000-0000-000000000901',
-      'LYDO',
-      'Scheduled Maintenance Window',
-      'maintenance',
-      'Transparency uploads and issue tracking may be temporarily unavailable for 30 minutes.',
-      '2026-03-06T20:00:00+08:00'
-    ),
-    (
-      '00000000-0000-0000-0000-000000000902',
-      'LYDO',
-      'Daily Data Sync Complete',
-      'operational',
-      'Event registrations and disclosure registry data are fully synchronized.',
-      '2026-03-07T08:10:00+08:00'
-    ),
-    (
-      '00000000-0000-0000-0000-000000000903',
-      'LYDO',
-      'Facebook-to-Portal Sync Reminder',
-      'notice',
-      'Please link source Facebook post URLs for newly encoded events and programs.',
-      '2026-03-07T09:15:00+08:00'
-    )
-) as v(id, office_code, title, status, message, updated_at)
-left join public.offices o on o.code = v.office_code
-on conflict (id) do update set
-  office_id = excluded.office_id,
-  title = excluded.title,
-  status = excluded.status,
-  message = excluded.message,
-  updated_at = excluded.updated_at;
-
--- Seed barangay metrics and financial rows currently shown in the portal.
-with source_data as (
-  select * from (values
-    ('Ampid I', 500000::numeric, 385000::numeric, 12, 890, 4, 'compliant'),
-    ('Ampid II', 450000::numeric, 320000::numeric, 8, 560, 3, 'compliant'),
-    ('Banaba', 600000::numeric, 410000::numeric, 15, 1200, 6, 'compliant'),
-    ('Dulong Bayan I', 380000::numeric, 290000::numeric, 6, 420, 2, 'pending'),
-    ('Dulong Bayan II', 350000::numeric, 180000::numeric, 5, 310, 2, 'overdue'),
-    ('Guinayang', 520000::numeric, 460000::numeric, 14, 980, 5, 'compliant'),
-    ('Guitnang Bayan I', 480000::numeric, 350000::numeric, 10, 720, 4, 'compliant'),
-    ('Guitnang Bayan II', 460000::numeric, 390000::numeric, 9, 650, 3, 'pending'),
-    ('Gulod Malaya', 510000::numeric, 420000::numeric, 11, 830, 4, 'compliant'),
-    ('Malanday', 650000::numeric, 520000::numeric, 18, 1500, 7, 'compliant'),
-    ('Maly', 400000::numeric, 280000::numeric, 7, 480, 3, 'pending'),
-    ('Pintong Bocaue', 320000::numeric, 210000::numeric, 4, 280, 2, 'overdue'),
-    ('San Jose', 490000::numeric, 380000::numeric, 13, 760, 5, 'compliant'),
-    ('San Rafael', 440000::numeric, 310000::numeric, 9, 590, 3, 'compliant'),
-    ('Santa Ana', 550000::numeric, 470000::numeric, 16, 1100, 5, 'compliant'),
-    ('Santo Nino', 420000::numeric, 340000::numeric, 8, 520, 3, 'compliant')
-  ) as v(name, sk_budget, utilized_budget, activities, participants, organizations, compliance_status)
-),
-ratios as (
-  select * from (values
-    (1, 0.772727::numeric, 0.696629::numeric),
-    (2, 0.836364::numeric, 0.876404::numeric),
-    (3, 1.000000::numeric, 1.000000::numeric)
-  ) as r(month_no, allocated_ratio, utilized_ratio)
-)
-insert into public.barangay_youth_metrics (
-  barangay_id,
-  fiscal_year,
-  activities,
-  participants,
-  organizations,
-  compliance_status
-)
-select
-  b.id,
-  2026,
-  s.activities,
-  s.participants,
-  s.organizations,
-  s.compliance_status::public.barangay_compliance_status
-from source_data s
-join public.barangays b on b.name = s.name
-on conflict (barangay_id, fiscal_year) do update set
-  activities = excluded.activities,
-  participants = excluded.participants,
-  organizations = excluded.organizations,
-  compliance_status = excluded.compliance_status,
-  updated_at = now();
-
-with source_data as (
-  select * from (values
-    ('Ampid I', 500000::numeric, 385000::numeric),
-    ('Ampid II', 450000::numeric, 320000::numeric),
-    ('Banaba', 600000::numeric, 410000::numeric),
-    ('Dulong Bayan I', 380000::numeric, 290000::numeric),
-    ('Dulong Bayan II', 350000::numeric, 180000::numeric),
-    ('Guinayang', 520000::numeric, 460000::numeric),
-    ('Guitnang Bayan I', 480000::numeric, 350000::numeric),
-    ('Guitnang Bayan II', 460000::numeric, 390000::numeric),
-    ('Gulod Malaya', 510000::numeric, 420000::numeric),
-    ('Malanday', 650000::numeric, 520000::numeric),
-    ('Maly', 400000::numeric, 280000::numeric),
-    ('Pintong Bocaue', 320000::numeric, 210000::numeric),
-    ('San Jose', 490000::numeric, 380000::numeric),
-    ('San Rafael', 440000::numeric, 310000::numeric),
-    ('Santa Ana', 550000::numeric, 470000::numeric),
-    ('Santo Nino', 420000::numeric, 340000::numeric)
-  ) as v(name, sk_budget, utilized_budget)
-),
-ratios as (
-  select * from (values
-    (1, 0.772727::numeric, 0.696629::numeric),
-    (2, 0.836364::numeric, 0.876404::numeric),
-    (3, 1.000000::numeric, 1.000000::numeric)
-  ) as r(month_no, allocated_ratio, utilized_ratio)
-)
-insert into public.barangay_financials (
-  barangay_id,
-  fiscal_year,
-  month_no,
-  allocated_amount,
-  utilized_amount,
-  sk_budget
-)
-select
-  b.id,
-  2026,
-  r.month_no,
-  round(s.sk_budget * r.allocated_ratio, 2),
-  round(s.utilized_budget * r.utilized_ratio, 2),
-  s.sk_budget
-from source_data s
-join public.barangays b on b.name = s.name
-cross join ratios r
-on conflict (barangay_id, fiscal_year, month_no) do update set
-  allocated_amount = excluded.allocated_amount,
-  utilized_amount = excluded.utilized_amount,
-  sk_budget = excluded.sk_budget,
-  updated_at = now();
-
--- Seed SK full disclosure board rows currently shown in the portal.
-with board_rows as (
-  select * from (values
-    ('Ampid I', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (1/20/2026)'),
-    ('Ampid II', 'ok', 'ok', 'ok', 'issue', 'partial', 'Partially Compliant'),
-    ('Banaba', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Dulong Bayan I', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Dulong Bayan II', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Guinayang', 'ok', 'ok', 'ok', 'ok', 'partial', 'Partially Compliant'),
-    ('Gulod Malaya', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Guitnang Bayan I', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (1/20/2026)'),
-    ('Guitnang Bayan II', 'partial', 'ok', 'ok', 'issue', 'issue', 'Partially Compliant'),
-    ('Malanday', 'ok', 'ok', 'ok', 'issue', 'issue', 'Partially Compliant'),
-    ('Maly', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Pintong Bocaue', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (1/19/2026)'),
-    ('San Jose', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('San Rafael', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Santa Ana', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant'),
-    ('Santo Nino', 'ok', 'ok', 'ok', 'ok', 'partial', 'Partially Compliant')
-  ) as v(barangay_name, cbydp, abyip, annual_budget, rcb, mil, remarks)
-)
-insert into public.compliance_board_status (
-  barangay_id,
-  fiscal_year,
-  quarter,
-  cbydp,
-  abyip,
-  annual_budget,
-  rcb,
-  mil,
-  remarks
-)
-select
-  b.id,
-  2025,
-  'Q4'::public.quarter_code,
-  br.cbydp::public.doc_state,
-  br.abyip::public.doc_state,
-  br.annual_budget::public.doc_state,
-  br.rcb::public.doc_state,
-  br.mil::public.doc_state,
-  br.remarks
-from board_rows br
-join public.barangays b on b.name = br.barangay_name
-on conflict (barangay_id, fiscal_year, quarter) do update set
-  cbydp = excluded.cbydp,
-  abyip = excluded.abyip,
-  annual_budget = excluded.annual_budget,
-  rcb = excluded.rcb,
-  mil = excluded.mil,
-  remarks = excluded.remarks,
-  updated_at = now();
-
--- Seed monthly compliance rows for Jan-March 2026 using the same deterministic pattern
--- that previously powered the local fallback data.
-with ordered_barangays as (
-  select id, row_number() over (order by name) as b_index
-  from public.barangays
-),
-month_series as (
-  select generate_series(1, 3) as month_no
-),
-generated as (
-  select
-    ob.id as barangay_id,
-    2026 as fiscal_year,
-    ms.month_no,
-    make_date(2026, ms.month_no, 5) as due_date,
-    (case
-      when mod(ob.b_index * 13 + ms.month_no * 7, 11) = 0 then 'missing'
-      when mod(ob.b_index * 13 + ms.month_no * 7, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as mfr_status,
-    (case
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 5, 11) = 0 then 'missing'
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 5, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as mil_status,
-    (case
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 10, 11) = 0 then 'missing'
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 10, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as rcb_status,
-    (case
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 15, 11) = 0 then 'missing'
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 15, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as accomplishment_status,
-    (case
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 20, 11) = 0 then 'missing'
-      when mod(ob.b_index * 13 + ms.month_no * 7 + 20, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as census_status
-  from ordered_barangays ob
-  cross join month_series ms
-)
-insert into public.monthly_compliance (
-  barangay_id,
-  fiscal_year,
-  month_no,
-  due_date,
-  mfr_status,
-  mil_status,
-  rcb_status,
-  accomplishment_status,
-  census_status,
-  completion_percent,
-  report_document_id
-)
-select
-  g.barangay_id,
-  g.fiscal_year,
-  g.month_no,
-  g.due_date,
-  g.mfr_status,
-  g.mil_status,
-  g.rcb_status,
-  g.accomplishment_status,
-  g.census_status,
-  (
-    (
-      (case when g.mfr_status <> 'missing' then 1 else 0 end) +
-      (case when g.mil_status <> 'missing' then 1 else 0 end) +
-      (case when g.rcb_status <> 'missing' then 1 else 0 end) +
-      (case when g.accomplishment_status <> 'missing' then 1 else 0 end) +
-      (case when g.census_status <> 'missing' then 1 else 0 end)
-    ) * 20
-  )::smallint as completion_percent,
-  (select id from public.disclosure_documents where doc_code = 'doc-002' limit 1) as report_document_id
-from generated g
-on conflict (barangay_id, fiscal_year, month_no) do update set
-  due_date = excluded.due_date,
-  mfr_status = excluded.mfr_status,
-  mil_status = excluded.mil_status,
-  rcb_status = excluded.rcb_status,
-  accomplishment_status = excluded.accomplishment_status,
-  census_status = excluded.census_status,
-  completion_percent = excluded.completion_percent,
-  report_document_id = excluded.report_document_id,
-  updated_at = now();
+-- Consolidated prototype dataset is provided in 27_mock_data_all_tables.sql.
+-- This template block is intentionally kept as a no-op to avoid duplicate or
+-- conflicting demo records.
 
 commit;
 
@@ -1555,737 +959,14 @@ commit;
 
 begin;
 
--- Optional Template Pack B
--- Adds another reusable dataset (different from 09_template_seed_data.sql).
--- Safe to re-run: uses on conflict upserts.
-
--- Programs
-insert into public.programs (
-  slug,
-  title,
-  sector,
-  description,
-  start_date,
-  end_date,
-  schedule_text,
-  location,
-  status,
-  source_post_url,
-  published_at
-)
-values
-  (
-    'youth-digital-skills-bootcamp-2026',
-    'Youth Digital Skills Bootcamp 2026',
-    'LYDO',
-    'Hands-on training on productivity tools, basic web skills, and digital career pathways.',
-    date '2026-04-10',
-    date '2026-04-12',
-    null,
-    'Metro Manila Youth Center',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'barangay-innovation-microgrants-2026',
-    'Barangay Innovation Microgrants Program',
-    'LYDO',
-    'Seed support for barangay-led youth projects in livelihood, environment, and community service.',
-    date '2026-05-01',
-    date '2026-08-31',
-    null,
-    'Metro Manila',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'siklab-sports-wellness-caravan-2026',
-    'SIKLAB Sports and Wellness Caravan',
-    'SK',
-    'Multi-barangay youth wellness, sports, and mental health engagement caravan.',
-    date '2026-05-15',
-    date '2026-07-15',
-    null,
-    'Multiple Metro Manila Barangays',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'kabataan-disaster-readiness-labs-2026',
-    'Kabataan Disaster Readiness Labs',
-    'YDAC',
-    'Youth preparedness sessions with drills, risk mapping, and local volunteer mobilization.',
-    date '2026-06-05',
-    date '2026-06-30',
-    null,
-    'Metro Manila DRRM Grounds',
-    'published',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  )
-on conflict (slug) do update set
-  title = excluded.title,
-  sector = excluded.sector,
-  description = excluded.description,
-  start_date = excluded.start_date,
-  end_date = excluded.end_date,
-  schedule_text = excluded.schedule_text,
-  location = excluded.location,
-  status = excluded.status,
-  source_post_url = excluded.source_post_url,
-  published_at = excluded.published_at,
-  updated_at = now();
-
--- Events
-insert into public.events (
-  slug,
-  title,
-  sector,
-  description,
-  event_date,
-  location,
-  status,
-  source_post_url,
-  published_at
-)
-values
-  (
-    'youth-digital-skills-demo-day-2026',
-    'Youth Digital Skills Demo Day',
-    'LYDO',
-    'Showcase of outputs from the digital skills bootcamp.',
-    date '2026-04-20',
-    'Metro Manila Youth Center',
-    'upcoming',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'siklab-opening-games-2026',
-    'SIKLAB Opening Games',
-    'SK',
-    'Kickoff event for the sports and wellness caravan.',
-    date '2026-05-05',
-    'Municipal Covered Court',
-    'upcoming',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'municipal-youth-policy-consultation-2026',
-    'Municipal Youth Policy Consultation',
-    'LYDC',
-    'Open consultation on municipal youth policy priorities for FY 2027.',
-    date '2026-06-02',
-    'Sangguniang Bayan Hall',
-    'upcoming',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  ),
-  (
-    'climate-action-volunteer-day-2026',
-    'Climate Action Volunteer Day',
-    'YDAC',
-    'Tree planting and clean-up drive led by youth volunteers.',
-    date '2026-02-24',
-    'Barangay Banaba',
-    'past',
-    'https://www.facebook.com/metrolydo/',
-    now()
-  )
-on conflict (slug) do update set
-  title = excluded.title,
-  sector = excluded.sector,
-  description = excluded.description,
-  event_date = excluded.event_date,
-  location = excluded.location,
-  status = excluded.status,
-  source_post_url = excluded.source_post_url,
-  published_at = excluded.published_at,
-  updated_at = now();
-
--- Organizations
-insert into public.organizations (
-  slug,
-  name,
-  type,
-  focus,
-  source_tag,
-  status,
-  source_post_url
-)
-values
-  (
-    'metro-manila-youth-tech-club',
-    'Metro Manila Youth Tech Club',
-    'Youth Interest Group',
-    'Digital literacy, coding circles, and career readiness',
-    'Template Pack B',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'metro-manila-green-youth-coalition',
-    'Metro Manila Green Youth Coalition',
-    'Advocacy Network',
-    'Climate action and environmental stewardship',
-    'Template Pack B',
-    'partner',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'kabataang-lingkod-bayan-metro-manila',
-    'Kabataang Lingkod Bayan - Metro Manila',
-    'Civic Volunteer Group',
-    'Community service and civic volunteerism',
-    'Template Pack B',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  ),
-  (
-    'young-creative-media-circle',
-    'Young Creative Media Circle',
-    'Campus Youth Partner',
-    'Youth communications, media production, and storytelling',
-    'Template Pack B',
-    'active',
-    'https://www.facebook.com/metrolydo/'
-  )
-on conflict (slug) do update set
-  name = excluded.name,
-  type = excluded.type,
-  focus = excluded.focus,
-  source_tag = excluded.source_tag,
-  status = excluded.status,
-  source_post_url = excluded.source_post_url,
-  updated_at = now();
-
--- Disclosure documents
-with docs as (
-  select * from (values
-    (
-      'doc-101',
-      'SK Midyear Budget Utilization Statement',
-      'financial_statement',
-      2026,
-      'Q2',
-      null,
-      true,
-      'LYDO',
-      date '2026-06-15',
-      1887437::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-102',
-      'Youth Digital Skills Bootcamp Outcome Report',
-      'program_outcome',
-      2026,
-      'Q2',
-      null,
-      true,
-      'LYDO',
-      date '2026-06-20',
-      1468006::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-103',
-      'BAC Invitation to Bid - Youth Hub Equipment',
-      'bac_document',
-      2026,
-      'Q2',
-      null,
-      true,
-      'MUNICIPAL_BAC',
-      date '2026-06-08',
-      811008::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-104',
-      'Executive Order - Youth Volunteer Mobilization',
-      'executive_order',
-      2026,
-      'Q2',
-      null,
-      true,
-      'MAYOR_OFFICE',
-      date '2026-05-28',
-      503808::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-105',
-      'LYDC Resolution on Career Readiness Hubs',
-      'resolution',
-      2026,
-      'Q2',
-      null,
-      true,
-      'LYDC',
-      date '2026-06-12',
-      752640::bigint,
-      '/disclosure-registry-test.pdf'
-    ),
-    (
-      'doc-106',
-      'Ordinance on Barangay Youth Safety Protocol',
-      'ordinance',
-      2026,
-      'Q2',
-      'San Jose',
-      false,
-      'SANGGUNIANG_BAYAN',
-      date '2026-06-18',
-      992256::bigint,
-      '/disclosure-registry-test.pdf'
-    )
-  ) as v(
-    doc_code,
-    title,
-    document_type,
-    fiscal_year,
-    quarter,
-    barangay_name,
-    applies_to_all_barangays,
-    office_code,
-    published_date,
-    file_size_bytes,
-    public_url
-  )
-)
-insert into public.disclosure_documents (
-  doc_code,
-  title,
-  document_type,
-  fiscal_year,
-  quarter,
-  barangay_id,
-  applies_to_all_barangays,
-  office_id,
-  published_date,
-  file_size_bytes,
-  file_mime_type,
-  public_url,
-  source_post_url
-)
-select
-  d.doc_code,
-  d.title,
-  d.document_type::public.disclosure_doc_type,
-  d.fiscal_year,
-  d.quarter::public.quarter_code,
-  case when d.applies_to_all_barangays then null else b.id end,
-  d.applies_to_all_barangays,
-  o.id,
-  d.published_date,
-  d.file_size_bytes,
-  'application/pdf',
-  d.public_url,
-  'https://www.facebook.com/metrolydo/'
-from docs d
-left join public.barangays b on b.name = d.barangay_name
-left join public.offices o on o.code = d.office_code
-on conflict (doc_code) do update set
-  title = excluded.title,
-  document_type = excluded.document_type,
-  fiscal_year = excluded.fiscal_year,
-  quarter = excluded.quarter,
-  barangay_id = excluded.barangay_id,
-  applies_to_all_barangays = excluded.applies_to_all_barangays,
-  office_id = excluded.office_id,
-  published_date = excluded.published_date,
-  file_size_bytes = excluded.file_size_bytes,
-  file_mime_type = excluded.file_mime_type,
-  public_url = excluded.public_url,
-  source_post_url = excluded.source_post_url,
-  updated_at = now();
-
--- Service advisories
-insert into public.service_advisories (
-  id,
-  office_id,
-  title,
-  status,
-  message,
-  created_at,
-  updated_at
-)
-select
-  v.id::uuid,
-  o.id,
-  v.title,
-  v.status::public.service_status,
-  v.message,
-  v.updated_at::timestamptz,
-  v.updated_at::timestamptz
-from (
-  values
-    (
-      '00000000-0000-0000-0000-000000000911',
-      'LYDO',
-      'Data Validation Window',
-      'maintenance',
-      'Dashboard aggregates may refresh slowly while compliance data is validated.',
-      '2026-06-21T19:30:00+08:00'
-    ),
-    (
-      '00000000-0000-0000-0000-000000000912',
-      'LYDO',
-      'Public Reports Published',
-      'operational',
-      'Q2 transparency disclosures have been posted successfully.',
-      '2026-06-22T08:20:00+08:00'
-    ),
-    (
-      '00000000-0000-0000-0000-000000000913',
-      'LYDO',
-      'Reminder: Attach Source URLs',
-      'notice',
-      'Please include source links when encoding events and organizations.',
-      '2026-06-22T09:10:00+08:00'
-    )
-) as v(id, office_code, title, status, message, updated_at)
-left join public.offices o on o.code = v.office_code
-on conflict (id) do update set
-  office_id = excluded.office_id,
-  title = excluded.title,
-  status = excluded.status,
-  message = excluded.message,
-  updated_at = excluded.updated_at;
-
--- Ticket samples for KPI/testing
-with ticket_rows as (
-  select * from (values
-    (
-      'LYDO-TPL2-0001',
-      'Information Request',
-      'Request for SK budget breakdown',
-      'Please provide the detailed SK budget utilization per activity for Q2 2026.',
-      'citizen1@example.com',
-      'resolved',
-      2,
-      '2026-06-10T09:00:00+08:00',
-      '2026-06-11T15:20:00+08:00',
-      '2026-06-11T15:20:00+08:00'
-    ),
-    (
-      'LYDO-TPL2-0002',
-      'Complaint / Grievance',
-      'Delayed posting of barangay report',
-      'The monthly compliance report for our barangay appears delayed.',
-      'citizen2@example.com',
-      'in_progress',
-      3,
-      '2026-06-12T14:00:00+08:00',
-      '2026-06-13T10:00:00+08:00',
-      null
-    ),
-    (
-      'LYDO-TPL2-0003',
-      'Suggestion',
-      'Add downloadable CSV for board table',
-      'A CSV export for the board page would improve accessibility.',
-      'citizen3@example.com',
-      'received',
-      3,
-      '2026-06-14T08:30:00+08:00',
-      '2026-06-14T08:30:00+08:00',
-      null
-    ),
-    (
-      'LYDO-TPL2-0004',
-      'Service Request',
-      'Assistance with event registration',
-      'Unable to complete event registration due to form validation issue.',
-      'citizen4@example.com',
-      'closed',
-      2,
-      '2026-06-15T11:15:00+08:00',
-      '2026-06-16T09:05:00+08:00',
-      '2026-06-16T09:05:00+08:00'
-    )
-  ) as v(reference_no, type_name, subject, message, requester_email, status, priority, created_at, updated_at, resolved_at)
-)
-insert into public.citizen_tickets (
-  reference_no,
-  type_id,
-  subject,
-  message,
-  requester_email,
-  status,
-  priority,
-  created_at,
-  updated_at,
-  resolved_at
-)
-select
-  tr.reference_no,
-  tt.id,
-  tr.subject,
-  tr.message,
-  tr.requester_email::citext,
-  tr.status::public.ticket_status,
-  tr.priority,
-  tr.created_at::timestamptz,
-  tr.updated_at::timestamptz,
-  tr.resolved_at::timestamptz
-from ticket_rows tr
-join public.ticket_types tt on tt.name = tr.type_name
-on conflict (reference_no) do update set
-  type_id = excluded.type_id,
-  subject = excluded.subject,
-  message = excluded.message,
-  requester_email = excluded.requester_email,
-  status = excluded.status,
-  priority = excluded.priority,
-  updated_at = excluded.updated_at,
-  resolved_at = excluded.resolved_at;
-
--- Barangay youth metrics (FY 2026)
-with source_data as (
-  select * from (values
-    ('Ampid I', 14, 940, 4, 'compliant'),
-    ('Ampid II', 9, 610, 3, 'pending'),
-    ('Banaba', 17, 1320, 6, 'compliant'),
-    ('Dulong Bayan I', 8, 470, 2, 'pending'),
-    ('Dulong Bayan II', 6, 340, 2, 'overdue'),
-    ('Guinayang', 15, 1040, 5, 'compliant'),
-    ('Guitnang Bayan I', 11, 760, 4, 'compliant'),
-    ('Guitnang Bayan II', 10, 700, 3, 'pending'),
-    ('Gulod Malaya', 12, 880, 4, 'compliant'),
-    ('Malanday', 20, 1620, 7, 'compliant'),
-    ('Maly', 8, 510, 3, 'pending'),
-    ('Pintong Bocaue', 5, 300, 2, 'overdue'),
-    ('San Jose', 14, 820, 5, 'compliant'),
-    ('San Rafael', 10, 620, 3, 'compliant'),
-    ('Santa Ana', 17, 1180, 5, 'compliant'),
-    ('Santo Nino', 9, 560, 3, 'compliant')
-  ) as v(name, activities, participants, organizations, compliance_status)
-)
-insert into public.barangay_youth_metrics (
-  barangay_id,
-  fiscal_year,
-  activities,
-  participants,
-  organizations,
-  compliance_status
-)
-select
-  b.id,
-  2026,
-  s.activities,
-  s.participants,
-  s.organizations,
-  s.compliance_status::public.barangay_compliance_status
-from source_data s
-join public.barangays b on b.name = s.name
-on conflict (barangay_id, fiscal_year) do update set
-  activities = excluded.activities,
-  participants = excluded.participants,
-  organizations = excluded.organizations,
-  compliance_status = excluded.compliance_status,
-  updated_at = now();
-
--- Financial rows for Apr-Jun 2026
-with source_data as (
-  select * from (values
-    ('Ampid I', 500000::numeric, 385000::numeric),
-    ('Ampid II', 450000::numeric, 320000::numeric),
-    ('Banaba', 600000::numeric, 410000::numeric),
-    ('Dulong Bayan I', 380000::numeric, 290000::numeric),
-    ('Dulong Bayan II', 350000::numeric, 180000::numeric),
-    ('Guinayang', 520000::numeric, 460000::numeric),
-    ('Guitnang Bayan I', 480000::numeric, 350000::numeric),
-    ('Guitnang Bayan II', 460000::numeric, 390000::numeric),
-    ('Gulod Malaya', 510000::numeric, 420000::numeric),
-    ('Malanday', 650000::numeric, 520000::numeric),
-    ('Maly', 400000::numeric, 280000::numeric),
-    ('Pintong Bocaue', 320000::numeric, 210000::numeric),
-    ('San Jose', 490000::numeric, 380000::numeric),
-    ('San Rafael', 440000::numeric, 310000::numeric),
-    ('Santa Ana', 550000::numeric, 470000::numeric),
-    ('Santo Nino', 420000::numeric, 340000::numeric)
-  ) as v(name, sk_budget, utilized_budget)
-),
-ratios as (
-  select * from (values
-    (4, 0.74::numeric, 0.62::numeric),
-    (5, 0.86::numeric, 0.74::numeric),
-    (6, 0.94::numeric, 0.83::numeric)
-  ) as r(month_no, allocated_ratio, utilized_ratio)
-)
-insert into public.barangay_financials (
-  barangay_id,
-  fiscal_year,
-  month_no,
-  allocated_amount,
-  utilized_amount,
-  sk_budget
-)
-select
-  b.id,
-  2026,
-  r.month_no,
-  round(s.sk_budget * r.allocated_ratio, 2),
-  round(s.utilized_budget * r.utilized_ratio, 2),
-  s.sk_budget
-from source_data s
-join public.barangays b on b.name = s.name
-cross join ratios r
-on conflict (barangay_id, fiscal_year, month_no) do update set
-  allocated_amount = excluded.allocated_amount,
-  utilized_amount = excluded.utilized_amount,
-  sk_budget = excluded.sk_budget,
-  updated_at = now();
-
--- Board rows for Q1 2026
-with board_rows as (
-  select * from (values
-    ('Ampid I', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Ampid II', 'ok', 'ok', 'ok', 'partial', 'partial', 'Partially Compliant (Q1 2026)'),
-    ('Banaba', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Dulong Bayan I', 'ok', 'ok', 'partial', 'ok', 'ok', 'Partially Compliant (Q1 2026)'),
-    ('Dulong Bayan II', 'partial', 'partial', 'issue', 'issue', 'issue', 'Partially Compliant (Q1 2026)'),
-    ('Guinayang', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Guitnang Bayan I', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Guitnang Bayan II', 'ok', 'ok', 'ok', 'partial', 'issue', 'Partially Compliant (Q1 2026)'),
-    ('Gulod Malaya', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Malanday', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Maly', 'ok', 'ok', 'partial', 'partial', 'partial', 'Partially Compliant (Q1 2026)'),
-    ('Pintong Bocaue', 'partial', 'issue', 'issue', 'issue', 'issue', 'Partially Compliant (Q1 2026)'),
-    ('San Jose', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('San Rafael', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Santa Ana', 'ok', 'ok', 'ok', 'ok', 'ok', 'Fully Compliant (Q1 2026)'),
-    ('Santo Nino', 'ok', 'ok', 'ok', 'ok', 'partial', 'Partially Compliant (Q1 2026)')
-  ) as v(barangay_name, cbydp, abyip, annual_budget, rcb, mil, remarks)
-)
-insert into public.compliance_board_status (
-  barangay_id,
-  fiscal_year,
-  quarter,
-  cbydp,
-  abyip,
-  annual_budget,
-  rcb,
-  mil,
-  remarks
-)
-select
-  b.id,
-  2026,
-  'Q1'::public.quarter_code,
-  br.cbydp::public.doc_state,
-  br.abyip::public.doc_state,
-  br.annual_budget::public.doc_state,
-  br.rcb::public.doc_state,
-  br.mil::public.doc_state,
-  br.remarks
-from board_rows br
-join public.barangays b on b.name = br.barangay_name
-on conflict (barangay_id, fiscal_year, quarter) do update set
-  cbydp = excluded.cbydp,
-  abyip = excluded.abyip,
-  annual_budget = excluded.annual_budget,
-  rcb = excluded.rcb,
-  mil = excluded.mil,
-  remarks = excluded.remarks,
-  updated_at = now();
-
--- Monthly compliance rows for Apr-Jun 2026
-with ordered_barangays as (
-  select id, row_number() over (order by name) as b_index
-  from public.barangays
-),
-month_series as (
-  select generate_series(4, 6) as month_no
-),
-generated as (
-  select
-    ob.id as barangay_id,
-    2026 as fiscal_year,
-    ms.month_no,
-    make_date(2026, ms.month_no, 5) as due_date,
-    (case
-      when mod(ob.b_index * 17 + ms.month_no * 9, 11) = 0 then 'missing'
-      when mod(ob.b_index * 17 + ms.month_no * 9, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as mfr_status,
-    (case
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 5, 11) = 0 then 'missing'
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 5, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as mil_status,
-    (case
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 10, 11) = 0 then 'missing'
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 10, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as rcb_status,
-    (case
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 15, 11) = 0 then 'missing'
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 15, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as accomplishment_status,
-    (case
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 20, 11) = 0 then 'missing'
-      when mod(ob.b_index * 17 + ms.month_no * 9 + 20, 7) = 0 then 'late'
-      else 'submitted'
-    end)::public.submission_state as census_status
-  from ordered_barangays ob
-  cross join month_series ms
-)
-insert into public.monthly_compliance (
-  barangay_id,
-  fiscal_year,
-  month_no,
-  due_date,
-  mfr_status,
-  mil_status,
-  rcb_status,
-  accomplishment_status,
-  census_status,
-  completion_percent,
-  report_document_id
-)
-select
-  g.barangay_id,
-  g.fiscal_year,
-  g.month_no,
-  g.due_date,
-  g.mfr_status,
-  g.mil_status,
-  g.rcb_status,
-  g.accomplishment_status,
-  g.census_status,
-  (
-    (
-      (case when g.mfr_status <> 'missing' then 1 else 0 end) +
-      (case when g.mil_status <> 'missing' then 1 else 0 end) +
-      (case when g.rcb_status <> 'missing' then 1 else 0 end) +
-      (case when g.accomplishment_status <> 'missing' then 1 else 0 end) +
-      (case when g.census_status <> 'missing' then 1 else 0 end)
-    ) * 20
-  )::smallint as completion_percent,
-  (select id from public.disclosure_documents where doc_code = 'doc-102' limit 1) as report_document_id
-from generated g
-on conflict (barangay_id, fiscal_year, month_no) do update set
-  due_date = excluded.due_date,
-  mfr_status = excluded.mfr_status,
-  mil_status = excluded.mil_status,
-  rcb_status = excluded.rcb_status,
-  accomplishment_status = excluded.accomplishment_status,
-  census_status = excluded.census_status,
-  completion_percent = excluded.completion_percent,
-  report_document_id = excluded.report_document_id,
-  updated_at = now();
+-- Consolidated prototype dataset is provided in 27_mock_data_all_tables.sql.
+-- This optional template pack is intentionally kept as a no-op to prevent
+-- duplicate, stale, or conflicting seed records.
 
 commit;
 
 -- END FILE: supabase/sql/11_template_seed_data_pack_b.sql
+
 
 -- ===========================================================================
 -- BEGIN FILE: supabase/sql/12_admin_accounts.sql
@@ -2377,7 +1058,7 @@ begin
     nullif(new.raw_user_meta_data ->> 'full_name', ''),
     nullif(new.raw_user_meta_data ->> 'display_name', ''),
     nullif(new.raw_user_meta_data ->> 'contact_number', ''),
-    coalesce(nullif(new.raw_user_meta_data ->> 'municipality', ''), 'Metro Manila'),
+    coalesce(nullif(new.raw_user_meta_data ->> 'municipality', ''), 'Prototype Municipality'),
     selected_barangay_id
   )
   on conflict (user_id) do update
@@ -2429,7 +1110,6 @@ declare
     'barangay_youth_metrics',
     'compliance_board_status',
     'monthly_compliance',
-    'service_advisories',
     'ticket_types'
   ];
 begin
@@ -3050,7 +1730,6 @@ declare
     'barangay_youth_metrics',
     'compliance_board_status',
     'monthly_compliance',
-    'service_advisories',
     'ticket_types',
     'citizen_tickets',
     'event_registrations',
@@ -4166,417 +2845,361 @@ commit;
 
 begin;
 
--- Ensures there is at least one mock row for every table.
--- User-dependent tables are seeded only when auth.users has at least one row.
-with sample_users as (
-  select
-    (select id from auth.users order by created_at asc limit 1) as user_a,
-    (select id from auth.users order by created_at asc offset 1 limit 1) as user_b
-)
-insert into public.user_profiles (user_id, email, full_name, display_name, municipality, contact_number)
-select user_a, 'mock.user.a@example.com', 'Mock User A', 'MockA', 'Metro Manila', '+639171111111'
-from sample_users
-where user_a is not null
-on conflict (user_id) do update
-set email = excluded.email,
-    full_name = excluded.full_name,
-    display_name = excluded.display_name,
-    municipality = excluded.municipality,
-    contact_number = excluded.contact_number,
-    updated_at = now();
-
-insert into public.roles (code, label, description)
-values ('admin', 'Administrator', 'Full platform administration')
+insert into public.roles (code, label, description) values
+  ('admin','Administrator','Prototype administrator account role'),
+  ('staff','LYDO Staff','Prototype municipal operations role'),
+  ('sk','Barangay SK','Prototype SK governance role'),
+  ('youth','Youth User','Prototype youth participant role')
 on conflict (code) do update
 set label = excluded.label,
     description = excluded.description;
 
-insert into public.barangays (id, name, latitude, longitude, sk_chairperson, youth_population)
-values ('00000000-0000-0000-0000-00000000b001', 'Mock Barangay One', 14.700000, 121.120000, 'Mock SK Chair', 1200)
-on conflict (id) do update
-set name = excluded.name,
-    latitude = excluded.latitude,
-    longitude = excluded.longitude,
-    sk_chairperson = excluded.sk_chairperson,
-    youth_population = excluded.youth_population,
-    updated_at = now();
+insert into public.ticket_types (name) values
+  ('Information Request'),
+  ('Complaint / Grievance'),
+  ('Suggestion'),
+  ('Service Request')
+on conflict (name) do nothing;
 
-insert into public.offices (id, name, code)
-values ('00000000-0000-0000-0000-00000000c001', 'Mock Youth Office', 'MOCK_OFFICE')
-on conflict (id) do update
-set name = excluded.name,
-    code = excluded.code,
-    updated_at = now();
+insert into public.offices (name, code) values
+  ('San Mateo LYDO Prototype Office', 'LYDO'),
+  ('San Mateo LYDO Prototype Council', 'LYDC'),
+  ('Prototype Bids and Awards Committee', 'MUNICIPAL_BAC'),
+  ('Prototype Mayor Office', 'MAYOR_OFFICE'),
+  ('Prototype Sangguniang Bayan', 'SANGGUNIANG_BAYAN')
+on conflict (code) do update set
+  name = excluded.name,
+  updated_at = now();
 
 with sample_users as (
-  select (select id from auth.users order by created_at asc limit 1) as user_a
-),
-admin_role as (
-  select id as role_id from public.roles where code = 'admin' limit 1
+  select
+    (select id from auth.users order by created_at asc limit 1) as user_a,
+    (select id from auth.users order by created_at asc offset 1 limit 1) as user_b,
+    (select id from auth.users order by created_at asc offset 2 limit 1) as user_c,
+    (select id from auth.users order by created_at asc offset 3 limit 1) as user_d
 )
-insert into public.user_roles (user_id, role_id, assigned_by)
-select su.user_a, ar.role_id, su.user_a
-from sample_users su
-cross join admin_role ar
-where su.user_a is not null
-on conflict (user_id, role_id) do nothing;
+insert into public.user_profiles (user_id, email, full_name, display_name, municipality, contact_number, bio)
+select user_a, 'prototype.admin@example.com', 'Prototype Admin I', 'Prototype Admin', 'Prototype Municipality', '+639100000001', 'Prototype admin profile for demo.' from sample_users where user_a is not null
+union all
+select user_b, 'prototype.user1@example.com', 'Prototype User I', 'Proto User I', 'Prototype Municipality', '+639100000002', 'Prototype youth profile.' from sample_users where user_b is not null
+union all
+select user_c, 'prototype.user2@example.com', 'Prototype User II', 'Proto User II', 'Prototype Municipality', '+639100000003', 'Prototype youth profile.' from sample_users where user_c is not null
+union all
+select user_d, 'prototype.user3@example.com', 'Prototype User III', 'Proto User III', 'Prototype Municipality', '+639100000004', null from sample_users where user_d is not null
+on conflict (user_id) do update set
+  email = excluded.email,
+  full_name = excluded.full_name,
+  display_name = excluded.display_name,
+  municipality = excluded.municipality,
+  contact_number = excluded.contact_number,
+  bio = excluded.bio,
+  updated_at = now();
 
 insert into public.programs (
-  id, slug, title, sector, description, start_date, end_date, schedule_text, location,
-  status, barangay_id, source_post_url, published_at
-)
-values (
-  '00000000-0000-0000-0000-00000000d001',
-  'mock-program-all-table-seed',
-  'Mock Program Seed',
-  'LYDO',
-  'Mock program for all-table seed coverage.',
-  date '2026-05-10',
-  date '2026-05-12',
-  '8:00 AM to 5:00 PM',
-  'Mock Youth Center',
-  'published',
-  '00000000-0000-0000-0000-00000000b001',
-  'https://www.facebook.com/metrolydo/',
-  now()
-)
-on conflict (id) do update
-set title = excluded.title,
-    description = excluded.description,
-    updated_at = now();
+  slug, title, sector, description, start_date, end_date, location, status,
+  source_post_url, published_at, registration_form_url, registration_sheet_url, external_attendance_enabled
+) values
+  ('testing-program-i','Program I','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',date '2026-06-01',date '2026-06-02','Prototype Youth Center','published','https://example.com/prototype/program-i',now(),'https://docs.google.com/forms/d/e/testing-program-i/viewform','https://docs.google.com/spreadsheets/d/testing-program-i/pubhtml',true),
+  ('testing-program-ii','Program II','SK','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.',date '2026-06-10',date '2026-06-11','Barangay I Covered Court','draft','https://example.com/prototype/program-ii',null,null,null,false),
+  ('testing-program-iii','Program III','YDAC','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.',date '2026-07-01',date '2026-07-02','Barangay II Activity Hall','upcoming','https://example.com/prototype/program-iii',now(),null,null,false),
+  ('testing-program-iv','Program IV','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.',date '2026-05-10',date '2026-05-12','Prototype Activity Hall','ongoing','https://example.com/prototype/program-iv',now(),null,null,false),
+  ('testing-program-v','Program V','SK','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur non nulla sit amet nisl tempus convallis quis ac lectus.',date '2026-04-01',date '2026-04-02','Prototype Sports Complex','archived','https://example.com/prototype/program-v',now(),null,null,false),
+  ('testing-program-vi','Program VI','YDAC','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.',date '2026-08-03',date '2026-08-04','Barangay III Youth Center','published','https://example.com/prototype/program-vi',now(),null,null,false),
+  ('testing-program-vii','Program VII','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas sed diam eget risus varius blandit sit amet non magna.',date '2026-09-01',date '2026-09-03','Barangay IV Session Hall','draft','https://example.com/prototype/program-vii',null,null,null,false),
+  ('testing-program-viii','Program VIII','SK','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean lacinia bibendum nulla sed consectetur.',date '2026-10-11',date '2026-10-12','Barangay V Community Center','upcoming','https://example.com/prototype/program-viii',now(),null,null,false),
+  ('testing-program-ix','Program IX','YDAC','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sed odio dui. Donec ullamcorper nulla non metus auctor fringilla.',date '2026-03-18',date '2026-03-19','Prototype Covered Court','ongoing','https://example.com/prototype/program-ix',now(),null,null,false),
+  ('testing-program-x','Program X','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras mattis consectetur purus sit amet fermentum.',date '2026-02-08',date '2026-02-09','Prototype Municipal Hall','archived','https://example.com/prototype/program-x',now(),null,null,false)
+on conflict (slug) do update set
+  title = excluded.title, sector = excluded.sector, description = excluded.description,
+  start_date = excluded.start_date, end_date = excluded.end_date, location = excluded.location,
+  status = excluded.status, source_post_url = excluded.source_post_url, published_at = excluded.published_at,
+  registration_form_url = excluded.registration_form_url, registration_sheet_url = excluded.registration_sheet_url,
+  external_attendance_enabled = excluded.external_attendance_enabled, updated_at = now();
 
 insert into public.events (
-  id, slug, title, sector, description, event_date, location, status, barangay_id, source_post_url,
-  capacity, published_at, start_time, end_time
-)
-values (
-  '00000000-0000-0000-0000-00000000e001',
-  'mock-event-all-table-seed',
-  'Mock Event Seed',
-  'LYDO',
-  'Mock event for all-table seed coverage.',
-  date '2026-05-15',
-  'Mock Covered Court',
-  'upcoming',
-  '00000000-0000-0000-0000-00000000b001',
-  'https://www.facebook.com/metrolydo/',
-  100,
-  now(),
-  time '09:00',
-  time '12:00'
-)
-on conflict (id) do update
-set title = excluded.title,
-    description = excluded.description,
-    capacity = excluded.capacity,
-    updated_at = now();
+  slug, title, sector, description, event_date, location, status, source_post_url,
+  capacity, published_at, start_time, end_time, registration_form_url, registration_sheet_url, external_attendance_enabled
+) values
+  ('testing-event-i','Event I','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',date '2026-06-20','Prototype Municipal Hall','upcoming','https://example.com/prototype/event-i',120,now(),time '09:00',time '12:00','https://docs.google.com/forms/d/e/testing-event-i/viewform','https://docs.google.com/spreadsheets/d/testing-event-i/pubhtml',true),
+  ('testing-event-ii','Event II','SK','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.',date '2026-06-12','Prototype Sports Complex','ongoing','https://example.com/prototype/event-ii',200,now(),time '13:00',time '17:00',null,null,false),
+  ('testing-event-iii','Event III','YDAC','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.',date '2026-05-10','Barangay III Covered Court','past','https://example.com/prototype/event-iii',80,now(),time '08:00',time '10:00',null,null,false),
+  ('testing-event-iv','Event IV','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.',date '2026-07-15','Barangay IV Activity Hall','cancelled','https://example.com/prototype/event-iv',90,now(),time '10:00',time '12:00',null,null,false),
+  ('testing-event-v','Event V','SK','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur non nulla sit amet nisl tempus convallis quis ac lectus.',date '2026-08-01','Prototype Youth Center','published','https://example.com/prototype/event-v',150,now(),time '14:00',time '16:00',null,null,false),
+  ('testing-event-vi','Event VI','YDAC','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.',date '2026-09-05','Prototype Covered Court','upcoming','https://example.com/prototype/event-vi',130,now(),time '09:30',time '11:30',null,null,false),
+  ('testing-event-vii','Event VII','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas sed diam eget risus varius blandit sit amet non magna.',date '2026-03-22','Barangay I Covered Court','past','https://example.com/prototype/event-vii',95,now(),time '08:30',time '10:00',null,null,false),
+  ('testing-event-viii','Event VIII','SK','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean lacinia bibendum nulla sed consectetur.',date '2026-10-14','Barangay II Activity Hall','cancelled','https://example.com/prototype/event-viii',100,now(),time '15:00',time '17:00',null,null,false),
+  ('testing-event-ix','Event IX','YDAC','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sed odio dui. Donec ullamcorper nulla non metus auctor fringilla.',date '2026-11-02','Barangay V Community Center','upcoming','https://example.com/prototype/event-ix',180,now(),time '09:00',time '12:00',null,null,false),
+  ('testing-event-x','Event X','LYDO','Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras mattis consectetur purus sit amet fermentum.',date '2026-04-11','Prototype Activity Hall','ongoing','https://example.com/prototype/event-x',110,now(),time '13:30',time '16:30',null,null,false)
+on conflict (slug) do update set
+  title = excluded.title, sector = excluded.sector, description = excluded.description,
+  event_date = excluded.event_date, location = excluded.location, status = excluded.status,
+  source_post_url = excluded.source_post_url, capacity = excluded.capacity, published_at = excluded.published_at,
+  start_time = excluded.start_time, end_time = excluded.end_time,
+  registration_form_url = excluded.registration_form_url, registration_sheet_url = excluded.registration_sheet_url,
+  external_attendance_enabled = excluded.external_attendance_enabled, updated_at = now();
 
-insert into public.organizations (
-  id, slug, name, type, focus, source_tag, status, barangay_id, source_post_url
-)
-values (
-  '00000000-0000-0000-0000-00000000f001',
-  'mock-org-all-table-seed',
-  'Mock Youth Organization',
-  'Youth Interest Group',
-  'Leadership and volunteerism',
-  'Mock seed',
-  'active',
-  '00000000-0000-0000-0000-00000000b001',
-  'https://www.facebook.com/metrolydo/'
-)
-on conflict (id) do update
-set name = excluded.name,
-    focus = excluded.focus,
-    updated_at = now();
+insert into public.organizations (slug, name, type, focus, source_tag, status, source_post_url) values
+  ('testing-youth-organization-i','Testing Youth Organization I','Civic Volunteer Group','Community service and civic volunteerism','Prototype seed dataset','active','https://example.com/prototype/org-i'),
+  ('testing-youth-organization-ii','Testing Youth Organization II','Advocacy Network','Environmental awareness','Prototype seed dataset','partner','https://example.com/prototype/org-ii'),
+  ('testing-youth-organization-iii','Testing Youth Organization III','Multi-organization Network','Youth leadership','Prototype seed dataset','active','https://example.com/prototype/org-iii'),
+  ('testing-youth-organization-iv','Testing Youth Organization IV','Youth Interest Group','Digital literacy','Prototype seed dataset','inactive','https://example.com/prototype/org-iv'),
+  ('testing-youth-organization-v','Testing Youth Organization V','Youth Governance','Education support','Prototype seed dataset','active','https://example.com/prototype/org-v'),
+  ('testing-youth-organization-vi','Testing Youth Organization VI','Campus Youth Partner','Sports and wellness','Prototype seed dataset','partner','https://example.com/prototype/org-vi')
+on conflict (slug) do update set
+  name = excluded.name, type = excluded.type, focus = excluded.focus, source_tag = excluded.source_tag,
+  status = excluded.status, source_post_url = excluded.source_post_url, updated_at = now();
 
-with sample_users as (
-  select (select id from auth.users order by created_at asc limit 1) as user_a
+with docs as (
+  select * from (values
+    ('DOC-001','Testing Transparency Document I','program_outcome',2026,'Q1',null,true,'LYDO',date '2026-03-15',1048576::bigint,'https://example.com/files/doc-001.pdf','transparency-documents/prototype/testing-document-i.pdf',null),
+    ('DOC-002','Testing Transparency Document II','ordinance',2026,'Q2','Barangay I',false,'SANGGUNIANG_BAYAN',date '2026-04-20',1153433::bigint,'https://example.com/files/doc-002.pdf','transparency-documents/prototype/testing-document-ii.pdf',null),
+    ('DOC-003','Testing Transparency Document III','financial_statement',2026,'Q2',null,true,'LYDO',date '2026-05-10',1268777::bigint,'https://example.com/files/doc-003.pdf','transparency-documents/prototype/testing-document-iii.pdf',null),
+    ('DOC-004','Testing Transparency Document IV','resolution',2026,'Q3',null,true,'LYDC',date '2026-06-05',978944::bigint,'https://example.com/files/doc-004.pdf','transparency-documents/prototype/testing-document-iv.pdf',null),
+    ('DOC-005','Testing Transparency Document V','bac_document',2026,'Q4',null,true,'MUNICIPAL_BAC',date '2026-07-08',867530::bigint,'https://example.com/files/doc-005.pdf','transparency-documents/prototype/testing-document-v.pdf',null),
+    ('DOC-006','Testing Transparency Document VI','other',2026,'Q4','Barangay II',false,'MAYOR_OFFICE',date '2026-07-25',734003::bigint,'https://example.com/files/doc-006.pdf','transparency-documents/prototype/testing-document-vi.pdf','Other / Custom Type'),
+    ('DOC-007','Testing Transparency Document VII','program_outcome',2026,'Q1','Barangay III',false,'LYDO',date '2026-02-18',899121::bigint,'https://example.com/files/doc-007.pdf','transparency-documents/prototype/testing-document-vii.pdf',null),
+    ('DOC-008','Testing Transparency Document VIII','ordinance',2026,'Q2',null,true,'SANGGUNIANG_BAYAN',date '2026-03-29',1004200::bigint,'https://example.com/files/doc-008.pdf','transparency-documents/prototype/testing-document-viii.pdf',null),
+    ('DOC-009','Testing Transparency Document IX','financial_statement',2026,'Q3','Barangay IV',false,'MAYOR_OFFICE',date '2026-08-14',943211::bigint,'https://example.com/files/doc-009.pdf','transparency-documents/prototype/testing-document-ix.pdf',null),
+    ('DOC-010','Testing Transparency Document X','bac_document',2026,'Q4',null,true,'MUNICIPAL_BAC',date '2026-09-06',888765::bigint,'https://example.com/files/doc-010.pdf','transparency-documents/prototype/testing-document-x.pdf',null)
+  ) as v(doc_code, title, document_type, fiscal_year, quarter, barangay_name, applies_to_all_barangays, office_code, published_date, file_size_bytes, public_url, storage_path, document_type_other)
 )
-insert into public.user_program_memberships (id, user_id, program_id, left_at)
-select '00000000-0000-0000-0000-00000000f101', su.user_a, '00000000-0000-0000-0000-00000000d001', null
-from sample_users su
-where su.user_a is not null
-on conflict (id) do nothing;
-
-with sample_users as (
-  select (select id from auth.users order by created_at asc limit 1) as user_a
-)
-insert into public.user_org_memberships (id, user_id, organization_id, left_at)
-select '00000000-0000-0000-0000-00000000f102', su.user_a, '00000000-0000-0000-0000-00000000f001', null
-from sample_users su
-where su.user_a is not null
-on conflict (id) do nothing;
-
-with sample_users as (
-  select (select id from auth.users order by created_at asc limit 1) as user_a
-)
-insert into public.event_registrations (
-  id, user_id, event_id, full_name, email, contact_number, municipality, barangay_id,
-  registration_status, registered_at, cancelled_at, source, gform_sync_status
-)
-select
-  '00000000-0000-0000-0000-00000000f103',
-  su.user_a,
-  '00000000-0000-0000-0000-00000000e001',
-  'Mock User A',
-  'mock.user.a@example.com',
-  '+639171111111',
-  'Metro Manila',
-  '00000000-0000-0000-0000-00000000b001',
-  'registered',
-  now(),
-  null,
-  'portal_direct',
-  'pending'
-from sample_users su
-where su.user_a is not null
-on conflict (id) do update
-set registration_status = excluded.registration_status,
-    updated_at = now();
-
-insert into public.ticket_types (id, name)
-values (9001, 'Mock Ticket Type')
-on conflict (id) do update
-set name = excluded.name;
-
 insert into public.disclosure_documents (
-  id, doc_code, title, document_type, fiscal_year, quarter, barangay_id, applies_to_all_barangays,
-  office_id, published_date, file_size_bytes, file_mime_type, public_url, source_post_url
+  doc_code, title, document_type, fiscal_year, quarter, barangay_id, applies_to_all_barangays,
+  office_id, published_date, file_size_bytes, file_mime_type, public_url, storage_path, source_post_url, document_type_other
 )
-values (
-  '00000000-0000-0000-0000-00000000a101',
-  'mock-doc-all-table-seed',
-  'Mock Disclosure Document',
-  'program_outcome',
-  2026,
-  'Q2',
-  '00000000-0000-0000-0000-00000000b001',
-  false,
-  '00000000-0000-0000-0000-00000000c001',
-  date '2026-05-20',
-  1234567,
-  'application/pdf',
-  '/disclosure-registry-test.pdf',
-  'https://www.facebook.com/metrolydo/'
-)
-on conflict (id) do update
-set title = excluded.title,
-    updated_at = now();
-
-with sample_users as (
-  select (select id from auth.users order by created_at asc limit 1) as user_a
-)
-insert into public.document_downloads (id, document_id, user_id, ip_hash, user_agent)
 select
-  '00000000-0000-0000-0000-00000000a102',
-  '00000000-0000-0000-0000-00000000a101',
-  su.user_a,
-  'mock_ip_hash',
-  'mock-browser'
-from sample_users su
-on conflict (id) do nothing;
+  d.doc_code, d.title, d.document_type::public.disclosure_doc_type, d.fiscal_year, d.quarter::public.quarter_code,
+  case when d.applies_to_all_barangays then null else b.id end, d.applies_to_all_barangays, o.id, d.published_date,
+  d.file_size_bytes, 'application/pdf', d.public_url, d.storage_path, 'https://example.com/prototype/transparency-source', d.document_type_other
+from docs d
+left join public.barangays b on b.name = d.barangay_name
+left join public.offices o on o.code = d.office_code
+on conflict (doc_code) do update set
+  title = excluded.title, document_type = excluded.document_type, fiscal_year = excluded.fiscal_year,
+  quarter = excluded.quarter, barangay_id = excluded.barangay_id, applies_to_all_barangays = excluded.applies_to_all_barangays,
+  office_id = excluded.office_id, published_date = excluded.published_date, file_size_bytes = excluded.file_size_bytes,
+  file_mime_type = excluded.file_mime_type, public_url = excluded.public_url, storage_path = excluded.storage_path,
+  source_post_url = excluded.source_post_url, document_type_other = excluded.document_type_other, updated_at = now();
 
-insert into public.barangay_financials (
-  id, barangay_id, fiscal_year, month_no, allocated_amount, utilized_amount, sk_budget
+with metrics as (
+  select * from (values
+    ('Barangay I', 11, 780, 4, 'compliant'),
+    ('Barangay II', 8, 620, 3, 'pending'),
+    ('Barangay III', 13, 920, 5, 'compliant'),
+    ('Barangay IV', 7, 510, 2, 'pending'),
+    ('Barangay V', 15, 1100, 6, 'compliant'),
+    ('Barangay VI', 6, 470, 2, 'overdue'),
+    ('Barangay VII', 10, 690, 3, 'compliant'),
+    ('Barangay VIII', 9, 650, 3, 'pending'),
+    ('Barangay IX', 12, 840, 4, 'compliant'),
+    ('Barangay X', 8, 590, 3, 'compliant')
+  ) as v(name, activities, participants, organizations, compliance_status)
 )
-values (
-  '00000000-0000-0000-0000-00000000a103',
-  '00000000-0000-0000-0000-00000000b001',
-  2026,
-  4,
-  750000.00,
-  520000.00,
-  900000.00
-)
-on conflict (barangay_id, fiscal_year, month_no) do update
-set allocated_amount = excluded.allocated_amount,
-    utilized_amount = excluded.utilized_amount,
-    sk_budget = excluded.sk_budget,
-    updated_at = now();
+insert into public.barangay_youth_metrics (barangay_id, fiscal_year, activities, participants, organizations, compliance_status)
+select b.id, 2026, m.activities, m.participants, m.organizations, m.compliance_status::public.barangay_compliance_status
+from metrics m
+join public.barangays b on b.name = m.name
+on conflict (barangay_id, fiscal_year) do update set
+  activities = excluded.activities,
+  participants = excluded.participants,
+  organizations = excluded.organizations,
+  compliance_status = excluded.compliance_status,
+  updated_at = now();
 
-insert into public.barangay_youth_metrics (
-  id, barangay_id, fiscal_year, activities, participants, organizations, compliance_status
+with fin as (
+  select * from (values
+    ('Barangay I', 520000::numeric, 395000::numeric),
+    ('Barangay II', 480000::numeric, 330000::numeric),
+    ('Barangay III', 560000::numeric, 420000::numeric),
+    ('Barangay IV', 430000::numeric, 300000::numeric),
+    ('Barangay V', 610000::numeric, 470000::numeric),
+    ('Barangay VI', 400000::numeric, 255000::numeric),
+    ('Barangay VII', 495000::numeric, 360000::numeric),
+    ('Barangay VIII', 470000::numeric, 340000::numeric),
+    ('Barangay IX', 530000::numeric, 405000::numeric),
+    ('Barangay X', 455000::numeric, 325000::numeric)
+  ) as v(name, sk_budget, utilized_budget)
+), ratios as (
+  select * from (values
+    (4, 0.72::numeric, 0.64::numeric),
+    (5, 0.86::numeric, 0.75::numeric),
+    (6, 1.00::numeric, 0.82::numeric)
+  ) as r(month_no, allocated_ratio, utilized_ratio)
 )
-values (
-  '00000000-0000-0000-0000-00000000a104',
-  '00000000-0000-0000-0000-00000000b001',
-  2026,
-  11,
-  780,
-  4,
-  'compliant'
-)
-on conflict (barangay_id, fiscal_year) do update
-set activities = excluded.activities,
-    participants = excluded.participants,
-    organizations = excluded.organizations,
-    compliance_status = excluded.compliance_status,
-    updated_at = now();
+insert into public.barangay_financials (barangay_id, fiscal_year, month_no, allocated_amount, utilized_amount, sk_budget)
+select b.id, 2026, r.month_no, round(f.sk_budget * r.allocated_ratio, 2), round(f.utilized_budget * r.utilized_ratio, 2), f.sk_budget
+from fin f
+join public.barangays b on b.name = f.name
+cross join ratios r
+on conflict (barangay_id, fiscal_year, month_no) do update set
+  allocated_amount = excluded.allocated_amount,
+  utilized_amount = excluded.utilized_amount,
+  sk_budget = excluded.sk_budget,
+  updated_at = now();
 
-insert into public.compliance_board_status (
-  id, barangay_id, fiscal_year, quarter, cbydp, abyip, annual_budget, rcb, mil, remarks
+with board as (
+  select * from (values
+    ('Barangay I','ok','ok','ok','ok','ok','Prototype: Fully Compliant'),
+    ('Barangay II','ok','ok','partial','partial','ok','Prototype: Partially Compliant'),
+    ('Barangay III','ok','ok','ok','ok','ok','Prototype: Fully Compliant'),
+    ('Barangay IV','ok','partial','partial','issue','partial','Prototype: Under Review'),
+    ('Barangay V','ok','ok','ok','ok','ok','Prototype: Fully Compliant'),
+    ('Barangay VI','partial','partial','issue','issue','issue','Prototype: Needs Follow-up'),
+    ('Barangay VII','ok','ok','ok','partial','ok','Prototype: Partially Compliant'),
+    ('Barangay VIII','ok','ok','partial','partial','partial','Prototype: Partially Compliant'),
+    ('Barangay IX','ok','ok','ok','ok','ok','Prototype: Fully Compliant'),
+    ('Barangay X','ok','ok','ok','ok','partial','Prototype: Partially Compliant')
+  ) as v(name, cbydp, abyip, annual_budget, rcb, mil, remarks)
 )
-values (
-  '00000000-0000-0000-0000-00000000a105',
-  '00000000-0000-0000-0000-00000000b001',
-  2026,
-  'Q2',
-  'ok',
-  'ok',
-  'partial',
-  'ok',
-  'issue',
-  'Mock board status'
-)
-on conflict (barangay_id, fiscal_year, quarter) do update
-set cbydp = excluded.cbydp,
-    abyip = excluded.abyip,
-    annual_budget = excluded.annual_budget,
-    rcb = excluded.rcb,
-    mil = excluded.mil,
-    remarks = excluded.remarks,
-    updated_at = now();
+insert into public.compliance_board_status (barangay_id, fiscal_year, quarter, cbydp, abyip, annual_budget, rcb, mil, remarks)
+select b.id, 2026, 'Q2'::public.quarter_code, board.cbydp::public.doc_state, board.abyip::public.doc_state, board.annual_budget::public.doc_state, board.rcb::public.doc_state, board.mil::public.doc_state, board.remarks
+from board
+join public.barangays b on b.name = board.name
+on conflict (barangay_id, fiscal_year, quarter) do update set
+  cbydp = excluded.cbydp,
+  abyip = excluded.abyip,
+  annual_budget = excluded.annual_budget,
+  rcb = excluded.rcb,
+  mil = excluded.mil,
+  remarks = excluded.remarks,
+  updated_at = now();
 
-insert into public.monthly_compliance (
-  id, barangay_id, fiscal_year, month_no, due_date, mfr_status, mil_status, rcb_status,
-  accomplishment_status, census_status, completion_percent, report_document_id
+with ticket_rows as (
+  select * from (values
+    ('LYDO-PROT-0001', 'Information Request', 'Testing Citizen Ticket I', 'Prototype ticket record for list and filter testing.', 'prototype.requester1@example.com', 'received', 2),
+    ('LYDO-PROT-0002', 'Service Request', 'Testing Citizen Ticket II', 'Prototype ticket record in progress.', 'prototype.requester2@example.com', 'in_progress', 3),
+    ('LYDO-PROT-0003', 'Suggestion', 'Testing Citizen Ticket III', 'Prototype ticket record resolved.', 'prototype.requester3@example.com', 'resolved', 1),
+    ('LYDO-PROT-0004', 'Complaint / Grievance', 'Testing Citizen Ticket IV', 'Prototype ticket record closed.', 'prototype.requester4@example.com', 'closed', 2),
+    ('LYDO-PROT-0005', 'Information Request', 'Testing Citizen Ticket V', 'Prototype ticket record for pending review simulation.', 'prototype.requester5@example.com', 'received', 3),
+    ('LYDO-PROT-0006', 'Service Request', 'Testing Citizen Ticket VI', 'Prototype ticket record for active workflow simulation.', 'prototype.requester6@example.com', 'in_progress', 2),
+    ('LYDO-PROT-0007', 'Suggestion', 'Testing Citizen Ticket VII', 'Prototype ticket record for feedback and suggestion testing.', 'prototype.requester7@example.com', 'resolved', 2),
+    ('LYDO-PROT-0008', 'Complaint / Grievance', 'Testing Citizen Ticket VIII', 'Prototype ticket record for grievance queue testing.', 'prototype.requester8@example.com', 'closed', 4),
+    ('LYDO-PROT-0009', 'Information Request', 'Testing Citizen Ticket IX', 'Prototype ticket record for history and pagination testing.', 'prototype.requester9@example.com', 'received', 1),
+    ('LYDO-PROT-0010', 'Service Request', 'Testing Citizen Ticket X', 'Prototype ticket record to complete 10-item demo set.', 'prototype.requester10@example.com', 'in_progress', 3)
+  ) as v(reference_no, type_name, subject, message, requester_email, status, priority)
 )
-values (
-  '00000000-0000-0000-0000-00000000a106',
-  '00000000-0000-0000-0000-00000000b001',
-  2026,
-  4,
-  date '2026-04-05',
-  'submitted',
-  'submitted',
-  'late',
-  'submitted',
-  'missing',
-  80,
-  '00000000-0000-0000-0000-00000000a101'
+insert into public.citizen_tickets (
+  reference_no, type_id, subject, message, requester_email, status, priority
 )
-on conflict (barangay_id, fiscal_year, month_no) do update
-set mfr_status = excluded.mfr_status,
-    mil_status = excluded.mil_status,
-    rcb_status = excluded.rcb_status,
-    accomplishment_status = excluded.accomplishment_status,
-    census_status = excluded.census_status,
-    completion_percent = excluded.completion_percent,
-    report_document_id = excluded.report_document_id,
-    updated_at = now();
+select
+  tr.reference_no,
+  tt.id,
+  tr.subject,
+  tr.message,
+  tr.requester_email::citext,
+  tr.status::public.ticket_status,
+  tr.priority
+from ticket_rows tr
+join public.ticket_types tt on tt.name = tr.type_name
+on conflict (reference_no) do update set
+  type_id = excluded.type_id,
+  subject = excluded.subject,
+  message = excluded.message,
+  requester_email = excluded.requester_email,
+  status = excluded.status,
+  priority = excluded.priority,
+  updated_at = now();
 
 with sample_users as (
   select
     (select id from auth.users order by created_at asc limit 1) as user_a,
     (select id from auth.users order by created_at asc offset 1 limit 1) as user_b
 )
-insert into public.citizen_tickets (
-  id, reference_no, type_id, subject, message, requester_email, requester_name, requester_contact,
-  status, priority, created_by_user_id, assigned_to_user_id
+insert into public.event_registrations (
+  user_id, event_id, full_name, email, contact_number, municipality, barangay_id,
+  registration_status, source, gform_sync_status
 )
 select
-  '00000000-0000-0000-0000-00000000a107',
-  'LYDO-MOCK-900001',
-  9001,
-  'Mock Citizen Ticket',
-  'Mock ticket for all-table seed coverage.',
-  'mock.requester@example.com',
-  'Mock Requester',
-  '+639199999999',
-  'in_progress',
-  3,
   su.user_a,
-  coalesce(su.user_b, su.user_a)
+  (select id from public.events where slug = 'testing-event-i' limit 1),
+  'Prototype User I',
+  'prototype.user1@example.com',
+  '+639100000002',
+  'Prototype Municipality',
+  (select id from public.barangays where name = 'Barangay I' limit 1),
+  'registered',
+  'portal_direct',
+  'synced'
 from sample_users su
-on conflict (id) do update
-set status = excluded.status,
-    updated_at = now();
-
-insert into public.service_advisories (
-  id, office_id, title, status, message, starts_at, ends_at
-)
-values (
-  '00000000-0000-0000-0000-00000000a108',
-  '00000000-0000-0000-0000-00000000c001',
-  'Mock Service Advisory',
-  'notice',
-  'Mock advisory for all-table seed coverage.',
-  now(),
-  now() + interval '2 hours'
-)
-on conflict (id) do update
-set title = excluded.title,
-    status = excluded.status,
-    message = excluded.message,
-    updated_at = now();
-
-insert into public.admin_accounts (id, username, password_hash, display_name, is_active)
-values (
-  '00000000-0000-0000-0000-00000000a109',
-  'mockadmin',
-  crypt('mockadminpassword', gen_salt('bf')),
-  'Mock Admin',
-  true
-)
-on conflict (id) do update
-set username = excluded.username,
-    password_hash = excluded.password_hash,
-    display_name = excluded.display_name,
-    is_active = excluded.is_active,
-    updated_at = now();
+where su.user_a is not null
+on conflict do nothing;
 
 with sample_users as (
-  select (select id from auth.users order by created_at asc limit 1) as user_a
+  select
+    (select id from auth.users order by created_at asc limit 1) as user_a,
+    (select id from auth.users order by created_at asc offset 1 limit 1) as user_b
 )
 insert into public.program_registrations (
-  id, user_id, program_id, full_name, email, contact_number, municipality, barangay_id,
-  registration_status, registered_at, cancelled_at, source, gform_sync_status
+  user_id, program_id, full_name, email, contact_number, municipality, barangay_id,
+  registration_status, source, gform_sync_status
 )
 select
-  '00000000-0000-0000-0000-00000000a110',
-  su.user_a,
-  '00000000-0000-0000-0000-00000000d001',
-  'Mock User A',
-  'mock.user.a@example.com',
-  '+639171111111',
-  'Metro Manila',
-  '00000000-0000-0000-0000-00000000b001',
-  'registered',
-  now(),
-  null,
+  su.user_b,
+  (select id from public.programs where slug = 'testing-program-i' limit 1),
+  'Prototype User II',
+  'prototype.user2@example.com',
+  '+639100000003',
+  'Prototype Municipality',
+  (select id from public.barangays where name = 'Barangay II' limit 1),
+  'waitlisted',
   'portal_direct',
   'pending'
 from sample_users su
-where su.user_a is not null
-on conflict (id) do update
-set registration_status = excluded.registration_status,
-    updated_at = now();
+where su.user_b is not null
+on conflict do nothing;
 
 insert into public.audit_logs (
-  id, actor_user_id, actor_name, actor_email, actor_role, actor_claims, operation,
-  table_schema, table_name, row_pk, changed_fields, old_data, new_data
-)
-values (
-  '00000000-0000-0000-0000-00000000a111',
-  null,
-  'mock-seeder',
-  'mock.seeder@example.com',
-  'service_role',
-  '{"seed":"mock"}'::jsonb,
-  'INSERT',
-  'public',
-  'barangays',
-  '{"id":"00000000-0000-0000-0000-00000000b001"}'::jsonb,
-  array['name','latitude','longitude'],
-  null,
-  '{"name":"Mock Barangay One"}'::jsonb
-)
-on conflict (id) do nothing;
+  actor_name, actor_email, actor_role, operation, table_schema, table_name,
+  row_pk, changed_fields, old_data, new_data
+) values
+  (
+    'Prototype Admin I',
+    'prototype.admin@example.com',
+    'admin',
+    'INSERT',
+    'public',
+    'programs',
+    '{"slug":"testing-program-i"}'::jsonb,
+    array['title','status'],
+    null,
+    '{"title":"Testing Program I","status":"published"}'::jsonb
+  ),
+  (
+    'Prototype Admin I',
+    'prototype.admin@example.com',
+    'admin',
+    'UPDATE',
+    'public',
+    'events',
+    '{"slug":"testing-event-ii"}'::jsonb,
+    array['status'],
+    '{"status":"upcoming"}'::jsonb,
+    '{"status":"ongoing"}'::jsonb
+  ),
+  (
+    'Prototype Admin I',
+    'prototype.admin@example.com',
+    'admin',
+    'INSERT',
+    'public',
+    'disclosure_documents',
+    '{"doc_code":"DOC-003"}'::jsonb,
+    array['title','document_type'],
+    null,
+    '{"title":"Testing Transparency Document III","document_type":"financial_statement"}'::jsonb
+  )
+on conflict do nothing;
+
+insert into public.admin_accounts (id, username, password_hash, display_name, is_active)
+values ('00000000-0000-0000-0000-00000000aa01','prototype_admin', crypt('prototype_admin_123', gen_salt('bf')), 'Prototype Admin I', true)
+on conflict (id) do update
+set username = excluded.username, password_hash = excluded.password_hash, display_name = excluded.display_name,
+    is_active = excluded.is_active, updated_at = now();
 
 commit;
 
 -- END FILE: supabase/sql/27_mock_data_all_tables.sql
+
 
 -- ===========================================================================
 -- BEGIN FILE: supabase/sql/schema_orgs_pasig_update.sql
@@ -4584,10 +3207,12 @@ commit;
 
 begin;
 
+-- Organizations: prototype-friendly details-first model.
 alter table if exists public.organizations
   add column if not exists category text,
   add column if not exists overview text,
   add column if not exists mission text,
+  add column if not exists purpose text,
   add column if not exists objectives text,
   add column if not exists programs_projects text,
   add column if not exists coverage_area text,
@@ -4599,20 +3224,20 @@ alter table if exists public.organizations
   add column if not exists related_initiatives text,
   add column if not exists related_events text,
   add column if not exists activity_year integer check (activity_year is null or activity_year between 1900 and 2100),
-  add column if not exists is_pasig_based boolean not null default true,
+  add column if not exists is_pasig_based boolean not null default false,
   add column if not exists data_status text not null default 'verified',
+  add column if not exists source_label text,
   add column if not exists source_reference_title text,
   add column if not exists source_reference_url text,
   add column if not exists source_reference_published_on date,
+  add column if not exists prototype_note text,
   add column if not exists credibility_notes text,
   add column if not exists last_verified_at timestamptz;
 
 do $$
 begin
   if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'organizations_data_status_check'
+    select 1 from pg_constraint where conname = 'organizations_data_status_check'
   ) then
     alter table public.organizations
       add constraint organizations_data_status_check
@@ -4629,7 +3254,7 @@ create table if not exists public.organization_references (
   published_on date,
   reference_type text,
   credibility_notes text,
-  is_official boolean not null default true,
+  is_official boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -4637,8 +3262,23 @@ create table if not exists public.organization_references (
 create unique index if not exists uq_org_references_org_url
   on public.organization_references(organization_id, reference_url);
 
-create index if not exists idx_orgs_pasig_status_type
-  on public.organizations(is_pasig_based, status, type);
+create table if not exists public.organization_projects (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  title text not null,
+  description text,
+  activity_type text,
+  date_label text,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_organization_projects_org
+  on public.organization_projects(organization_id, created_at desc);
+
+create index if not exists idx_orgs_status_type
+  on public.organizations(status, type);
 
 create index if not exists idx_orgs_category
   on public.organizations(category);
@@ -4680,6 +3320,7 @@ create index if not exists idx_orgs_search_tsv
   );
 
 alter table if exists public.organization_references enable row level security;
+alter table if exists public.organization_projects enable row level security;
 
 drop policy if exists public_read_organization_references on public.organization_references;
 create policy public_read_organization_references
@@ -4694,6 +3335,19 @@ for all
 using (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]))
 with check (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
+drop policy if exists public_read_organization_projects on public.organization_projects;
+create policy public_read_organization_projects
+on public.organization_projects
+for select
+using (true);
+
+drop policy if exists manage_organization_projects on public.organization_projects;
+create policy manage_organization_projects
+on public.organization_projects
+for all
+using (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]))
+with check (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
+
 insert into public.organizations (
   slug,
   name,
@@ -4702,22 +3356,20 @@ insert into public.organizations (
   focus,
   overview,
   mission,
+  purpose,
   objectives,
   programs_projects,
   coverage_area,
   target_beneficiaries,
   contact_email,
   contact_phone,
-  contact_facebook,
-  contact_website,
-  related_initiatives,
-  related_events,
-  activity_year,
+  source_label,
   source_tag,
   source_post_url,
   source_reference_title,
   source_reference_url,
   source_reference_published_on,
+  prototype_note,
   credibility_notes,
   is_pasig_based,
   data_status,
@@ -4726,153 +3378,171 @@ insert into public.organizations (
 )
 values
   (
-    'pasig-city-youth-development-office',
-    'Pasig City Youth Development Office (PCYDO / LYDO)',
-    'City Government Office',
-    'Local Youth Development Office',
-    'Youth governance support, YORP implementation, youth program coordination',
-    'Pasig City office under the Office of the Mayor that manages youth and youth-serving program coordination and organization registration support.',
-    null,
-    'Facilitate Youth Organization Registration Program and support youth-sector coordination in Pasig City.',
-    'Youth Organization Registration Program (YORP); correspondence support for youth, scholarship, CSO, and sports/youth concerns.',
-    'Pasig City',
-    'Youth organizations and youth-serving organizations in Pasig City',
-    'lydo@pasigcity.gov.ph',
-    null,
-    'https://www.facebook.com/Local-Youth-Development-Office-Pasig-City-104618617612581',
-    'https://pasigcity.gov.ph',
-    'YORP implementation under RA 10742',
-    null,
-    2026,
-    'Pasig City official services and YORP policy context',
-    'https://pasigcity.gov.ph/services/infrastructure-development-sector',
-    'YORP Registration Bukas na para sa mga Kabataang Pasigueno!',
-    'https://pasigcity.gov.ph/news-and-releases/yorp-registration-bukas-na-para-sa-mga-kabataang-pasigueno-670',
-    date '2025-03-19',
-    'Official Pasig City government page and city-hosted LYDO charter PDF.',
-    true,
+    'testing-youth-organization-i',
+    'Testing Youth Organization I',
+    'Civic Volunteer Group',
+    'Prototype Civic Group',
+    'Community service and civic volunteerism',
+    'Prototype youth organization focused on community service and civic participation.',
+    'Encourage prototype volunteerism among youth communities.',
+    'Provide prototype services and engagement opportunities.',
+    'Coordinate outreach and youth support activities for testing flows.',
+    'Testing Community Outreach Project I; Testing Volunteer Activity I',
+    'Barangay-wide',
+    'Prototype youth volunteers',
+    'prototype.org1@example.com',
+    '+639100200001',
+    'Prototype Data',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-i',
+    'Prototype Organization Reference I',
+    'https://example.com/prototype-organization-i/reference',
+    date '2026-04-01',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
     'verified',
     'active',
     now()
   ),
   (
-    'pasig-sk-federation',
-    'Pasig City Sangguniang Kabataan Federation',
-    'Youth Governance',
-    'SK Federation',
-    'City-level youth council federation and youth policy/program leadership',
-    'City-wide SK federation recognized in official Pasig City announcements and youth governance activities.',
-    null,
-    'Represent barangay SK councils and lead city-level youth activities with LGU partners.',
-    'Linggo ng Kabataan 2025 activities; city youth governance and recognition initiatives.',
-    'Pasig City',
-    'Kabataang Pasigueno and barangay youth councils',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'SGYG/GKA 2025 ecosystem participation',
-    null,
-    2025,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    null,
-    'Official city release references Pasig SK Federation in SGYG/GKA 2025 implementation.',
-    true,
+    'testing-youth-organization-ii',
+    'Testing Youth Organization II',
+    'Advocacy Network',
+    'Prototype Advocacy Group',
+    'Environmental awareness',
+    'Prototype advocacy network created for testing organization information display.',
+    'Promote prototype awareness campaigns and civic engagement.',
+    'Support awareness-driven youth collaboration.',
+    'Run prototype campaigns across youth groups.',
+    'Testing Environmental Action Drive I; Testing Advocacy Session I',
+    'Multi-barangay coverage',
+    'Prototype youth advocates',
+    'prototype.org2@example.com',
+    '+639100200002',
+    'Demo Record',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-ii',
+    'Prototype Organization Reference II',
+    'https://example.com/prototype-organization-ii/reference',
+    date '2026-04-05',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
     'verified',
-    'active',
+    'partner',
     now()
   ),
   (
-    'pasig-city-youth-development-council',
-    'Pasig City Youth Development Council (PCYDC)',
-    'Youth Governance',
-    'Youth Development Council',
-    'Multi-stakeholder youth development coordination',
-    'Youth development council referenced in official Pasig SGYG/GKA 2025 ecosystem.',
-    null,
-    null,
-    null,
-    'Pasig City',
-    'Kabataang Pasigueno and youth sector stakeholders',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'SGYG 2025 validation process',
-    'SGYG and GKA 2025',
-    2025,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-    'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-    null,
-    'Official city announcement references PCYDC; additional structural details not explicitly published in source pack.',
-    true,
-    'partially_verified',
-    'active',
-    now()
-  ),
-  (
-    'pasiglaban-kabataan',
-    'PasigLaban Kabataan',
-    'Youth/Youth-Serving Organization',
-    'YO/YSO',
-    'Positive youth development and youth-serving initiatives',
-    'Youth/youth-serving organization cited by Pasig City as a national finalist in an official youth development-related announcement.',
-    null,
-    null,
-    null,
-    'Pasig City',
-    'Kabataang Pasigueno',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'Positive Youth Development Awards participation',
-    null,
-    2024,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/national-finalists-outstanding-sk-council-category-federation-724',
-    'National Finalists | Outstanding SK Council Category - Federation',
-    'https://pasigcity.gov.ph/news-and-releases/national-finalists-outstanding-sk-council-category-federation-724',
-    date '2024-08-06',
-    'Entity mentioned by official Pasig City announcement; unavailable details are intentionally null.',
-    true,
-    'partially_verified',
-    'active',
-    now()
-  ),
-  (
-    'pasig-yo-yso-network',
-    'Pasig Youth/Youth-Serving Organizations Network (YO/YSO sector)',
+    'testing-youth-organization-iii',
+    'Testing Youth Organization III',
     'Multi-organization Network',
-    'Youth Organization Network',
-    'Coordination network of youth and youth-serving organizations in Pasig',
-    'Sector-level representation referenced by Pasig City in youth agenda convenings.',
-    null,
-    'Support youth agenda alignment and participation through coordinated city-level activities.',
-    null,
-    'Pasig City',
-    'Registered and participating youth/youth-serving organizations in Pasig',
-    null,
-    null,
-    null,
-    'https://pasigcity.gov.ph',
-    'S1NCRO One Pasig, One Agenda',
-    'S1NCRO: One Pasig, One Agenda',
-    2026,
-    'Pasig City news release',
-    'https://pasigcity.gov.ph/news-and-releases/s1ncro-one-pasig-one-agenda-idinaos-para-sa-pagpapalakas-ng-sektor-ng-kabataan-sa-lungsod-ng-pasig-209',
-    'S1NCRO: One Pasig, One Agenda',
-    'https://pasigcity.gov.ph/news-and-releases/s1ncro-one-pasig-one-agenda-idinaos-para-sa-pagpapalakas-ng-sektor-ng-kabataan-sa-lungsod-ng-pasig-209',
-    null,
-    'Official city announcement references 51 YO/YSOs and participation counts; organization-level specifics not individually published.',
-    true,
+    'Prototype Network',
+    'Youth leadership and governance',
+    'Prototype multi-organization network for profile and details-view testing.',
+    'Build collaborative leadership pathways for prototype records.',
+    'Coordinate prototype organizations under one umbrella workflow.',
+    'Facilitate shared activities and records for demo use.',
+    'Testing Youth Leadership Activity I; Testing Network Assembly I',
+    'Prototype Municipality',
+    'Prototype youth leaders',
+    'prototype.org3@example.com',
+    '+639100200003',
+    'Prototype Data',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-iii',
+    'Prototype Organization Reference III',
+    'https://example.com/prototype-organization-iii/reference',
+    date '2026-04-09',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
     'partially_verified',
     'active',
+    now()
+  ),
+  (
+    'testing-youth-organization-iv',
+    'Testing Youth Organization IV',
+    'Youth Interest Group',
+    'Prototype Interest Group',
+    'Digital literacy and skills development',
+    'Prototype youth interest group used for digital literacy record testing.',
+    'Promote prototype digital skills and technology awareness.',
+    'Offer prototype learning sessions for youth.',
+    'Support digital skills development demos.',
+    'Testing Digital Skills Workshop I',
+    'Youth community coverage',
+    'Prototype student participants',
+    'prototype.org4@example.com',
+    '+639100200004',
+    'Demo Record',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-iv',
+    'Prototype Organization Reference IV',
+    'https://example.com/prototype-organization-iv/reference',
+    date '2026-04-12',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
+    'verified',
+    'inactive',
+    now()
+  ),
+  (
+    'testing-youth-organization-v',
+    'Testing Youth Organization V',
+    'Youth Governance',
+    'Prototype Governance Group',
+    'Education support',
+    'Prototype governance-oriented organization profile for testing.',
+    'Encourage structured youth participation in prototype policy activities.',
+    'Demonstrate governance workflows and role-based records.',
+    'Facilitate prototype education support planning.',
+    'Testing Education Support Activity I',
+    'Barangay-wide',
+    'Prototype youth councils',
+    'prototype.org5@example.com',
+    '+639100200005',
+    'Prototype Data',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-v',
+    'Prototype Organization Reference V',
+    'https://example.com/prototype-organization-v/reference',
+    date '2026-04-15',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
+    'verified',
+    'active',
+    now()
+  ),
+  (
+    'testing-youth-organization-vi',
+    'Testing Youth Organization VI',
+    'Campus Youth Partner',
+    'Prototype Campus Partner',
+    'Sports and wellness',
+    'Prototype campus youth partner used for demonstrating organization profiles.',
+    'Promote balanced prototype activities for wellness and participation.',
+    'Support prototype wellness and sports engagement.',
+    'Coordinate campus-oriented demo activities.',
+    'Testing Sports and Wellness Activity I',
+    'Campus-based coverage',
+    'Prototype campus members',
+    'prototype.org6@example.com',
+    '+639100200006',
+    'Demo Record',
+    'Internal Prototype Seed',
+    'https://example.com/prototype-organization-vi',
+    'Prototype Organization Reference VI',
+    'https://example.com/prototype-organization-vi/reference',
+    date '2026-04-18',
+    'Prototype record for demonstration and testing.',
+    'Internal prototype context only.',
+    false,
+    'verified',
+    'partner',
     now()
   )
 on conflict (slug) do update set
@@ -4882,22 +3552,20 @@ on conflict (slug) do update set
   focus = excluded.focus,
   overview = excluded.overview,
   mission = excluded.mission,
+  purpose = excluded.purpose,
   objectives = excluded.objectives,
   programs_projects = excluded.programs_projects,
   coverage_area = excluded.coverage_area,
   target_beneficiaries = excluded.target_beneficiaries,
   contact_email = excluded.contact_email,
   contact_phone = excluded.contact_phone,
-  contact_facebook = excluded.contact_facebook,
-  contact_website = excluded.contact_website,
-  related_initiatives = excluded.related_initiatives,
-  related_events = excluded.related_events,
-  activity_year = excluded.activity_year,
+  source_label = excluded.source_label,
   source_tag = excluded.source_tag,
   source_post_url = excluded.source_post_url,
   source_reference_title = excluded.source_reference_title,
   source_reference_url = excluded.source_reference_url,
   source_reference_published_on = excluded.source_reference_published_on,
+  prototype_note = excluded.prototype_note,
   credibility_notes = excluded.credibility_notes,
   is_pasig_based = excluded.is_pasig_based,
   data_status = excluded.data_status,
@@ -4927,99 +3595,207 @@ select
 from public.organizations o
 join (
   values
-    (
-      'pasig-city-youth-development-office',
-      'Pasig City Services: Pasig City Youth Development Office',
-      'https://pasigcity.gov.ph/services/infrastructure-development-sector',
-      'Pasig City Government',
-      null::date,
-      'official_page',
-      'Office profile and service summary for Pasig City Youth Development Office.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-office',
-      'Pasig City Directory',
-      'https://pasigcity.gov.ph/about-pasig-city/directory',
-      'Pasig City Government',
-      null::date,
-      'directory',
-      'Official city directory page used for office listings and contact references.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-office',
-      'LYDO Citizens Charter (Tagalog)',
-      'https://assets.pasigcity.gov.ph/storage/attachments/local_youth_development_office/686b66e11a2fb1751869153Citizen_s%20Charter%20Tagalog.pdf',
-      'Pasig City Government',
-      null::date,
-      'citizen_charter',
-      'Contains YORP process, office details, and policy context.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-office',
-      'YORP Registration Bukas na para sa mga Kabataang Pasigueno!',
-      'https://pasigcity.gov.ph/news-and-releases/yorp-registration-bukas-na-para-sa-mga-kabataang-pasigueno-670',
-      'Pasig City Government',
-      date '2025-03-19',
-      'news_release',
-      'References NYC mandate, Pasig Ordinance 14-2018 and 50-2024, and LYDO verification role.',
-      true
-    ),
-    (
-      'pasig-sk-federation',
-      'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-      'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-      'Pasig City Government',
-      null::date,
-      'news_release',
-      'Official city release referencing Pasig SK Federation in SGYG/GKA collaboration.',
-      true
-    ),
-    (
-      'pasig-city-youth-development-council',
-      'Natatanging Kabataang Pasigueno, Pinarangalan sa SGYG at GKA 2025',
-      'https://pasigcity.gov.ph/news-and-releases/natatanging-kabataang-pasigueno-pinarangalan-sa-sgyg-at-gka-2025-481',
-      'Pasig City Government',
-      null::date,
-      'news_release',
-      'Official city release includes PCYDC among SGYG 2025 validation stakeholders.',
-      true
-    ),
-    (
-      'pasiglaban-kabataan',
-      'National Finalists | Outstanding SK Council Category - Federation',
-      'https://pasigcity.gov.ph/news-and-releases/national-finalists-outstanding-sk-council-category-federation-724',
-      'Pasig City Government',
-      date '2024-08-06',
-      'news_release',
-      'Official city announcement naming PasigLaban Kabataan as national finalist.',
-      true
-    ),
-    (
-      'pasig-yo-yso-network',
-      'S1NCRO: One Pasig, One Agenda',
-      'https://pasigcity.gov.ph/news-and-releases/s1ncro-one-pasig-one-agenda-idinaos-para-sa-pagpapalakas-ng-sektor-ng-kabataan-sa-lungsod-ng-pasig-209',
-      'Pasig City Government',
-      null::date,
-      'news_release',
-      'Official city release referencing participation from 51 youth/youth-serving organizations.',
-      true
-    )
-) as v(
-  slug,
-  reference_title,
-  reference_url,
-  publisher,
-  published_on,
-  reference_type,
-  credibility_notes,
-  is_official
-)
+    ('testing-youth-organization-i', 'Prototype Organization Reference I', 'https://example.com/prototype-organization-i/reference', 'Prototype Publisher', date '2026-04-01', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-ii', 'Prototype Organization Reference II', 'https://example.com/prototype-organization-ii/reference', 'Prototype Publisher', date '2026-04-05', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-iii', 'Prototype Organization Reference III', 'https://example.com/prototype-organization-iii/reference', 'Prototype Publisher', date '2026-04-09', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-iv', 'Prototype Organization Reference IV', 'https://example.com/prototype-organization-iv/reference', 'Prototype Publisher', date '2026-04-12', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-v', 'Prototype Organization Reference V', 'https://example.com/prototype-organization-v/reference', 'Prototype Publisher', date '2026-04-15', 'prototype_reference', 'Prototype reference record.', false),
+    ('testing-youth-organization-vi', 'Prototype Organization Reference VI', 'https://example.com/prototype-organization-vi/reference', 'Prototype Publisher', date '2026-04-18', 'prototype_reference', 'Prototype reference record.', false)
+) as v(slug, reference_title, reference_url, publisher, published_on, reference_type, credibility_notes, is_official)
   on o.slug = v.slug
+on conflict do nothing;
+
+insert into public.organization_projects (
+  organization_id,
+  title,
+  description,
+  activity_type,
+  date_label,
+  status
+)
+select
+  o.id,
+  p.title,
+  p.description,
+  p.activity_type,
+  p.date_label,
+  p.status
+from public.organizations o
+join (
+  values
+    ('testing-youth-organization-i', 'Testing Community Outreach Project I', 'Prototype community outreach project for demo display.', 'project', 'Q2 2026', 'active'),
+    ('testing-youth-organization-ii', 'Testing Environmental Action Drive I', 'Prototype environmental action activity for demo display.', 'activity', 'Q2 2026', 'active'),
+    ('testing-youth-organization-iii', 'Testing Youth Leadership Activity I', 'Prototype leadership activity for demo display.', 'activity', 'Q2 2026', 'active'),
+    ('testing-youth-organization-iv', 'Testing Digital Skills Workshop I', 'Prototype digital skills workshop for demo display.', 'workshop', 'Q2 2026', 'planned'),
+    ('testing-youth-organization-v', 'Testing Education Support Activity I', 'Prototype education support activity for demo display.', 'activity', 'Q3 2026', 'active'),
+    ('testing-youth-organization-vi', 'Testing Sports and Wellness Activity I', 'Prototype sports and wellness activity for demo display.', 'activity', 'Q3 2026', 'active')
+) as p(slug, title, description, activity_type, date_label, status)
+  on o.slug = p.slug
 on conflict do nothing;
 
 commit;
 
 -- END FILE: supabase/sql/schema_orgs_pasig_update.sql
+
+
+-- ===========================================================================
+-- BEGIN FILE: supabase/sql/27_status_enum_expansion.sql
+-- ===========================================================================
+
+begin;
+
+do $$ begin
+  if exists (
+    select 1
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'program_status' and n.nspname = 'public'
+  ) then
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'program_status' and e.enumlabel = 'upcoming'
+    ) then
+      alter type public.program_status add value 'upcoming';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'program_status' and e.enumlabel = 'ongoing'
+    ) then
+      alter type public.program_status add value 'ongoing';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'program_status' and e.enumlabel = 'past'
+    ) then
+      alter type public.program_status add value 'past';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'program_status' and e.enumlabel = 'postponed'
+    ) then
+      alter type public.program_status add value 'postponed';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'program_status' and e.enumlabel = 'cancelled'
+    ) then
+      alter type public.program_status add value 'cancelled';
+    end if;
+  end if;
+end $$;
+
+-- Policy versions (public can read only the active policy)
+drop policy if exists select_active_policy_versions on public.policy_versions;
+create policy select_active_policy_versions on public.policy_versions
+for select
+using (is_active = true);
+
+drop policy if exists manage_policy_versions_admin on public.policy_versions;
+create policy manage_policy_versions_admin on public.policy_versions
+for all
+using (public.current_user_has_any_role(array['admin']::public.app_role_code[]))
+with check (public.current_user_has_any_role(array['admin']::public.app_role_code[]));
+
+-- User policy acceptance (users can read and insert only their own records)
+drop policy if exists select_user_policy_acceptance on public.user_policy_acceptance;
+create policy select_user_policy_acceptance on public.user_policy_acceptance
+for select
+using (auth.uid() = user_id or public.current_user_has_any_role(array['admin','staff']::public.app_role_code[]));
+
+drop policy if exists insert_user_policy_acceptance on public.user_policy_acceptance;
+create policy insert_user_policy_acceptance on public.user_policy_acceptance
+for insert
+with check (auth.uid() = user_id);
+
+do $$ begin
+  if exists (
+    select 1
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'event_status' and n.nspname = 'public'
+  ) then
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'event_status' and e.enumlabel = 'published'
+    ) then
+      alter type public.event_status add value 'published';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'event_status' and e.enumlabel = 'ongoing'
+    ) then
+      alter type public.event_status add value 'ongoing';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'event_status' and e.enumlabel = 'archived'
+    ) then
+      alter type public.event_status add value 'archived';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'event_status' and e.enumlabel = 'postponed'
+    ) then
+      alter type public.event_status add value 'postponed';
+    end if;
+  end if;
+end $$;
+
+do $$ begin
+  if exists (
+    select 1
+    from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'organization_status' and n.nspname = 'public'
+  ) then
+    if not exists (
+      select 1
+      from pg_enum e
+      join pg_type t on t.oid = e.enumtypid
+      join pg_namespace n on n.oid = t.typnamespace
+      where n.nspname = 'public' and t.typname = 'organization_status' and e.enumlabel = 'pending'
+    ) then
+      alter type public.organization_status add value 'pending';
+    end if;
+  end if;
+end $$;
+
+commit;
+
+-- END FILE: supabase/sql/27_status_enum_expansion.sql
+
+

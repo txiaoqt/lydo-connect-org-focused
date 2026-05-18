@@ -149,7 +149,7 @@ export default function AdminPortal() {
         />
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{renderContent()}</div>
         <footer className="mt-auto p-6 border-t border-border text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} LYDO Connect Admin Portal. Metro Manila LYDOs.
+          &copy; {new Date().getFullYear()} LYDO Connect Admin Portal. Prototype LYDO.
         </footer>
       </main>
     </div>

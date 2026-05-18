@@ -20,8 +20,10 @@ import FinancialDisclosure from "./pages/FinancialDisclosure";
 import BarangayMap from "./pages/BarangayMap";
 import TransparencyBoard from "./pages/TransparencyBoard";
 import CitizenDesk from "./pages/CitizenDesk";
-import ServiceAdvisories from "./pages/ServiceAdvisories";
 import AdminPortal from "./admin/AdminPortal";
+import LegalPolicy from "./pages/LegalPolicy";
+import { usePolicyAgreement } from "./hooks/use-policy-agreement";
+import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
 import {
   ADMIN_SIGNIN_PATH,
   EFFECTIVE_ADMIN_SIGNIN_PATH,
@@ -36,6 +38,65 @@ const queryClient = new QueryClient();
 const FullScreenLoader = () => (
   <div className="min-h-screen bg-background grid place-items-center text-muted-foreground text-sm">Loading...</div>
 );
+
+const PolicyAgreementGate = ({ children }: { children: JSX.Element }) => {
+  const { isInitialized, isAuthenticated, role, user, signOut } = useAuth();
+  const shouldCheckPolicy = isInitialized && isAuthenticated && role !== "admin" && Boolean(user?.id);
+  const { isChecking, isRequired, activePolicy, accepting, error, accept, refresh } = usePolicyAgreement({
+    userId: user?.id ?? null,
+    enabled: shouldCheckPolicy,
+  });
+
+  if (!isInitialized) return <FullScreenLoader />;
+  if (shouldCheckPolicy && isChecking) return <FullScreenLoader />;
+  if (shouldCheckPolicy && !activePolicy) {
+    return (
+      <div className="min-h-screen bg-background grid place-items-center px-4">
+        <div className="max-w-md rounded-xl border border-border bg-card p-5 text-center">
+          <h2 className="text-lg font-semibold text-foreground">Policy Agreement Required</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We could not load the active Terms of Service and Privacy Policy right now.
+          </p>
+          {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+          <div className="mt-4 flex justify-center gap-2">
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+              onClick={() => void refresh()}
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+              onClick={() => void signOut()}
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {children}
+      <TermsPrivacyAgreementModal
+        open={Boolean(shouldCheckPolicy && isRequired && activePolicy)}
+        policy={activePolicy}
+        saving={accepting}
+        error={error}
+        onAccept={async () => {
+          await accept();
+        }}
+        onDecline={async () => {
+          await signOut();
+        }}
+      />
+    </>
+  );
+};
 
 const RedirectAdmin = ({ children }: { children: JSX.Element }) => {
   const { isInitialized, role } = useAuth();
@@ -72,11 +133,13 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTopOnRouteChange />
-          <Routes>
+        <PolicyAgreementGate>
+          <>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ScrollToTopOnRouteChange />
+              <Routes>
             {IS_ADMIN_SURFACE ? (
               <>
                 <Route
@@ -148,6 +211,22 @@ const App = () => (
                   element={
                     <RedirectAdmin>
                       <About />
+                    </RedirectAdmin>
+                  }
+                />
+                <Route
+                  path="/terms"
+                  element={
+                    <RedirectAdmin>
+                      <LegalPolicy />
+                    </RedirectAdmin>
+                  }
+                />
+                <Route
+                  path="/privacy"
+                  element={
+                    <RedirectAdmin>
+                      <LegalPolicy />
                     </RedirectAdmin>
                   }
                 />
@@ -240,14 +319,6 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/transparency/service-advisories"
-                  element={
-                    <RedirectAdmin>
-                      <ServiceAdvisories />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
                   path="/feedback"
                   element={
                     <RedirectAdmin>
@@ -258,8 +329,10 @@ const App = () => (
                 <Route path="*" element={<NotFoundRoute />} />
               </>
             )}
-          </Routes>
-        </BrowserRouter>
+              </Routes>
+            </BrowserRouter>
+          </>
+        </PolicyAgreementGate>
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

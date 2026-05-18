@@ -42,7 +42,7 @@ const defaultProfile: UserProfileState = {
     fullName: "",
     email: "",
     contactNumber: "",
-    municipality: "Metro Manila",
+    municipality: "Prototype Municipality",
     barangay: "",
     bio: "",
     notifications: true,
@@ -137,7 +137,7 @@ export const useUserProfile = () => {
           fullName: row.full_name ?? "",
           email: row.email ?? "",
           contactNumber: row.contact_number ?? "",
-          municipality: row.municipality ?? "Metro Manila",
+          municipality: row.municipality ?? "Prototype Municipality",
           barangay: eventBarangay,
         };
         return acc;
@@ -148,7 +148,7 @@ export const useUserProfile = () => {
           fullName: row.full_name ?? "",
           email: row.email ?? "",
           contactNumber: row.contact_number ?? "",
-          municipality: row.municipality ?? "Metro Manila",
+          municipality: row.municipality ?? "Prototype Municipality",
           barangay: programBarangay,
         };
         return acc;
@@ -162,7 +162,7 @@ export const useUserProfile = () => {
           fullName: profileRow?.full_name ?? profileRow?.display_name ?? user.displayName ?? "",
           email: profileRow?.email ?? user.email ?? "",
           contactNumber: profileRow?.contact_number ?? "",
-          municipality: profileRow?.municipality ?? "Metro Manila",
+          municipality: profileRow?.municipality ?? "Prototype Municipality",
           barangay: resolvedBarangay,
           bio: profileRow?.bio ?? "",
           notifications: profileRow?.notifications ?? true,

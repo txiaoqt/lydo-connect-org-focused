@@ -1,8 +1,11 @@
 ﻿import React, { FormEvent, useEffect, useMemo, useState } from "react";
-import { Calendar as CalendarIcon, CalendarDays, CircleHelp, FileText, Filter, Info, Link2, MapPin, Plus, Search, Users } from "lucide-react";
+import { CalendarDays, CircleHelp, FileText, Filter, Info, Link2, MapPin, Plus, Search } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
 import { StatusBadge } from "../components/StatusBadge";
+import { LegendHelpButton } from "../components/LegendHelpButton";
+import { LegendModal } from "../components/LegendModal";
+import { baseEventStatusLegendItems, optionalEventStatusLegendItems } from "../components/legend-config";
 import { Event, EventStatus } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -85,7 +88,7 @@ const defaultForm: EventForm = {
   eventDate: "",
   startTime: "",
   endTime: "",
-  location: "Metro Manila",
+  location: "Prototype Activity Hall",
   locationLatitude: "",
   locationLongitude: "",
   capacity: "",
@@ -148,6 +151,7 @@ export const Events = () => {
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [isLinksGuideOpen, setIsLinksGuideOpen] = useState(false);
   const [isSyncGuideOpen, setIsSyncGuideOpen] = useState(false);
+  const [isStatusLegendOpen, setIsStatusLegendOpen] = useState(false);
   const [form, setForm] = useState<EventForm>(defaultForm);
   const { toast } = useToast();
 
@@ -332,7 +336,7 @@ export const Events = () => {
       event_date: form.eventDate || null,
       start_time: form.startTime || null,
       end_time: form.endTime || null,
-      location: form.location.trim() || "Metro Manila",
+      location: form.location.trim() || "Prototype Activity Hall",
       location_latitude: parsedLatitude,
       location_longitude: parsedLongitude,
       capacity: parsedCapacity,
@@ -411,48 +415,29 @@ export const Events = () => {
 
   const columns = [
     {
-      header: "Event",
+      header: "Events",
       accessor: (e: Event) => (
         <div className="flex flex-col">
           <span className="font-bold text-foreground">{e.title}</span>
-          <span className="text-xs text-muted-foreground font-medium">{e.sector}</span>
+          <span className="text-xs text-muted-foreground font-medium">{e.slug}</span>
         </div>
       ),
     },
-    {
-      header: "Date & Time",
-      accessor: (e: Event) => (
-        <div className="flex flex-col text-xs font-medium">
-          <div className="flex items-center gap-1">
-            <CalendarIcon size={12} className="text-muted-foreground" />
-            <span>{e.event_date ? format(new Date(e.event_date), "MMM d, yyyy") : "N/A"}</span>
-          </div>
-          <span className="text-muted-foreground ml-4">{formatTimeRange(e.start_time, e.end_time)}</span>
-        </div>
-      ),
-    },
+    { header: "Sector", accessor: "sector" as const },
     {
       header: "Status",
       accessor: (e: Event) => <StatusBadge status={e.status} />,
     },
     {
-      header: "Location",
+      header: "Dates",
       accessor: (e: Event) => (
-        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-          <MapPin size={12} className="text-muted-foreground" />
-          <span className="max-w-[120px] truncate">{e.location}</span>
+        <div className="flex flex-col text-xs font-medium">
+          <span>{e.event_date ? format(new Date(e.event_date), "MMM d, yyyy") : "N/A"}</span>
+          <span className="text-muted-foreground">{formatTimeRange(e.start_time, e.end_time)}</span>
         </div>
       ),
     },
-    {
-      header: "Capacity",
-      accessor: (e: Event) => (
-        <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-          <Users size={12} className="text-muted-foreground" />
-          <span>{e.capacity || "Unlimited"}</span>
-        </div>
-      ),
-    },
+    { header: "Location", accessor: "location" as const, className: "max-w-[150px] truncate" },
   ];
 
   const availableSectorFilters = useMemo(
@@ -475,13 +460,26 @@ export const Events = () => {
       }),
     [events, searchTerm, statusFilter, sectorFilter],
   );
+  const eventLegendItems = useMemo(() => {
+    const usedStatuses = new Set(events.map((event) => (event.status ?? "").toLowerCase()));
+    return [
+      ...baseEventStatusLegendItems,
+      ...optionalEventStatusLegendItems.filter((item) => usedStatuses.has(item.key)),
+    ];
+  }, [events]);
 
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Events Management</h1>
-          <p className="text-muted-foreground mt-1 font-medium">Coordinate and manage community events for youth across Metro Manila.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground">Events Management</h1>
+            <LegendHelpButton
+              onClick={() => setIsStatusLegendOpen(true)}
+              ariaLabel="View event status color legend"
+            />
+          </div>
+          <p className="text-muted-foreground mt-1 font-medium">Coordinate and manage community events for youth across prototype coverage areas.</p>
         </div>
         <button
           type="button"
@@ -570,6 +568,14 @@ export const Events = () => {
         isLoading={isLoading}
         onRowClick={openDetailsModal}
         getRowAriaLabel={(item) => `Open details for ${item.title}`}
+      />
+
+      <LegendModal
+        open={isStatusLegendOpen}
+        onOpenChange={setIsStatusLegendOpen}
+        title="Event Status Legend"
+        description="These colors help identify event status at a glance."
+        items={eventLegendItems}
       />
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

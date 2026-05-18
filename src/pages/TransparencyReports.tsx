@@ -89,19 +89,19 @@ export default function TransparencyReports() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-12">
+        <section className="hero-gradient py-10 sm:py-12">
           <div className="container">
-            <h1 className="text-2xl md:text-4xl font-bold text-secondary-foreground">Disclosure Registry</h1>
-            <p className="text-secondary-foreground/70 mt-2 max-w-2xl text-sm">
+            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Disclosure Registry</h1>
+            <p className="text-secondary-foreground/70 mt-2 max-w-xl md:max-w-2xl text-sm leading-relaxed">
               Structured full-disclosure records by type, fiscal year, quarter, office, and barangay.
             </p>
           </div>
         </section>
 
-        <section className="container py-8 space-y-6">
-          <div className="bg-card border rounded-xl p-4 sm:p-6 card-shadow">
-            <h2 className="text-xl font-semibold mb-4">Transparency Board Snapshot</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+        <section className="container py-6 sm:py-8 space-y-4 sm:space-y-6">
+          <div className="bg-card border rounded-xl p-3.5 sm:p-6 card-shadow">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Transparency Board Snapshot</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5 sm:gap-4">
               <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Disclosures Published</p><p className="text-xl font-semibold">{kpis.disclosuresPublished}</p></div>
               <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Reports Received</p><p className="text-xl font-semibold">{kpis.reportsReceived}</p></div>
               <div className="rounded-md border bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Reports Resolved</p><p className="text-xl font-semibold">{kpis.reportsResolved}</p></div>
@@ -110,10 +110,10 @@ export default function TransparencyReports() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3">
             <div className="relative md:col-span-3 lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search disclosure title..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              <Input placeholder="Search disclosure title..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-10 sm:h-11 text-sm" />
             </div>
             <Select value={docType} onValueChange={setDocType}>
               <SelectTrigger><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Type" /></SelectTrigger>
@@ -137,7 +137,7 @@ export default function TransparencyReports() {
             </Select>
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
             <Button variant="outline" onClick={exportCsv}><Download className="h-4 w-4 mr-1" />Export CSV</Button>
             <Button variant="outline" onClick={exportJson}><Download className="h-4 w-4 mr-1" />Export JSON</Button>
           </div>
@@ -150,7 +150,7 @@ export default function TransparencyReports() {
                 <table className="w-full min-w-[860px] text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-muted/40 text-left">
-                      <th className="px-4 py-3 font-medium">Title</th>
+                      <th className="px-3 sm:px-4 py-3 font-medium">Title</th>
                       <th className="px-4 py-3 font-medium">Type</th>
                       <th className="px-4 py-3 font-medium">FY</th>
                       <th className="px-4 py-3 font-medium">Qtr</th>
@@ -163,7 +163,7 @@ export default function TransparencyReports() {
                   <tbody>
                     {filtered.map((doc) => (
                       <tr key={doc.id} className="border-t">
-                        <td className="px-4 py-3 min-w-72">
+                        <td className="px-3 sm:px-4 py-3 min-w-72">
                           <div className="flex items-start gap-2">
                             <FileText className="h-4 w-4 mt-0.5 text-primary" />
                             {doc.pdfUrl ? (

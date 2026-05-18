@@ -388,68 +388,35 @@ export default function EventRecord() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
-                              <FileText className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
-                              <p className="text-sm font-semibold text-foreground mt-0.5">{recordTypeLabel}</p>
-                            </div>
-                          </div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
+                          <p className="text-sm font-semibold text-foreground mt-1">{recordTypeLabel}</p>
                         </div>
                         <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
-                              <UserCheck className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
-                              <p className="text-sm font-semibold text-foreground mt-0.5">{sourceTypeLabel}</p>
-                            </div>
-                          </div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
+                          <p className="text-sm font-semibold text-foreground mt-1">{sourceTypeLabel}</p>
                         </div>
                         <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
-                              <Calendar className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Date</p>
-                              <p className="text-sm font-semibold text-foreground mt-0.5">{event.date || "TBA"}</p>
-                            </div>
-                          </div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Date</p>
+                          <p className="text-sm font-semibold text-foreground mt-1">{event.date || "TBA"}</p>
                         </div>
                         <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
-                              <Clock className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time</p>
-                              <p className="text-sm font-semibold text-foreground mt-0.5">{event.time || "TBA"}</p>
-                            </div>
-                          </div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time</p>
+                          <p className="text-sm font-semibold text-foreground mt-1">{event.time || "TBA"}</p>
                         </div>
                       </div>
 
                       <div className="rounded-lg border bg-muted/20 p-3.5">
-                        <div className="flex items-start gap-2.5">
-                          <div className="h-8 w-8 rounded-md border bg-background grid place-items-center text-primary shrink-0">
-                            <MapPin className="h-4 w-4" />
-                          </div>
-                          <div className="min-w-0 w-full">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Location</p>
-                            <LocationPreviewButton
-                              location={event.location}
-                              locationLatitude={event.locationLatitude}
-                              locationLongitude={event.locationLongitude}
-                              className="text-sm font-semibold"
-                            />
-                            <p className="mt-1 text-[11px] text-muted-foreground">
-                              Tip: click the location to open map preview and directions.
-                            </p>
-                          </div>
+                        <div className="min-w-0 w-full">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Location</p>
+                          <LocationPreviewButton
+                            location={event.location}
+                            locationLatitude={event.locationLatitude}
+                            locationLongitude={event.locationLongitude}
+                            className="text-sm font-semibold"
+                          />
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            Tip: click the location to open map preview and directions.
+                          </p>
                         </div>
                       </div>
                     </div>

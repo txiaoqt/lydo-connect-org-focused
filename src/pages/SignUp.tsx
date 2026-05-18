@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -33,6 +34,7 @@ const SignUp = () => {
   const [barangaysLoading, setBarangaysLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { signUp } = useAuth();
@@ -295,19 +297,38 @@ const SignUp = () => {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are all details correct?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Please review before creating your account.
-                <span className="block mt-2 text-foreground">Name: {name.trim() || "N/A"}</span>
-                <span className="block text-foreground">Email: {email.trim() || "N/A"}</span>
-                <span className="block text-foreground">Barangay: {selectedBarangayName}</span>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isCreating}>See Form Again</AlertDialogCancel>
-              <AlertDialogAction onClick={proceedCreateAccount} disabled={isCreating}>
-                {isCreating ? "Creating..." : "Proceed"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+            <AlertDialogDescription>
+              Please review before creating your account.
+              <span className="block mt-2 text-foreground">Name: {name.trim() || "N/A"}</span>
+              <span className="block text-foreground">Email: {email.trim() || "N/A"}</span>
+              <span className="block text-foreground">Barangay: {selectedBarangayName}</span>
+              <span className="mt-3 flex items-start gap-2">
+                <Checkbox
+                  id="signup-policy-agreement"
+                  checked={agreedToPolicies}
+                  onCheckedChange={(checked) => setAgreedToPolicies(Boolean(checked))}
+                  disabled={isCreating}
+                />
+                <Label htmlFor="signup-policy-agreement" className="text-sm font-normal leading-5 text-left text-foreground">
+                  I have read and agree to the{" "}
+                  <Link to="/terms" className="text-primary hover:underline">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacy" className="text-primary hover:underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </Label>
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCreating}>See Form Again</AlertDialogCancel>
+            <AlertDialogAction onClick={proceedCreateAccount} disabled={isCreating || !agreedToPolicies}>
+              {isCreating ? "Creating..." : "Proceed"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 

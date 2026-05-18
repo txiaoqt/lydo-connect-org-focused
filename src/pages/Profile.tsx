@@ -76,10 +76,6 @@ export default function Profile() {
     () => profile.joined.programs.map((id) => ({ id, label: findLabel(catalog.programs, id) })),
     [catalog.programs, profile.joined.programs],
   );
-  const joinedOrganizations = useMemo(
-    () => profile.joined.organizations.map((id) => ({ id, label: findLabel(catalog.organizations, id) })),
-    [catalog.organizations, profile.joined.organizations],
-  );
 
   if (!isInitialized) {
     return (
@@ -140,8 +136,8 @@ export default function Profile() {
                   <Building2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Joined Organizations</p>
-                  <p className="text-3xl leading-none font-semibold mt-1">{joinedCounts.organizations}</p>
+                  <p className="text-sm text-muted-foreground">Organization Profiles</p>
+                  <p className="text-3xl leading-none font-semibold mt-1">{catalog.organizations.length}</p>
                 </div>
               </div>
             </div>
@@ -189,7 +185,7 @@ export default function Profile() {
                 </div>
                 <div>
                   <Label htmlFor="municipality">Municipality</Label>
-                  <Input id="municipality" value={settings.municipality || "Metro Manila"} readOnly />
+                  <Input id="municipality" value={settings.municipality || "Prototype Municipality"} readOnly />
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="barangay">Barangay</Label>
@@ -248,22 +244,12 @@ export default function Profile() {
             </div>
 
             <div className="bg-card border rounded-xl p-6 card-shadow">
-              <h3 className="font-semibold mb-4 flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" /> My Organizations</h3>
+              <h3 className="font-semibold mb-4 flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" /> Organizations</h3>
               <div className="space-y-3">
-                {joinedOrganizations.length === 0 && <p className="text-sm text-muted-foreground">No joined organizations.</p>}
-                {joinedOrganizations.map((item) => (
-                  <div key={item.id} className="space-y-2">
-                    <p className="text-sm">{item.label}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to="/organizations">Details</Link>
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("organizations", item.id)}>
-                        Leave
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                <p className="text-sm text-muted-foreground">Browse organization information records for prototype demonstration.</p>
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/organizations">View Organization Info</Link>
+                </Button>
               </div>
             </div>
           </div>

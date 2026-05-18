@@ -93,32 +93,32 @@ export default function BarangayMap() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-12">
+        <section className="hero-gradient py-10 sm:py-12">
           <div className="container">
-            <h1 className="text-2xl md:text-4xl font-bold text-secondary-foreground">Barangay Map</h1>
-            <p className="text-secondary-foreground/70 mt-2 max-w-xl text-sm">
+            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Barangay Map</h1>
+            <p className="text-secondary-foreground/70 mt-2 max-w-xl text-sm leading-relaxed">
               Click any marker to view youth population, budget utilization, activities, and compliance status.
             </p>
           </div>
         </section>
 
-        <section className="container py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <section className="container py-6 sm:py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
             <div className="lg:col-span-2">
-              <div className="bg-card rounded-lg border p-4 card-shadow">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-card rounded-lg border p-3.5 sm:p-4 card-shadow">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-primary" />
                     <h2 className="font-heading font-semibold">Interactive Barangay Map</h2>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" />Compliant</span>
                     <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" />Pending</span>
                     <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-destructive" />Overdue</span>
                   </div>
                 </div>
 
-                <div className="h-[460px] w-full rounded-lg overflow-hidden border">
+                <div className="h-[340px] sm:h-[420px] lg:h-[460px] w-full rounded-lg overflow-hidden border">
                   {isLoading ? (
                     <div className="h-full grid place-items-center text-sm text-muted-foreground">Loading map data...</div>
                   ) : (
@@ -152,14 +152,14 @@ export default function BarangayMap() {
 
             <div>
               {data && selected ? (
-                <div className="bg-card rounded-lg border p-6 card-shadow animate-fade-up">
+                <div className="bg-card rounded-lg border p-4 sm:p-6 card-shadow animate-fade-up">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-heading font-bold text-lg">{selected}</h3>
                     <ComplianceBadge status={data.complianceStatus} />
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
                       <Users className="h-4 w-4 text-primary" />
                       <div>
                         <p className="text-xs text-muted-foreground">Youth Population</p>
@@ -167,7 +167,7 @@ export default function BarangayMap() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
                       <DollarSign className="h-4 w-4 text-accent" />
                       <div>
                         <p className="text-xs text-muted-foreground">SK Budget</p>
@@ -176,7 +176,7 @@ export default function BarangayMap() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
                       <BarChart3 className="h-4 w-4 text-primary" />
                       <div>
                         <p className="text-xs text-muted-foreground">Activities and Participants</p>
@@ -184,7 +184,7 @@ export default function BarangayMap() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
                       <Shield className="h-4 w-4 text-primary" />
                       <div>
                         <p className="text-xs text-muted-foreground">SK Chairperson</p>
@@ -194,7 +194,7 @@ export default function BarangayMap() {
                   </div>
                 </div>
               ) : (
-                <div className="bg-card rounded-lg border p-8 card-shadow text-center">
+                <div className="bg-card rounded-lg border p-5 sm:p-8 card-shadow text-center">
                   <MapPin className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
                   <p className="text-muted-foreground text-sm">Click a marker to view barangay details</p>
                 </div>

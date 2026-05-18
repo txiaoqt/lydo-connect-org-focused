@@ -1,7 +1,11 @@
 ﻿import React, { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { Calendar, ExternalLink, FileText, Plus, Search, Tag, UploadCloud } from "lucide-react";
+import { Calendar, ExternalLink, FileText, Plus, Search, UploadCloud } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
+import { DOCUMENT_TYPE_LABELS, DocumentTypeBadge, getDocumentTypeLabel } from "../components/DocumentTypeBadge";
+import { LegendHelpButton } from "../components/LegendHelpButton";
+import { LegendModal } from "../components/LegendModal";
+import { documentTypeLegendItems } from "../components/legend-config";
 import { DisclosureDocType, DisclosureDocument, QuarterCode } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -86,15 +90,6 @@ const EXTENSION_MIME_MAP: Record<string, string> = {
   png: "image/png",
 };
 
-const DOC_TYPE_LABELS: Record<DisclosureDocType, string> = {
-  ordinance: "Ordinance",
-  resolution: "Resolution",
-  executive_order: "Executive Order",
-  bac_document: "BAC Document",
-  financial_statement: "Financial Statement",
-  program_outcome: "Program Outcome",
-  other: "Other",
-};
 
 const defaultForm: DocumentForm = {
   docCode: "",
@@ -131,13 +126,6 @@ const detectFileMimeType = (file: File) => {
 const formatMimeType = (mime?: string | null) =>
   MIME_OPTIONS.find((item) => item.value === mime)?.label ?? (mime || "N/A");
 
-const getDocumentTypeLabel = (doc: DisclosureDocument) => {
-  if (doc.document_type === "other") {
-    return doc.document_type_other?.trim() || "Other";
-  }
-  return DOC_TYPE_LABELS[doc.document_type] || "Other";
-};
-
 export const Documents = () => {
   const [docs, setDocs] = useState<DisclosureDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,6 +139,7 @@ export const Documents = () => {
   const [deletingDoc, setDeletingDoc] = useState<DisclosureDocument | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isTypeLegendOpen, setIsTypeLegendOpen] = useState(false);
   const [form, setForm] = useState<DocumentForm>(defaultForm);
   const [barangayOptions, setBarangayOptions] = useState<Option[]>([]);
   const [officeOptions, setOfficeOptions] = useState<Option[]>([]);
@@ -459,12 +448,7 @@ export const Documents = () => {
     },
     {
       header: "Type",
-      accessor: (d: DisclosureDocument) => (
-        <div className="flex items-center gap-1 text-xs font-bold text-muted-foreground bg-muted px-2 py-1 rounded-lg w-fit uppercase">
-          <Tag size={12} />
-          {getDocumentTypeLabel(d)}
-        </div>
-      ),
+      accessor: (d: DisclosureDocument) => <DocumentTypeBadge doc={d} />,
     },
     {
       header: "Fiscal Period",
@@ -530,7 +514,13 @@ export const Documents = () => {
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Transparency Documents</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground">Transparency Documents</h1>
+            <LegendHelpButton
+              onClick={() => setIsTypeLegendOpen(true)}
+              ariaLabel="View document type color legend"
+            />
+          </div>
           <p className="text-muted-foreground mt-1 font-medium">Upload public files and keep the transparency registry up to date.</p>
         </div>
         <button
@@ -577,6 +567,14 @@ export const Documents = () => {
         isLoading={isLoading}
         onRowClick={openDetailsModal}
         getRowAriaLabel={(item) => `Open details for document ${item.title}`}
+      />
+
+      <LegendModal
+        open={isTypeLegendOpen}
+        onOpenChange={setIsTypeLegendOpen}
+        title="Document Type Legend"
+        description="These colors help identify transparency document categories quickly."
+        items={documentTypeLegendItems}
       />
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
@@ -664,7 +662,7 @@ export const Documents = () => {
                   >
                     {DOC_TYPES.map((type) => (
                       <option key={type} value={type}>
-                        {DOC_TYPE_LABELS[type]}
+                        {DOCUMENT_TYPE_LABELS[type]}
                       </option>
                     ))}
                   </select>

@@ -1,4 +1,4 @@
-import { Download, RefreshCw, Search, Table2, Users } from "lucide-react";
+import { Download, RefreshCw, Search, Table2, Users, Users2, Database, RotateCw, Filter } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/admin/components/DataTable";
@@ -562,7 +562,14 @@ export const Registrations = () => {
         </div>
       ),
     },
-    { header: "Status", accessor: "status" as const },
+    {
+      header: "Status",
+      accessor: (row: LocalRegistrationRow) => (
+        <span className="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-muted text-muted-foreground">
+          {row.status}
+        </span>
+      ),
+    },
     {
       header: "Sync",
       accessor: (row: LocalRegistrationRow) => (
@@ -608,6 +615,10 @@ export const Registrations = () => {
     { header: "Email", accessor: "email" as const },
   ];
 
+  const uniqueParticipants = new Set(filteredRows.map((row) => row.email.toLowerCase())).size;
+  const hasNoLocalRows = !isLoading && filteredRows.length === 0;
+  const hasNoSheetRows = !isLoadingSheet && sheetRows.length === 0;
+
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-2">
@@ -617,20 +628,19 @@ export const Registrations = () => {
         </p>
       </header>
 
-      <div className="grid gap-4 xl:grid-cols-4">
-        <div className="bg-card border rounded-2xl p-4 card-shadow">
-          <p className="admin-kicker mb-2">Registration Type</p>
-          <div className="grid grid-cols-2 gap-2">
+      <div className="bg-card border rounded-2xl p-4 md:p-5 card-shadow space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[300px_1fr]">
+          <div className="space-y-2 xl:border-r xl:pr-6 xl:border-border">
+            <p className="admin-kicker">Registration Type</p>
+            <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant={mode === "events" ? "default" : "outline"} onClick={() => setMode("events")}>
               Events
             </Button>
             <Button type="button" variant={mode === "programs" ? "default" : "outline"} onClick={() => setMode("programs")}>
               Programs
             </Button>
+            </div>
           </div>
-        </div>
-
-        <div className="bg-card border rounded-2xl p-4 card-shadow xl:col-span-3">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto_auto]">
             <div className="space-y-1">
               <label className="admin-kicker">Record Filter</label>
@@ -681,17 +691,29 @@ export const Registrations = () => {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="bg-card border rounded-2xl p-4 card-shadow">
+        <div className="bg-card border rounded-2xl p-4 card-shadow flex items-start gap-3">
+          <div className="h-12 w-12 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><Database className="h-6 w-6" /></div>
+          <div>
           <p className="admin-kicker">Total Rows</p>
           <p className="text-2xl font-semibold mt-2">{filteredRows.length}</p>
+          <p className="text-sm text-muted-foreground mt-1">All registration records</p>
+          </div>
         </div>
-        <div className="bg-card border rounded-2xl p-4 card-shadow">
+        <div className="bg-card border rounded-2xl p-4 card-shadow flex items-start gap-3">
+          <div className="h-12 w-12 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><Users2 className="h-6 w-6" /></div>
+          <div>
           <p className="admin-kicker">Unique Participants</p>
-          <p className="text-2xl font-semibold mt-2">{new Set(filteredRows.map((row) => row.email.toLowerCase())).size}</p>
+          <p className="text-2xl font-semibold mt-2">{uniqueParticipants}</p>
+          <p className="text-sm text-muted-foreground mt-1">Distinct participants</p>
+          </div>
         </div>
-        <div className="bg-card border rounded-2xl p-4 card-shadow">
+        <div className="bg-card border rounded-2xl p-4 card-shadow flex items-start gap-3">
+          <div className="h-12 w-12 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><RotateCw className="h-6 w-6" /></div>
+          <div>
           <p className="admin-kicker">Pending Sync</p>
           <p className="text-2xl font-semibold mt-2">{pendingSyncCount}</p>
+          <p className="text-sm text-muted-foreground mt-1">Records awaiting sync</p>
+          </div>
         </div>
       </div>
 
@@ -701,8 +723,33 @@ export const Registrations = () => {
             <Users className="h-4 w-4 text-primary" />
             Local Portal Registrations
           </h2>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{filteredRows.length} results</span>
+            <Button type="button" variant="outline" size="icon" className="h-8 w-8">
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <DataTable columns={localColumns} data={filteredRows} isLoading={isLoading} />
+        {hasNoLocalRows ? (
+          <div className="rounded-2xl border bg-card card-shadow overflow-hidden">
+            <div className="border-b border-border bg-muted/40">
+              <div className="grid grid-cols-10 gap-0">
+                {["Record", "Name", "Email", "Source", "Contact", "Location", "Status", "Sync", "Synced At", "Registered"].map((heading) => (
+                  <div key={heading} className="admin-kicker px-6 py-4">{heading}</div>
+                ))}
+              </div>
+            </div>
+            <div className="py-14 text-center">
+              <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <Table2 className="h-7 w-7" />
+              </div>
+              <p className="text-xl font-semibold text-foreground">No registrations found</p>
+              <p className="text-sm text-muted-foreground mt-2">Try adjusting your filters or check back later.</p>
+            </div>
+          </div>
+        ) : (
+          <DataTable columns={localColumns} data={filteredRows} isLoading={isLoading} />
+        )}
       </section>
 
       <section className="space-y-3">
@@ -723,9 +770,12 @@ export const Registrations = () => {
             </Button>
           </div>
         </div>
-        <div className="rounded-2xl border bg-card p-4 card-shadow space-y-2">
+        <div className="rounded-2xl border bg-card p-4 card-shadow space-y-3">
           {selectedRecordId === "all" ? (
-            <p className="text-sm text-muted-foreground">Select one event/program to preview its external attendance sheet.</p>
+            <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
+              <p className="text-lg font-semibold text-foreground">Select an event or program</p>
+              <p className="text-sm text-muted-foreground mt-2">Choose an event or program above to load and preview its external attendance sheet.</p>
+            </div>
           ) : !hasExternalSheet ? (
             <p className="text-sm text-muted-foreground">
               No Google Sheet URL configured for this {mode === "events" ? "event" : "program"}.
@@ -736,7 +786,13 @@ export const Registrations = () => {
                 Preview source: <span className="font-medium break-all">{selectedRecord?.registration_sheet_url}</span>
               </p>
               {sheetError ? <p className="text-sm text-destructive">{sheetError}</p> : null}
-              <DataTable columns={externalColumns} data={sheetRows} isLoading={isLoadingSheet} />
+              {hasNoSheetRows ? (
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 p-5 text-center text-sm text-muted-foreground">
+                  No sheet rows loaded yet.
+                </div>
+              ) : (
+                <DataTable columns={externalColumns} data={sheetRows} isLoading={isLoadingSheet} />
+              )}
             </>
           )}
         </div>

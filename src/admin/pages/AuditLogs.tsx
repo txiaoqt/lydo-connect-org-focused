@@ -1,16 +1,8 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Filter, RefreshCw, Search } from "lucide-react";
+import { Filter, RefreshCw, Search } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { AuditLogEntry, AuditOperation } from "../types";
 
 type ComparisonRow = {
@@ -22,7 +14,7 @@ type ComparisonRow = {
 };
 
 const OPERATION_META: Record<AuditOperation, { label: string; badgeClass: string }> = {
-  INSERT: { label: "Created", badgeClass: "bg-accent/15 text-accent" },
+  INSERT: { label: "Created", badgeClass: "bg-emerald-100 text-emerald-700" },
   UPDATE: { label: "Updated", badgeClass: "bg-primary/10 text-primary" },
   DELETE: { label: "Deleted", badgeClass: "bg-destructive/10 text-destructive" },
 };
@@ -41,7 +33,6 @@ const TABLE_LABELS: Record<string, string> = {
   barangay_youth_metrics: "Barangay Youth Metrics",
   compliance_board_status: "Compliance Board",
   monthly_compliance: "Monthly Compliance",
-  service_advisories: "Service Advisories",
   ticket_types: "Citizen Desk Ticket Types",
   citizen_tickets: "Citizen Desk Tickets",
   event_registrations: "Event Registrations",
@@ -76,6 +67,10 @@ const FIELD_LABELS: Record<string, string> = {
   public_url: "Public URL",
   document_type: "Document Type",
   document_type_other: "Document Type (Other)",
+  file_mime_type: "File Type",
+  file_size_bytes: "File Size",
+  doc_code: "Document Code",
+  office_id: "Office",
   fiscal_year: "Fiscal Year",
   month_no: "Month",
   due_date: "Due Date",
@@ -125,6 +120,19 @@ const SUMMARY_KEYS = [
 
 const RECORD_TITLE_KEYS = ["title", "name", "subject", "full_name", "display_name", "reference_no", "doc_code", "email"];
 const HIDDEN_CHANGED_KEYS = new Set(["updated_at"]);
+const TECHNICAL_FIELD_KEYS = new Set([
+  "id",
+  "user_id",
+  "role_id",
+  "created_by",
+  "updated_by",
+  "storage_path",
+  "public_url",
+  "file_mime_type",
+  "office_id",
+  "barangay_id",
+]);
+const URL_FIELD_KEYS = new Set(["public_url", "source_post_url", "registration_form_url", "registration_sheet_url"]);
 
 const toTitleWords = (value: string) =>
   value
@@ -139,6 +147,7 @@ const toJsonObject = (value: unknown): Record<string, unknown> =>
 const isDateOnly = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 const isTimeOnly = (value: string) => /^\d{2}:\d{2}(:\d{2})?$/.test(value);
 const isIsoTimestamp = (value: string) => /^\d{4}-\d{2}-\d{2}T/.test(value);
+const isLikelyExternalUrl = (value: string) => /^https?:\/\//i.test(value);
 
 const formatTime = (value: string) => {
   const [hh, mm] = value.slice(0, 5).split(":");
@@ -150,10 +159,22 @@ const formatTime = (value: string) => {
   return `${normalizedHour}:${String(minute).padStart(2, "0")} ${suffix}`;
 };
 
+const formatFileSize = (bytes: number) => {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+};
+
+const looksLikeUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const shortenTechnicalId = (value: string) => `${value.slice(0, 8)}...${value.slice(-4)}`;
+
 const formatValue = (value: unknown, fieldKey?: string): string => {
   if (value == null || value === "") return "Not set";
   if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "number") return Number.isFinite(value) ? value.toLocaleString() : String(value);
+  if (typeof value === "number") {
+    if (fieldKey === "file_size_bytes") return formatFileSize(value);
+    return Number.isFinite(value) ? value.toLocaleString() : String(value);
+  }
   if (typeof value === "string") {
     const raw = value.trim();
     if (!raw) return "Not set";
@@ -168,6 +189,9 @@ const formatValue = (value: unknown, fieldKey?: string): string => {
     }
     if ((fieldKey?.includes("time") || fieldKey?.endsWith("_time")) && isTimeOnly(raw)) {
       return formatTime(raw);
+    }
+    if (fieldKey && TECHNICAL_FIELD_KEYS.has(fieldKey) && looksLikeUuid(raw)) {
+      return shortenTechnicalId(raw);
     }
     return raw;
   }
@@ -199,6 +223,7 @@ const sortKeys = (keys: string[]) => {
 
 const toTableLabel = (tableName: string) => TABLE_LABELS[tableName] ?? toTitleWords(tableName);
 const toFieldLabel = (key: string) => FIELD_LABELS[key] ?? toTitleWords(key);
+const getOperationMeta = (operation: AuditOperation) => OPERATION_META[operation] ?? { label: "Unknown", badgeClass: "bg-muted text-muted-foreground" };
 
 const toActorLabel = (entry: AuditLogEntry) => {
   const raw = entry.actor_name?.trim() || entry.actor_email?.trim() || entry.actor_user_id?.trim() || "";
@@ -280,6 +305,13 @@ const toChangedFieldsSummary = (entry: AuditLogEntry) => {
   return `${labels.slice(0, 2).join(", ")} +${labels.length - 2} more`;
 };
 
+const getAuditSummaryText = (entry: AuditLogEntry) => {
+  const section = toTableLabel(entry.table_name);
+  if (entry.operation === "INSERT") return `A new record was created in ${section}.`;
+  if (entry.operation === "DELETE") return `A record was deleted from ${section}.`;
+  return `A record in ${section} was updated.`;
+};
+
 const buildComparisonRows = (entry: AuditLogEntry): ComparisonRow[] => {
   const oldData = toJsonObject(entry.old_data);
   const newData = toJsonObject(entry.new_data);
@@ -319,6 +351,16 @@ const buildSummaryFields = (entry: AuditLogEntry): Array<{ key: string; label: s
   }));
 };
 
+const splitMainAndTechnicalFields = (fields: Array<{ key: string; label: string; value: string }>) => {
+  const main: Array<{ key: string; label: string; value: string }> = [];
+  const technical: Array<{ key: string; label: string; value: string }> = [];
+  for (const field of fields) {
+    if (TECHNICAL_FIELD_KEYS.has(field.key)) technical.push(field);
+    else main.push(field);
+  }
+  return { main, technical };
+};
+
 const toJsonPreview = (value: unknown) => {
   if (value == null) return "{}";
   try {
@@ -335,8 +377,6 @@ export const AuditLogs = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [operationFilter, setOperationFilter] = useState<"all" | AuditOperation>("all");
   const [tableFilter, setTableFilter] = useState("all");
-  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const { toast } = useToast();
 
   const loadLogs = useCallback(async () => {
@@ -389,7 +429,7 @@ export const AuditLogs = () => {
           toRecordTitle(entry).toLowerCase(),
           toRowPkLabel(entry).toLowerCase(),
           toChangedFieldsSummary(entry).toLowerCase(),
-          OPERATION_META[entry.operation].label.toLowerCase(),
+          getOperationMeta(entry.operation).label.toLowerCase(),
         ].join(" ");
 
         const matchesSearch = term.length === 0 ? true : haystack.includes(term);
@@ -407,17 +447,12 @@ export const AuditLogs = () => {
 
   const uniqueActors = useMemo(() => new Set(logs.map((entry) => toActorLabel(entry))).size, [logs]);
 
-  const selectedRows = useMemo(() => (selectedLog ? buildComparisonRows(selectedLog) : []), [selectedLog]);
-  const selectedSummary = useMemo(() => (selectedLog ? buildSummaryFields(selectedLog) : []), [selectedLog]);
-
   return (
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Audit Logs</h1>
-          <p className="text-muted-foreground mt-1 font-medium">
-            See who changed records, where the change happened, and exactly what was updated.
-          </p>
+          <p className="text-muted-foreground mt-1 font-medium">Track who changed records, when changes happened, and what was updated.</p>
         </div>
         <Button type="button" variant="outline" onClick={() => void loadLogs()}>
           <RefreshCw size={16} className="mr-2" />
@@ -520,20 +555,20 @@ export const AuditLogs = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Section</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Record</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Changes</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inspect</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {isLoading ? (
                 <tr>
-                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={7}>
+                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={6}>
                     Loading audit logs...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={7}>
-                    No audit entries found for current filters.
+                  <td className="px-4 py-12 text-center text-muted-foreground" colSpan={6}>
+                    <p className="font-medium text-foreground">No audit logs found</p>
+                    <p className="text-xs mt-1">Try adjusting your search or filters.</p>
                   </td>
                 </tr>
               ) : (
@@ -547,8 +582,8 @@ export const AuditLogs = () => {
                       <p className="text-xs text-muted-foreground">{toActorRoleLabel(entry)}</p>
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${OPERATION_META[entry.operation].badgeClass}`}>
-                        {OPERATION_META[entry.operation].label}
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${getOperationMeta(entry.operation).badgeClass}`}>
+                        {getOperationMeta(entry.operation).label}
                       </span>
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -561,20 +596,6 @@ export const AuditLogs = () => {
                     <td className="px-4 py-3 align-top">
                       <p className="text-xs text-muted-foreground">{toChangedFieldsSummary(entry)}</p>
                     </td>
-                    <td className="px-4 py-3 align-top text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedLog(entry);
-                          setIsDetailsOpen(true);
-                        }}
-                      >
-                        <Eye size={14} className="mr-1" />
-                        View
-                      </Button>
-                    </td>
                   </tr>
                 ))
               )}
@@ -582,124 +603,6 @@ export const AuditLogs = () => {
           </table>
         </div>
       </div>
-
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-6xl">
-          <DialogHeader>
-            <DialogTitle>Change Details</DialogTitle>
-            <DialogDescription>
-              Readable summary of what changed, with highlighted before and after values.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedLog && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                <div className="rounded-xl border border-border bg-muted/20 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Time</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{new Date(selectedLog.occurred_at).toLocaleString()}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Admin</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{toActorLabel(selectedLog)}</p>
-                  <p className="text-xs text-muted-foreground">{toActorRoleLabel(selectedLog)}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Section</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{toTableLabel(selectedLog.table_name)}</p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/20 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{OPERATION_META[selectedLog.operation].label}</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <div className="px-4 py-3 border-b border-border bg-muted/20">
-                  <p className="text-sm font-semibold text-foreground">
-                    {selectedLog.operation === "UPDATE"
-                      ? "Highlighted Changes"
-                      : selectedLog.operation === "INSERT"
-                        ? "Added Information"
-                        : "Removed Information"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 break-all">
-                    Record: {toRecordTitle(selectedLog)} (ID: {toRecordId(selectedLog)})
-                  </p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[820px] text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/10">
-                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Field</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Before</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">After</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                      {selectedRows.length === 0 ? (
-                        <tr>
-                          <td className="px-4 py-6 text-sm text-muted-foreground" colSpan={3}>
-                            No field-level details captured for this entry.
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedRows.map((row) => (
-                          <tr key={row.key} className={row.changed ? "bg-primary/5" : ""}>
-                            <td className="px-4 py-3 align-top">
-                              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${row.changed ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                                {row.label}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 align-top text-sm text-muted-foreground break-words">{row.before}</td>
-                            <td className="px-4 py-3 align-top text-sm text-foreground break-words">{row.after}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-4">
-                <p className="text-sm font-semibold text-foreground mb-3">Record Snapshot</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {selectedSummary.map((field) => (
-                    <div key={field.key} className="rounded-lg border border-border bg-muted/20 px-3 py-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{field.label}</p>
-                      <p className="text-sm text-foreground break-words mt-1">{field.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <details className="rounded-xl border border-border bg-muted/10 p-3">
-                <summary className="cursor-pointer text-sm font-medium text-muted-foreground">Technical JSON (optional)</summary>
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Old Data JSON</p>
-                    <pre className="max-h-72 overflow-auto rounded-lg border border-border bg-card p-3 text-xs leading-relaxed text-foreground">
-                      {toJsonPreview(selectedLog.old_data)}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">New Data JSON</p>
-                    <pre className="max-h-72 overflow-auto rounded-lg border border-border bg-card p-3 text-xs leading-relaxed text-foreground">
-                      {toJsonPreview(selectedLog.new_data)}
-                    </pre>
-                  </div>
-                </div>
-              </details>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsDetailsOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

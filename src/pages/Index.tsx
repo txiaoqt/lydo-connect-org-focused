@@ -90,43 +90,47 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <section className="hero-gradient relative overflow-hidden pt-16">
+      <section className="hero-gradient relative overflow-x-clip pt-16">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-20 w-96 h-96 bg-accent rounded-full blur-3xl" />
         </div>
-        <div className="container mx-auto px-4 py-20 md:py-28 relative z-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="container mx-auto px-4 py-10 sm:py-12 md:py-16 lg:py-20 relative z-10">
+          <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="animate-fade-up">
-              <div className="inline-flex items-center gap-2 bg-secondary-foreground/10 backdrop-blur-sm border border-secondary-foreground/20 rounded-full px-4 py-1.5 mb-6">
+              <div className="inline-flex max-w-full items-center gap-2 bg-secondary-foreground/10 backdrop-blur-sm border border-secondary-foreground/20 rounded-full px-3 py-1.5 mb-4 sm:mb-6">
                 <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-                <span className="text-xs font-medium text-secondary-foreground/80">Metro Manila Local Youth Development Offices</span>
+                <span className="text-[11px] sm:text-xs font-medium text-secondary-foreground/80 truncate">Prototype Local Youth Development Offices</span>
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-extrabold text-secondary-foreground leading-tight mb-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-heading font-extrabold text-secondary-foreground leading-tight mb-4 sm:mb-6">
                 Empowering Youth through Programs, Opportunities, and <span className="text-gradient">Transparent Governance</span>
               </h1>
-              <p className="text-lg text-secondary-foreground/75 max-w-xl mb-8 leading-relaxed">
-                A centralized digital platform for Metro Manila LYDOs connecting youth with programs, events, organizations, advocacy groups, and transparency data.
+              <p className="text-base sm:text-lg text-secondary-foreground/75 max-w-xl mb-6 sm:mb-8 leading-relaxed">
+                A centralized digital platform connecting youth with programs, events, organizations, advocacy groups, and transparency data.
               </p>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="hero" size="lg" asChild>
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+                <Button variant="hero" size="lg" className="w-full sm:w-auto" asChild>
                   <Link to="/programs">Explore Programs <ArrowRight className="ml-1 h-4 w-4" /></Link>
                 </Button>
-                <Button variant="heroOutline" size="lg" asChild>
+                <Button variant="heroOutline" size="lg" className="w-full sm:w-auto" asChild>
                   <Link to="/transparency/reports">View Transparency Portal</Link>
                 </Button>
               </div>
             </div>
-            <div className="hidden md:block animate-float">
-              <img src={heroImage} alt="Metro Manila youth participants" className="rounded-2xl shadow-2xl w-full" />
+            <div className="animate-float order-last md:order-none">
+              <img
+                src={heroImage}
+                alt="Youth participants in a community activity"
+                className="rounded-2xl shadow-2xl w-full h-auto max-w-full object-contain mx-auto md:max-w-[560px]"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      <section className="stats-gradient py-12">
+      <section className="stats-gradient py-8 sm:py-10 md:py-12">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
             <StatCard value={participantCount.toLocaleString()} label="Youth Engaged" compact />
             <StatCard value={programCount.toLocaleString()} label="Programs" compact />
             <StatCard value={`PHP ${(displayBudget / 1000000).toFixed(1)}M`} label="Budget Transparency" compact />
@@ -192,14 +196,27 @@ const Index = () => {
       <section className="py-20 md:py-24 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12 max-w-2xl mx-auto">
-            <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-3 block">Role Based Access</span>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">One Platform, Three Active Roles</h2>
-            <p className="text-muted-foreground">Guests, youth users, and SK officials each get tailored views and actions.</p>
+            <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-3 block">Platform Features</span>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">Explore what you can do</h2>
+            <p className="text-muted-foreground">Access youth programs, events, organization information, and transparency resources in one place.</p>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-card border rounded-lg p-5"><p className="font-semibold">Guest</p><p className="text-sm text-muted-foreground mt-1">Browse programs and transparency pages.</p></div>
-            <div className="bg-card border rounded-lg p-5"><p className="font-semibold">Youth User</p><p className="text-sm text-muted-foreground mt-1">Join programs, participate in events, and connect with organizations.</p></div>
-            <div className="bg-card border rounded-lg p-5"><p className="font-semibold">Barangay SK</p><p className="text-sm text-muted-foreground mt-1">Track compliance and governance data.</p></div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-card border rounded-lg p-5">
+              <p className="font-semibold">Browse Programs and Events</p>
+              <p className="text-sm text-muted-foreground mt-1">Discover available programs and upcoming youth events.</p>
+            </div>
+            <div className="bg-card border rounded-lg p-5">
+              <p className="font-semibold">View Youth Organizations</p>
+              <p className="text-sm text-muted-foreground mt-1">Explore LYDO-related organization information, focus areas, and activities.</p>
+            </div>
+            <div className="bg-card border rounded-lg p-5">
+              <p className="font-semibold">Access Transparency Records</p>
+              <p className="text-sm text-muted-foreground mt-1">View public reports, disclosures, and governance-related documents.</p>
+            </div>
+            <div className="bg-card border rounded-lg p-5">
+              <p className="font-semibold">Check Barangay Youth Data</p>
+              <p className="text-sm text-muted-foreground mt-1">Explore youth metrics and barangay-level information.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -209,12 +226,12 @@ const Index = () => {
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-secondary-foreground mb-4">Youth Governance Transparency and Accountability System</h2>
           <p className="text-secondary-foreground/70 max-w-2xl mx-auto mb-8 leading-relaxed">
             {isAuthenticated
-              ? `You are signed in as ${role === "sk" ? "Barangay SK" : role}. Continue to your zone from the navigation menu.`
-              : "Sign in to access role-based features while keeping all transparency data public for citizens."}
+              ? "You are signed in. Continue exploring programs, events, organizations, and transparency records from the navigation menu."
+              : "Sign in to access saved participation features, while public transparency records remain available to everyone."}
           </p>
           <div className="flex justify-center gap-3 flex-wrap">
             <Button variant="hero" size="lg" asChild>
-              <Link to="/signin">Access Your Role <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              <Link to="/signin">{isAuthenticated ? "Open Portal" : "Sign In"} <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
             <Button variant="heroOutline" size="lg" asChild>
               <Link to="/transparency/reports">Open Transparency</Link>

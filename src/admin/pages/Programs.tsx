@@ -3,6 +3,9 @@ import { CalendarDays, CircleHelp, FileText, Filter, Info, Link2, MapPin, Plus, 
 import { format } from "date-fns";
 import { DataTable } from "../components/DataTable";
 import { StatusBadge } from "../components/StatusBadge";
+import { LegendHelpButton } from "../components/LegendHelpButton";
+import { LegendModal } from "../components/LegendModal";
+import { programStatusLegendItems } from "../components/legend-config";
 import { Program, ProgramStatus } from "../types";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -82,7 +85,7 @@ const defaultForm: ProgramForm = {
   sectorOption: "General",
   customSector: "",
   description: "",
-  location: "Metro Manila",
+  location: "Prototype Youth Center",
   locationLatitude: "",
   locationLongitude: "",
   startDate: "",
@@ -148,6 +151,7 @@ export const Programs = () => {
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [isLinksGuideOpen, setIsLinksGuideOpen] = useState(false);
   const [isSyncGuideOpen, setIsSyncGuideOpen] = useState(false);
+  const [isStatusLegendOpen, setIsStatusLegendOpen] = useState(false);
   const [form, setForm] = useState<ProgramForm>(defaultForm);
   const { toast } = useToast();
 
@@ -323,7 +327,7 @@ export const Programs = () => {
       title: form.title.trim(),
       sector: selectedSector,
       description: form.description.trim(),
-      location: form.location.trim() || "Metro Manila",
+      location: form.location.trim() || "Prototype Youth Center",
       location_latitude: parsedLatitude,
       location_longitude: parsedLongitude,
       start_date: form.startDate || null,
@@ -406,7 +410,7 @@ export const Programs = () => {
 
   const columns = [
     {
-      header: "Title",
+      header: "Programs",
       accessor: (p: Program) => (
         <div className="flex flex-col">
           <span className="font-bold text-foreground">{p.title}</span>
@@ -461,8 +465,14 @@ export const Programs = () => {
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Programs Management</h1>
-          <p className="text-muted-foreground mt-1 font-medium">Manage and monitor youth development programs across Metro Manila.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground">Programs Management</h1>
+            <LegendHelpButton
+              onClick={() => setIsStatusLegendOpen(true)}
+              ariaLabel="View program status color legend"
+            />
+          </div>
+          <p className="text-muted-foreground mt-1 font-medium">Manage and monitor youth development programs across prototype coverage areas.</p>
         </div>
         <button
           type="button"
@@ -551,6 +561,14 @@ export const Programs = () => {
         isLoading={isLoading}
         onRowClick={openDetailsModal}
         getRowAriaLabel={(item) => `Open details for ${item.title}`}
+      />
+
+      <LegendModal
+        open={isStatusLegendOpen}
+        onOpenChange={setIsStatusLegendOpen}
+        title="Program Status Legend"
+        description="These colors show the current state of each program."
+        items={programStatusLegendItems}
       />
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>

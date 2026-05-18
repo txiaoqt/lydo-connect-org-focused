@@ -56,80 +56,79 @@ export default function Organizations() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-16">
+        <section className="hero-gradient py-10 sm:py-12 md:py-16">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-3xl md:text-5xl font-heading font-bold text-secondary-foreground mb-4">
+            <h1 className="text-[1.9rem] sm:text-4xl md:text-5xl font-heading font-bold text-secondary-foreground mb-3 sm:mb-4">
               Youth Organizations
             </h1>
-            <p className="text-secondary-foreground/70 max-w-2xl mx-auto">
-              Verified Pasig-based youth organizations and partners, sourced from official city and government
-              announcements.
+            <p className="text-sm sm:text-base text-secondary-foreground/70 max-w-xl md:max-w-2xl mx-auto leading-relaxed">
+              Prototype organization records are shown for system demonstration and testing purposes.
             </p>
           </div>
         </section>
 
-        <section className="py-12">
+        <section className="py-6 sm:py-8 md:py-12">
           <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row gap-4 mb-8">
+            <div className="flex flex-col gap-3 sm:gap-4 mb-5 sm:mb-6 md:mb-8">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search organizations..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 h-10 sm:h-11 text-sm"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button variant={tab === "active" ? "default" : "outline"} size="sm" onClick={() => setTab("active")}>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <Button variant={tab === "active" ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => setTab("active")}>
                   Active
                 </Button>
-                <Button variant={tab === "partner" ? "default" : "outline"} size="sm" onClick={() => setTab("partner")}>
+                <Button variant={tab === "partner" ? "default" : "outline"} size="sm" className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm" onClick={() => setTab("partner")}>
                   Partners
                 </Button>
               </div>
             </div>
 
             {isLoadingOrgs ? (
-              <div className="text-center py-16 text-muted-foreground">
+              <div className="text-center py-12 sm:py-16 text-muted-foreground">
                 <p className="text-sm">Loading organizations...</p>
               </div>
             ) : errorMessage ? (
-              <div className="text-center py-16 text-muted-foreground">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive/70" />
+              <div className="text-center py-12 sm:py-16 text-muted-foreground">
+                <AlertCircle className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-destructive/70" />
                 <p className="text-lg font-medium text-foreground">Could not load organization records</p>
                 <p className="mt-2 mb-5 text-sm">{errorMessage}</p>
                 <Button variant="outline" onClick={() => void loadOrganizations()}>Retry</Button>
               </div>
             ) : filtered.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 lg:gap-6 items-stretch">
                 {filtered.map((org) => (
                   <div
                     key={org.id}
-                    className="h-full rounded-lg border border-border bg-card p-5 card-shadow hover:card-shadow-hover transition-all duration-200 flex flex-col"
+                    className="h-full rounded-lg border border-border bg-card p-4 sm:p-5 card-shadow hover:card-shadow-hover transition-all duration-200 flex flex-col"
                   >
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2.5 sm:mb-4">
+                      <span className="text-[11px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-primary/10 text-primary">
                         {showValue(org.category ?? org.type)}
                       </span>
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-muted text-foreground/80">
-                        {org.status === "partner" ? "Partner" : "Active"}
+                      <span className="text-[11px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-muted text-foreground/80">
+                        {org.status === "partner" ? "Partner" : org.status === "pending" ? "Pending" : org.status === "inactive" ? "Inactive" : "Active"}
                       </span>
                     </div>
-                    <h3 className="font-heading font-bold text-foreground text-lg leading-snug mb-2 min-h-[3.25rem] line-clamp-2">{org.name}</h3>
-                    <p className="text-muted-foreground text-sm mb-4 leading-6 min-h-[3rem] line-clamp-2">{org.overview ?? org.focus}</p>
-                    <div className="space-y-3 text-sm text-muted-foreground mb-4 border-t border-border pt-4">
-                      <span className="flex items-center gap-3">
-                        <Users className="h-4 w-4 text-primary" />
+                    <h3 className="font-heading font-bold text-foreground text-base sm:text-lg leading-snug mb-1.5 sm:mb-2 min-h-[2.5rem] sm:min-h-[3.25rem] line-clamp-2">{org.name}</h3>
+                    <p className="text-muted-foreground text-sm mb-3 sm:mb-4 leading-5 sm:leading-6 min-h-[2.8rem] sm:min-h-[3rem] line-clamp-2">{org.overview ?? org.focus}</p>
+                    <div className="space-y-2 text-sm text-muted-foreground mb-3 sm:mb-4 border-t border-border pt-3 sm:pt-4">
+                      <span className="flex items-center gap-2.5">
+                        <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                         {showValue(org.type)}
                       </span>
-                      <span className="flex items-start gap-3">
-                        <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                      <span className="flex items-start gap-2.5">
+                        <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 shrink-0 text-primary" />
                         {showValue(org.sourceTag)}
                       </span>
                       {(org.coverageArea || org.location) && (
-                        <span className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                        <span className="flex items-start gap-2.5">
+                          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 shrink-0 text-primary" />
                           {showValue(org.coverageArea ?? org.location)}
                         </span>
                       )}
@@ -138,32 +137,31 @@ export default function Organizations() {
                           href={org.sourcePostUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-3 font-semibold text-primary hover:text-primary/80"
+                          className="inline-flex items-center gap-2.5 font-semibold text-primary hover:text-primary/80"
                         >
-                          <FileText className="h-4 w-4 shrink-0" />
-                          Source Post
+                          <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                          Reference Link
                         </a>
                       )}
                     </div>
-                    <Button size="sm" className="w-full mt-auto" onClick={() => setSelectedOrganization(org)}>
-                      <FileText className="h-4 w-4" />
+                    <Button size="sm" className="w-full h-10 sm:h-9 mt-auto" onClick={() => setSelectedOrganization(org)}>
+                      <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       View Organization Info
                     </Button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 text-muted-foreground">
-                <Filter className="h-12 w-12 mx-auto mb-4 opacity-40" />
+              <div className="text-center py-12 sm:py-16 text-muted-foreground">
+                <Filter className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-40" />
                 <p className="text-lg font-medium">No organizations found</p>
               </div>
             )}
 
-            <div className="mt-10 bg-muted/40 border rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
+            <div className="mt-7 sm:mt-10 bg-muted/40 border rounded-lg p-3 sm:p-4 text-sm text-muted-foreground flex items-start gap-2">
               <Building2 className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
-                Organization list is based on official Pasig City pages, announcements, and verified government
-                references.
+                Organization list uses prototype data for demonstration and testing purposes.
               </p>
             </div>
           </div>
@@ -257,7 +255,7 @@ export default function Organizations() {
                   {showValue(selectedOrganization.sourceName)}
                 </p>
                 <p className="text-muted-foreground">
-                  <span className="font-semibold text-foreground">Official Reference:</span>{" "}
+                  <span className="font-semibold text-foreground">Reference:</span>{" "}
                   {selectedOrganization.sourcePostUrl ? (
                     <a
                       href={selectedOrganization.sourcePostUrl}
@@ -274,7 +272,7 @@ export default function Organizations() {
                 </p>
                 {selectedOrganization.sourceLinks && selectedOrganization.sourceLinks.length > 0 ? (
                   <div className="space-y-1">
-                    <p className="font-semibold text-foreground">Additional Official Sources:</p>
+                    <p className="font-semibold text-foreground">Additional References:</p>
                     {selectedOrganization.sourceLinks.map((source, index) => (
                       <a
                         key={`${source.url}-${index}`}

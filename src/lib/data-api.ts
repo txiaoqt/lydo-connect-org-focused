@@ -322,7 +322,6 @@ export async function fetchOrganizations(): Promise<YouthOrganization[]> {
   const { data, error } = await supabase
     .from("organizations")
     .select("*, organization_references(reference_title, reference_url, published_on)")
-    .in("status", ["active", "partner"])
     .order("created_at", { ascending: false });
 
   if (error || !data || data.length === 0) return [];
@@ -354,7 +353,7 @@ export async function fetchOrganizations(): Promise<YouthOrganization[]> {
         const url = pickFirstString(typed, ["reference_url", "url"]);
         if (!url) return null;
         return {
-          label: pickFirstString(typed, ["reference_title", "label", "name", "title"]) ?? "Official Reference",
+          label: pickFirstString(typed, ["reference_title", "label", "name", "title"]) ?? "Reference",
           url,
         };
       })
@@ -375,13 +374,21 @@ export async function fetchOrganizations(): Promise<YouthOrganization[]> {
         .filter((entry): entry is { label: string; url: string } => Boolean(entry)),
       ];
 
+    const normalizedStatus = String(raw.status ?? "active").toLowerCase();
     return {
       id: String(raw.id ?? ""),
       name: String(raw.name ?? "Unnamed Organization"),
       type: String(raw.type ?? pickFirstString(raw, ["category", "organization_type"]) ?? "Organization"),
       focus: String(raw.focus ?? pickFirstString(raw, ["overview", "description", "mission"]) ?? "N/A"),
-      sourceTag: String(raw.source_tag ?? pickFirstString(raw, ["source_name", "source_reference", "source_reference_title"]) ?? ""),
-      status: raw.status === "partner" ? "partner" : "active",
+      sourceTag: String(raw.source_tag ?? pickFirstString(raw, ["source_name", "source_reference", "source_reference_title"]) ?? "Prototype Data"),
+      status:
+        normalizedStatus === "partner"
+          ? "partner"
+          : normalizedStatus === "pending"
+            ? "pending"
+            : normalizedStatus === "inactive"
+              ? "inactive"
+              : "active",
       sourcePostUrl: pickFirstString(raw, ["source_post_url", "source_reference_url", "source_link", "official_source_url"]) ?? undefined,
       category: pickFirstString(raw, ["category", "organization_type"]),
       overview: pickFirstString(raw, ["overview", "description"]),
@@ -478,26 +485,6 @@ export async function fetchTransparencyKpis() {
     avgResponseHours: data.avg_response_hours ?? 0,
     pendingTickets: data.pending_tickets ?? 0,
   };
-}
-
-export async function fetchServiceAdvisories() {
-  if (!supabase) return [];
-
-  const { data, error } = await supabase
-    .from("service_advisories")
-    .select("id,title,status,message,updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(30);
-
-  if (error || !data || data.length === 0) return [];
-
-  return data.map((row) => ({
-    id: row.id,
-    title: row.title,
-    status: toTitleCase(row.status),
-    updatedAt: row.updated_at?.replace("T", " ").slice(0, 16) ?? "",
-    message: row.message,
-  }));
 }
 
 export async function fetchTicketTypeOptions(): Promise<TicketTypeOption[]> {

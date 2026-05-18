@@ -11,19 +11,41 @@ end $$;
 
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='program_status' and n.nspname='public') then
-    create type public.program_status as enum ('draft','published','archived');
+    create type public.program_status as enum (
+      'draft',
+      'published',
+      'upcoming',
+      'ongoing',
+      'completed',
+      'pending',
+      'past',
+      'postponed',
+      'cancelled',
+      'archived'
+    );
   end if;
 end $$;
 
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='event_status' and n.nspname='public') then
-    create type public.event_status as enum ('draft','upcoming','past','cancelled');
+    create type public.event_status as enum (
+      'draft',
+      'published',
+      'upcoming',
+      'ongoing',
+      'completed',
+      'pending',
+      'past',
+      'postponed',
+      'cancelled',
+      'archived'
+    );
   end if;
 end $$;
 
 do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='organization_status' and n.nspname='public') then
-    create type public.organization_status as enum ('active','partner','inactive');
+    create type public.organization_status as enum ('active','partner','pending','inactive','archived');
   end if;
 end $$;
 

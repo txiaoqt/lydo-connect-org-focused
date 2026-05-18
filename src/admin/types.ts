@@ -1,7 +1,7 @@
 
 export type ProgramStatus = 'draft' | 'upcoming' | 'ongoing' | 'past' | 'archived' | 'postponed' | 'cancelled' | 'published';
 export type EventStatus = 'draft' | 'upcoming' | 'ongoing' | 'past' | 'archived' | 'postponed' | 'cancelled' | 'published';
-export type OrganizationStatus = 'active' | 'partner' | 'inactive';
+export type OrganizationStatus = 'active' | 'partner' | 'pending' | 'inactive';
 export type RegistrationStatus = 'registered' | 'attended' | 'cancelled';
 export type DocState = 'ok' | 'partial' | 'issue';
 export type SubmissionState = 'submitted' | 'late' | 'missing';
@@ -84,6 +84,19 @@ export interface Organization {
   name: string;
   type: string;
   focus: string;
+  category?: string | null;
+  overview?: string | null;
+  mission?: string | null;
+  objectives?: string | null;
+  programs_projects?: string | null;
+  coverage_area?: string | null;
+  target_beneficiaries?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  source_reference_title?: string | null;
+  source_reference_url?: string | null;
+  credibility_notes?: string | null;
+  related_events?: string | null;
   source_tag?: string;
   status: OrganizationStatus;
   barangay_id?: string;
