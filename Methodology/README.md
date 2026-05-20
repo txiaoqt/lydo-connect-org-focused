@@ -1,6 +1,6 @@
 # Methodology Package for LYDO Connect
 
-This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement, and Transparency Management System** based on the actual repository, workflows, and database design of the current system. It is not copied from the VIG template.
+This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement, and Transparency Management System** based on the actual repository, workflows, and database design of the current system. It is not copied from the VIG template. The current package reflects the updated public portal, admin portal, policy agreement gate, program/event registration monitoring, optional Google Forms/Sheets sync support, expanded organization references/projects, transparency modules, citizen desk, and audit logs.
 
 ## Recommended Section Decisions
 
@@ -9,6 +9,8 @@ This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement
 - Do not reuse the template's `Waterfall` discussion. A **hybrid DSR + RAD** approach fits this study better because the project is a design-and-development study with iterative prototyping.
 - Do not copy hypothesis-testing content from the template unless your adviser explicitly requires inferential comparison. For this kind of system study, weighted mean, standard deviation, expert validation, and usability evaluation are usually more appropriate.
 - Reframe the template's `3.8 Reliability Test Result Required for Ethics Clearance` into an **instrument validation and reliability plan**. Actual Cronbach's alpha results should only be inserted after pilot testing.
+- Treat the local registration tables as the source of record. External Google Forms/Sheets behavior is documented as sync and monitoring support, not as a replacement for the Supabase registration records.
+- Keep organization workflows read-centric for public users: "View Organization Info" and source inspection are current behavior, while organization join/enrollment is not part of the current public module.
 
 ## Files
 
@@ -31,4 +33,4 @@ This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement
 
 ## Note for Manuscript Integration
 
-These files are drafted as clean source material. You can paste them into your manuscript and adjust wording, respondent counts, and school-specific formatting rules as needed.
+These files are drafted as clean source material. You can paste them into your manuscript and adjust wording, respondent counts, evaluator tasks, and school-specific formatting rules as needed.

@@ -92,7 +92,8 @@
 
   <ellipse cx="825" cy="230" rx="160" ry="42" class="mainUsecase"/>
   <text x="825" y="219" text-anchor="middle" class="ucId">UC-02</text>
-  <text x="825" y="239" text-anchor="middle" class="text">Log In / Sign Out</text>
+  <text x="825" y="236" text-anchor="middle" class="text">Log In, Accept Policy,</text>
+  <text x="825" y="255" text-anchor="middle" class="text">and Sign Out</text>
 
   <ellipse cx="1120" cy="230" rx="135" ry="38" class="helperUsecase"/>
   <text x="1120" y="226" text-anchor="middle" class="text">Verify Active</text>
@@ -107,8 +108,8 @@
   <text x="825" y="345" text-anchor="middle" class="text">Credentials</text>
 
   <ellipse cx="1100" cy="330" rx="130" ry="34" class="helperUsecase"/>
-  <text x="1100" y="326" text-anchor="middle" class="text">Redirect by</text>
-  <text x="1100" y="345" text-anchor="middle" class="text">User Role</text>
+  <text x="1100" y="326" text-anchor="middle" class="text">Check Policy and</text>
+  <text x="1100" y="345" text-anchor="middle" class="text">Redirect by Role</text>
 
   <line x1="500" y1="272" x2="500" y2="296" class="include"/>
   <line x1="825" y1="272" x2="825" y2="296" class="include"/>
@@ -239,8 +240,8 @@
 
   <ellipse cx="2050" cy="455" rx="150" ry="44" class="mainUsecase"/>
   <text x="2050" y="444" text-anchor="middle" class="ucId">UC-12</text>
-  <text x="2050" y="464" text-anchor="middle" class="text">Monitor Local</text>
-  <text x="2050" y="483" text-anchor="middle" class="text">Registrations</text>
+  <text x="2050" y="464" text-anchor="middle" class="text">Monitor Registrations</text>
+  <text x="2050" y="483" text-anchor="middle" class="text">and Sync Status</text>
 
   <ellipse cx="1430" cy="590" rx="120" ry="33" class="helperUsecase"/>
   <text x="1430" y="586" text-anchor="middle" class="text">Validate Record</text>
@@ -259,8 +260,8 @@
   <text x="1965" y="604" text-anchor="middle" class="text">Registrations</text>
 
   <ellipse cx="2245" cy="590" rx="105" ry="33" class="helperUsecase"/>
-  <text x="2245" y="586" text-anchor="middle" class="text">Export</text>
-  <text x="2245" y="604" text-anchor="middle" class="text">CSV</text>
+  <text x="2245" y="586" text-anchor="middle" class="text">Export CSV or</text>
+  <text x="2245" y="604" text-anchor="middle" class="text">Retry Sync</text>
 
   <ellipse cx="2050" cy="690" rx="160" ry="44" class="mainUsecase"/>
   <text x="2050" y="679" text-anchor="middle" class="ucId">UC-07</text>

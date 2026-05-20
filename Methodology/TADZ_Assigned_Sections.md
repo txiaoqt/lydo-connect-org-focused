@@ -1,6 +1,6 @@
 # TADZ Assigned Sections (Chapter 3 Draft)
 
-Source of truth: `supabase/schema_supabase_all_in_one.sql`.
+Source of truth: the current Supabase SQL migrations and `supabase/schema_supabase_all_in_one.sql`.
 
 This file keeps the TADZ-assigned manuscript sections aligned with the current dedicated Chapter 3 Markdown files. The authoritative versions are maintained in separate files to avoid duplicate, inconsistent diagrams and dictionaries.
 
@@ -19,13 +19,15 @@ The database schema is presented as partitioned ERDs instead of one oversized di
 7. Citizen Services and Advisories
 8. Audit Logs
 
+Policy version and user policy acceptance tables are documented inside the Authentication, Users, and Roles partition because they are tied directly to authenticated user access. Expanded organization reference and project tables are documented inside the Youth Programs, Events, and Organizations partition.
+
 Each partition shows table boxes, primary keys, foreign keys, and relationships. Shared reference tables such as `auth.users`, `barangays`, `offices`, and `disclosure_documents` are repeated as simplified boxes where needed for readability.
 
 ## 3.2.5 Data Dictionary
 
 Authoritative file: [`3.2.5-Data-Dictionary.md`](./3.2.5-Data-Dictionary.md)
 
-The data dictionary uses the same eight modules as the database schema. For each table, it lists the field name, data type, key type, reference table, and field purpose. The dictionary is aligned with the partitioned ERDs and the implemented core schema documented for the manuscript.
+The data dictionary uses the same modules as the database schema. For each table, it lists the field name, data type, key type, reference table, and field purpose. The dictionary is aligned with the partitioned ERDs and the implemented schema, including policy agreement records, organization references/projects, and registration sync fields.
 
 ## 3.3 Development Methodology
 
@@ -36,13 +38,13 @@ The study adopts a hybrid Design Science Research (DSR) and Rapid Application De
 - DSR frames the research problem, solution objectives, artifact development, demonstration, evaluation, and communication.
 - RAD supports iterative prototyping, stakeholder review, revision, and delivery of working modules.
 
-This combined method fits LYDO Connect because the platform includes public information access, account and role management, youth participation, transparency records, financial and compliance data, citizen tickets, and audit-supported administration.
+This combined method fits LYDO Connect because the platform includes public information access, account and role management, policy agreement handling, youth participation, registration monitoring, transparency records, financial and compliance data, citizen tickets, and audit-supported administration.
 
 ### 3.3.2 Development Tools
 
 Authoritative file: [`3.3.2-Development-Tools.md`](./3.3.2-Development-Tools.md)
 
-The implementation uses TypeScript, React, Vite, Tailwind CSS, Supabase, PostgreSQL, SQL migrations, Supabase Storage, Recharts, React Leaflet, Git, ESLint, Vitest, Visual Studio Code, Vercel, and related frontend libraries. These tools support responsive development, structured relational storage, role-based access, public document handling, maps, dashboards, and maintainable deployment.
+The implementation uses TypeScript, React, Vite, Tailwind CSS, Supabase, PostgreSQL, SQL migrations, Supabase Storage, Python worker scripts, Google Forms/Sheets integration support, Recharts, React Leaflet, Git, ESLint, Vitest, Visual Studio Code, Vercel, and related frontend libraries. These tools support responsive development, structured relational storage, role-based access, public document handling, registration sync monitoring, maps, dashboards, and maintainable deployment.
 
 ## 3.7.6 Statistical Treatments
 
