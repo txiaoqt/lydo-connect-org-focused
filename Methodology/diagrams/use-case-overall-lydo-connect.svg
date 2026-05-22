@@ -1,404 +1,244 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="2700" height="1900" viewBox="0 0 2700 1900">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="820" viewBox="0 0 1180 820" role="img" aria-labelledby="title desc">
+  <title id="title">General Use Case Diagram of LYDO Connect</title>
+  <desc id="desc">Use case diagram showing Public User, Youth User, LYDO Staff, and LYDO Super Admin interactions with the LYDO Connect System.</desc>
   <defs>
     <style>
-      .title { font: 700 32px Arial, sans-serif; fill: #111827; }
-      .systemTitle { font: 700 22px Arial, sans-serif; fill: #111827; }
-      .section { font: 700 18px Arial, sans-serif; fill: #334155; }
-      .actorText { font: 700 17px Arial, sans-serif; fill: #111827; }
-      .ucId { font: 700 13px Arial, sans-serif; fill: #475569; }
-      .text { font: 15px Arial, sans-serif; fill: #111827; }
-      .small { font: 13px Arial, sans-serif; fill: #111827; }
-      .legend { font: 13px Arial, sans-serif; fill: #334155; }
-      .system { fill: #ffffff; stroke: #111827; stroke-width: 2.5; }
-      .band { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.2; }
-      .mainUsecase { fill: #fff7ed; stroke: #111827; stroke-width: 2.2; }
-      .helperUsecase { fill: #ffffff; stroke: #111827; stroke-width: 1.8; }
-      .actorShape { fill: #ffffff; stroke: #111827; stroke-width: 2.2; }
-      .assoc { fill: none; stroke: #111827; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-      .include { fill: none; stroke: #111827; stroke-width: 1.6; stroke-dasharray: 8 7; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#includeArrow); }
-      .extend { fill: none; stroke: #2563eb; stroke-width: 1.6; stroke-dasharray: 8 7; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#extendArrow); }
-      .gen { fill: none; stroke: #111827; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#inheritArrow); }
-      .legendBox { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.4; }
+      .boundary { fill: #ffffff; stroke: #1f2937; stroke-width: 2; }
+      .actor-line { stroke: #111827; stroke-width: 2; fill: none; stroke-linecap: round; }
+      .assoc { stroke: #111827; stroke-width: 1.5; fill: none; }
+      .include { stroke: #111827; stroke-width: 1.2; stroke-dasharray: 6 5; fill: none; marker-end: url(#arrow); }
+      .extend { stroke: #2563eb; stroke-width: 1.2; stroke-dasharray: 6 5; fill: none; marker-end: url(#blueArrow); }
+      .usecase { fill: #64c7ec; stroke: #0f172a; stroke-width: 1.5; }
+      .support { fill: #ffffff; stroke: #0f172a; stroke-width: 1.2; }
+      .system-title { font: 700 16px Arial, sans-serif; fill: #111827; }
+      .label { font: 13px Arial, sans-serif; fill: #111827; text-anchor: middle; dominant-baseline: middle; }
+      .small { font: 11px Arial, sans-serif; fill: #111827; text-anchor: middle; dominant-baseline: middle; }
+      .rel { font: 11px Arial, sans-serif; fill: #111827; text-anchor: middle; }
+      .rel-blue { font: 11px Arial, sans-serif; fill: #2563eb; text-anchor: middle; }
     </style>
-    <marker id="includeArrow" markerWidth="11" markerHeight="11" refX="10" refY="5.5" orient="auto">
-      <path d="M1,1 L10,5.5 L1,10" fill="none" stroke="#111827" stroke-width="1.8"/>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#111827" />
     </marker>
-    <marker id="extendArrow" markerWidth="11" markerHeight="11" refX="10" refY="5.5" orient="auto">
-      <path d="M1,1 L10,5.5 L1,10" fill="none" stroke="#2563eb" stroke-width="1.8"/>
-    </marker>
-    <marker id="inheritArrow" markerWidth="13" markerHeight="13" refX="12" refY="6.5" orient="auto">
-      <path d="M1,1 L12,6.5 L1,12 Z" fill="#ffffff" stroke="#111827" stroke-width="1.6"/>
+    <marker id="blueArrow" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#2563eb" />
     </marker>
   </defs>
 
-  <rect width="2700" height="1900" fill="#ffffff"/>
-  <text x="1350" y="48" text-anchor="middle" class="title">Figure 1. General Use Case Diagram of LYDO Connect</text>
-
-  <rect x="250" y="85" width="2200" height="1715" rx="12" ry="12" class="system"/>
-  <text x="1350" y="123" text-anchor="middle" class="systemTitle">LYDO Connect: Youth Governance Transparency and Accountability System</text>
-
-  <rect x="285" y="150" width="990" height="590" rx="10" ry="10" class="band"/>
-  <text x="315" y="181" class="section">Account Access and Public Portal</text>
-
-  <rect x="285" y="775" width="990" height="850" rx="10" ry="10" class="band"/>
-  <text x="315" y="806" class="section">Youth and Citizen Services</text>
-
-  <rect x="1315" y="150" width="1100" height="1475" rx="10" ry="10" class="band"/>
-  <text x="1345" y="181" class="section">Admin Portal and Management Services</text>
-
-  <!-- Actor associations: public and account users -->
-  <polyline points="160,250 250,250 250,455 500,455" class="assoc"/>
-  <polyline points="160,250 250,250 250,585 305,585" class="assoc"/>
-  <polyline points="160,250 250,250 250,585 770,585" class="assoc"/>
-
-  <polyline points="160,665 225,665 225,230 350,230" class="assoc"/>
-  <polyline points="160,665 225,665 225,230 665,230" class="assoc"/>
-  <polyline points="160,665 225,665 225,865 270,865" class="assoc"/>
-  <polyline points="160,665 225,665 225,1065 270,1065" class="assoc"/>
-  <polyline points="160,665 225,665 225,1065 660,1065" class="assoc"/>
-
-  <polyline points="160,1080 205,1080 205,230 350,230" class="assoc"/>
-  <polyline points="160,1080 205,1080 205,230 665,230" class="assoc"/>
-  <polyline points="160,1080 205,1080 205,1065 660,1065" class="assoc"/>
-
-  <!-- Actor generalization for public browsing privileges -->
-  <line x1="95" y1="555" x2="95" y2="340" class="gen"/>
-  <line x1="135" y1="970" x2="135" y2="340" class="gen"/>
-
-  <!-- Actor associations: admin users -->
-  <polyline points="2540,445 2450,445 2450,230 2050,230" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,230 985,230" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,455 1700,455" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,455 2185,455" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,690 2210,690" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,825 1700,825" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,825 2185,825" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,1225 1700,1225" class="assoc"/>
-  <polyline points="2540,445 2450,445 2450,1225 2185,1225" class="assoc"/>
-
-  <polyline points="2540,895 2470,895 2470,230 985,230" class="assoc"/>
-  <polyline points="2540,895 2470,895 2470,230 2050,230" class="assoc"/>
-  <polyline points="2540,895 2470,895 2470,455 1700,455" class="assoc"/>
-  <polyline points="2540,895 2470,895 2470,455 2185,455" class="assoc"/>
-  <polyline points="2540,895 2470,895 2470,690 2210,690" class="assoc"/>
-  <polyline points="2540,895 2470,895 2470,825 1700,825" class="assoc"/>
-  <polyline points="2540,895 2470,895 2470,825 2185,825" class="assoc"/>
-
-  <!-- Account use cases -->
-  <ellipse cx="500" cy="230" rx="150" ry="42" class="mainUsecase"/>
-  <text x="500" y="219" text-anchor="middle" class="ucId">UC-01</text>
-  <text x="500" y="239" text-anchor="middle" class="text">Register Account</text>
-
-  <ellipse cx="825" cy="230" rx="160" ry="42" class="mainUsecase"/>
-  <text x="825" y="219" text-anchor="middle" class="ucId">UC-02</text>
-  <text x="825" y="236" text-anchor="middle" class="text">Log In, Accept Policy,</text>
-  <text x="825" y="255" text-anchor="middle" class="text">and Sign Out</text>
-
-  <ellipse cx="1120" cy="230" rx="135" ry="38" class="helperUsecase"/>
-  <text x="1120" y="226" text-anchor="middle" class="text">Verify Active</text>
-  <text x="1120" y="245" text-anchor="middle" class="text">Session</text>
-
-  <ellipse cx="500" cy="330" rx="140" ry="34" class="helperUsecase"/>
-  <text x="500" y="326" text-anchor="middle" class="text">Validate Account</text>
-  <text x="500" y="345" text-anchor="middle" class="text">Details</text>
-
-  <ellipse cx="825" cy="330" rx="140" ry="34" class="helperUsecase"/>
-  <text x="825" y="326" text-anchor="middle" class="text">Validate</text>
-  <text x="825" y="345" text-anchor="middle" class="text">Credentials</text>
-
-  <ellipse cx="1100" cy="330" rx="130" ry="34" class="helperUsecase"/>
-  <text x="1100" y="326" text-anchor="middle" class="text">Check Policy and</text>
-  <text x="1100" y="345" text-anchor="middle" class="text">Redirect by Role</text>
-
-  <line x1="500" y1="272" x2="500" y2="296" class="include"/>
-  <line x1="825" y1="272" x2="825" y2="296" class="include"/>
-  <line x1="940" y1="258" x2="1010" y2="304" class="extend"/>
-
-  <!-- Public portal use cases -->
-  <ellipse cx="690" cy="455" rx="190" ry="44" class="mainUsecase"/>
-  <text x="690" y="444" text-anchor="middle" class="ucId">UC-03</text>
-  <text x="690" y="464" text-anchor="middle" class="text">Browse Public Portal</text>
-
-  <ellipse cx="455" cy="585" rx="150" ry="44" class="mainUsecase"/>
-  <text x="455" y="574" text-anchor="middle" class="ucId">UC-04</text>
-  <text x="455" y="594" text-anchor="middle" class="text">View Programs, Events,</text>
-  <text x="455" y="613" text-anchor="middle" class="text">and Organization Info</text>
-
-  <ellipse cx="930" cy="585" rx="160" ry="44" class="mainUsecase"/>
-  <text x="930" y="574" text-anchor="middle" class="ucId">UC-05</text>
-  <text x="930" y="594" text-anchor="middle" class="text">View Transparency</text>
-  <text x="930" y="613" text-anchor="middle" class="text">Services</text>
-
-  <ellipse cx="410" cy="690" rx="125" ry="33" class="helperUsecase"/>
-  <text x="410" y="686" text-anchor="middle" class="text">Load Published</text>
-  <text x="410" y="704" text-anchor="middle" class="text">Records</text>
-
-  <ellipse cx="665" cy="690" rx="130" ry="33" class="helperUsecase"/>
-  <text x="665" y="686" text-anchor="middle" class="text">Search and</text>
-  <text x="665" y="704" text-anchor="middle" class="text">Filter Listings</text>
-
-  <ellipse cx="915" cy="690" rx="115" ry="33" class="helperUsecase"/>
-  <text x="915" y="686" text-anchor="middle" class="text">Inspect Verified</text>
-  <text x="915" y="704" text-anchor="middle" class="text">Source Reference</text>
-
-  <ellipse cx="1140" cy="690" rx="115" ry="33" class="helperUsecase"/>
-  <text x="1140" y="686" text-anchor="middle" class="text">Preview Location</text>
-  <text x="1140" y="704" text-anchor="middle" class="text">or Map</text>
-
-  <ellipse cx="1140" cy="515" rx="120" ry="33" class="helperUsecase"/>
-  <text x="1140" y="511" text-anchor="middle" class="text">Export Disclosure</text>
-  <text x="1140" y="529" text-anchor="middle" class="text">Registry</text>
-
-  <line x1="630" y1="494" x2="470" y2="660" class="include"/>
-  <line x1="690" y1="499" x2="665" y2="657" class="include"/>
-  <line x1="455" y1="629" x2="410" y2="657" class="include"/>
-  <line x1="540" y1="620" x2="625" y2="660" class="include"/>
-  <line x1="850" y1="625" x2="470" y2="660" class="include"/>
-  <line x1="860" y1="625" x2="700" y2="660" class="include"/>
-  <line x1="820" y1="493" x2="900" y2="657" class="extend"/>
-  <line x1="845" y1="485" x2="1115" y2="660" class="extend"/>
-  <line x1="560" y1="620" x2="880" y2="665" class="extend"/>
-  <line x1="595" y1="605" x2="1110" y2="665" class="extend"/>
-  <line x1="1045" y1="620" x2="1100" y2="660" class="extend"/>
-  <line x1="1035" y1="555" x2="1095" y2="535" class="extend"/>
-
-  <!-- Youth and citizen service use cases -->
-  <ellipse cx="430" cy="865" rx="160" ry="44" class="mainUsecase"/>
-  <text x="430" y="854" text-anchor="middle" class="ucId">UC-06</text>
-  <text x="430" y="874" text-anchor="middle" class="text">Register for Program</text>
-  <text x="430" y="893" text-anchor="middle" class="text">or Event</text>
-
-  <ellipse cx="430" cy="1065" rx="170" ry="44" class="mainUsecase"/>
-  <text x="430" y="1054" text-anchor="middle" class="ucId">UC-08</text>
-  <text x="430" y="1074" text-anchor="middle" class="text">Manage Profile and</text>
-  <text x="430" y="1093" text-anchor="middle" class="text">Participation History</text>
-
-  <ellipse cx="820" cy="1065" rx="160" ry="44" class="mainUsecase"/>
-  <text x="820" y="1054" text-anchor="middle" class="ucId">UC-09</text>
-  <text x="820" y="1074" text-anchor="middle" class="text">Submit and View</text>
-  <text x="820" y="1093" text-anchor="middle" class="text">Citizen Tickets</text>
-
-  <ellipse cx="350" cy="1230" rx="125" ry="33" class="helperUsecase"/>
-  <text x="350" y="1226" text-anchor="middle" class="text">Validate</text>
-  <text x="350" y="1244" text-anchor="middle" class="text">Registration</text>
-
-  <ellipse cx="570" cy="1230" rx="125" ry="33" class="helperUsecase"/>
-  <text x="570" y="1226" text-anchor="middle" class="text">Save Local</text>
-  <text x="570" y="1244" text-anchor="middle" class="text">Registration</text>
-
-  <ellipse cx="800" cy="1230" rx="145" ry="33" class="helperUsecase"/>
-  <text x="800" y="1226" text-anchor="middle" class="text">Update Participation</text>
-  <text x="800" y="1244" text-anchor="middle" class="text">History</text>
-
-  <ellipse cx="350" cy="1390" rx="125" ry="33" class="helperUsecase"/>
-  <text x="350" y="1386" text-anchor="middle" class="text">Cancel</text>
-  <text x="350" y="1404" text-anchor="middle" class="text">Registration</text>
-
-  <ellipse cx="610" cy="1390" rx="130" ry="33" class="helperUsecase"/>
-  <text x="610" y="1386" text-anchor="middle" class="text">Update Profile</text>
-  <text x="610" y="1404" text-anchor="middle" class="text">Settings</text>
-
-  <ellipse cx="785" cy="1530" rx="130" ry="33" class="helperUsecase"/>
-  <text x="785" y="1526" text-anchor="middle" class="text">Generate Ticket</text>
-  <text x="785" y="1544" text-anchor="middle" class="text">Reference</text>
-
-  <ellipse cx="1035" cy="1530" rx="125" ry="33" class="helperUsecase"/>
-  <text x="1035" y="1526" text-anchor="middle" class="text">View Ticket</text>
-  <text x="1035" y="1544" text-anchor="middle" class="text">Status</text>
-
-  <ellipse cx="1095" cy="1390" rx="155" ry="33" class="helperUsecase"/>
-  <text x="1095" y="1386" text-anchor="middle" class="text">View Account-Linked</text>
-  <text x="1095" y="1404" text-anchor="middle" class="text">Tickets</text>
-
-  <line x1="515" y1="828" x2="1035" y2="260" class="include"/>
-  <line x1="455" y1="1022" x2="1050" y2="260" class="include"/>
-  <line x1="395" y1="908" x2="360" y2="1198" class="include"/>
-  <line x1="440" y1="909" x2="560" y2="1198" class="include"/>
-  <line x1="520" y1="898" x2="750" y2="1200" class="include"/>
-  <line x1="415" y1="908" x2="350" y2="1357" class="extend"/>
-  <line x1="475" y1="1107" x2="610" y2="1357" class="include"/>
-  <line x1="555" y1="1090" x2="760" y2="1200" class="include"/>
-  <line x1="805" y1="1109" x2="785" y2="1497" class="include"/>
-  <line x1="850" y1="1108" x2="1035" y2="1497" class="include"/>
-  <line x1="910" y1="1098" x2="1095" y2="1357" class="extend"/>
-
-  <!-- Admin use cases -->
-  <ellipse cx="1870" cy="230" rx="185" ry="44" class="mainUsecase"/>
-  <text x="1870" y="219" text-anchor="middle" class="ucId">UC-10</text>
-  <text x="1870" y="239" text-anchor="middle" class="text">Access Admin Portal</text>
-  <text x="1870" y="258" text-anchor="middle" class="text">and Dashboard</text>
-
-  <ellipse cx="2205" cy="330" rx="130" ry="33" class="helperUsecase"/>
-  <text x="2205" y="326" text-anchor="middle" class="text">View Admin</text>
-  <text x="2205" y="344" text-anchor="middle" class="text">Dashboard</text>
-
-  <ellipse cx="1550" cy="455" rx="150" ry="44" class="mainUsecase"/>
-  <text x="1550" y="444" text-anchor="middle" class="ucId">UC-11</text>
-  <text x="1550" y="464" text-anchor="middle" class="text">Manage Youth</text>
-  <text x="1550" y="483" text-anchor="middle" class="text">Records</text>
-
-  <ellipse cx="2050" cy="455" rx="150" ry="44" class="mainUsecase"/>
-  <text x="2050" y="444" text-anchor="middle" class="ucId">UC-12</text>
-  <text x="2050" y="464" text-anchor="middle" class="text">Monitor Registrations</text>
-  <text x="2050" y="483" text-anchor="middle" class="text">and Sync Status</text>
-
-  <ellipse cx="1430" cy="590" rx="120" ry="33" class="helperUsecase"/>
-  <text x="1430" y="586" text-anchor="middle" class="text">Validate Record</text>
-  <text x="1430" y="604" text-anchor="middle" class="text">Data</text>
-
-  <ellipse cx="1660" cy="590" rx="120" ry="33" class="helperUsecase"/>
-  <text x="1660" y="586" text-anchor="middle" class="text">Save Record</text>
-  <text x="1660" y="604" text-anchor="middle" class="text">Changes</text>
-
-  <ellipse cx="1660" cy="690" rx="135" ry="33" class="helperUsecase"/>
-  <text x="1660" y="686" text-anchor="middle" class="text">Attach Source or</text>
-  <text x="1660" y="704" text-anchor="middle" class="text">Set Location</text>
-
-  <ellipse cx="1965" cy="590" rx="130" ry="33" class="helperUsecase"/>
-  <text x="1965" y="586" text-anchor="middle" class="text">View and Filter</text>
-  <text x="1965" y="604" text-anchor="middle" class="text">Registrations</text>
-
-  <ellipse cx="2245" cy="590" rx="105" ry="33" class="helperUsecase"/>
-  <text x="2245" y="586" text-anchor="middle" class="text">Export CSV or</text>
-  <text x="2245" y="604" text-anchor="middle" class="text">Retry Sync</text>
-
-  <ellipse cx="2050" cy="690" rx="160" ry="44" class="mainUsecase"/>
-  <text x="2050" y="679" text-anchor="middle" class="ucId">UC-07</text>
-  <text x="2050" y="699" text-anchor="middle" class="text">Post Organization</text>
-  <text x="2050" y="718" text-anchor="middle" class="text">Information</text>
-
-  <ellipse cx="1550" cy="825" rx="170" ry="44" class="mainUsecase"/>
-  <text x="1550" y="814" text-anchor="middle" class="ucId">UC-13</text>
-  <text x="1550" y="834" text-anchor="middle" class="text">Manage Transparency</text>
-  <text x="1550" y="853" text-anchor="middle" class="text">and Financial Records</text>
-
-  <ellipse cx="2050" cy="825" rx="160" ry="44" class="mainUsecase"/>
-  <text x="2050" y="814" text-anchor="middle" class="ucId">UC-14</text>
-  <text x="2050" y="834" text-anchor="middle" class="text">Manage Citizen</text>
-  <text x="2050" y="853" text-anchor="middle" class="text">Desk Tickets</text>
-
-  <ellipse cx="1430" cy="965" rx="120" ry="33" class="helperUsecase"/>
-  <text x="1430" y="961" text-anchor="middle" class="text">Validate</text>
-  <text x="1430" y="979" text-anchor="middle" class="text">Metadata</text>
-
-  <ellipse cx="1660" cy="965" rx="125" ry="33" class="helperUsecase"/>
-  <text x="1660" y="961" text-anchor="middle" class="text">Upload or Save</text>
-  <text x="1660" y="979" text-anchor="middle" class="text">Record</text>
-
-  <ellipse cx="1660" cy="1065" rx="125" ry="33" class="helperUsecase"/>
-  <text x="1660" y="1061" text-anchor="middle" class="text">Export Financial</text>
-  <text x="1660" y="1079" text-anchor="middle" class="text">Reports</text>
-
-  <ellipse cx="1965" cy="965" rx="125" ry="33" class="helperUsecase"/>
-  <text x="1965" y="961" text-anchor="middle" class="text">Review Ticket</text>
-  <text x="1965" y="979" text-anchor="middle" class="text">Details</text>
-
-  <ellipse cx="2245" cy="965" rx="125" ry="33" class="helperUsecase"/>
-  <text x="2245" y="961" text-anchor="middle" class="text">Update Status</text>
-  <text x="2245" y="979" text-anchor="middle" class="text">and Priority</text>
-
-  <ellipse cx="1550" cy="1225" rx="155" ry="44" class="mainUsecase"/>
-  <text x="1550" y="1214" text-anchor="middle" class="ucId">UC-15</text>
-  <text x="1550" y="1234" text-anchor="middle" class="text">Manage Users</text>
-  <text x="1550" y="1253" text-anchor="middle" class="text">and Roles</text>
-
-  <ellipse cx="2050" cy="1225" rx="155" ry="44" class="mainUsecase"/>
-  <text x="2050" y="1214" text-anchor="middle" class="ucId">UC-16</text>
-  <text x="2050" y="1234" text-anchor="middle" class="text">Review Audit</text>
-  <text x="2050" y="1253" text-anchor="middle" class="text">Logs</text>
-
-  <ellipse cx="1430" cy="1370" rx="125" ry="33" class="helperUsecase"/>
-  <text x="1430" y="1366" text-anchor="middle" class="text">Update User</text>
-  <text x="1430" y="1384" text-anchor="middle" class="text">Profiles</text>
-
-  <ellipse cx="1660" cy="1370" rx="135" ry="33" class="helperUsecase"/>
-  <text x="1660" y="1366" text-anchor="middle" class="text">Maintain Role</text>
-  <text x="1660" y="1384" text-anchor="middle" class="text">Definitions</text>
-
-  <ellipse cx="2050" cy="1370" rx="155" ry="33" class="helperUsecase"/>
-  <text x="2050" y="1366" text-anchor="middle" class="text">Filter and View</text>
-  <text x="2050" y="1384" text-anchor="middle" class="text">Change History</text>
-
-  <line x1="1710" y1="210" x2="1240" y2="225" class="include"/>
-  <line x1="2028" y1="255" x2="2130" y2="310" class="include"/>
-
-  <line x1="1505" y1="498" x2="1450" y2="558" class="include"/>
-  <line x1="1595" y1="498" x2="1645" y2="558" class="include"/>
-  <line x1="1600" y1="495" x2="1645" y2="658" class="extend"/>
-  <line x1="2015" y1="499" x2="1975" y2="558" class="include"/>
-  <line x1="2115" y1="495" x2="2225" y2="558" class="extend"/>
-  <line x1="1920" y1="666" x2="1515" y2="605" class="include"/>
-  <line x1="1940" y1="660" x2="1745" y2="610" class="include"/>
-  <line x1="1890" y1="690" x2="1795" y2="690" class="extend"/>
-
-  <line x1="1505" y1="868" x2="1450" y2="933" class="include"/>
-  <line x1="1595" y1="868" x2="1645" y2="933" class="include"/>
-  <line x1="1595" y1="867" x2="1645" y2="1033" class="extend"/>
-  <line x1="2015" y1="869" x2="1975" y2="933" class="include"/>
-  <line x1="2115" y1="865" x2="2225" y2="933" class="include"/>
-
-  <line x1="1505" y1="1268" x2="1450" y2="1338" class="include"/>
-  <line x1="1595" y1="1268" x2="1645" y2="1338" class="include"/>
-  <line x1="2050" y1="1269" x2="2050" y2="1337" class="include"/>
+  <rect x="145" y="20" width="890" height="780" class="boundary" />
+  <text x="590" y="45" class="system-title" text-anchor="middle">LYDO Connect System</text>
 
   <!-- Actors -->
-  <g id="public-viewer">
-    <circle cx="115" cy="180" r="24" class="actorShape"/>
-    <line x1="115" y1="204" x2="115" y2="270" class="assoc"/>
-    <line x1="78" y1="230" x2="152" y2="230" class="assoc"/>
-    <line x1="115" y1="270" x2="82" y2="325" class="assoc"/>
-    <line x1="115" y1="270" x2="148" y2="325" class="assoc"/>
-    <text x="115" y="358" text-anchor="middle" class="actorText">Public Viewer</text>
+  <g transform="translate(65 560)">
+    <circle cx="0" cy="-44" r="10" fill="#9bdaf5" stroke="#111827" stroke-width="1.5" />
+    <path d="M 0 -34 L 0 10 M -30 -18 L 30 -18 M 0 10 L -25 45 M 0 10 L 25 45" class="actor-line" />
+    <text x="0" y="70" class="label">Public User</text>
+  </g>
+  <g transform="translate(65 325)">
+    <circle cx="0" cy="-44" r="10" fill="#9bdaf5" stroke="#111827" stroke-width="1.5" />
+    <path d="M 0 -34 L 0 10 M -30 -18 L 30 -18 M 0 10 L -25 45 M 0 10 L 25 45" class="actor-line" />
+    <text x="0" y="70" class="label">Youth User</text>
+  </g>
+  <g transform="translate(1115 390)">
+    <circle cx="0" cy="-44" r="10" fill="#9bdaf5" stroke="#111827" stroke-width="1.5" />
+    <path d="M 0 -34 L 0 10 M -30 -18 L 30 -18 M 0 10 L -25 45 M 0 10 L 25 45" class="actor-line" />
+    <text x="0" y="70" class="label">LYDO Staff</text>
+  </g>
+  <g transform="translate(1115 145)">
+    <circle cx="0" cy="-44" r="10" fill="#9bdaf5" stroke="#111827" stroke-width="1.5" />
+    <path d="M 0 -34 L 0 10 M -30 -18 L 30 -18 M 0 10 L -25 45 M 0 10 L 25 45" class="actor-line" />
+    <text x="0" y="70" class="label">
+      <tspan x="0" dy="0">LYDO Super</tspan>
+      <tspan x="0" dy="15">Admin</tspan>
+    </text>
   </g>
 
-  <g id="youth-user">
-    <circle cx="115" cy="595" r="24" class="actorShape"/>
-    <line x1="115" y1="619" x2="115" y2="685" class="assoc"/>
-    <line x1="78" y1="645" x2="152" y2="645" class="assoc"/>
-    <line x1="115" y1="685" x2="82" y2="740" class="assoc"/>
-    <line x1="115" y1="685" x2="148" y2="740" class="assoc"/>
-    <text x="115" y="773" text-anchor="middle" class="actorText">Youth User</text>
-  </g>
+  <!-- Main use cases: left side -->
+  <ellipse cx="255" cy="125" rx="62" ry="24" class="usecase" />
+  <text x="255" y="125" class="label">Login</text>
+  <ellipse cx="255" cy="190" rx="62" ry="26" class="usecase" />
+  <text x="255" y="190" class="label">Manage Account</text>
+  <ellipse cx="255" cy="290" rx="62" ry="28" class="usecase" />
+  <text x="255" y="290" class="small">
+    <tspan x="255" dy="-6">Register for</tspan>
+    <tspan x="255" dy="14">Programs/Events</tspan>
+  </text>
+  <ellipse cx="255" cy="395" rx="62" ry="26" class="usecase" />
+  <text x="255" y="395" class="label">Track Participation</text>
+  <ellipse cx="255" cy="505" rx="66" ry="30" class="usecase" />
+  <text x="255" y="505" class="small">
+    <tspan x="255" dy="-6">Submit Service</tspan>
+    <tspan x="255" dy="14">Requests</tspan>
+  </text>
+  <ellipse cx="255" cy="650" rx="62" ry="24" class="usecase" />
+  <text x="255" y="650" class="label">Register</text>
+  <ellipse cx="255" cy="720" rx="66" ry="26" class="usecase" />
+  <text x="255" y="720" class="label">Browse Public Portal</text>
 
-  <g id="citizen">
-    <circle cx="115" cy="1010" r="24" class="actorShape"/>
-    <line x1="115" y1="1034" x2="115" y2="1100" class="assoc"/>
-    <line x1="78" y1="1060" x2="152" y2="1060" class="assoc"/>
-    <line x1="115" y1="1100" x2="82" y2="1155" class="assoc"/>
-    <line x1="115" y1="1100" x2="148" y2="1155" class="assoc"/>
-    <text x="115" y="1188" text-anchor="middle" class="actorText">Citizen</text>
-  </g>
+  <!-- Supporting use cases: center -->
+  <ellipse cx="440" cy="75" rx="65" ry="27" class="support" />
+  <text x="440" y="75" class="small">
+    <tspan x="440" dy="-6">Authenticate</tspan>
+    <tspan x="440" dy="14">User</tspan>
+  </text>
+  <ellipse cx="520" cy="125" rx="78" ry="26" class="support" />
+  <text x="520" y="125" class="small">
+    <tspan x="520" dy="-6">Two-Factor</tspan>
+    <tspan x="520" dy="14">Authentication</tspan>
+  </text>
+  <ellipse cx="440" cy="175" rx="62" ry="24" class="support" />
+  <text x="440" y="175" class="label">Login Error</text>
+  <ellipse cx="435" cy="250" rx="66" ry="26" class="support" />
+  <text x="435" y="250" class="small">
+    <tspan x="435" dy="-6">Submit</tspan>
+    <tspan x="435" dy="14">Registration</tspan>
+  </text>
+  <ellipse cx="440" cy="325" rx="62" ry="24" class="support" />
+  <text x="440" y="325" class="label">Registration Error</text>
+  <ellipse cx="440" cy="385" rx="70" ry="26" class="support" />
+  <text x="440" y="385" class="small">
+    <tspan x="440" dy="-6">View Participation</tspan>
+    <tspan x="440" dy="14">Status</tspan>
+  </text>
+  <ellipse cx="490" cy="430" rx="73" ry="26" class="support" />
+  <text x="490" y="430" class="small">
+    <tspan x="490" dy="-6">View Participation</tspan>
+    <tspan x="490" dy="14">History</tspan>
+  </text>
+  <ellipse cx="440" cy="495" rx="62" ry="24" class="support" />
+  <text x="440" y="495" class="label">Submit Request</text>
+  <ellipse cx="500" cy="550" rx="70" ry="26" class="support" />
+  <text x="500" y="550" class="small">
+    <tspan x="500" dy="-6">Receive Status</tspan>
+    <tspan x="500" dy="14">Update</tspan>
+  </text>
+  <ellipse cx="470" cy="605" rx="68" ry="24" class="support" />
+  <text x="470" y="605" class="label">Submission Error</text>
+  <ellipse cx="435" cy="650" rx="67" ry="26" class="support" />
+  <text x="435" y="650" class="small">
+    <tspan x="435" dy="-6">Validate</tspan>
+    <tspan x="435" dy="14">Credentials</tspan>
+  </text>
+  <ellipse cx="525" cy="690" rx="64" ry="26" class="support" />
+  <text x="525" y="690" class="small">
+    <tspan x="525" dy="-6">Email</tspan>
+    <tspan x="525" dy="14">Verification</tspan>
+  </text>
 
-  <g id="lydo-admin">
-    <circle cx="2585" cy="375" r="24" class="actorShape"/>
-    <line x1="2585" y1="399" x2="2585" y2="465" class="assoc"/>
-    <line x1="2548" y1="425" x2="2622" y2="425" class="assoc"/>
-    <line x1="2585" y1="465" x2="2552" y2="520" class="assoc"/>
-    <line x1="2585" y1="465" x2="2618" y2="520" class="assoc"/>
-    <text x="2585" y="553" text-anchor="middle" class="actorText">LYDO</text>
-    <text x="2585" y="575" text-anchor="middle" class="actorText">Administrator</text>
-  </g>
+  <!-- Main use cases: right side -->
+  <ellipse cx="885" cy="105" rx="82" ry="28" class="usecase" />
+  <text x="885" y="105" class="small">
+    <tspan x="885" dy="-6">Manage User</tspan>
+    <tspan x="885" dy="14">Accounts and Roles</tspan>
+  </text>
+  <ellipse cx="885" cy="175" rx="68" ry="25" class="usecase" />
+  <text x="885" y="175" class="label">Review Audit Logs</text>
+  <ellipse cx="885" cy="275" rx="70" ry="26" class="usecase" />
+  <text x="885" y="275" class="small">
+    <tspan x="885" dy="-6">Manage Public</tspan>
+    <tspan x="885" dy="14">Portal Content</tspan>
+  </text>
+  <ellipse cx="885" cy="350" rx="70" ry="26" class="usecase" />
+  <text x="885" y="350" class="small">
+    <tspan x="885" dy="-6">Manage</tspan>
+    <tspan x="885" dy="14">Programs/Events</tspan>
+  </text>
+  <ellipse cx="885" cy="430" rx="68" ry="25" class="usecase" />
+  <text x="885" y="430" class="label">Monitor Participation</text>
+  <ellipse cx="885" cy="500" rx="76" ry="26" class="usecase" />
+  <text x="885" y="500" class="small">
+    <tspan x="885" dy="-6">Manage Participation</tspan>
+    <tspan x="885" dy="14">Records</tspan>
+  </text>
+  <ellipse cx="885" cy="585" rx="72" ry="26" class="usecase" />
+  <text x="885" y="585" class="label">Generate Reports</text>
+  <ellipse cx="885" cy="690" rx="78" ry="28" class="usecase" />
+  <text x="885" y="690" class="small">
+    <tspan x="885" dy="-6">Manage</tspan>
+    <tspan x="885" dy="14">Service Requests</tspan>
+  </text>
 
-  <g id="staff-sk">
-    <circle cx="2585" cy="825" r="24" class="actorShape"/>
-    <line x1="2585" y1="849" x2="2585" y2="915" class="assoc"/>
-    <line x1="2548" y1="875" x2="2622" y2="875" class="assoc"/>
-    <line x1="2585" y1="915" x2="2552" y2="970" class="assoc"/>
-    <line x1="2585" y1="915" x2="2618" y2="970" class="assoc"/>
-    <text x="2585" y="1003" text-anchor="middle" class="actorText">Staff /</text>
-    <text x="2585" y="1025" text-anchor="middle" class="actorText">SK Officer</text>
-  </g>
+  <!-- Supporting use cases: admin side -->
+  <ellipse cx="720" cy="70" rx="70" ry="26" class="support" />
+  <text x="720" y="70" class="small">
+    <tspan x="720" dy="-6">Create/Update</tspan>
+    <tspan x="720" dy="14">User Account</tspan>
+  </text>
+  <ellipse cx="650" cy="120" rx="58" ry="24" class="support" />
+  <text x="650" y="120" class="label">Assign Role</text>
+  <ellipse cx="720" cy="565" rx="61" ry="24" class="support" />
+  <text x="720" y="565" class="label">Select Report Type</text>
+  <ellipse cx="665" cy="615" rx="62" ry="24" class="support" />
+  <text x="665" y="615" class="label">Retrieve Data</text>
+  <ellipse cx="720" cy="655" rx="62" ry="24" class="support" />
+  <text x="720" y="655" class="label">Review Request</text>
+  <ellipse cx="650" cy="705" rx="62" ry="24" class="support" />
+  <text x="650" y="705" class="label">Respond to Request</text>
+  <ellipse cx="720" cy="755" rx="62" ry="24" class="support" />
+  <text x="720" y="755" class="label">Evaluate Request</text>
 
-  <!-- Legend -->
-  <rect x="315" y="1660" width="1320" height="95" rx="8" ry="8" class="legendBox"/>
-  <line x1="350" y1="1690" x2="430" y2="1690" class="assoc"/>
-  <text x="445" y="1695" class="legend">actor association</text>
-  <line x1="630" y1="1690" x2="710" y2="1690" class="include"/>
-  <text x="725" y="1695" class="legend">&lt;&lt;include&gt;&gt; required supporting use case</text>
-  <line x1="1015" y1="1690" x2="1095" y2="1690" class="extend"/>
-  <text x="1110" y="1695" class="legend">&lt;&lt;extend&gt;&gt; optional or conditional supporting use case</text>
-  <line x1="350" y1="1725" x2="430" y2="1725" class="gen"/>
-  <text x="445" y="1730" class="legend">actor generalization: Youth User and Citizen inherit Public Viewer browsing access</text>
-  <text x="1015" y="1730" class="legend">Main orange ovals map to UC-01 through UC-16 in the use case report.</text>
+  <!-- Actor associations -->
+  <path d="M 95 307 C 125 307 145 125 193 125" class="assoc" />
+  <path d="M 95 307 C 130 307 145 190 193 190" class="assoc" />
+  <path d="M 95 307 C 135 307 150 290 193 290" class="assoc" />
+  <path d="M 95 307 C 135 350 150 395 193 395" class="assoc" />
+  <path d="M 95 307 C 125 420 150 505 189 505" class="assoc" />
+  <path d="M 95 542 C 130 620 150 650 193 650" class="assoc" />
+  <path d="M 95 542 C 130 690 150 720 189 720" class="assoc" />
+  <path d="M 1085 127 C 1045 120 1000 105 967 105" class="assoc" />
+  <path d="M 1085 127 C 1045 145 990 175 953 175" class="assoc" />
+  <path d="M 1085 372 C 1045 350 995 275 955 275" class="assoc" />
+  <path d="M 1085 372 C 1045 365 995 350 955 350" class="assoc" />
+  <path d="M 1085 372 C 1045 395 995 430 953 430" class="assoc" />
+  <path d="M 1085 372 C 1045 445 1000 500 961 500" class="assoc" />
+  <path d="M 1085 372 C 1045 510 1000 585 957 585" class="assoc" />
+  <path d="M 1085 372 C 1045 615 1000 690 963 690" class="assoc" />
+
+  <!-- Include/extend relationships -->
+  <path d="M 317 125 L 382 82" class="include" />
+  <text x="347" y="94" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <path d="M 317 125 L 442 125" class="extend" />
+  <text x="378" y="114" class="rel-blue">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M 317 125 L 382 168" class="extend" />
+  <text x="348" y="162" class="rel-blue">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M 317 290 L 375 255" class="include" />
+  <text x="343" y="260" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <path d="M 317 290 L 380 320" class="extend" />
+  <text x="348" y="316" class="rel-blue">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M 317 395 L 372 385" class="include" />
+  <path d="M 317 395 L 421 427" class="include" />
+  <text x="350" y="379" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="363" y="424" class="rel">&lt;&lt;include&gt;&gt;</text>
+
+  <path d="M 321 505 L 379 497" class="include" />
+  <path d="M 321 505 L 435 548" class="extend" />
+  <path d="M 321 505 L 405 600" class="extend" />
+  <text x="354" y="488" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="371" y="540" class="rel-blue">&lt;&lt;extend&gt;&gt;</text>
+  <text x="365" y="585" class="rel-blue">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M 317 650 L 370 650" class="include" />
+  <path d="M 317 650 L 463 688" class="include" />
+  <path d="M 317 650 L 384 330" class="extend" />
+  <text x="346" y="638" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="387" y="678" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="345" y="492" class="rel-blue">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M 817 105 L 770 76" class="include" />
+  <path d="M 817 105 L 708 120" class="include" />
+  <text x="788" y="82" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="765" y="118" class="rel">&lt;&lt;include&gt;&gt;</text>
+
+  <path d="M 827 585 L 781 568" class="include" />
+  <path d="M 827 585 L 727 612" class="include" />
+  <text x="802" y="565" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="777" y="610" class="rel">&lt;&lt;include&gt;&gt;</text>
+
+  <path d="M 820 690 L 780 658" class="include" />
+  <path d="M 820 690 L 712 704" class="include" />
+  <path d="M 820 690 L 780 752" class="include" />
+  <text x="795" y="664" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="766" y="702" class="rel">&lt;&lt;include&gt;&gt;</text>
+  <text x="795" y="744" class="rel">&lt;&lt;include&gt;&gt;</text>
 </svg>
