@@ -127,7 +127,7 @@ declare
     'barangays','offices','user_profiles','programs','events','organizations',
     'user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','citizen_tickets','service_advisories'
+    'monthly_compliance','citizen_tickets'
   ];
 begin
   foreach t in array tables loop

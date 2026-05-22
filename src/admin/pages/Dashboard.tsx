@@ -445,7 +445,7 @@ export const Dashboard = ({ onNavigate }: DashboardProps) => {
       { label: "Registrations", tab: "registrations" as const, keywords: "event program registration attendance" },
       { label: "Organizations", tab: "organizations" as const, keywords: "groups partners active" },
       { label: "Barangay Map Data", tab: "barangays" as const, keywords: "barangay maps youth metrics" },
-      { label: "Transparency Docs", tab: "documents" as const, keywords: "documents advisories uploads registry" },
+      { label: "Transparency Docs", tab: "documents" as const, keywords: "documents uploads registry" },
       { label: "Transparency Board", tab: "transparency-board" as const, keywords: "compliance board monthly" },
       { label: "Financial DSS", tab: "financial-dss" as const, keywords: "budget finance dss rows" },
       { label: "Citizen Desk", tab: "citizen-desk" as const, keywords: "tickets requests complaints" },

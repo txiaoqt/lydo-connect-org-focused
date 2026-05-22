@@ -86,12 +86,6 @@ do $$ begin
 end $$;
 
 do $$ begin
-  if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='service_status' and n.nspname='public') then
-    create type public.service_status as enum ('operational','maintenance','notice');
-  end if;
-end $$;
-
-do $$ begin
   if not exists (select 1 from pg_type t join pg_namespace n on n.oid=t.typnamespace where t.typname='barangay_compliance_status' and n.nspname='public') then
     create type public.barangay_compliance_status as enum ('compliant','pending','overdue');
   end if;

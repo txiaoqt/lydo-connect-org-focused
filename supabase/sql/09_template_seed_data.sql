@@ -429,59 +429,6 @@ on conflict (doc_code) do update set
   source_post_url = excluded.source_post_url,
   updated_at = now();
 
--- Seed service advisories currently shown in the portal.
-insert into public.service_advisories (
-  id,
-  office_id,
-  title,
-  status,
-  message,
-  created_at,
-  updated_at
-)
-select
-  v.id::uuid,
-  o.id,
-  v.title,
-  v.status::public.service_status,
-  v.message,
-  v.updated_at::timestamptz,
-  v.updated_at::timestamptz
-from (
-  values
-    (
-      '00000000-0000-0000-0000-000000000901',
-      'LYDO',
-      'Scheduled Maintenance Window',
-      'maintenance',
-      'Transparency uploads and issue tracking may be temporarily unavailable for 30 minutes.',
-      '2026-03-06T20:00:00+08:00'
-    ),
-    (
-      '00000000-0000-0000-0000-000000000902',
-      'LYDO',
-      'Daily Data Sync Complete',
-      'operational',
-      'Event registrations and disclosure registry data are fully synchronized.',
-      '2026-03-07T08:10:00+08:00'
-    ),
-    (
-      '00000000-0000-0000-0000-000000000903',
-      'LYDO',
-      'Facebook-to-Portal Sync Reminder',
-      'notice',
-      'Please link source Facebook post URLs for newly encoded events and programs.',
-      '2026-03-07T09:15:00+08:00'
-    )
-) as v(id, office_code, title, status, message, updated_at)
-left join public.offices o on o.code = v.office_code
-on conflict (id) do update set
-  office_id = excluded.office_id,
-  title = excluded.title,
-  status = excluded.status,
-  message = excluded.message,
-  updated_at = excluded.updated_at;
-
 -- Seed barangay metrics and financial rows currently shown in the portal.
 with source_data as (
   select * from (values

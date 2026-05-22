@@ -7,7 +7,7 @@ declare
     'roles','user_roles','barangays','offices','user_profiles','programs','events',
     'organizations','user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','document_downloads','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','ticket_types','citizen_tickets','service_advisories'
+    'monthly_compliance','ticket_types','citizen_tickets'
   ];
 begin
   foreach t in array all_tables loop
@@ -21,7 +21,7 @@ declare
   t text;
   public_read_tables text[] := array[
     'barangays','offices','programs','events','organizations','disclosure_documents',
-    'barangay_financials','barangay_youth_metrics','compliance_board_status','monthly_compliance','service_advisories','ticket_types'
+    'barangay_financials','barangay_youth_metrics','compliance_board_status','monthly_compliance','ticket_types'
   ];
 begin
   foreach t in array public_read_tables loop

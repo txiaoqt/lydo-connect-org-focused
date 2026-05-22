@@ -1,7 +1,7 @@
 -- Supabase all-in-one schema + policies + functions + seed script
 -- Generated from supabase/sql/*.sql in run order
 -- Excludes: 10_template_seed_data_delete.sql (rollback script)
--- Generated: 2026-04-25 21:26:49 +08:00
+-- Generated: 2026-05-22 22:20:47 +08:00
 
 -- ===========================================================================
 -- BEGIN FILE: supabase/sql/00_extensions_enums.sql
@@ -3797,5 +3797,20 @@ end $$;
 commit;
 
 -- END FILE: supabase/sql/27_status_enum_expansion.sql
+
+-- ===========================================================================
+-- BEGIN FILE: supabase/sql/30_remove_service_advisories.sql
+-- ===========================================================================
+
+begin;
+
+-- Service advisories were removed from the user/admin interface and are no
+-- longer part of the LYDO Connect data model.
+drop table if exists public.service_advisories cascade;
+drop type if exists public.service_status;
+
+commit;
+
+-- END FILE: supabase/sql/30_remove_service_advisories.sql
 
 

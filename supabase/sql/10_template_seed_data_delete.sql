@@ -102,15 +102,7 @@ where f.barangay_id = b.id
     'Santo Nino'
   );
 
--- 5) Remove template service advisories
-delete from public.service_advisories
-where id in (
-  '00000000-0000-0000-0000-000000000901'::uuid,
-  '00000000-0000-0000-0000-000000000902'::uuid,
-  '00000000-0000-0000-0000-000000000903'::uuid
-);
-
--- 6) Remove template disclosure documents
+-- 5) Remove template disclosure documents
 delete from public.disclosure_documents
 where doc_code in (
   'doc-001',
@@ -121,7 +113,7 @@ where doc_code in (
   'doc-006'
 );
 
--- 7) Remove template organizations
+-- 6) Remove template organizations
 delete from public.organizations
 where slug in (
   'ydac-arts-culture',
@@ -131,7 +123,7 @@ where slug in (
   'lydo-youth-org-assembly'
 );
 
--- 8) Remove template events
+-- 7) Remove template events
 delete from public.events
 where slug in (
   'project-ka-art-ihan-2025',
@@ -142,7 +134,7 @@ where slug in (
   'project-bigkis-kabataan-2025'
 );
 
--- 9) Remove template programs
+-- 8) Remove template programs
 delete from public.programs
 where slug in (
   'hirayang-kabataan-yep',

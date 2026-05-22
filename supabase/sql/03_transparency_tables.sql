@@ -120,17 +120,4 @@ create table if not exists public.citizen_tickets (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.service_advisories (
-  id uuid primary key default gen_random_uuid(),
-  office_id uuid references public.offices(id) on delete set null,
-  title text not null,
-  status public.service_status not null default 'notice',
-  message text not null,
-  starts_at timestamptz,
-  ends_at timestamptz,
-  updated_by uuid references auth.users(id) on delete set null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 commit;

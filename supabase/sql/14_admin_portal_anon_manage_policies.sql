@@ -20,7 +20,6 @@ declare
     'barangay_youth_metrics',
     'compliance_board_status',
     'monthly_compliance',
-    'service_advisories',
     'ticket_types'
   ];
 begin
