@@ -30,8 +30,9 @@ Run these files in order inside Supabase SQL Editor:
 26. `26_program_registration_membership_fix.sql` (recommended if later registration metadata migrations were already applied: fixes program registration RPC membership reactivation so historical membership rows do not trigger `uq_user_program_active`)
 27. `27_status_enum_expansion.sql` (recommended: ensures organization status enum includes newer values such as `pending`)
 28. `28_policy_agreement.sql` (recommended: adds active Terms/Privacy policy versions and user acceptance records)
-29. `schema_orgs_pasig_update.sql` (recommended for Pasig organization details: adds expanded organization fields, `organization_references`, `organization_projects`, RLS, search indexes, and official-source seed records)
+29. `schema_orgs_details_update.sql` (recommended for organization details: adds expanded organization fields, `organization_references`, `organization_projects`, RLS, search indexes, and source-reference seed records)
 30. `30_remove_service_advisories.sql` (recommended cleanup: removes the deprecated service advisory table/type after the feature was removed from the interface)
+31. `31_remove_org_legacy_fields.sql` (recommended cleanup: removes deprecated organization fields tied to the older location-specific/prototype model)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

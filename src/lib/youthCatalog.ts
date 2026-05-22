@@ -53,7 +53,6 @@ export type YouthOrganization = {
   contactPerson?: string | null;
   relatedInitiatives?: string | null;
   activityYear?: string | null;
-  credibilityNotes?: string | null;
   sourceName?: string | null;
   sourceDate?: string | null;
   relatedInitiativesList?: Array<{ name: string; year?: string | null; sourceUrl?: string | null }>;

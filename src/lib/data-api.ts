@@ -404,7 +404,6 @@ export async function fetchOrganizations(): Promise<YouthOrganization[]> {
       contactPerson: pickFirstString(raw, ["contact_person"]),
       relatedInitiatives: pickFirstString(raw, ["related_initiatives_summary", "initiatives_summary", "related_initiatives", "initiatives"]),
       activityYear: pickFirstString(raw, ["activity_year", "related_activity_year", "source_reference_published_on"]),
-      credibilityNotes: pickFirstString(raw, ["credibility_notes", "verification_notes"]),
       sourceName: pickFirstString(raw, ["source_reference_title", "source_name"]),
       sourceDate: pickFirstString(raw, ["source_reference_published_on", "source_date"]),
       relatedInitiativesList,

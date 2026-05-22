@@ -95,7 +95,6 @@ export interface Organization {
   contact_phone?: string | null;
   source_reference_title?: string | null;
   source_reference_url?: string | null;
-  credibility_notes?: string | null;
   related_events?: string | null;
   source_tag?: string;
   status: OrganizationStatus;

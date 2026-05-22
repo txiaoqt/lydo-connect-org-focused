@@ -49,7 +49,6 @@ type OrganizationForm = {
   sourceTag: string;
   sourceLabel: string;
   sourcePostUrl: string;
-  prototypeNote: string;
   status: OrganizationStatus;
 };
 
@@ -71,7 +70,6 @@ const defaultForm: OrganizationForm = {
   sourceTag: "",
   sourceLabel: "Prototype Data",
   sourcePostUrl: "",
-  prototypeNote: "",
   status: "active",
 };
 
@@ -149,7 +147,6 @@ export const Organizations = () => {
       sourceTag: org.source_tag ?? "",
       sourceLabel: org.source_reference_title ?? "",
       sourcePostUrl: org.source_post_url ?? "",
-      prototypeNote: org.credibility_notes ?? "",
       status: org.status ?? "active",
     });
     setIsFormOpen(true);
@@ -202,7 +199,6 @@ export const Organizations = () => {
       source_reference_title: form.sourceLabel.trim() || null,
       source_post_url: form.sourcePostUrl.trim() || null,
       source_reference_url: form.sourcePostUrl.trim() || null,
-      credibility_notes: form.prototypeNote.trim() || null,
       status: form.status,
     };
 
@@ -520,10 +516,6 @@ export const Organizations = () => {
                       <p className="text-sm font-medium">N/A</p>
                     )}
                   </div>
-                  <div className="md:col-span-2">
-                    <p className="text-xs text-muted-foreground">Prototype Note</p>
-                    <p className="text-sm font-medium">{viewingOrg.credibility_notes || "N/A"}</p>
-                  </div>
                 </div>
               </section>
             </div>
@@ -690,10 +682,6 @@ export const Organizations = () => {
                   onChange={(e) => setForm((prev) => ({ ...prev, sourcePostUrl: e.target.value }))}
                   placeholder="https://..."
                 />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="org-prototype-note">Prototype Note</Label>
-                <Textarea id="org-prototype-note" value={form.prototypeNote} onChange={(e) => setForm((prev) => ({ ...prev, prototypeNote: e.target.value }))} />
               </div>
             </div>
             </div>

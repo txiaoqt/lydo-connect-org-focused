@@ -1,7 +1,7 @@
 -- Supabase all-in-one schema + policies + functions + seed script
 -- Generated from supabase/sql/*.sql in run order
 -- Excludes: 10_template_seed_data_delete.sql (rollback script)
--- Generated: 2026-05-22 22:20:47 +08:00
+-- Generated: 2026-05-22 22:38:43 +08:00
 
 -- ===========================================================================
 -- BEGIN FILE: supabase/sql/00_extensions_enums.sql
@@ -3202,7 +3202,7 @@ commit;
 
 
 -- ===========================================================================
--- BEGIN FILE: supabase/sql/schema_orgs_pasig_update.sql
+-- BEGIN FILE: supabase/sql/schema_orgs_details_update.sql
 -- ===========================================================================
 
 begin;
@@ -3224,14 +3224,11 @@ alter table if exists public.organizations
   add column if not exists related_initiatives text,
   add column if not exists related_events text,
   add column if not exists activity_year integer check (activity_year is null or activity_year between 1900 and 2100),
-  add column if not exists is_pasig_based boolean not null default false,
   add column if not exists data_status text not null default 'verified',
   add column if not exists source_label text,
   add column if not exists source_reference_title text,
   add column if not exists source_reference_url text,
   add column if not exists source_reference_published_on date,
-  add column if not exists prototype_note text,
-  add column if not exists credibility_notes text,
   add column if not exists last_verified_at timestamptz;
 
 do $$
@@ -3253,7 +3250,6 @@ create table if not exists public.organization_references (
   publisher text,
   published_on date,
   reference_type text,
-  credibility_notes text,
   is_official boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -3369,9 +3365,6 @@ insert into public.organizations (
   source_reference_title,
   source_reference_url,
   source_reference_published_on,
-  prototype_note,
-  credibility_notes,
-  is_pasig_based,
   data_status,
   status,
   last_verified_at
@@ -3398,9 +3391,6 @@ values
     'Prototype Organization Reference I',
     'https://example.com/prototype-organization-i/reference',
     date '2026-04-01',
-    'Prototype record for demonstration and testing.',
-    'Internal prototype context only.',
-    false,
     'verified',
     'active',
     now()
@@ -3426,9 +3416,6 @@ values
     'Prototype Organization Reference II',
     'https://example.com/prototype-organization-ii/reference',
     date '2026-04-05',
-    'Prototype record for demonstration and testing.',
-    'Internal prototype context only.',
-    false,
     'verified',
     'partner',
     now()
@@ -3454,9 +3441,6 @@ values
     'Prototype Organization Reference III',
     'https://example.com/prototype-organization-iii/reference',
     date '2026-04-09',
-    'Prototype record for demonstration and testing.',
-    'Internal prototype context only.',
-    false,
     'partially_verified',
     'active',
     now()
@@ -3482,9 +3466,6 @@ values
     'Prototype Organization Reference IV',
     'https://example.com/prototype-organization-iv/reference',
     date '2026-04-12',
-    'Prototype record for demonstration and testing.',
-    'Internal prototype context only.',
-    false,
     'verified',
     'inactive',
     now()
@@ -3510,9 +3491,6 @@ values
     'Prototype Organization Reference V',
     'https://example.com/prototype-organization-v/reference',
     date '2026-04-15',
-    'Prototype record for demonstration and testing.',
-    'Internal prototype context only.',
-    false,
     'verified',
     'active',
     now()
@@ -3538,9 +3516,6 @@ values
     'Prototype Organization Reference VI',
     'https://example.com/prototype-organization-vi/reference',
     date '2026-04-18',
-    'Prototype record for demonstration and testing.',
-    'Internal prototype context only.',
-    false,
     'verified',
     'partner',
     now()
@@ -3565,9 +3540,6 @@ on conflict (slug) do update set
   source_reference_title = excluded.source_reference_title,
   source_reference_url = excluded.source_reference_url,
   source_reference_published_on = excluded.source_reference_published_on,
-  prototype_note = excluded.prototype_note,
-  credibility_notes = excluded.credibility_notes,
-  is_pasig_based = excluded.is_pasig_based,
   data_status = excluded.data_status,
   status = excluded.status,
   last_verified_at = excluded.last_verified_at,
@@ -3580,7 +3552,6 @@ insert into public.organization_references (
   publisher,
   published_on,
   reference_type,
-  credibility_notes,
   is_official
 )
 select
@@ -3590,18 +3561,17 @@ select
   v.publisher,
   v.published_on,
   v.reference_type,
-  v.credibility_notes,
   v.is_official
 from public.organizations o
 join (
   values
-    ('testing-youth-organization-i', 'Prototype Organization Reference I', 'https://example.com/prototype-organization-i/reference', 'Prototype Publisher', date '2026-04-01', 'prototype_reference', 'Prototype reference record.', false),
-    ('testing-youth-organization-ii', 'Prototype Organization Reference II', 'https://example.com/prototype-organization-ii/reference', 'Prototype Publisher', date '2026-04-05', 'prototype_reference', 'Prototype reference record.', false),
-    ('testing-youth-organization-iii', 'Prototype Organization Reference III', 'https://example.com/prototype-organization-iii/reference', 'Prototype Publisher', date '2026-04-09', 'prototype_reference', 'Prototype reference record.', false),
-    ('testing-youth-organization-iv', 'Prototype Organization Reference IV', 'https://example.com/prototype-organization-iv/reference', 'Prototype Publisher', date '2026-04-12', 'prototype_reference', 'Prototype reference record.', false),
-    ('testing-youth-organization-v', 'Prototype Organization Reference V', 'https://example.com/prototype-organization-v/reference', 'Prototype Publisher', date '2026-04-15', 'prototype_reference', 'Prototype reference record.', false),
-    ('testing-youth-organization-vi', 'Prototype Organization Reference VI', 'https://example.com/prototype-organization-vi/reference', 'Prototype Publisher', date '2026-04-18', 'prototype_reference', 'Prototype reference record.', false)
-) as v(slug, reference_title, reference_url, publisher, published_on, reference_type, credibility_notes, is_official)
+    ('testing-youth-organization-i', 'Prototype Organization Reference I', 'https://example.com/prototype-organization-i/reference', 'Prototype Publisher', date '2026-04-01', 'prototype_reference', false),
+    ('testing-youth-organization-ii', 'Prototype Organization Reference II', 'https://example.com/prototype-organization-ii/reference', 'Prototype Publisher', date '2026-04-05', 'prototype_reference', false),
+    ('testing-youth-organization-iii', 'Prototype Organization Reference III', 'https://example.com/prototype-organization-iii/reference', 'Prototype Publisher', date '2026-04-09', 'prototype_reference', false),
+    ('testing-youth-organization-iv', 'Prototype Organization Reference IV', 'https://example.com/prototype-organization-iv/reference', 'Prototype Publisher', date '2026-04-12', 'prototype_reference', false),
+    ('testing-youth-organization-v', 'Prototype Organization Reference V', 'https://example.com/prototype-organization-v/reference', 'Prototype Publisher', date '2026-04-15', 'prototype_reference', false),
+    ('testing-youth-organization-vi', 'Prototype Organization Reference VI', 'https://example.com/prototype-organization-vi/reference', 'Prototype Publisher', date '2026-04-18', 'prototype_reference', false)
+) as v(slug, reference_title, reference_url, publisher, published_on, reference_type, is_official)
   on o.slug = v.slug
 on conflict do nothing;
 
@@ -3635,7 +3605,7 @@ on conflict do nothing;
 
 commit;
 
--- END FILE: supabase/sql/schema_orgs_pasig_update.sql
+-- END FILE: supabase/sql/schema_orgs_details_update.sql
 
 
 -- ===========================================================================
@@ -3812,5 +3782,25 @@ drop type if exists public.service_status;
 commit;
 
 -- END FILE: supabase/sql/30_remove_service_advisories.sql
+
+-- ===========================================================================
+-- BEGIN FILE: supabase/sql/31_remove_org_legacy_fields.sql
+-- ===========================================================================
+
+begin;
+
+-- Removes organization fields tied to the older location-specific/prototype
+-- model. Organization records now stay generic and source-focused.
+alter table if exists public.organizations
+  drop column if exists is_pasig_based,
+  drop column if exists prototype_note,
+  drop column if exists credibility_notes;
+
+alter table if exists public.organization_references
+  drop column if exists credibility_notes;
+
+commit;
+
+-- END FILE: supabase/sql/31_remove_org_legacy_fields.sql
 
 

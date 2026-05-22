@@ -243,10 +243,6 @@ export default function Organizations() {
                       {showValue(selectedOrganization.activityYear ?? selectedOrganization.sourceDate)}
                     </p>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground mb-1">Credibility Notes</h4>
-                    <p className="text-muted-foreground leading-6">{showValue(selectedOrganization.credibilityNotes ?? selectedOrganization.sourceTag)}</p>
-                  </div>
                 </div>
               </div>
               <div className="pt-2 border-t space-y-2 text-sm">
