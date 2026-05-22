@@ -108,8 +108,8 @@
     --secondary-foreground: var(--user-on-dark);
     --muted: 244 62% 96%;
     --muted-foreground: var(--user-meta);
-    --accent: var(--brand-sk-gold);
-    --accent-foreground: var(--user-heading);
+    --accent: var(--user-link);
+    --accent-foreground: var(--user-on-dark);
     --destructive: var(--semantic-danger);
     --destructive-foreground: var(--user-on-dark);
     --border: var(--user-border);

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import BrandLogo from "@/components/BrandLogo";
 import { useAuth } from "@/hooks/use-auth";
 import {
   DropdownMenu,
@@ -43,14 +44,12 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-primary/15">
       <div className="container mx-auto flex items-center justify-between h-16 px-3 sm:px-4 gap-2">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-heading font-bold text-xs tracking-tight">YG</span>
-          </div>
-          <span className="hidden sm:inline font-heading font-bold text-sm lg:text-base text-foreground leading-tight max-w-[13rem] lg:max-w-none">
-            <span className="lg:hidden">Youth Governance System</span>
-            <span className="hidden lg:inline">Youth Governance Transparency and Accountability System</span>
-          </span>
+        <Link to="/" className="min-w-0">
+          <BrandLogo
+            imgClassName="h-9 w-9 sm:h-10 sm:w-10"
+            showText
+            textClassName="hidden sm:block"
+          />
         </Link>
 
         <div className="hidden md:flex items-center gap-1">
@@ -60,7 +59,7 @@ const Navbar = () => {
               to={item.href}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === item.href
-                  ? "bg-accent/20 text-user-heading"
+                  ? "bg-primary/12 text-primary border border-primary/25"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
@@ -71,7 +70,7 @@ const Navbar = () => {
             <DropdownMenuTrigger
               className={`inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isTransparencyPath
-                  ? "bg-accent/20 text-user-heading"
+                  ? "bg-primary/12 text-primary border border-primary/25"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
@@ -119,6 +118,11 @@ const Navbar = () => {
 
       {mobileOpen && (
         <div className="md:hidden bg-background border-b border-primary/15 px-4 pb-4">
+          <div className="py-3">
+            <Link to="/" onClick={() => setMobileOpen(false)}>
+              <BrandLogo imgClassName="h-8 w-8" showText textClassName="text-sm" />
+            </Link>
+          </div>
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -126,7 +130,7 @@ const Navbar = () => {
               onClick={() => setMobileOpen(false)}
               className={`block px-4 py-3 rounded-lg text-sm font-medium ${
                 location.pathname === item.href
-                  ? "bg-accent/20 text-user-heading"
+                  ? "bg-primary/12 text-primary border border-primary/25"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
@@ -137,7 +141,7 @@ const Navbar = () => {
             type="button"
             onClick={() => setMobileTransparencyOpen(!mobileTransparencyOpen)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium ${
-              isTransparencyPath ? "bg-accent/20 text-user-heading" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+              isTransparencyPath ? "bg-primary/12 text-primary border border-primary/25" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
             }`}
           >
             <span>Transparency</span>
@@ -151,7 +155,7 @@ const Navbar = () => {
                   to={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={`block px-4 py-2 rounded-lg text-sm ${
-                    location.pathname === item.href ? "bg-accent/20 text-user-heading" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                    location.pathname === item.href ? "bg-primary/12 text-primary border border-primary/25" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                   }`}
                 >
                   {item.label}

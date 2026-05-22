@@ -25,7 +25,7 @@ interface ProgramCardProps {
 
 const typeColors: Record<string, string> = {
   program: "bg-primary/10 text-primary",
-  event: "bg-primary/10 text-primary",
+  event: "bg-info/12 text-info",
   organization: "bg-primary/10 text-primary",
 };
 
@@ -76,7 +76,7 @@ const ProgramCard = ({
           </span>
           <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">{sector}</span>
           {isJoined && (
-            <span className="text-[11px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-accent/15 text-accent">
+            <span className="text-[11px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-success/12 text-success">
               {joinedLabel}
             </span>
           )}

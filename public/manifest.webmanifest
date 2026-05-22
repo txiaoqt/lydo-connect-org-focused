@@ -1,12 +1,12 @@
 ﻿{
-  "name": "Youth Governance Transparency and Accountability System",
-  "short_name": "YGTAS",
-  "description": "Youth Engagement Management System for Metro Manila Local Youth Development Offices.",
+  "name": "LYDO Connect",
+  "short_name": "LYDO",
+  "description": "LYDO Connect centralizes youth programs, events, organizations, and transparency services.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0f766e",
+  "theme_color": "#2460A7",
   "lang": "en-PH",
   "icons": [
     {

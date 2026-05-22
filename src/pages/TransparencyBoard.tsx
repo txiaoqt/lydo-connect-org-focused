@@ -24,7 +24,7 @@ type MonthlyComplianceItem = {
 };
 
 const statusIcon = (state: DocState) => {
-  if (state === "ok") return <CheckCircle2 className="h-5 w-5 text-accent mx-auto" />;
+  if (state === "ok") return <CheckCircle2 className="h-5 w-5 text-success mx-auto" />;
   if (state === "issue") return <CircleX className="h-5 w-5 text-destructive mx-auto" />;
   return <AlertCircle className="h-5 w-5 text-warning mx-auto" />;
 };
@@ -36,7 +36,7 @@ const statusBadge = (remarks: string) => {
       className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
         partial
           ? "bg-warning/15 text-warning border border-warning/40"
-          : "bg-accent/20 text-accent border border-accent/40"
+          : "bg-success/12 text-success border border-success/30"
       }`}
     >
       {remarks}
@@ -45,7 +45,7 @@ const statusBadge = (remarks: string) => {
 };
 
 const docIcon = (state: SubmissionState) => {
-  if (state === "submitted") return <CheckCircle2 className="h-4 w-4 text-accent mx-auto" />;
+  if (state === "submitted") return <CheckCircle2 className="h-4 w-4 text-success mx-auto" />;
   if (state === "late") return <AlertCircle className="h-4 w-4 text-warning mx-auto" />;
   return <CircleX className="h-4 w-4 text-destructive mx-auto" />;
 };
@@ -68,7 +68,7 @@ const computeMonthlyStatus = (item: MonthlyComplianceItem): MonthlyOverallStatus
 };
 
 const monthlyStatusBadge = (status: MonthlyOverallStatus) => {
-  if (status === "Completed") return <Badge className="bg-accent text-accent-foreground">Completed</Badge>;
+  if (status === "Completed") return <Badge className="bg-success text-success-foreground">Completed</Badge>;
   if (status === "Late") return <Badge variant="outline" className="border-destructive text-destructive">Late</Badge>;
   if (status === "Due Soon") return <Badge variant="outline" className="border-warning text-warning">Due Soon</Badge>;
   return <Badge variant="outline" className="border-primary text-primary">Open</Badge>;
@@ -252,7 +252,7 @@ export default function TransparencyBoard() {
             <>
               <div className="grid md:grid-cols-3 gap-3 sm:gap-4">
                 <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Total Barangays</p><p className="text-2xl sm:text-3xl font-bold mt-1">{rows.length}</p></div>
-                <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Fully Compliant</p><p className="text-2xl sm:text-3xl font-bold mt-1 text-accent">{fullyCompliant}</p></div>
+                <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Fully Compliant</p><p className="text-2xl sm:text-3xl font-bold mt-1 text-success">{fullyCompliant}</p></div>
                 <div className="rounded-xl border bg-card p-4 sm:p-5 card-shadow"><p className="text-sm text-muted-foreground">Partially Compliant</p><p className="text-2xl sm:text-3xl font-bold mt-1 text-warning">{partiallyCompliant}</p></div>
               </div>
 
@@ -297,7 +297,7 @@ export default function TransparencyBoard() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Rows</p><p className="text-2xl font-bold">{monthlyTotals.total}</p></div>
-                <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Completed</p><p className="text-2xl font-bold text-accent">{monthlyTotals.completed}</p></div>
+                <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Completed</p><p className="text-2xl font-bold text-success">{monthlyTotals.completed}</p></div>
                 <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Late</p><p className="text-2xl font-bold text-destructive">{monthlyTotals.late}</p></div>
                 <div className="rounded-xl border bg-card p-4 card-shadow"><p className="text-sm text-muted-foreground">Avg Completion</p><p className="text-2xl font-bold">{monthlyTotals.avgCompletion}%</p></div>
               </div>

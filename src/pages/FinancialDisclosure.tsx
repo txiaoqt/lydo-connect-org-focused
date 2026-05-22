@@ -18,7 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { fetchFinancialDashboardData, type FinancialDashboardRow } from "@/lib/data-api";
 
 const getUtilizationStatus = (percent: number) => {
-  if (percent >= 80) return { label: "Healthy", className: "bg-accent/20 text-accent border-accent/40" };
+  if (percent >= 80) return { label: "Healthy", className: "bg-success/12 text-success border-success/30" };
   if (percent >= 60) return { label: "Moderate", className: "bg-warning/20 text-warning border-warning/40" };
   return { label: "Low", className: "bg-destructive/15 text-destructive border-destructive/30" };
 };
@@ -81,7 +81,7 @@ export default function FinancialDisclosure() {
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" />Allocated</span>
-                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-accent" />Utilized</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-secondary" />Utilized</span>
               </div>
             </div>
             <div className="h-64 sm:h-72">
@@ -94,7 +94,7 @@ export default function FinancialDisclosure() {
                     <Tooltip formatter={(value: number) => `PHP ${value.toLocaleString()}`} />
                     <Legend />
                     <Bar dataKey="allocated" name="Allocated" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="utilized" name="Utilized" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="utilized" name="Utilized" fill="hsl(var(--secondary))" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (

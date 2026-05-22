@@ -93,13 +93,13 @@ const Index = () => {
       <section className="hero-gradient relative overflow-x-clip pt-16">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-20 w-96 h-96 bg-accent rounded-full blur-3xl" />
+          <div className="absolute bottom-10 right-20 w-96 h-96 bg-primary rounded-full blur-3xl" />
         </div>
         <div className="container mx-auto px-4 py-10 sm:py-12 md:py-16 lg:py-20 relative z-10">
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="animate-fade-up">
               <div className="inline-flex max-w-full items-center gap-2 bg-secondary-foreground/10 backdrop-blur-sm border border-secondary-foreground/20 rounded-full px-3 py-1.5 mb-4 sm:mb-6">
-                <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-brand-skGold animate-pulse" />
                 <span className="text-[11px] sm:text-xs font-medium text-secondary-foreground/80 truncate">Prototype Local Youth Development Offices</span>
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-heading font-extrabold text-secondary-foreground leading-tight mb-4 sm:mb-6">
@@ -223,7 +223,7 @@ const Index = () => {
 
       <section className="hero-gradient py-20 md:py-24 relative overflow-hidden">
         <div className="container mx-auto px-4 text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-secondary-foreground mb-4">Youth Governance Transparency and Accountability System</h2>
+          <h2 className="text-3xl md:text-4xl font-heading font-bold text-secondary-foreground mb-4">LYDO Connect</h2>
           <p className="text-secondary-foreground/70 max-w-2xl mx-auto mb-8 leading-relaxed">
             {isAuthenticated
               ? "You are signed in. Continue exploring programs, events, organizations, and transparency records from the navigation menu."

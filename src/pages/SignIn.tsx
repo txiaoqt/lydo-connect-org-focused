@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import BrandLogo from "@/components/BrandLogo";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { IS_ADMIN_SURFACE, IS_USER_SURFACE } from "@/lib/deployment-surface";
@@ -70,21 +71,17 @@ const SignIn = ({ forcedMode }: SignInProps) => {
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-8 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-180px] left-[-140px] h-[360px] w-[360px] rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-[-190px] right-[-150px] h-[400px] w-[400px] rounded-full bg-accent/20 blur-3xl" />
+        <div className="absolute bottom-[-190px] right-[-150px] h-[400px] w-[400px] rounded-full bg-primary/20 blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         <div className="mb-6 text-left">
           <Link to="/" className="inline-flex items-center gap-3 max-w-full">
-            <div className="h-11 w-11 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center shadow-[var(--glow-primary)]">
-              LC
-            </div>
-            <div>
-              <p className="font-heading font-bold text-base leading-tight text-foreground">LYDO Connect</p>
-              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                {isAdminMode ? "Admin Portal" : "Youth Portal"}
-              </p>
-            </div>
+            <BrandLogo
+              imgClassName="h-10 w-10"
+              showText
+              subtitle={isAdminMode ? "Admin Portal" : "Youth Portal"}
+            />
           </Link>
         </div>
 

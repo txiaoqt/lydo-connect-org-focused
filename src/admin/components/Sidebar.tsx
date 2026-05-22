@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { EFFECTIVE_ADMIN_SIGNIN_PATH } from "@/lib/deployment-surface";
 import { useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -143,17 +144,12 @@ export const Sidebar = ({
     >
       <div className={cn("pb-5", collapsed ? "p-4" : "p-8")}>
         <div className={cn("flex items-center", collapsed ? "justify-center" : "justify-between gap-3")}>
-          <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-primary-foreground font-bold text-xl shadow-[var(--glow-primary)]">
-              L
-            </div>
-            {!collapsed && (
-              <div>
-                <h1 className="font-bold text-foreground text-lg leading-tight">LYDO Connect</h1>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Admin Portal</p>
-              </div>
-            )}
-          </div>
+          <BrandLogo
+            imgClassName={collapsed ? "h-9 w-9" : "h-10 w-10"}
+            showText={!collapsed}
+            subtitle={collapsed ? undefined : "Admin Portal"}
+            className={collapsed ? "justify-center w-full" : ""}
+          />
         </div>
       </div>
 
