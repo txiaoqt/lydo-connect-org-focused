@@ -6,58 +6,126 @@
 
 @layer base {
   :root {
-    --background: 204 42% 98%;
-    --foreground: 209 46% 14%;
+    --brand-deep-blue: 218 64% 29%;
+    --brand-mid-blue: 212 64% 40%;
+    --brand-sk-gold: 49 92% 48%;
+    --brand-sk-red: 354 73% 46%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 209 46% 14%;
+    --admin-page-bg: 60 7% 95%;
+    --admin-surface: 0 0% 100%;
+    --admin-border: 0 0% 87%;
+    --admin-nav-dark: 218 64% 29%;
+    --admin-heading: 218 64% 29%;
+    --admin-link: 212 64% 40%;
+    --admin-body: 0 0% 24%;
+    --admin-meta: 0 0% 47%;
+    --admin-on-dark: 0 0% 100%;
+    --admin-active-on-dark: 49 92% 48%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 209 46% 14%;
+    --user-page-bg: 244 100% 98%;
+    --user-surface: 0 0% 100%;
+    --user-border: 247 46% 89%;
+    --user-nav-dark: 218 64% 23%;
+    --user-heading: 225 61% 27%;
+    --user-link: 212 64% 40%;
+    --user-body: 180 12% 21%;
+    --user-meta: 240 13% 48%;
+    --user-on-dark: 0 0% 100%;
+    --user-active-on-dark: 49 92% 48%;
 
-    --primary: 205 68% 30%;
-    --primary-foreground: 0 0% 100%;
+    --semantic-success: 146 40% 30%;
+    --semantic-warning: 47 100% 24%;
+    --semantic-danger: 354 73% 46%;
+    --semantic-info-admin: 218 64% 29%;
+    --semantic-info-user: 225 61% 27%;
+    --semantic-disabled: 0 0% 73%;
+    --semantic-placeholder: 0 0% 67%;
 
-    --secondary: 177 58% 33%;
-    --secondary-foreground: 0 0% 100%;
+    --background: var(--admin-page-bg);
+    --foreground: var(--admin-body);
 
-    --muted: 204 34% 95%;
-    --muted-foreground: 208 23% 38%;
+    --card: var(--admin-surface);
+    --card-foreground: var(--admin-body);
 
-    --accent: 162 56% 38%;
-    --accent-foreground: 0 0% 100%;
+    --popover: var(--admin-surface);
+    --popover-foreground: var(--admin-body);
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --primary: var(--admin-heading);
+    --primary-foreground: var(--admin-on-dark);
 
-    --border: 206 30% 86%;
-    --input: 206 30% 86%;
-    --ring: 205 68% 30%;
+    --secondary: var(--admin-link);
+    --secondary-foreground: var(--admin-on-dark);
+
+    --muted: 0 0% 96%;
+    --muted-foreground: var(--admin-meta);
+
+    --accent: var(--admin-link);
+    --accent-foreground: var(--admin-on-dark);
+
+    --destructive: var(--semantic-danger);
+    --destructive-foreground: var(--admin-on-dark);
+
+    --border: var(--admin-border);
+    --input: var(--admin-border);
+    --ring: var(--admin-link);
 
     --radius: 0.625rem;
 
-    --success: 162 56% 38%;
+    --success: var(--semantic-success);
     --success-foreground: 0 0% 100%;
-    --warning: 45 93% 58%;
-    --warning-foreground: 209 46% 14%;
-    --info: 191 57% 36%;
+    --warning: var(--semantic-warning);
+    --warning-foreground: 0 0% 100%;
+    --info: var(--semantic-info-admin);
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 210 60% 12%;
-    --sidebar-foreground: 210 20% 94%;
-    --sidebar-primary: 174 62% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 50% 20%;
-    --sidebar-accent-foreground: 210 20% 94%;
-    --sidebar-border: 210 40% 22%;
-    --sidebar-ring: 174 62% 45%;
+    --sidebar-background: var(--admin-nav-dark);
+    --sidebar-foreground: var(--admin-on-dark);
+    --sidebar-primary: var(--admin-link);
+    --sidebar-primary-foreground: var(--admin-on-dark);
+    --sidebar-accent: 218 56% 24%;
+    --sidebar-accent-foreground: var(--admin-on-dark);
+    --sidebar-border: 218 44% 34%;
+    --sidebar-ring: var(--admin-active-on-dark);
 
     /* Custom tokens */
-    --hero-gradient: linear-gradient(135deg, hsl(206 64% 23%), hsl(202 58% 31%), hsl(176 56% 34%));
-    --stats-gradient: linear-gradient(135deg, hsl(205 64% 27%), hsl(192 53% 32%), hsl(176 56% 35%));
-    --card-shadow: 0 1px 2px hsl(207 36% 12% / 0.06), 0 10px 24px hsl(207 36% 12% / 0.08);
-    --card-shadow-hover: 0 4px 14px hsl(207 36% 12% / 0.1), 0 16px 34px hsl(207 36% 12% / 0.1);
-    --glow-primary: 0 0 20px hsl(205 68% 30% / 0.24);
+    --hero-gradient: linear-gradient(135deg, hsl(var(--admin-nav-dark)), hsl(var(--admin-heading)), hsl(var(--admin-link)));
+    --stats-gradient: linear-gradient(135deg, hsl(var(--admin-nav-dark)), hsl(var(--admin-heading)), hsl(var(--admin-link)));
+    --card-shadow: 0 1px 2px hsl(0 0% 10% / 0.06), 0 10px 24px hsl(0 0% 10% / 0.08);
+    --card-shadow-hover: 0 4px 14px hsl(0 0% 10% / 0.1), 0 16px 34px hsl(0 0% 10% / 0.1);
+    --glow-primary: 0 0 20px hsl(var(--admin-link) / 0.24);
+  }
+
+  body.public-shell {
+    --background: var(--user-page-bg);
+    --foreground: var(--user-body);
+    --card: var(--user-surface);
+    --card-foreground: var(--user-body);
+    --popover: var(--user-surface);
+    --popover-foreground: var(--user-body);
+    --primary: var(--brand-mid-blue);
+    --primary-foreground: var(--user-on-dark);
+    --secondary: var(--brand-deep-blue);
+    --secondary-foreground: var(--user-on-dark);
+    --muted: 244 62% 96%;
+    --muted-foreground: var(--user-meta);
+    --accent: var(--brand-sk-gold);
+    --accent-foreground: var(--user-heading);
+    --destructive: var(--semantic-danger);
+    --destructive-foreground: var(--user-on-dark);
+    --border: var(--user-border);
+    --input: var(--user-border);
+    --ring: var(--brand-mid-blue);
+    --success: var(--semantic-success);
+    --success-foreground: var(--user-on-dark);
+    --warning: var(--semantic-warning);
+    --warning-foreground: var(--user-on-dark);
+    --info: var(--semantic-info-user);
+    --info-foreground: var(--user-on-dark);
+    --hero-gradient: linear-gradient(135deg, hsl(var(--user-nav-dark)), hsl(var(--brand-deep-blue)), hsl(var(--brand-mid-blue)));
+    --stats-gradient: linear-gradient(135deg, hsl(var(--brand-deep-blue)), hsl(var(--user-heading)), hsl(var(--brand-mid-blue)));
+    --card-shadow: 0 1px 2px hsl(225 45% 16% / 0.06), 0 10px 24px hsl(225 45% 16% / 0.08);
+    --card-shadow-hover: 0 4px 14px hsl(225 45% 16% / 0.1), 0 16px 34px hsl(225 45% 16% / 0.1);
+    --glow-primary: 0 0 20px hsl(var(--brand-mid-blue) / 0.24);
   }
 
   .dark {
@@ -90,6 +158,14 @@
   body {
     @apply bg-background text-foreground font-body antialiased;
   }
+  body input::placeholder,
+  body textarea::placeholder {
+    color: hsl(var(--semantic-placeholder));
+  }
+  body.public-shell input::placeholder,
+  body.public-shell textarea::placeholder {
+    color: hsl(var(--semantic-placeholder));
+  }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
   }
@@ -100,7 +176,7 @@
     background: var(--hero-gradient);
   }
   .text-gradient {
-    background: linear-gradient(135deg, hsl(177 56% 46%), hsl(162 54% 41%));
+    background: linear-gradient(135deg, hsl(var(--brand-sk-gold)), hsl(var(--brand-mid-blue)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -122,7 +198,7 @@
   }
 
   .admin-kicker {
-    color: hsl(196 34% 44%);
+    color: hsl(var(--admin-meta));
     letter-spacing: 0.16em;
     font-size: 0.72rem;
     font-weight: 700;
@@ -134,11 +210,11 @@
   .admin-shell h1,
   .admin-shell h2,
   .admin-shell h3 {
-    color: hsl(210 52% 14%);
+    color: hsl(var(--admin-heading));
   }
 
   .admin-shell label {
-    color: hsl(196 34% 44%);
+    color: hsl(var(--admin-meta));
     letter-spacing: 0.12em;
     font-size: 0.72rem;
     font-weight: 700;
@@ -146,11 +222,11 @@
   }
 
   .admin-shell .text-xs.font-semibold.uppercase.tracking-wider {
-    color: hsl(196 34% 44%);
+    color: hsl(var(--admin-meta));
   }
 
   .admin-shell thead th {
-    color: hsl(196 34% 44%);
+    color: hsl(var(--admin-meta));
   }
 }
 

@@ -5,20 +5,20 @@ type StatusBadgeProps = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  published: "bg-emerald-100 text-emerald-700 border-emerald-200/80",
+  published: "bg-success/12 text-success border-success/30",
   upcoming: "bg-primary/10 text-primary border-primary/20",
-  ongoing: "bg-cyan-100 text-cyan-700 border-cyan-200/80",
+  ongoing: "bg-info/12 text-info border-info/30",
   draft: "bg-muted text-muted-foreground border-border",
-  active: "bg-emerald-100 text-emerald-700 border-emerald-200/80",
+  active: "bg-success/12 text-success border-success/30",
   partner: "bg-primary/10 text-primary border-primary/20",
   inactive: "bg-muted text-muted-foreground border-border",
-  archived: "bg-slate-200/70 text-slate-700 border-slate-300/70",
-  past: "bg-slate-100 text-slate-700 border-slate-200/80",
+  archived: "bg-muted text-muted-foreground border-border",
+  past: "bg-muted text-muted-foreground border-border",
   cancelled: "bg-destructive/10 text-destructive border-destructive/25",
-  postponed: "bg-amber-100 text-amber-700 border-amber-200/80",
-  completed: "bg-violet-100 text-violet-700 border-violet-200/80",
-  pending: "bg-amber-100 text-amber-700 border-amber-200/80",
-  enabled: "bg-emerald-100 text-emerald-700 border-emerald-200/80",
+  postponed: "bg-warning/12 text-warning border-warning/30",
+  completed: "bg-info/12 text-info border-info/30",
+  pending: "bg-warning/12 text-warning border-warning/30",
+  enabled: "bg-success/12 text-success border-success/30",
   disabled: "bg-destructive/10 text-destructive border-destructive/25",
 };
 

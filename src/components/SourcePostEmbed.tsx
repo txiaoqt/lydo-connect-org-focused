@@ -53,7 +53,7 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
         </div>
       )}
       {embedIssue ? (
-        <p className="text-xs text-amber-600">{embedIssue.message}</p>
+        <p className="text-xs text-warning">{embedIssue.message}</p>
       ) : embedConfig ? (
         <p className="text-xs text-muted-foreground">
           If Facebook shows "post no longer available", the post is usually not public/embeddable for all visitors.

@@ -129,6 +129,22 @@ const ScrollToTopOnRouteChange = () => {
   return null;
 };
 
+const SurfaceThemeClass = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const isAdminPath = pathname.startsWith("/admin");
+    const shouldUsePublicTheme = !IS_ADMIN_SURFACE && !isAdminPath;
+    document.body.classList.toggle("public-shell", shouldUsePublicTheme);
+
+    return () => {
+      document.body.classList.remove("public-shell");
+    };
+  }, [pathname]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -139,6 +155,7 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <ScrollToTopOnRouteChange />
+              <SurfaceThemeClass />
               <Routes>
             {IS_ADMIN_SURFACE ? (
               <>

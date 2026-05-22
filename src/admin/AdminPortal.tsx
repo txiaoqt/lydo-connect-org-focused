@@ -55,7 +55,7 @@ export default function AdminPortal() {
       manifestLink.setAttribute("href", "/manifest-admin.webmanifest");
     }
     if (themeColorMeta) {
-      themeColorMeta.setAttribute("content", "#1e4f78");
+      themeColorMeta.setAttribute("content", "#1A3F7A");
     }
 
     return () => {

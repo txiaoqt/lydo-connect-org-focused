@@ -29,8 +29,8 @@ const destinationMarker = L.divIcon({
   className: "",
   html: `
     <div style="position: relative; width: 26px; height: 26px;">
-      <div style="width: 18px; height: 18px; border-radius: 9999px; background: #1B4F72; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,.25); position: absolute; left: 4px; top: 0;"></div>
-      <div style="width: 2px; height: 10px; background: #1B4F72; position: absolute; left: 12px; bottom: 0;"></div>
+      <div style="width: 18px; height: 18px; border-radius: 9999px; background: #1A3F7A; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,.25); position: absolute; left: 4px; top: 0;"></div>
+      <div style="width: 2px; height: 10px; background: #1A3F7A; position: absolute; left: 12px; bottom: 0;"></div>
     </div>
   `,
   iconSize: [26, 26],
@@ -42,7 +42,7 @@ const userMarker = L.divIcon({
   className: "",
   html: `
     <div style="position: relative; width: 22px; height: 22px;">
-      <div style="width: 14px; height: 14px; border-radius: 9999px; background: #0f766e; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,.25); position: absolute; left: 4px; top: 4px;"></div>
+      <div style="width: 14px; height: 14px; border-radius: 9999px; background: #2460A7; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,.25); position: absolute; left: 4px; top: 4px;"></div>
     </div>
   `,
   iconSize: [22, 22],
@@ -233,7 +233,7 @@ export default function LocationPreviewButton({
   const [origin, setOrigin] = useState<LatLngTuple | null>(null);
   const [originQuery, setOriginQuery] = useState("");
   const [originResolvedAddress, setOriginResolvedAddress] = useState("");
-  const [originHint, setOriginHint] = useState("Type your starting location or drag the teal pin.");
+  const [originHint, setOriginHint] = useState("Type your starting location or drag the blue pin.");
   const [originLatInput, setOriginLatInput] = useState("");
   const [originLngInput, setOriginLngInput] = useState("");
   const [hasManualOrigin, setHasManualOrigin] = useState(false);
@@ -402,7 +402,7 @@ export default function LocationPreviewButton({
       setOrigin(destinationPoint);
       setOriginQuery("");
       setOriginResolvedAddress("");
-      setOriginHint("Set your starting location by typing or dragging the teal pin.");
+      setOriginHint("Set your starting location by typing or dragging the blue pin.");
       setOriginLatInput(destinationPoint[0].toFixed(6));
       setOriginLngInput(destinationPoint[1].toFixed(6));
       setHasManualOrigin(false);
@@ -555,7 +555,7 @@ export default function LocationPreviewButton({
                   />
                 )}
 
-                {hasManualOrigin && routePoints.length > 1 && <Polyline positions={routePoints} color="#1B4F72" weight={4} opacity={0.8} />}
+                {hasManualOrigin && routePoints.length > 1 && <Polyline positions={routePoints} color="#2460A7" weight={4} opacity={0.8} />}
               </MapContainer>
             ) : (
               <div className="h-full grid place-items-center text-sm text-muted-foreground">Location data unavailable.</div>

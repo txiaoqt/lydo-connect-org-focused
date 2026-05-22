@@ -3,11 +3,11 @@ import { DisclosureDocType, DisclosureDocument } from "../types";
 
 const DOC_TYPE_STYLES: Record<string, string> = {
   program_outcome: "bg-primary/10 text-primary border-primary/20",
-  ordinance: "bg-amber-100 text-amber-700 border-amber-200/80",
-  financial_statement: "bg-emerald-100 text-emerald-700 border-emerald-200/80",
-  resolution: "bg-violet-100 text-violet-700 border-violet-200/80",
+  ordinance: "bg-warning/12 text-warning border-warning/30",
+  financial_statement: "bg-success/12 text-success border-success/30",
+  resolution: "bg-info/12 text-info border-info/30",
   bac_document: "bg-destructive/10 text-destructive border-destructive/20",
-  executive_order: "bg-cyan-100 text-cyan-700 border-cyan-200/80",
+  executive_order: "bg-info/12 text-info border-info/30",
   other: "bg-muted text-muted-foreground border-border",
 };
 
@@ -47,4 +47,3 @@ export function DocumentTypeBadge({ doc }: DocumentTypeBadgeProps) {
     </span>
   );
 }
-

@@ -14,7 +14,7 @@ type ComparisonRow = {
 };
 
 const OPERATION_META: Record<AuditOperation, { label: string; badgeClass: string }> = {
-  INSERT: { label: "Created", badgeClass: "bg-emerald-100 text-emerald-700" },
+  INSERT: { label: "Created", badgeClass: "bg-success/12 text-success" },
   UPDATE: { label: "Updated", badgeClass: "bg-primary/10 text-primary" },
   DELETE: { label: "Deleted", badgeClass: "bg-destructive/10 text-destructive" },
 };

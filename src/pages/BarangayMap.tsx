@@ -24,7 +24,7 @@ const baseMarkerIcon = new L.Icon({
 });
 
 const statusMarkerIcon = (status: "compliant" | "pending" | "overdue") => {
-  const color = status === "overdue" ? "#ef4444" : status === "pending" ? "#f59e0b" : "#1B4F72";
+  const color = status === "overdue" ? "#CC1F2F" : status === "pending" ? "#7A6000" : "#1A3F7A";
 
   return L.divIcon({
     className: "status-marker-wrapper",

@@ -269,11 +269,11 @@ export const Organizations = () => {
   const getOrganizationTypeBadgeClass = (type?: string | null) => {
     const normalized = (type ?? "").trim().toLowerCase();
     if (normalized.includes("civic volunteer")) return "bg-primary/10 text-primary border-primary/20";
-    if (normalized.includes("advocacy network")) return "bg-emerald-100 text-emerald-700 border-emerald-200/80";
-    if (normalized.includes("multi-organization")) return "bg-violet-100 text-violet-700 border-violet-200/80";
-    if (normalized.includes("youth interest")) return "bg-amber-100 text-amber-700 border-amber-200/80";
-    if (normalized.includes("youth governance")) return "bg-blue-100 text-blue-700 border-blue-200/80";
-    if (normalized.includes("campus youth")) return "bg-cyan-100 text-cyan-700 border-cyan-200/80";
+    if (normalized.includes("advocacy network")) return "bg-success/12 text-success border-success/30";
+    if (normalized.includes("multi-organization")) return "bg-info/12 text-info border-info/30";
+    if (normalized.includes("youth interest")) return "bg-warning/12 text-warning border-warning/30";
+    if (normalized.includes("youth governance")) return "bg-primary/10 text-primary border-primary/20";
+    if (normalized.includes("campus youth")) return "bg-info/12 text-info border-info/30";
     return "bg-muted text-muted-foreground border-border";
   };
 

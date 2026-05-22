@@ -47,10 +47,10 @@ const ticketFilterOptions: Array<{ value: TicketViewFilter; label: string }> = [
 ];
 
 const statusBadgeClasses: Record<TicketStatus, string> = {
-  received: "border-amber-300 bg-amber-100 text-amber-800",
-  in_progress: "border-sky-300 bg-sky-100 text-sky-800",
-  resolved: "border-emerald-300 bg-emerald-100 text-emerald-800",
-  closed: "border-slate-300 bg-slate-200 text-slate-700",
+  received: "border-warning/35 bg-warning/10 text-warning",
+  in_progress: "border-info/35 bg-info/10 text-info",
+  resolved: "border-success/35 bg-success/10 text-success",
+  closed: "border-border bg-muted text-muted-foreground",
 };
 
 const formatStatus = (value: TicketStatus | string) =>
@@ -373,7 +373,7 @@ export default function CitizenDesk() {
                   {isSyncing ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                   ) : (
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="h-2 w-2 rounded-full bg-success" />
                   )}
                   Auto-refresh every 10 seconds
                 </div>

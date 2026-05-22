@@ -60,7 +60,7 @@ const Navbar = () => {
               to={item.href}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === item.href
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-accent/20 text-user-heading"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
@@ -71,7 +71,7 @@ const Navbar = () => {
             <DropdownMenuTrigger
               className={`inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isTransparencyPath
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-accent/20 text-user-heading"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
@@ -126,7 +126,7 @@ const Navbar = () => {
               onClick={() => setMobileOpen(false)}
               className={`block px-4 py-3 rounded-lg text-sm font-medium ${
                 location.pathname === item.href
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-accent/20 text-user-heading"
                   : "text-muted-foreground hover:text-primary hover:bg-primary/5"
               }`}
             >
@@ -137,7 +137,7 @@ const Navbar = () => {
             type="button"
             onClick={() => setMobileTransparencyOpen(!mobileTransparencyOpen)}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium ${
-              isTransparencyPath ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+              isTransparencyPath ? "bg-accent/20 text-user-heading" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
             }`}
           >
             <span>Transparency</span>
@@ -151,7 +151,7 @@ const Navbar = () => {
                   to={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={`block px-4 py-2 rounded-lg text-sm ${
-                    location.pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                    location.pathname === item.href ? "bg-accent/20 text-user-heading" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                   }`}
                 >
                   {item.label}

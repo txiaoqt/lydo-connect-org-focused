@@ -469,13 +469,13 @@ export const FinancialDss = () => {
         <head>
           <meta charset="utf-8" />
           <style>
-            body { font-family: Arial, sans-serif; color: #1f2937; }
+            body { font-family: Arial, sans-serif; color: #3D3D3D; }
             h1 { font-size: 20px; margin: 0 0 8px 0; }
-            p { margin: 0 0 12px 0; color: #4b5563; }
+            p { margin: 0 0 12px 0; color: #777777; }
             table { border-collapse: collapse; width: 100%; font-size: 12px; }
-            th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
-            th { background: #f3f4f6; font-weight: 700; }
-            tr:nth-child(even) { background: #fafafa; }
+            th, td { border: 1px solid #DEDEDE; padding: 8px; text-align: left; }
+            th { background: #F2F2F0; font-weight: 700; }
+            tr:nth-child(even) { background: #FAFAFA; }
           </style>
         </head>
         <body>
@@ -526,13 +526,13 @@ export const FinancialDss = () => {
         <head>
           <title>Financial DSS Export</title>
           <style>
-            body { font-family: Arial, sans-serif; color: #111827; padding: 20px; }
+            body { font-family: Arial, sans-serif; color: #3D3D3D; padding: 20px; }
             h1 { font-size: 20px; margin: 0 0 8px 0; }
-            p { margin: 0 0 12px 0; color: #4b5563; }
+            p { margin: 0 0 12px 0; color: #777777; }
             table { border-collapse: collapse; width: 100%; font-size: 11px; }
-            th, td { border: 1px solid #d1d5db; padding: 7px; text-align: left; }
-            th { background: #f3f4f6; font-weight: 700; }
-            tr:nth-child(even) { background: #fafafa; }
+            th, td { border: 1px solid #DEDEDE; padding: 7px; text-align: left; }
+            th { background: #F2F2F0; font-weight: 700; }
+            tr:nth-child(even) { background: #FAFAFA; }
             @media print {
               body { padding: 0; }
             }
@@ -659,8 +659,8 @@ export const FinancialDss = () => {
                     <YAxis />
                     <Tooltip formatter={(value: number) => asCurrency(value)} />
                     <Legend />
-                    <Bar dataKey="allocated" name="Allocated" fill="#1B4F72" radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="utilized" name="Utilized" fill="#0f766e" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="allocated" name="Allocated" fill="#1A3F7A" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="utilized" name="Utilized" fill="#2460A7" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (

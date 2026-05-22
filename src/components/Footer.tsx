@@ -21,22 +21,22 @@ const Footer = () => {
           <div>
             <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Platform</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
-              <li><Link to="/programs" className="hover:text-primary transition-colors">Programs</Link></li>
-              <li><Link to="/events" className="hover:text-primary transition-colors">Events</Link></li>
-              <li><Link to="/organizations" className="hover:text-primary transition-colors">Organizations</Link></li>
-              <li><Link to="/about" className="hover:text-primary transition-colors">Platform Overview</Link></li>
-              <li><Link to="/feedback" className="hover:text-primary transition-colors">Citizen Desk</Link></li>
+              <li><Link to="/programs" className="hover:text-accent transition-colors">Programs</Link></li>
+              <li><Link to="/events" className="hover:text-accent transition-colors">Events</Link></li>
+              <li><Link to="/organizations" className="hover:text-accent transition-colors">Organizations</Link></li>
+              <li><Link to="/about" className="hover:text-accent transition-colors">Platform Overview</Link></li>
+              <li><Link to="/feedback" className="hover:text-accent transition-colors">Citizen Desk</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Transparency</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
-              <li><Link to="/transparency/reports" className="hover:text-primary transition-colors">Disclosure Registry</Link></li>
-              <li><Link to="/transparency/board" className="hover:text-primary transition-colors">Transparency Board</Link></li>
-              <li><Link to="/transparency/financial-disclosure" className="hover:text-primary transition-colors">Financial Disclosure</Link></li>
-              <li><Link to="/transparency/barangay-map" className="hover:text-primary transition-colors">Barangay Map</Link></li>
-              <li><Link to="/transparency/board" className="hover:text-primary transition-colors">Monthly Compliance</Link></li>
+              <li><Link to="/transparency/reports" className="hover:text-accent transition-colors">Disclosure Registry</Link></li>
+              <li><Link to="/transparency/board" className="hover:text-accent transition-colors">Transparency Board</Link></li>
+              <li><Link to="/transparency/financial-disclosure" className="hover:text-accent transition-colors">Financial Disclosure</Link></li>
+              <li><Link to="/transparency/barangay-map" className="hover:text-accent transition-colors">Barangay Map</Link></li>
+              <li><Link to="/transparency/board" className="hover:text-accent transition-colors">Monthly Compliance</Link></li>
             </ul>
           </div>
 
@@ -46,7 +46,7 @@ const Footer = () => {
               <li>Prototype Municipality, Philippines</li>
               <li>Regional LYDO coverage</li>
               <li>
-                <a href="mailto:lydo@prototype-lydo.demo" className="hover:text-primary transition-colors">
+                <a href="mailto:lydo@prototype-lydo.demo" className="hover:text-accent transition-colors">
                   lydo@prototype-lydo.demo
                 </a>
               </li>
