@@ -1,0 +1,489 @@
+
+--- PAGE 1 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Appendix 3: System Testing Task Sheet 
+ 
+ 
+Republic of the Philippines 
+POLYTECHNIC UNIVERSITY OF THE PHILIPPINES   
+OFFICE OF THE VICE PRESIDENT FOR ACADEMIC AFFAIRS 
+College of Computer and Information Sciences 
+ 
+SYSTEM TESTING TASK SHEET 
+ 
+UniCentral: A One-Stop Portal for State Universities’ Application Information in  
+Metro Manila for Grade 12 Students 
+ 
+ 
+Good day! 
+​
+Thank you for participating in the system testing of UniCentral, a one-stop portal designed to 
+help Grade 12 students easily access application information for State Universities in Metro 
+Manila. Your feedback will be essential in improving the portal for future students like you. 
+ 
+What is this task sheet all about? This task sheet is designed to guide you through the key 
+features and functionalities of the portal as you explore it. It contains a set of tasks that will allow 
+you to test different aspects of UniCentral, from browsing university information, using 
+comparison features, tracking application deadlines, and many more. 
+​
+How to use this sheet: 
+1.​ Complete each task listed below at your own pace 
+2.​ Check the "Completed" box once you finish each task 
+3.​ Feel free to write any comments, issues, or suggestions in the "Comments/Issues" 
+column. 
+4.​ Important: You are not limited to just the tasks listed below! This sheet serves as a 
+starter guide. Feel free to explore other features, try different combinations, and interact 
+with the portal in ways that feel natural to you. Your spontaneous exploration often 
+reveals the most valuable insights! 
+ 
+Task 1: Exploring Universities 
+Completed 
+Comments / Issues (Optional) 
+1.​ Launch the web application. 
+ 
+​ 
+ 
+
+--- PAGE 2 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+2.​ Browse and explore at least 3 different 
+state universities in Metro Manila. 
+​ 
+ 
+3.​ Check how university information is 
+displayed and organized. 
+​ 
+ 
+Task 2: Searching for Programs 
+ 
+ 
+1.​ Navigate to the program search feature. 
+ 
+​ 
+ 
+2.​ Search for a specific degree program 
+you’re interested in. 
+​ 
+ 
+3.​ Review the search results and 
+information provided. 
+​ 
+ 
+Task 3: Comparing Universities 
+ 
+ 
+1.​ Select 2 to 4 universities you want to 
+compare. 
+​ 
+ 
+2.​ Use the comparison feature to view their 
+application requirements side by side. 
+​ 
+ 
+3.​ Evaluate how easy it is to understand the 
+differences. 
+​ 
+ 
+Task 4: Application Information 
+ 
+ 
+1.​ Navigate to a specific university. 
+ 
+​ 
+ 
+2.​ Review how the information is 
+presented. 
+​ 
+ 
+3.​ Read the application information. 
+ 
+​ 
+ 
+Task 5: Save Feature 
+ 
+ 
+1.​ Save a university or program for later 
+viewing. 
+​ 
+ 
+
+--- PAGE 3 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+2.​ Navigate to the Saved section. 
+ 
+​ 
+ 
+3.​ Check if the saved universities appear 
+correctly. 
+​ 
+ 
+Task 6: Map Navigation 
+ 
+ 
+1.​ Open the Map Navigation section. 
+ 
+​ 
+ 
+2.​ Allow location access if prompted. 
+ 
+​ 
+ 
+3.​ View the distance between your current 
+location and the selected university. 
+​ 
+ 
+Task 7: Login Feature 
+ 
+ 
+1.​ Navigate to the Login section. 
+ 
+​ 
+ 
+2.​ Review the available login options. 
+ 
+​ 
+ 
+3.​ Attempt to log in or return to the 
+homepage. 
+​ 
+ 
+Task 8: Chatbot Feature 
+ 
+ 
+1.​ Open the AI-powered Chatbot. 
+ 
+​ 
+ 
+2.​ Ask a question related to universities, 
+programs, or applications. 
+​ 
+ 
+3.​ Review the chatbot response. 
+ 
+​ 
+ 
+Task 9: About Page 
+ 
+ 
+1.​ Navigate to the About section. 
+ 
+​ 
+ 
+
+--- PAGE 4 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+2.​ Read the information about the system 
+and its purpose. 
+​ 
+ 
+3.​ Get to know the people behind 
+UniCentral. 
+​ 
+ 
+Task 10: Additional Exploration 
+ 
+ 
+1.​ Try any additional features you discover 
+during your exploration. 
+​ 
+ 
+2.​ Use the portal as you naturally would 
+when researching universities. 
+​ 
+ 
+3.​ Note any features that are particularly 
+helpful or confusing. 
+​ 
+ 
+ 
+Thank you! 
+​
+Your time and feedback are greatly appreciated. The insights you provide will be an instrument 
+in improving UniCentral as a tool for Grade 12 students planning to apply to state universities in 
+Metro Manila.  
+ 
+Next Steps: Once you have completed these tasks and explored the portal, please proceed to 
+answer the post-survey. The survey will ask about your experience, any difficulties you have 
+encountered, and suggestions for improvement. 
+ 
+If you have any questions during testing, please don't hesitate to reach out to the research team. 
+Thank you again for helping us improve UniCentral! 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 5 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Appendix 3: System Testing Task Sheet 
+ 
+ 
+Republic of the Philippines 
+POLYTECHNIC UNIVERSITY OF THE PHILIPPINES   
+OFFICE OF THE VICE PRESIDENT FOR ACADEMIC AFFAIRS 
+College of Computer and Information Sciences 
+ 
+SYSTEM TESTING TASK SHEET 
+ 
+UniCentral: A One-Stop Portal for State Universities’ Application Information in  
+Metro Manila for Grade 12 Students 
+ 
+ 
+Good day! 
+ 
+Thank you for participating in the system testing of UniCentral, a one-stop portal designed to 
+help Grade 12 students easily access application information for State Universities in Metro 
+Manila. Your professional expertise and critical assessment are essential to ensuring the portal 
+meets high standards of usability, functionality, and educational value. 
+ 
+What is this sheet about? This task sheet is designed to guide you through the key features and 
+functionalities of the portal as you explore it. It contains a set of tasks that will allow you to test 
+different aspects of UniCentral, from browsing university information, using comparison 
+features, tracking application deadlines, and many more. 
+ 
+How to use this sheet: 
+1.​ Complete each task listed below at your own pace 
+2.​ Check the "Completed" box after evaluating each aspect 
+3.​ Feel free to write any comments, issues, or suggestions in the "Comments/Issues" 
+column. Your expert insights are particularly valuable. 
+4.​ Important: You are not limited to just the tasks listed below! This sheet serves as a 
+baseline evaluation framework. Please explore beyond these tasks, test edge cases, 
+evaluate the system from multiple perspectives, and assess any aspects you consider 
+relevant to the portal’s success. Your comprehensive evaluation is highly encouraged! 
+ 
+Task 1: Overall System Assessment 
+Completed 
+Comments / Issues (Optional) 
+
+--- PAGE 6 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+1.​ Launch the web application. 
+ 
+​ 
+ 
+2.​ Assess the overall layout and 
+responsiveness of the homepage. 
+​ 
+ 
+3.​ Evaluate the clarity of the system’s 
+purpose upon first use. 
+​ 
+ 
+Task 2: Programs Offered Feature 
+ 
+ 
+1.​ Navigate to the program search section. 
+ 
+​ 
+ 
+2.​ Search for a specific degree program. 
+ 
+​ 
+ 
+3.​ Evaluate how academic programs are 
+displayed and grouped. 
+​ 
+ 
+Task 3: Universities Feature 
+ 
+ 
+1.​ Navigate to the Universities section. 
+ 
+​ 
+ 
+2.​ Review how universities are listed and 
+categorized. 
+​ 
+ 
+3.​ Select a university and explore all 
+available sub-sections. 
+​ 
+ 
+Task 4: University Comparison Feature 
+ 
+ 
+1.​ Access the Compare Universities 
+section. 
+​ 
+ 
+2.​ Select 2 to 4 universities for comparison. 
+ 
+​ 
+ 
+3.​ Evaluate how easy it is to understand the 
+differences. 
+​ 
+ 
+Task 5: Application Information Feature 
+ 
+ 
+
+--- PAGE 7 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+1.​ Navigate to a specific university. 
+ 
+​ 
+ 
+2.​ Review the application requirements and 
+application process. 
+​ 
+ 
+3.​ Evaluate how clearly the process is 
+communicated to users. 
+​ 
+ 
+Task 6: Save Feature 
+ 
+ 
+1.​ Save a university or program for later 
+viewing. 
+​ 
+ 
+2.​ Navigate to the Saved section. 
+ 
+​ 
+ 
+3.​ Verify persistence and retrieval of saved 
+data. 
+​ 
+ 
+Task 7: Map Navigation Feature 
+ 
+ 
+1.​ Open the Map Navigation section. 
+​ 
+ 
+2.​ Allow location access if prompted. 
+ 
+​ 
+ 
+3.​ View the distance between your current 
+location and the selected university. 
+​ 
+ 
+Task 8: Login Feature 
+ 
+ 
+1.​ Navigate to the Login section. 
+ 
+​ 
+ 
+2.​ Review the available login options. 
+ 
+​ 
+ 
+3.​ Evaluate security considerations at a 
+conceptual level. 
+​ 
+ 
+Task 9: Chatbot Feature 
+ 
+ 
+
+--- PAGE 8 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+1.​ Interact with the AI-powered and 
+rule-based chatbot. 
+​ 
+ 
+2.​ Ask a question related to universities, 
+programs, or applications. 
+​ 
+ 
+3.​ Review the chatbot response. 
+ 
+​ 
+ 
+Task 10: Additional Exploration 
+ 
+ 
+1.​ Conduct any additional testing based on 
+your professional judgment. 
+​ 
+ 
+2.​ Explore edge cases and advanced 
+scenarios. 
+​ 
+ 
+3.​ Provide a comprehensive professional 
+assessment. 
+​ 
+ 
+ 
+Thank you! 
+ 
+Your professional evaluation is invaluable to the development and refinement of UniCentral. 
+Your expertise will help ensure that the portal serves Grade 12 students effectively and meets 
+professional standards for educational technology. 
+ 
+Next Steps: Once you have completed your evaluation and thoroughly tested the portal, please 
+proceed to answer the post-survey. The survey will gather your professional assessment, 
+technical recommendations, and suggestions for enhancing the portal's effectiveness. 
+ 
+Should you need any additional information or clarification during your evaluation, please 
+contact the research team. Thank you again for contributing your expertise to improve 
+UniCentral! 
+ 
+ 
+ 
+ 
