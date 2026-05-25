@@ -1,0 +1,941 @@
+
+--- PAGE 1 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Appendix 2: Post-survey 
+ 
+ 
+Republic of the Philippines 
+POLYTECHNIC UNIVERSITY OF THE PHILIPPINES   
+OFFICE OF THE VICE PRESIDENT FOR ACADEMIC AFFAIRS 
+College of Computer and Information Sciences 
+ 
+POST-SURVEY QUESTIONNAIRE  
+ 
+UniCentral: A One-Stop Portal for State Universities’ Application Information in  
+Metro Manila for Grade 12 Students 
+ 
+ 
+Good day! 
+ 
+You are invited to participate in a research study entitled “UniCentral: A One-Stop Portal for 
+State Universities’ Application Information in Metro Manila for Grade 12 Students.” This 
+survey aims to understand the current experiences and challenges of Grade 12 students in 
+accessing, understanding, and comparing application information for state universities in Metro 
+Manila. 
+ 
+Your participation in this study is voluntary, and all responses will be treated with strict 
+confidentiality. This survey is anonymous, and no personally identifiable information (such as 
+name, email address, or contact details) will be collected. You may withdraw from the study at 
+any time without penalty. 
+ 
+By proceeding with this survey, you confirm that you understand the purpose of the study and 
+agree to participate. 
+ 
+[Screening Question] 
+ 
+1.​ Did you successfully access and use the UniCentral system before answering this survey? 
+​Yes 
+​No (If No, the survey will automatically end) 
+ 
+[Email Address] 
+Please provide a valid email address. This will be used only to coordinate system testing and 
+the post-survey phase. 
+
+--- PAGE 2 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Email: ___________________________ 
+ 
+Directions: Please indicate your level of agreement with the following statements. Your 
+response is expressed by rating the Likert Scale presented below by the following: 
+ 
+(5 = Strongly Agree, 4 = Agree, 3 = Neutral, 2 = Disagree, 1 = Strongly Disagree) 
+ 
+[Section A: Information Quality] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+1.​ UniCentral provides complete application 
+requirements for state universities in Metro 
+Manila. 
+ 
+ 
+ 
+ 
+ 
+2.​ The admission information presented in 
+UniCentral is clear and easy to understand. 
+ 
+ 
+ 
+ 
+ 
+3.​ The information in UniCentral is 
+well-organized and easy to follow. 
+ 
+ 
+ 
+ 
+ 
+4.​ UniCentral presents application information in 
+a consistent format across universities. 
+ 
+ 
+ 
+ 
+ 
+5.​ The admission information in UniCentral is 
+accurate and reliable. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section B: System Quality] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+6.​ UniCentral is easy to navigate when searching 
+for university information. 
+ 
+ 
+ 
+ 
+ 
+7.​ UniCentral responds quickly when loading 
+pages or search results. 
+ 
+ 
+ 
+ 
+ 
+8.​ The layout and design of UniCentral make it 
+easy to find information. 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 3 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+9.​ UniCentral functions properly without errors 
+during use. 
+ 
+ 
+ 
+ 
+ 
+10.​I was able to use UniCentral without needing 
+technical assistance. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section C: Service Quality] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+11.​UniCentral provides helpful guidance or 
+instructions for first-time users. 
+ 
+ 
+ 
+ 
+ 
+12.​The chatbot or help features in UniCentral are 
+useful in answering my questions. 
+ 
+ 
+ 
+ 
+ 
+13.​UniCentral provides sufficient support when I 
+encounter difficulties. 
+ 
+ 
+ 
+ 
+ 
+14.​The system makes it easy to recover from 
+mistakes (e.g., wrong search or selection). 
+ 
+ 
+ 
+ 
+ 
+15.​UniCentral effectively supports students in 
+comparing university application information. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section D: Information-Seeking Behavior (Post-use)] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+16.​Using UniCentral reduced the time I spend 
+searching for university application 
+information. 
+ 
+ 
+ 
+ 
+ 
+17.​I feel more confident in finding admission 
+requirements after using UniCentral. 
+ 
+ 
+ 
+ 
+ 
+18.​UniCentral helped me compare application 
+requirements across universities more easily. 
+ 
+ 
+ 
+ 
+ 
+19.​I feel less overwhelmed when searching for 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 4 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+university admission information after using 
+UniCentral. 
+20.​I am more likely to rely on UniCentral when 
+researching state universities. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section E: User Satisfaction] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+21.​Overall, I am satisfied with my experience 
+using UniCentral. 
+ 
+ 
+ 
+ 
+ 
+22.​UniCentral meets my needs as a Grade 12 
+student applying to state universities. 
+ 
+ 
+ 
+ 
+ 
+23.​I find UniCentral useful for understanding 
+university application requirements. 
+ 
+ 
+ 
+ 
+ 
+24.​I would recommend UniCentral to other Grade 
+12 students. 
+ 
+ 
+ 
+ 
+ 
+25.​I would use UniCentral again when searching 
+for university application information. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section F: Open-Ended Question] 
+1.​ What is the biggest challenge you face when using the UniCentral portal? 
+________________________________________________________________________ 
+ 
+[End of Survey Notice] 
+ 
+Thank you for completing the post-survey. 
+ 
+This marks the end of your participation in this study. Your time, effort, and valuable insights are 
+greatly appreciated and will be used to improve the UniCentral system. 
+ 
+ 
+ 
+ 
+
+--- PAGE 5 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Republic of the Philippines 
+POLYTECHNIC UNIVERSITY OF THE PHILIPPINES   
+OFFICE OF THE VICE PRESIDENT FOR ACADEMIC AFFAIRS 
+College of Computer and Information Sciences 
+ 
+EXPERT EVALUATION SURVEY QUESTIONNAIRE  
+ 
+UniCentral: A One-Stop Portal for State Universities’ Application Information in  
+Metro Manila for Grade 12 Students 
+ 
+ 
+Good day! 
+ 
+You are invited to participate in a research study entitled “UniCentral: A One-Stop Portal for 
+State Universities’ Application Information in Metro Manila for Grade 12 Students.” This 
+evaluation aims to gather expert feedback on the quality, functionality, and effectiveness of the 
+UniCentral system in presenting and supporting access to application information for state 
+universities in Metro Manila. 
+ 
+Your participation in this study is voluntary, and all responses will be treated with strict 
+confidentiality. This survey is anonymous, and no personally identifiable information (such as 
+name, email address, or contact details) will be collected. You may withdraw from the study at 
+any time without penalty. 
+ 
+By proceeding with this survey, you confirm that you understand the purpose of the study and 
+agree to participate. 
+ 
+ 
+Directions: Please indicate your level of agreement with the following statements. Your 
+response is expressed by rating the Likert Scale presented below by the following: 
+ 
+(5 = Strongly Agree, 4 = Agree, 3 = Neutral, 2 = Disagree, 1 = Strongly Disagree) 
+ 
+[Section A: Information Quality] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+1.​ UniCentral provides complete application 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 6 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+requirements for state universities in Metro 
+Manila. 
+2.​ The admission information presented in 
+UniCentral is clear and easy to understand. 
+ 
+ 
+ 
+ 
+ 
+3.​ The information in UniCentral is 
+well-organized and easy to follow. 
+ 
+ 
+ 
+ 
+ 
+4.​ UniCentral presents application information in 
+a consistent format across universities. 
+ 
+ 
+ 
+ 
+ 
+5.​ The admission information in UniCentral is 
+accurate and reliable. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section B: System Quality] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+6.​ UniCentral is easy to navigate when searching 
+for university information. 
+ 
+ 
+ 
+ 
+ 
+7.​ UniCentral responds quickly when loading 
+pages or search results. 
+ 
+ 
+ 
+ 
+ 
+8.​ The layout and design of UniCentral make it 
+easy to find information. 
+ 
+ 
+ 
+ 
+ 
+9.​ UniCentral functions properly without errors 
+during use. 
+ 
+ 
+ 
+ 
+ 
+10.​I was able to use UniCentral without needing 
+technical assistance. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section C: Service Quality] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+11.​UniCentral provides helpful guidance or 
+instructions for first-time users. 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 7 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+12.​The chatbot or help features in UniCentral are 
+useful in answering my questions. 
+ 
+ 
+ 
+ 
+ 
+13.​UniCentral provides sufficient support when I 
+encounter difficulties. 
+ 
+ 
+ 
+ 
+ 
+14.​The system makes it easy to recover from 
+mistakes (e.g., wrong search or selection). 
+ 
+ 
+ 
+ 
+ 
+15.​UniCentral effectively supports students in 
+comparing university application information. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section D: ISO/IEC 25010 Quality Characteristics] 
+ 
+Statement 
+5 
+4 
+3 
+2 
+1 
+Functional Stability 
+ 
+ 
+ 
+ 
+ 
+16.​The UniCentral system provides all the 
+necessary features required to present 
+comprehensive admission information from 
+state universities in Metro Manila. 
+ 
+ 
+ 
+ 
+ 
+17.​The functions of the UniCentral system 
+produce accurate and correct admission 
+information as intended. 
+ 
+ 
+ 
+ 
+ 
+18.​The features of the UniCentral system 
+appropriately support Grade 12 students in 
+accessing and comparing university admission 
+information. 
+ 
+ 
+ 
+ 
+ 
+Performance Efficiency 
+ 
+ 
+ 
+ 
+ 
+19.​The UniCentral system responds quickly when 
+users search for or access admission 
+information. 
+ 
+ 
+ 
+ 
+ 
+20.​The UniCentral system efficiently uses system 
+resources without unnecessary delays or 
+performance issues. 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 8 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+21.​The UniCentral system can handle multiple 
+users accessing admission information 
+simultaneously without performance 
+degradation. 
+ 
+ 
+ 
+ 
+ 
+Compatibiliy 
+ 
+ 
+ 
+ 
+ 
+22.​The UniCentral system can operate effectively 
+alongside other applications without causing 
+conflicts. 
+ 
+ 
+ 
+ 
+ 
+23.​The UniCentral system can integrate and 
+exchange information smoothly with external 
+data sources or platforms, if required. 
+ 
+ 
+ 
+ 
+ 
+Interaction Capability 
+ 
+ 
+ 
+ 
+ 
+24.​Users can easily recognize that UniCentral is 
+suitable for finding and comparing university 
+admission information. 
+ 
+ 
+ 
+ 
+ 
+25. New users can easily learn how to use the 
+UniCentral system without difficulty. 
+ 
+ 
+ 
+ 
+ 
+26. The UniCentral system is easy to operate and 
+navigate during information searching tasks. 
+ 
+ 
+ 
+ 
+ 
+27. The UniCentral system helps prevent user 
+errors or allows easy recovery from mistakes. 
+ 
+ 
+ 
+ 
+ 
+28. The UniCentral system keeps users engaged 
+while browsing and comparing admission 
+information. 
+ 
+ 
+ 
+ 
+ 
+29. The UniCentral system is accessible and 
+usable by users with varying abilities and 
+technical skills. 
+ 
+ 
+ 
+ 
+ 
+30. The UniCentral system provides sufficient 
+guidance or help features to assist users when 
+needed. 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 9 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+31. The content and functions of the UniCentral 
+system are clear and understandable without 
+requiring external explanation. 
+ 
+ 
+ 
+ 
+ 
+Reliability 
+ 
+ 
+ 
+ 
+ 
+32. The UniCentral system performs its functions 
+without errors during normal operation. 
+ 
+ 
+ 
+ 
+ 
+33. The UniCentral system is available whenever 
+users need to access admission information. 
+ 
+ 
+ 
+ 
+ 
+34. The UniCentral system continues to function 
+properly even when unexpected issues occur. 
+ 
+ 
+ 
+ 
+ 
+35. The UniCentral system can quickly recover 
+data and resume operation after a failure. 
+ 
+ 
+ 
+ 
+ 
+Security 
+ 
+ 
+ 
+ 
+ 
+36. The UniCentral system adequately protects 
+user data from unauthorized access. 
+ 
+ 
+ 
+ 
+ 
+37. The UniCentral system adequately protects 
+user data from unauthorized access. 
+ 
+ 
+ 
+ 
+ 
+38. The UniCentral system ensures accountability 
+for actions performed within the system. 
+ 
+ 
+ 
+ 
+ 
+39. User actions within the UniCentral system can 
+be tracked when necessary. 
+ 
+ 
+ 
+ 
+ 
+40. The UniCentral system verifies the 
+authenticity of its information sources. 
+ 
+ 
+ 
+ 
+ 
+41. The UniCentral system is resistant to security 
+threats and unauthorized access attempts. 
+ 
+ 
+ 
+ 
+ 
+Maintainability 
+ 
+ 
+ 
+ 
+ 
+42. The UniCentral system is composed of 
+well-structured modules that can be modified 
+independently. 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 10 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+43. Components of the UniCentral system can be 
+reused for future system enhancements. 
+ 
+ 
+ 
+ 
+ 
+44. The UniCentral system is easy to analyze for 
+identifying issues or improvements. 
+ 
+ 
+ 
+ 
+ 
+45. The UniCentral system can be easily updated 
+to reflect changes in admission information. 
+ 
+ 
+ 
+ 
+ 
+46. The UniCentral system can be effectively 
+tested to ensure its quality and correctness. 
+ 
+ 
+ 
+ 
+ 
+Flexibility 
+ 
+ 
+ 
+ 
+ 
+47. The UniCentral system can be adapted to 
+different platforms or user needs when 
+required. 
+ 
+ 
+ 
+ 
+ 
+48. The UniCentral system can accommodate 
+future expansion, such as adding more 
+universities or features. 
+ 
+ 
+ 
+ 
+ 
+49. The UniCentral system can be easily deployed 
+or set up in different environments. 
+ 
+ 
+ 
+ 
+ 
+50. The UniCentral system components can be 
+replaced or upgraded without affecting overall 
+functionality. 
+ 
+ 
+ 
+ 
+ 
+Safety 
+ 
+ 
+ 
+ 
+ 
+51. The UniCentral system operates within 
+defined safety and usage constraints. 
+ 
+ 
+ 
+ 
+ 
+52. The UniCentral system identifies potential 
+risks that may affect system usage. 
+ 
+ 
+ 
+ 
+ 
+53. The UniCentral system maintains safe 
+operation even when errors occur. 
+ 
+ 
+ 
+ 
+ 
+54. The UniCentral system provides warnings 
+when potential system issues arise. 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 11 ---
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+55. The UniCentral system integrates safely with 
+other systems or platforms when required. 
+ 
+ 
+ 
+ 
+ 
+ 
+[Section E: Open-Ended Question] 
+1.​ Are there any areas of the UniCentral system that you believe can be improved? Please 
+specify. 
+________________________________________________________________________ 
+ 
+[End of Survey Notice] 
+ 
+Thank you for completing the survey. 
+ 
+This marks the end of your participation in this study. Your time, effort, and valuable insights are 
+greatly appreciated and will be used to improve the UniCentral system. 
+ 
+ 
+ 
+ 
+ 
+ 
