@@ -7,7 +7,7 @@ College of Computer and Information Sciences
 
 ## PRE-SURVEY QUESTIONNAIRE
 
-**LYDO Connect: A Youth Engagement Management System for Programs, Events, Organization Information, Transparency, and Citizen Services**
+**LYDO Connect: A User Portal for Youth Programs, Events, Organization Information, Transparency, and Citizen Services**
 
 Good day!
 
@@ -19,7 +19,7 @@ By proceeding, you confirm that you understand the purpose of the study and agre
 
 ## [Screening Question]
 
-1. Are you part of the intended users of youth governance and engagement services (e.g., youth participant, citizen user, youth office staff, SK/barangay staff, evaluator)?
+1. Are you a youth participant or citizen who may use online youth-related services (e.g., viewing programs/events, registration, organization info, transparency pages, or concern reporting)?
 - Yes
 - No (If No, the survey will automatically end)
 
@@ -43,12 +43,9 @@ Email: ___________________________
 - Female
 - Prefer not to say
 
-4. Role in relation to the system:
+4. Role:
 - Youth participant / student
 - General citizen
-- SK / Barangay staff
-- LYDO staff / administrator
-- Faculty / IT evaluator
 - Others: _______________
 
 5. Barangay / City of residence (optional):
@@ -60,7 +57,7 @@ _______________________
 
 ## [Section B: Current Practices in Accessing Youth-Related Information and Services]
 
-7. What sources do you currently use to find youth-related announcements, program/event details, organization information, or governance records? (Select all that apply)
+7. What sources do you currently use to find youth-related announcements, program/event details, organization information, or public records? (Select all that apply)
 - Official LGU / LYDO websites
 - Official Facebook pages
 - Barangay / SK pages
@@ -100,7 +97,7 @@ Directions: Please indicate your level of agreement with the following statement
 7. Accessing transparency and financial disclosure records is straightforward.
 8. I know how to submit and track a youth-related concern or service request online.
 9. I am confident I can monitor my own participation history in youth activities.
-10. I believe role-based and secure access is important for youth governance systems.
+10. I believe account security and privacy are important in youth service portals.
 
 ## [Section D: Open-Ended Questions]
 
