@@ -1,5 +1,13 @@
 ﻿# Revised Expert Evaluation Survey (LYDO Connect, User + Admin, ISO/IEC 25010-Aligned)
 
+Good day!
+
+You are invited to participate in a research study entitled **"LYDO Connect: A Youth Engagement Management System for Program/Event Services, Transparency Access, and Citizen Support."** This survey aims to evaluate the quality of the LYDO Connect platform across both **user-side and admin-side** functions, including information access, registration workflows, citizen concern handling, transparency records, and administrative operations.
+
+Your participation in this study is **voluntary**, and all responses will be treated with **strict confidentiality**. This survey is **anonymous**, and no personally identifiable information (such as name, email address, or contact details) will be collected, unless a separate contact field is explicitly provided for coordination. You may withdraw from the study at any time without penalty.
+
+By proceeding with this survey, you confirm that you understand the purpose of the study and agree to participate.
+
 Directions: Please indicate your level of agreement with each statement.
 
 Likert Scale: 5 = Strongly Agree, 4 = Agree, 3 = Neutral, 2 = Disagree, 1 = Strongly Disagree
@@ -100,3 +108,4 @@ Likert Scale: 5 = Strongly Agree, 4 = Agree, 3 = Neutral, 2 = Disagree, 1 = Stro
 ## Section E: Open-Ended Question
 
 1. What areas of LYDO Connect (user side and/or admin side) should be improved further? Please specify.
+
