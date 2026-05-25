@@ -7,7 +7,7 @@ College of Computer and Information Sciences
 
 ## PRE-SURVEY QUESTIONNAIRE
 
-**LYDO Connect: A User Portal for Youth Programs, Events, Organization Information, Transparency, and Citizen Services**
+**LYDO Connect: A Progressive Web Application for Information, Participation, and Transparency for Local Youth Development Offices**
 
 Good day!
 
@@ -114,3 +114,5 @@ ________________________________________________________________________
 Thank you for completing the pre-survey.
 
 The LYDO Connect system testing link and post-survey questionnaire will be sent to the email address you provided and/or posted on the same platform where this survey was shared. Please monitor these channels for further instructions for the next phase of the study.
+
+

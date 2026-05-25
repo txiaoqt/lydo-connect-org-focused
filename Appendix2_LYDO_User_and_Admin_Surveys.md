@@ -7,11 +7,11 @@ College of Computer and Information Sciences
 
 ## PART I: POST-SURVEY QUESTIONNAIRE (USER)
 
-**LYDO Connect: A Youth Engagement Management System for Program/Event Services, Transparency Access, and Citizen Support**
+**LYDO Connect: A Progressive Web Application for Information, Participation, and Transparency for Local Youth Development Offices**
 
 Good day!
 
-You are invited to participate in a research study entitled **"LYDO Connect: A Youth Engagement Management System for Program/Event Services, Transparency Access, and Citizen Support."** This survey aims to evaluate user experience in accessing youth-related information and services through LYDO Connect, such as programs, events, organization information, transparency records, and citizen concern reporting.
+You are invited to participate in a research study entitled **"LYDO Connect: A Progressive Web Application for Information, Participation, and Transparency for Local Youth Development Offices."**
 
 Your participation in this study is **voluntary**, and all responses will be treated with **strict confidentiality**. This survey is **anonymous**, and no personally identifiable information (such as name, email address, or contact details) will be collected, unless a separate contact field is explicitly provided for coordination. You may withdraw from the study at any time without penalty.
 
@@ -75,11 +75,11 @@ ________________________________________________________________________
 
 ## PART II: EXPERT EVALUATION SURVEY QUESTIONNAIRE (ADMIN + EXPERT VIEW)
 
-**LYDO Connect: A Youth Engagement Management System for Program/Event Services, Transparency Access, and Citizen Support**
+**LYDO Connect: A Progressive Web Application for Information, Participation, and Transparency for Local Youth Development Offices**
 
 Good day!
 
-You are invited to participate in a research study entitled **"LYDO Connect: A Youth Engagement Management System for Program/Event Services, Transparency Access, and Citizen Support."** This evaluation aims to gather expert assessment of LYDO Connect across both **user-side and admin-side** functions, aligned with **ISO/IEC 25010 software product quality characteristics**.
+You are invited to participate in a research study entitled **"LYDO Connect: A Progressive Web Application for Information, Participation, and Transparency for Local Youth Development Offices."**
 
 Your participation in this study is **voluntary**, and all responses will be treated with **strict confidentiality**. This survey is **anonymous**, and no personally identifiable information (such as name, email address, or contact details) will be collected, unless a separate contact field is explicitly provided for coordination. You may withdraw from the study at any time without penalty.
 
@@ -185,3 +185,5 @@ Likert Scale: **5 = Strongly Agree, 4 = Agree, 3 = Neutral, 2 = Disagree, 1 = St
 
 1. What areas of LYDO Connect (user side and/or admin side) should be improved further? Please specify.  
 ________________________________________________________________________
+
+
