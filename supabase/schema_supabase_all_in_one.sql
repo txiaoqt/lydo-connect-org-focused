@@ -3064,6 +3064,50 @@ on conflict (barangay_id, fiscal_year, quarter) do update set
   remarks = excluded.remarks,
   updated_at = now();
 
+with monthly as (
+  select * from (values
+    ('Barangay I', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'submitted', 'submitted', 'submitted', 100, 'DOC-003'),
+    ('Barangay II', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'late', 'submitted', 'submitted', 92, 'DOC-002'),
+    ('Barangay III', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'submitted', 'submitted', 'submitted', 100, 'DOC-007'),
+    ('Barangay IV', 2026, 6, date '2026-06-10', 'late', 'submitted', 'missing', 'late', 'submitted', 62, 'DOC-009'),
+    ('Barangay V', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'submitted', 'submitted', 'submitted', 100, 'DOC-010'),
+    ('Barangay VI', 2026, 6, date '2026-06-10', 'missing', 'late', 'missing', 'missing', 'late', 24, null),
+    ('Barangay VII', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'late', 'submitted', 'submitted', 88, 'DOC-008'),
+    ('Barangay VIII', 2026, 6, date '2026-06-10', 'submitted', 'late', 'late', 'submitted', 'missing', 70, null),
+    ('Barangay IX', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'submitted', 'submitted', 'submitted', 100, 'DOC-001'),
+    ('Barangay X', 2026, 6, date '2026-06-10', 'submitted', 'submitted', 'submitted', 'late', 'submitted', 95, 'DOC-004')
+  ) as v(name, fiscal_year, month_no, due_date, mfr_status, mil_status, rcb_status, accomplishment_status, census_status, completion_percent, doc_code)
+)
+insert into public.monthly_compliance (
+  barangay_id, fiscal_year, month_no, due_date, mfr_status, mil_status, rcb_status,
+  accomplishment_status, census_status, completion_percent, report_document_id
+)
+select
+  b.id,
+  m.fiscal_year,
+  m.month_no,
+  m.due_date,
+  m.mfr_status::public.submission_state,
+  m.mil_status::public.submission_state,
+  m.rcb_status::public.submission_state,
+  m.accomplishment_status::public.submission_state,
+  m.census_status::public.submission_state,
+  m.completion_percent,
+  d.id
+from monthly m
+join public.barangays b on b.name = m.name
+left join public.disclosure_documents d on d.doc_code = m.doc_code
+on conflict (barangay_id, fiscal_year, month_no) do update set
+  due_date = excluded.due_date,
+  mfr_status = excluded.mfr_status,
+  mil_status = excluded.mil_status,
+  rcb_status = excluded.rcb_status,
+  accomplishment_status = excluded.accomplishment_status,
+  census_status = excluded.census_status,
+  completion_percent = excluded.completion_percent,
+  report_document_id = excluded.report_document_id,
+  updated_at = now();
+
 with ticket_rows as (
   select * from (values
     ('LYDO-PROT-0001', 'Information Request', 'Testing Citizen Ticket I', 'Prototype ticket record for list and filter testing.', 'prototype.requester1@example.com', 'received', 2),
