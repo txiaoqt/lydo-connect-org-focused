@@ -1,4 +1,4 @@
-﻿import React, { FormEvent, useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import { Filter, Plus, Search } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { StatusBadge } from "../components/StatusBadge";
@@ -435,7 +435,7 @@ export const Organizations = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Type / Category</p>
-                    <p className="text-sm font-medium">{viewingOrg.type || "N/A"}{viewingOrg.category ? ` • ${viewingOrg.category}` : ""}</p>
+                    <p className="text-sm font-medium">{viewingOrg.type || "N/A"}{viewingOrg.category ? ` � ${viewingOrg.category}` : ""}</p>
                   </div>
                   <div className="md:col-span-2">
                     <p className="text-xs text-muted-foreground">Short Overview</p>
@@ -538,7 +538,7 @@ export const Organizations = () => {
       </Dialog>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingOrg ? "Edit Organization" : "Create Organization"}</DialogTitle>
             <DialogDescription>Changes here are saved directly to Supabase.</DialogDescription>
@@ -731,4 +731,5 @@ export const Organizations = () => {
     </div>
   );
 };
+
 
