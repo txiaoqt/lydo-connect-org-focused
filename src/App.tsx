@@ -22,6 +22,9 @@ import TransparencyBoard from "./pages/TransparencyBoard";
 import CitizenDesk from "./pages/CitizenDesk";
 import AdminPortal from "./admin/AdminPortal";
 import LegalPolicy from "./pages/LegalPolicy";
+import Faqs from "./pages/Faqs";
+import Contacts from "./pages/Contacts";
+import SiteMap from "./pages/SiteMap";
 import { usePolicyAgreement } from "./hooks/use-policy-agreement";
 import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
 import {
@@ -228,6 +231,30 @@ const App = () => (
                   element={
                     <RedirectAdmin>
                       <About />
+                    </RedirectAdmin>
+                  }
+                />
+                <Route
+                  path="/faqs"
+                  element={
+                    <RedirectAdmin>
+                      <Faqs />
+                    </RedirectAdmin>
+                  }
+                />
+                <Route
+                  path="/contacts"
+                  element={
+                    <RedirectAdmin>
+                      <Contacts />
+                    </RedirectAdmin>
+                  }
+                />
+                <Route
+                  path="/site-map"
+                  element={
+                    <RedirectAdmin>
+                      <SiteMap />
                     </RedirectAdmin>
                   }
                 />
