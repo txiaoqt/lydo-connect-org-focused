@@ -4,7 +4,7 @@ const Footer = () => {
   return (
     <footer className="hero-gradient text-secondary-foreground">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
           <div className="md:col-span-1">
             <div className="mb-4">
               <BrandLogo
@@ -41,13 +41,29 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Contact</h4>
+            <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">FAQs</h4>
+            <ul className="space-y-2 text-sm text-secondary-foreground/70">
+              <li><Link to="/about" className="hover:text-primary transition-colors">What is LYDO Connect?</Link></li>
+              <li><Link to="/programs" className="hover:text-primary transition-colors">How to join programs?</Link></li>
+              <li><Link to="/events" className="hover:text-primary transition-colors">How to register for events?</Link></li>
+              <li><Link to="/feedback" className="hover:text-primary transition-colors">Where to send concerns?</Link></li>
+              <li><Link to="/terms" className="hover:text-primary transition-colors">Terms and privacy details</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Contacts</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
               <li>Prototype Municipality, Philippines</li>
               <li>Regional LYDO coverage</li>
               <li>
                 <a href="mailto:lydo@prototype-lydo.demo" className="hover:text-primary transition-colors">
                   lydo@prototype-lydo.demo
+                </a>
+              </li>
+              <li>
+                <a href="tel:+630000000000" className="hover:text-primary transition-colors">
+                  +63 000 000 0000
                 </a>
               </li>
             </ul>
