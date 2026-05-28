@@ -190,6 +190,10 @@ flowchart LR
 
 *Figure 3: Data Flow Diagram Level 2 of Process 3.0 Program and Event Registration*
 
+### Data Flow Diagram Level 2 Process Description
+
+The DFD Level 2 provides a more detailed view of **Process 3.0 Program and Event Registration**, building on the Level 1 diagram. It shows how registration details are submitted, validated against user and program/event records, saved in registration records, and monitored by admin/staff with corresponding audit logging.
+
 ### Program and Event Registration (3.0)
 
 - Youth users/citizens submit registration details for LYDO programs and events.
