@@ -75,13 +75,13 @@ flowchart LR
 
     subgraph CORE["Core LYDO Connect Processes"]
         direction TB
-        P1((1.0 Account and Access Management))
-        P2((2.0 Policy Agreement Management))
-        P3((3.0 Public Information and Transparency Viewing))
-        P4((4.0 Program/Event Registration Service))
-        P5((5.0 Youth Service Request Service))
-        P6((6.0 Admin Data and Content Management))
-        P7((7.0 Monitoring, Reporting, and Audit))
+        P1([1.0 Account and Access Management])
+        P2([2.0 Policy Agreement Management])
+        P3([3.0 Public Information and Transparency Viewing])
+        P4([4.0 Program/Event Registration Service])
+        P5([5.0 Youth Service Request Service])
+        P6([6.0 Admin Data and Content Management])
+        P7([7.0 Monitoring, Reporting, and Audit])
     end
 
     subgraph STORES["Data Stores"]
@@ -135,6 +135,13 @@ flowchart LR
     P7 -->|"Registration summary data"| D5
     P7 -->|"Service request summary data"| D8
     P7 -->|"Audit trail data"| D9
+
+    classDef entity fill:#f8f8f8,stroke:#666,stroke-width:1.2px,color:#222;
+    classDef process fill:#e9f2fb,stroke:#5d84b3,stroke-width:1.5px,color:#1f2e3d,rx:10,ry:10;
+    classDef store fill:#ffffff,stroke:#666,stroke-width:1.2px,color:#222;
+    class E1,E2,E3 entity;
+    class P1,P2,P3,P4,P5,P6,P7 process;
+    class D1,D2,D3,D4,D5,D6,D7,D8,D9 store;
 ```
 
 *Figure 2: Data Flow Diagram Level 1*
@@ -205,17 +212,17 @@ flowchart LR
 
     subgraph CORE["Process 4.0 Decomposition"]
         direction LR
-        P41((4.1 Receive Registration Request))
-        P42((4.2 Validate Eligibility and Required Fields))
-        P43((4.3 Check Program/Event Availability))
-        P45((4.5 Save or Update Registration Record))
-        P46((4.6 Send Registration Status and Confirmation))
+        P41([4.1 Receive Registration Request])
+        P42([4.2 Validate Eligibility and Required Fields])
+        P43([4.3 Check Program/Event Availability])
+        P45([4.5 Save or Update Registration Record])
+        P46([4.6 Send Registration Status and Confirmation])
     end
 
     subgraph AUX["Supporting Processes"]
         direction TB
-        P44((4.4 Import and Reconcile External Registration Rows))
-        P47((4.7 Admin Review and Registration Management))
+        P44([4.4 Import and Reconcile External Registration Rows])
+        P47([4.7 Admin Review and Registration Management])
     end
 
     subgraph STORES["Data Stores"]
@@ -256,6 +263,13 @@ flowchart LR
 
     P46 -->|"Registration confirmation/rejection/waitlist/status update"| E1
     P46 -->|"Registration summary or processing confirmation"| E2
+
+    classDef entity fill:#f8f8f8,stroke:#666,stroke-width:1.2px,color:#222;
+    classDef process fill:#e9f2fb,stroke:#5d84b3,stroke-width:1.5px,color:#1f2e3d,rx:10,ry:10;
+    classDef store fill:#ffffff,stroke:#666,stroke-width:1.2px,color:#222;
+    class E1,E2,E3 entity;
+    class P41,P42,P43,P44,P45,P46,P47 process;
+    class D1,D4,D5,D9 store;
 ```
 
 *Figure 3: Data Flow Diagram Level 2 of Process 4.0 Program/Event Registration Service*
