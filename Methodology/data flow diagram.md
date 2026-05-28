@@ -2,34 +2,47 @@
 
 ## Overview
 
-This section presents the Data Flow Diagram (DFD) of **LYDO Connect** to show how data moves between external entities, system processes, and internal data stores. Following the guide format, the presentation starts with a **Context Diagram**, then expands to **DFD Level 1**, and finally details a key process using **DFD Level 2**.
-
-The DFD covers the implemented scope of the site, including account access, policy agreement, public information browsing, program/event registration, citizen ticket handling, administrative management, and audit-supported governance.
+This section presents the Data Flow Diagram (DFD) of **LYDO Connect** in three levels: the **Context Diagram (Level 0)**, **DFD Level 1**, and **DFD Level 2 of Process 4.0 Program/Event Registration Service**. These diagrams show how youth users/citizens and admin/staff interact with the system for account access, policy agreement, public information browsing, program/event registration, youth service requests, administrative management, reporting, and audit logs.
 
 ## External Entities
 
 - `E1` Youth User / Citizen
-- `E2` Admin / Staff (LYDO Personnel)
-- `E3` External Registration Source (Google Forms/Sheets sync input, when enabled)
+- `E2` Admin / Staff / LYDO Personnel
+- `E3` External Registration Source
 
 ## Context Diagram (Level 0)
 
-The context diagram treats LYDO Connect as a single process and shows its interaction with external entities.
-
 ```mermaid
 flowchart LR
-    E1[/"E1 Youth User / Citizen"/] -->|Sign up/login, browse, register, submit ticket| P0((0.0 LYDO Connect System))
-    E2[/"E2 Admin / Staff"/] -->|Manage content, records, users, roles, tickets, reports| P0
-    E3[/"E3 External Registration Source"/] -->|Registration rows for sync| P0
+    subgraph LEFT["External Entity"]
+        direction TB
+        E1[/"E1 Youth User / Citizen"/]
+    end
 
-    P0 -->|Public info, registration status, ticket updates, policy prompts| E1
-    P0 -->|Dashboards, alerts, summaries, logs, exports| E2
-    P0 -->|Sync status/validation feedback| E3
+    subgraph CENTER["System Boundary"]
+        direction TB
+        P0((P0 LYDO Connect System))
+    end
+
+    subgraph RIGHT["External Entities"]
+        direction TB
+        E2[/"E2 Admin / Staff / LYDO Personnel"/]
+        E3[/"E3 External Registration Source"/]
+    end
+
+    E1 -->|"Sign up/login; browse programs/events; register for programs/events; submit youth service/document requests; view request or registration status"| P0
+    P0 -->|"Public information; registration confirmation/status; request updates; policy prompts"| E1
+
+    E2 -->|"Manage programs/events; manage users and records; review requests; generate reports; view audit logs"| P0
+    P0 -->|"Dashboard data; reports; alerts; request summaries; exported records"| E2
+
+    E3 -->|"External registration rows for sync"| P0
+    P0 -->|"Sync status and validation feedback"| E3
 ```
 
-## DFD Level 1
+*Figure 1: Context Diagram*
 
-DFD Level 1 decomposes the system into major functional processes and connected data stores.
+## Data Flow Diagram Level 1
 
 ### Major Processes
 
@@ -37,7 +50,7 @@ DFD Level 1 decomposes the system into major functional processes and connected 
 - `2.0` Policy Agreement Management
 - `3.0` Public Information and Transparency Viewing
 - `4.0` Program/Event Registration Service
-- `5.0` Citizen Ticket Service
+- `5.0` Youth Service Request Service
 - `6.0` Admin Data and Content Management
 - `7.0` Monitoring, Reporting, and Audit
 
@@ -48,155 +61,193 @@ DFD Level 1 decomposes the system into major functional processes and connected 
 - `D3` Policy Versions and User Policy Acceptance
 - `D4` Programs and Events
 - `D5` Registration Records
-- `D6` Youth Organization and Reference Records
+- `D6` Youth Organization and References
 - `D7` Transparency, Financial, and Compliance Records
-- `D8` Citizen Ticket Records
+- `D8` Youth Service Request Records
 - `D9` Audit Logs
 
-### Diagram
+```mermaid
+flowchart LR
+    subgraph LEFT["External Entity"]
+        direction TB
+        E1[/"E1 Youth User / Citizen"/]
+    end
+
+    subgraph CORE["Core LYDO Connect Processes"]
+        direction TB
+        P1((1.0 Account and Access Management))
+        P2((2.0 Policy Agreement Management))
+        P3((3.0 Public Information and Transparency Viewing))
+        P4((4.0 Program/Event Registration Service))
+        P5((5.0 Youth Service Request Service))
+        P6((6.0 Admin Data and Content Management))
+        P7((7.0 Monitoring, Reporting, and Audit))
+    end
+
+    subgraph STORES["Data Stores"]
+        direction TB
+        D1[(D1 User Accounts and Profiles)]
+        D2[(D2 Roles and Permissions)]
+        D3[(D3 Policy Versions and User Policy Acceptance)]
+        D4[(D4 Programs and Events)]
+        D5[(D5 Registration Records)]
+        D6[(D6 Youth Organization and References)]
+        D7[(D7 Transparency, Financial, and Compliance Records)]
+        D8[(D8 Youth Service Request Records)]
+        D9[(D9 Audit Logs)]
+    end
+
+    subgraph RIGHT["External Entities"]
+        direction TB
+        E2[/"E2 Admin / Staff / LYDO Personnel"/]
+        E3[/"E3 External Registration Source"/]
+    end
+
+    E1 -->|"Account/login details"| P1
+    E1 -->|"Policy acceptance input"| P2
+    E1 -->|"Public information request"| P3
+    E1 -->|"Registration details"| P4
+    E1 -->|"Youth service request details"| P5
+
+    E3 -->|"External registration rows"| P4
+    P4 -->|"Registration summary/processing feedback"| E2
+    P5 -->|"Service request summary"| E2
+    P6 -->|"Management confirmation"| E2
+    P7 -->|"Reports and audit summaries"| E2
+    P4 -->|"Sync status and validation feedback"| E3
+
+    P1 -->|"Account/profile data"| D1
+    P1 -->|"Role/permission data"| D2
+    P2 -->|"Policy acceptance data"| D3
+    P3 -->|"Program/event reference data"| D4
+    P3 -->|"Organization reference data"| D6
+    P3 -->|"Transparency/compliance data"| D7
+
+    P4 -->|"User/profile reference data"| D1
+    P4 -->|"Program/event details and availability"| D4
+    P4 -->|"Registration records (create/update)"| D5
+    P4 -->|"Registration audit entries"| D9
+
+    P5 -->|"Service request records"| D8
+    P6 -->|"Managed core records"| D1
+    P6 -->|"Managed program records"| D4
+    P6 -->|"Managed service request records"| D8
+    P7 -->|"Registration summary data"| D5
+    P7 -->|"Service request summary data"| D8
+    P7 -->|"Audit trail data"| D9
+```
+
+*Figure 2: Data Flow Diagram Level 1*
+
+## Data Flow Diagram Level 2 of Process 4.0 Program/Event Registration Service
 
 ```mermaid
 flowchart LR
-    E1[/"E1 Youth User / Citizen"/]
-    E2[/"E2 Admin / Staff"/]
-    E3[/"E3 External Registration Source"/]
+    subgraph LEFT["External Sources"]
+        direction TB
+        E1[/"E1 Youth User / Citizen"/]
+        E3[/"E3 External Registration Source"/]
+    end
 
-    P1((1.0 Account and Access Management))
-    P2((2.0 Policy Agreement Management))
-    P3((3.0 Public Information and Transparency Viewing))
-    P4((4.0 Program/Event Registration Service))
-    P5((5.0 Citizen Ticket Service))
-    P6((6.0 Admin Data and Content Management))
-    P7((7.0 Monitoring, Reporting, and Audit))
+    subgraph CORE["Process 4.0 Decomposition"]
+        direction LR
+        P41((4.1 Receive Registration Request))
+        P42((4.2 Validate Eligibility and Required Fields))
+        P43((4.3 Check Program/Event Availability))
+        P45((4.5 Save or Update Registration Record))
+        P46((4.6 Send Registration Status and Confirmation))
+    end
 
-    D1[(D1 User Accounts and Profiles)]
-    D2[(D2 Roles and Permissions)]
-    D3[(D3 Policy Versions and User Policy Acceptance)]
-    D4[(D4 Programs and Events)]
-    D5[(D5 Registration Records)]
-    D6[(D6 Youth Organization and References)]
-    D7[(D7 Transparency, Financial, Compliance)]
-    D8[(D8 Citizen Ticket Records)]
-    D9[(D9 Audit Logs)]
+    subgraph AUX["Supporting Processes"]
+        direction TB
+        P44((4.4 Import and Reconcile External Registration Rows))
+        P47((4.7 Admin Review and Registration Management))
+    end
 
-    E1 --> P1
-    P1 <--> D1
-    P1 <--> D2
-    P1 --> E1
+    subgraph STORES["Data Stores"]
+        direction TB
+        D1[(D1 User Accounts and Profiles)]
+        D4[(D4 Programs and Events)]
+        D5[(D5 Registration Records)]
+        D9[(D9 Audit Logs)]
+    end
 
-    E1 --> P2
-    P2 <--> D3
-    P2 --> E1
+    E2[/"E2 Admin / Staff / LYDO Personnel"/]
 
-    E1 --> P3
-    P3 <--> D4
-    P3 <--> D6
-    P3 <--> D7
-    P3 --> E1
+    E1 -->|"Registration details"| P41
+    P41 -->|"Submitted registration details"| P42
 
-    E1 --> P4
-    E3 --> P4
-    P4 <--> D4
-    P4 <--> D5
-    P4 --> E1
-    P4 --> E3
+    P42 -->|"User profile/eligibility query"| D1
+    D1 -->|"User profile and eligibility data"| P42
+    P42 -->|"Validated user and registration details"| P43
 
-    E1 --> P5
-    P5 <--> D8
-    P5 --> E1
-    E2 --> P5
-    P5 --> E2
+    P43 -->|"Program/event query"| D4
+    D4 -->|"Program/event details and slot availability"| P43
+    P43 -->|"Approved registration details"| P45
+    P43 -->|"Unavailable slot or registration issue status"| P46
 
-    E2 --> P6
-    P6 <--> D4
-    P6 <--> D6
-    P6 <--> D7
-    P6 <--> D1
-    P6 <--> D2
-    P6 <--> D8
-    P6 --> E2
+    E3 -->|"External registration rows"| P44
+    P44 -->|"Existing registration records query"| D5
+    D5 -->|"Matched/reconciled registration rows"| P44
+    P44 -->|"Validated imported registrations"| P45
 
-    E2 --> P7
-    P7 <--> D5
-    P7 <--> D8
-    P7 <--> D9
-    P7 --> E2
+    E2 -->|"Review action/registration update"| P47
+    P47 -->|"Registration records for review query"| D5
+    D5 -->|"Updated registration status"| P47
+    P47 -->|"Approved or updated registration details"| P45
+
+    P45 -->|"New or updated registration record"| D5
+    P45 -->|"Registration audit entry"| D9
+    P45 -->|"Final registration status"| P46
+
+    P46 -->|"Registration confirmation/rejection/waitlist/status update"| E1
+    P46 -->|"Registration summary or processing confirmation"| E2
 ```
 
-### Level 1 Flow Description
+*Figure 3: Data Flow Diagram Level 2 of Process 4.0 Program/Event Registration Service*
 
-1. Youth users/citizens create accounts, log in, and access protected features through Process `1.0`, which validates identity using `D1` and access rules from `D2`.
-2. Authenticated non-admin users pass through Process `2.0`, where active policy content is read and acceptance is recorded in `D3`.
-3. Users consume programs, events, organization information, and transparency records through Process `3.0`, which retrieves data from `D4`, `D6`, and `D7`.
-4. Registration actions are handled by Process `4.0`, which stores and updates participant records in `D5` while checking event/program context from `D4`. External sync data from `E3` is also processed here when enabled.
-5. Service concerns and follow-ups are handled by Process `5.0`, which creates and updates ticket records in `D8`.
-6. Administrative CRUD and governance actions are performed in Process `6.0` across operational stores (`D1`, `D2`, `D4`, `D6`, `D7`, `D8`).
-7. Summaries, exports, and traceability are generated by Process `7.0` using `D5`, `D8`, and `D9` for accountability and reporting.
+### Program/Event Registration Service (4.0)
 
-## DFD Level 2 (Process 4.0 Program/Event Registration Service)
+- Youth users/citizens submit registration details for available LYDO programs or events.
+- The system validates the user profile, required fields, and eligibility requirements.
+- The system checks the selected program/event details and available slots.
+- Valid registrations are saved in `D5 Registration Records`.
+- If external registration sources are used, imported rows are matched and reconciled with existing registration records.
+- Admin/staff can review, approve, update, or manage registration records.
+- The system sends confirmation, rejection, waitlist, or status updates to the youth user/citizen.
+- Important registration actions are recorded in `D9 Audit Logs`.
 
-DFD Level 2 expands Process `4.0` to show its internal sub-processes for registration capture, validation, persistence, sync support, and status delivery.
+### Receive Registration Request (4.1)
 
-### Sub-Processes
+- Captures registration details submitted by the youth user/citizen.
+- Passes submitted data to validation.
 
-- `4.1` Receive Registration Request
-- `4.2` Validate Eligibility and Required Fields
-- `4.3` Save/Update Registration Record
-- `4.4` Import and Reconcile External Registration Rows
-- `4.5` Send Registration Status and Confirmation
+### Validate Eligibility and Required Fields (4.2)
 
-### Diagram
+- Checks user profile, required registration fields, and eligibility.
+- Uses `D1 User Accounts and Profiles` as reference.
 
-```mermaid
-flowchart LR
-    E1[/"E1 Youth User / Citizen"/]
-    E2[/"E2 Admin / Staff"/]
-    E3[/"E3 External Registration Source"/]
+### Check Program/Event Availability (4.3)
 
-    P41((4.1 Receive Registration Request))
-    P42((4.2 Validate Eligibility and Required Fields))
-    P43((4.3 Save/Update Registration Record))
-    P44((4.4 Import and Reconcile External Registration Rows))
-    P45((4.5 Send Registration Status and Confirmation))
+- Checks selected program/event information and slot availability.
+- Uses `D4 Programs and Events` as reference.
 
-    D1[(D1 User Accounts and Profiles)]
-    D3[(D3 Policy Versions and User Policy Acceptance)]
-    D4[(D4 Programs and Events)]
-    D5[(D5 Registration Records)]
-    D9[(D9 Audit Logs)]
+### Import and Reconcile External Registration Rows (4.4)
 
-    E1 --> P41
-    P41 --> P42
+- Accepts rows from external registration sources, such as imported sheets or forms.
+- Matches imported rows with existing records in `D5 Registration Records` to avoid duplicates.
 
-    P42 <--> D1
-    P42 <--> D3
-    P42 <--> D4
-    P42 --> P43
-    P42 --> P45
+### Save or Update Registration Record (4.5)
 
-    P43 <--> D5
-    P43 --> D9
-    P43 --> P45
+- Creates or updates registration records in `D5`.
+- Sends important actions to `D9 Audit Logs`.
 
-    E3 --> P44
-    E2 --> P44
-    P44 <--> D4
-    P44 <--> D5
-    P44 --> D9
-    P44 --> E2
+### Send Registration Status and Confirmation (4.6)
 
-    P45 --> E1
-```
+- Sends confirmation, rejection, waitlist, or status update to the youth user/citizen.
+- Sends summaries or processing confirmation to admin/staff.
 
-### Level 2 Flow Description
+### Admin Review and Registration Management (4.7)
 
-1. The youth user submits a registration request to `4.1`.
-2. `4.2` checks user identity/profile (`D1`), required policy acceptance (`D3`), and event/program constraints (`D4`).
-3. If valid, `4.3` writes the registration to `D5`; if invalid, `4.5` returns errors/instructions to the user.
-4. For sync-enabled operations, `4.4` accepts rows from `E3`, reconciles duplicates or mismatches against `D4` and `D5`, and reports results to admin/staff (`E2`).
-5. Successful transactions generate confirmation/status feedback to the user through `4.5`.
-6. Significant registration updates and reconciliation actions are logged in `D9` for monitoring and accountability.
-
-## Summary
-
-The DFD set (Context, Level 1, and Level 2) demonstrates that LYDO Connect supports end-to-end data handling for public users and administrators: from access and consent, to registration and service operations, up to governance reporting and audit traceability.
+- Allows admin/staff to review, approve, update, or manage program/event registration records.
+- Updates registration status in `D5 Registration Records`.
