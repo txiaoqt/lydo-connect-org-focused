@@ -139,6 +139,60 @@ flowchart LR
 
 *Figure 2: Data Flow Diagram Level 1*
 
+### Data Flow Diagram Level 1 Process Description
+
+The DFD Level 1 provides a more detailed view of the major processes and data stores used in LYDO Connect, expanding the Context Diagram into specific operational flows for account access, policy agreement, public information viewing, program/event registration, youth service requests, administration, and reporting.
+
+### Account and Access Management (1.0)
+
+- Youth users/citizens submit account or login details.
+- The system verifies account/profile data through `D1 User Accounts and Profiles`.
+- Access permissions are checked through `D2 Roles and Permissions`.
+
+### Policy Agreement Management (2.0)
+
+- Youth users/citizens submit policy acceptance input.
+- The system records policy acceptance details in `D3 Policy Versions and User Policy Acceptance`.
+
+### Public Information and Transparency Viewing (3.0)
+
+- Youth users/citizens request public information.
+- The system retrieves program/event references from `D4 Programs and Events`.
+- The system retrieves organization references from `D6 Youth Organization and References`.
+- The system retrieves transparency and compliance records from `D7 Transparency, Financial, and Compliance Records`.
+
+### Program/Event Registration Service (4.0)
+
+- Youth users/citizens submit registration details for programs/events.
+- If enabled, external registration rows from `E3 External Registration Source` are accepted for synchronization.
+- The system checks user/profile reference data from `D1 User Accounts and Profiles`.
+- The system checks program/event details and availability from `D4 Programs and Events`.
+- The system stores created or updated registrations in `D5 Registration Records`.
+- Important registration actions are recorded in `D9 Audit Logs`.
+- Registration summaries/processing feedback are provided to admin/staff, and sync validation feedback is sent to the external source.
+
+### Youth Service Request Service (5.0)
+
+- Youth users/citizens submit youth service request details.
+- The system stores request records in `D8 Youth Service Request Records`.
+- Service request summaries are provided to admin/staff for monitoring and follow-up.
+
+### Admin Data and Content Management (6.0)
+
+- Admin/staff manages core data and content.
+- The process updates managed core records in `D1 User Accounts and Profiles`.
+- The process updates managed program records in `D4 Programs and Events`.
+- The process updates managed service request records in `D8 Youth Service Request Records`.
+- Management confirmation is sent to admin/staff.
+
+### Monitoring, Reporting, and Audit (7.0)
+
+- Admin/staff requests reporting and audit outputs.
+- The process reads registration summary data from `D5 Registration Records`.
+- The process reads service request summary data from `D8 Youth Service Request Records`.
+- The process reads audit trail data from `D9 Audit Logs`.
+- Reports and audit summaries are provided to admin/staff.
+
 ## Data Flow Diagram Level 2 of Process 4.0 Program/Event Registration Service
 
 ```mermaid
