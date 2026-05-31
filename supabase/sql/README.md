@@ -33,6 +33,7 @@ Run these files in order inside Supabase SQL Editor:
 29. `schema_orgs_details_update.sql` (recommended for organization details: adds expanded organization fields, `organization_references`, `organization_projects`, RLS, search indexes, and source-reference seed records)
 30. `30_remove_service_advisories.sql` (recommended cleanup: removes the deprecated service advisory table/type after the feature was removed from the interface)
 31. `31_remove_org_legacy_fields.sql` (recommended cleanup: removes deprecated organization fields tied to the older location-specific/prototype model)
+32. `32_program_outcomes_analytics.sql` (recommended for outcomes analytics: adds `program_outcomes` table with RLS and fields for target/actual participants, completion %, summary, challenges, and recommendations)
 
 Notes:
 - Files are idempotent (`if not exists`, `on conflict`).

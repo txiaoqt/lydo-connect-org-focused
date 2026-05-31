@@ -199,6 +199,23 @@ export interface BarangayYouthMetricRow {
   updated_at: string;
 }
 
+export interface ProgramOutcomeRow {
+  id: string;
+  program_id: string;
+  report_document_id?: string | null;
+  recorded_on?: string | null;
+  target_participants: number;
+  actual_participants: number;
+  completion_percent: number;
+  objectives_achieved?: string | null;
+  outcome_summary?: string | null;
+  challenges?: string | null;
+  recommendations?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type AuditOperation = "INSERT" | "UPDATE" | "DELETE";
 
 export interface AuditLogEntry {

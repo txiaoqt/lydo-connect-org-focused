@@ -14,6 +14,7 @@ import { UsersPage } from "./pages/Users";
 import { Roles } from "./pages/Roles";
 import { AuditLogs } from "./pages/AuditLogs";
 import { Registrations } from "./pages/Registrations";
+import { OutcomesAnalytics } from "./pages/OutcomesAnalytics";
 
 export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -35,6 +36,7 @@ export default function AdminPortal() {
     "audit-logs": "Audit Logs",
     users: "Users",
     roles: "Roles & Permissions",
+    "outcomes-analytics": "Trends and Analytics",
   };
 
   useEffect(() => {
@@ -107,6 +109,8 @@ export default function AdminPortal() {
         return <UsersPage />;
       case "roles":
         return <Roles />;
+      case "outcomes-analytics":
+        return <OutcomesAnalytics onNavigate={setActiveTab} />;
       default:
         return <Dashboard onNavigate={setActiveTab} />;
     }

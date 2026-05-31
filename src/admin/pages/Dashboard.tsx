@@ -45,6 +45,7 @@ import {
 
 type AdminTab =
   | "dashboard"
+  | "outcomes-analytics"
   | "programs"
   | "events"
   | "registrations"
@@ -440,6 +441,7 @@ export const Dashboard = ({ onNavigate }: DashboardProps) => {
   const sectionShortcuts = useMemo(
     () => [
       { label: "Dashboard", tab: "dashboard" as const, keywords: "overview analytics summary" },
+      { label: "Trends and Analytics", tab: "outcomes-analytics" as const, keywords: "program event trends analytics participation performance" },
       { label: "Programs", tab: "programs" as const, keywords: "projects sectors drafts published" },
       { label: "Events", tab: "events" as const, keywords: "schedule upcoming past cancelled" },
       { label: "Registrations", tab: "registrations" as const, keywords: "event program registration attendance" },

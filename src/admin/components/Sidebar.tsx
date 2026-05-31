@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   UserCheck,
+  LineChart,
 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
@@ -120,6 +121,11 @@ export const Sidebar = ({
         { id: "users", label: "Users", icon: Users },
         { id: "roles", label: "Roles & Permissions", icon: ShieldCheck },
       ],
+    },
+    {
+      id: "trends-analytics",
+      label: "Trends and Analytics",
+      items: [{ id: "outcomes-analytics", label: "Programs and Events", icon: LineChart }],
     },
   ];
 

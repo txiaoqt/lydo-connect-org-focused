@@ -18,6 +18,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 type AdminTab =
+  | "outcomes-analytics"
   | "programs"
   | "events"
   | "organizations"
