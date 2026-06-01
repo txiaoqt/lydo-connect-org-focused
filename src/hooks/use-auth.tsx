@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { ADMIN_SESSION_STORAGE_KEY, PREDEFINED_ADMIN_CREDENTIALS, PREDEFINED_ADMIN_USER } from "@/lib/admin-auth";
+import { getAuthCallbackUrl } from "@/lib/auth-redirect";
 import { IS_USER_SURFACE } from "@/lib/deployment-surface";
 import { supabase } from "@/lib/supabase";
 
@@ -227,6 +228,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email: email.trim(),
       password,
       options: {
+        emailRedirectTo: getAuthCallbackUrl(),
         data: {
           full_name: fullName ?? "",
           display_name: fullName ?? "",

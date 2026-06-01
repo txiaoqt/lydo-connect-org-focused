@@ -145,7 +145,7 @@ const SignUp = () => {
     toast({
       title: "Account Created",
       description: result.needsEmailConfirmation
-        ? "Check your email to confirm your account, then sign in using your credentials."
+        ? "Check your email to confirm your account. The confirmation link will sign you in automatically."
         : "Your account has been created. Please sign in using your credentials.",
     });
 

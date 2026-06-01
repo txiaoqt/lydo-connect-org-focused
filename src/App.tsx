@@ -11,6 +11,7 @@ import Organizations from "./pages/Organizations";
 import About from "./pages/About";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 import EventRecord from "./pages/EventRecord";
@@ -290,6 +291,7 @@ const App = () => (
                     </RedirectAdmin>
                   }
                 />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route
                   path="/signup"
                   element={
