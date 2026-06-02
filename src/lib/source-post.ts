@@ -123,20 +123,20 @@ export const toFacebookEmbedConfig = (sourcePostUrl?: string | null, width = 500
   if (isVideoPostUrl(resolved.targetUrl)) {
     return {
       kind: "video",
-      embedUrl: `https://www.facebook.com/plugins/video.php?href=${href}&show_text=false&width=${safeWidth}&adapt_container_width=true`,
+      embedUrl: `https://www.facebook.com/v19.0/plugins/video.php?href=${href}&show_text=false&width=${safeWidth}&adapt_container_width=true&locale=en_US`,
     };
   }
 
   if (resolved.kind === "page") {
     return {
       kind: "page",
-      embedUrl: `https://www.facebook.com/plugins/page.php?href=${href}&tabs=timeline&width=${safeWidth}&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`,
+      embedUrl: `https://www.facebook.com/v19.0/plugins/page.php?href=${href}&tabs=timeline&width=${safeWidth}&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&locale=en_US`,
     };
   }
 
   return {
     kind: "post",
-    embedUrl: `https://www.facebook.com/plugins/post.php?href=${href}&show_text=true&width=${safeWidth}&adapt_container_width=true`,
+    embedUrl: `https://www.facebook.com/v19.0/plugins/post.php?href=${href}&show_text=true&width=${safeWidth}&height=640&adapt_container_width=true&locale=en_US`,
   };
 };
 
