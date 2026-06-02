@@ -42,34 +42,43 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", copy));
-          return response;
-        })
-        .catch(() => caches.match("/index.html"))
-    );
-    return;
-  }
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== "basic") {
-          return response;
+    if (event.request.mode === "navigate") {
+      try {
+        const response = await fetch(event.request);
+        if (response && response.ok) {
+          cache.put("/index.html", response.clone()).catch(() => {});
         }
-
-        const responseCopy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
         return response;
-      });
-    })
-  );
+      } catch {
+        const cachedIndex = await cache.match("/index.html");
+        if (cachedIndex) return cachedIndex;
+
+        const rootFallback = await cache.match("/");
+        if (rootFallback) return rootFallback;
+
+        return new Response("Offline", {
+          status: 200,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      }
+    }
+
+    const cached = await cache.match(event.request);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const response = await fetch(event.request);
+      if (response && response.ok && response.type === "basic") {
+        cache.put(event.request, response.clone()).catch(() => {});
+      }
+      return response;
+    } catch {
+      return cached || Response.error();
+    }
+  })());
 });
