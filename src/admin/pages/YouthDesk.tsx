@@ -277,7 +277,7 @@ export const YouthDeskAdmin = () => {
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Youth Desk</h1>
+          <h1 className="text-3xl font-bold text-foreground">Youth Services Desk</h1>
           <p className="text-muted-foreground mt-1 font-medium">Monitor user-submitted tickets and update request status.</p>
         </div>
       </header>
@@ -341,7 +341,7 @@ export const YouthDeskAdmin = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Ticket Details</DialogTitle>
-            <DialogDescription>Youth Desk submission details.</DialogDescription>
+            <DialogDescription>Youth Services Desk submission details.</DialogDescription>
           </DialogHeader>
           {viewingTicket && (
             <div className="space-y-4 text-sm">

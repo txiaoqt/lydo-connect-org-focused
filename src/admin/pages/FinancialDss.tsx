@@ -479,7 +479,7 @@ export const FinancialDss = () => {
           </style>
         </head>
         <body>
-          <h1>Financial DSS - Filtered Financial Rows</h1>
+          <h1>Financial Reports - Filtered Financial Rows</h1>
           <p>Generated: ${escapeHtml(generatedAt)}</p>
           <table>
             <thead>
@@ -524,7 +524,7 @@ export const FinancialDss = () => {
     const html = `
       <html>
         <head>
-          <title>Financial DSS Export</title>
+          <title>Financial Reports Export</title>
           <style>
             body { font-family: Arial, sans-serif; color: #3D3D3D; padding: 20px; }
             h1 { font-size: 20px; margin: 0 0 8px 0; }
@@ -539,7 +539,7 @@ export const FinancialDss = () => {
           </style>
         </head>
         <body>
-          <h1>Financial DSS - Filtered Financial Rows</h1>
+          <h1>Financial Reports - Filtered Financial Rows</h1>
           <p>Generated: ${escapeHtml(generatedAt)}</p>
           <table>
             <thead>
@@ -580,7 +580,7 @@ export const FinancialDss = () => {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">Financial DSS</h1>
+        <h1 className="text-3xl font-bold text-foreground">Financial Reports</h1>
         <p className="text-muted-foreground mt-1 font-medium">
           Finance-only dashboard for budget setup, monthly allocation/utilization tracking, and fiscal-year analytics.
         </p>
@@ -588,7 +588,7 @@ export const FinancialDss = () => {
 
       <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList className="grid w-full max-w-xl grid-cols-3">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="dashboard">Overview</TabsTrigger>
           <TabsTrigger value="budget-setup">Budget Setup</TabsTrigger>
           <TabsTrigger value="financial-rows">Financial Rows</TabsTrigger>
         </TabsList>
@@ -1032,7 +1032,7 @@ export const FinancialDss = () => {
                 <p className="text-sm font-semibold text-foreground">Auto-Computed (Read-only)</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Total Budget (From Dashboard Setup)</Label>
+                    <Label>Total Budget (From Overview Setup)</Label>
                     <Input type="number" value={Number.isFinite(formTotalBudget) ? formTotalBudget.toFixed(2) : "0.00"} readOnly className="bg-muted/50" />
                   </div>
                   <div className="space-y-2">

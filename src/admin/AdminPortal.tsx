@@ -23,19 +23,19 @@ export default function AdminPortal() {
   const mainRef = useRef<HTMLElement | null>(null);
 
   const tabLabelMap: Record<string, string> = {
-    dashboard: "Dashboard",
+    dashboard: "Overview",
     programs: "Programs",
     events: "Events",
     registrations: "Registrations",
     organizations: "Organizations",
-    barangays: "Barangay Map Data",
-    documents: "Transparency Docs",
-    "transparency-board": "Transparency Board",
-    "financial-dss": "Financial DSS",
-    "youth-desk": "Youth Desk",
+    barangays: "Community Map",
+    documents: "Transparency Documents",
+    "transparency-board": "Accountability Board",
+    "financial-dss": "Financial Reports",
+    "youth-desk": "Youth Services Desk",
     "audit-logs": "Audit Logs",
     users: "Users",
-    roles: "Roles & Permissions",
+    roles: "Roles and Permissions",
     "outcomes-analytics": "Trends and Analytics",
   };
 

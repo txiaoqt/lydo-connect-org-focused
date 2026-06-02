@@ -234,7 +234,7 @@ export const Roles = () => {
     <div className="space-y-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Roles & Permissions</h1>
+          <h1 className="text-3xl font-bold text-foreground">Roles and Permissions</h1>
           <p className="text-muted-foreground mt-1 font-medium">Define and manage access levels for administrative users.</p>
         </div>
         <button

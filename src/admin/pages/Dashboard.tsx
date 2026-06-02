@@ -440,20 +440,20 @@ export const Dashboard = ({ onNavigate }: DashboardProps) => {
 
   const sectionShortcuts = useMemo(
     () => [
-      { label: "Dashboard", tab: "dashboard" as const, keywords: "overview analytics summary" },
+      { label: "Overview", tab: "dashboard" as const, keywords: "overview analytics summary" },
       { label: "Trends and Analytics", tab: "outcomes-analytics" as const, keywords: "program event trends analytics participation performance" },
       { label: "Programs", tab: "programs" as const, keywords: "projects sectors drafts published" },
       { label: "Events", tab: "events" as const, keywords: "schedule upcoming past cancelled" },
       { label: "Registrations", tab: "registrations" as const, keywords: "event program registration attendance" },
       { label: "Organizations", tab: "organizations" as const, keywords: "groups partners active" },
-      { label: "Barangay Map Data", tab: "barangays" as const, keywords: "barangay maps youth metrics" },
-      { label: "Transparency Docs", tab: "documents" as const, keywords: "documents uploads registry" },
-      { label: "Transparency Board", tab: "transparency-board" as const, keywords: "compliance board monthly" },
-      { label: "Financial DSS", tab: "financial-dss" as const, keywords: "budget finance dss rows" },
-      { label: "Youth Desk", tab: "youth-desk" as const, keywords: "tickets requests complaints" },
+      { label: "Community Map", tab: "barangays" as const, keywords: "barangay maps youth metrics" },
+      { label: "Transparency Documents", tab: "documents" as const, keywords: "documents uploads registry" },
+      { label: "Accountability Board", tab: "transparency-board" as const, keywords: "compliance board monthly" },
+      { label: "Financial Reports", tab: "financial-dss" as const, keywords: "budget finance dss rows" },
+      { label: "Youth Services Desk", tab: "youth-desk" as const, keywords: "tickets requests complaints" },
       { label: "Audit Logs", tab: "audit-logs" as const, keywords: "audit logs changes history admin edits" },
       { label: "Users", tab: "users" as const, keywords: "accounts profiles members" },
-      { label: "Roles & Permissions", tab: "roles" as const, keywords: "roles permissions access" },
+      { label: "Roles and Permissions", tab: "roles" as const, keywords: "roles permissions access" },
     ],
     [],
   );
@@ -567,7 +567,7 @@ export const Dashboard = ({ onNavigate }: DashboardProps) => {
     <div className="space-y-4 lg:space-y-5">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard Overview</h1>
+          <h1 className="text-3xl font-bold text-foreground">Overview</h1>
           <p className="text-muted-foreground mt-1 font-medium">
             Focused admin metrics, quick actions, and live user records from Supabase.
           </p>

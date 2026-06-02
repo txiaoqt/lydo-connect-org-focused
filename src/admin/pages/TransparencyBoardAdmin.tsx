@@ -273,8 +273,8 @@ export const TransparencyBoardAdmin = () => {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-bold text-foreground">Transparency Board Config</h1>
-        <p className="text-muted-foreground mt-1 font-medium">Configure all public Transparency Board and Monthly Compliance data from admin.</p>
+        <h1 className="text-3xl font-bold text-foreground">Accountability Board Config</h1>
+        <p className="text-muted-foreground mt-1 font-medium">Configure all public Accountability Board and Monthly Compliance data from admin.</p>
       </header>
 
       <Tabs defaultValue="board-rows" className="space-y-4">
@@ -369,7 +369,7 @@ export const TransparencyBoardAdmin = () => {
 
       <Dialog open={isBoardDialog} onOpenChange={setIsBoardDialog}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>{editingBoard ? "Edit Board Row" : "Create Board Row"}</DialogTitle><DialogDescription>This is used by the public Transparency Board table.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingBoard ? "Edit Board Row" : "Create Board Row"}</DialogTitle><DialogDescription>This is used by the public Accountability Board table.</DialogDescription></DialogHeader>
           <form onSubmit={saveBoard} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2 md:col-span-2"><Label>Barangay</Label><select value={boardForm.barangayId} onChange={(e) => setBoardForm((p) => ({ ...p, barangayId: e.target.value }))} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" required><option value="">Select barangay</option>{barangays.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
