@@ -117,7 +117,8 @@ export const toFacebookEmbedConfig = (sourcePostUrl?: string | null, width = 500
   const resolved = resolveFacebookTarget(sourcePostUrl);
   if (!resolved || resolved.issue) return null;
 
-  const safeWidth = Math.min(750, Math.max(280, Math.round(width)));
+  const minimumWidth = resolved.kind === "post" ? 350 : 280;
+  const safeWidth = Math.min(750, Math.max(minimumWidth, Math.round(width)));
   const href = encodeURIComponent(resolved.targetUrl.toString());
   if (isVideoPostUrl(resolved.targetUrl)) {
     return {

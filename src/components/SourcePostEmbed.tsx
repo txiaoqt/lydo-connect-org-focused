@@ -19,8 +19,12 @@ export default function SourcePostEmbed({ sourcePostUrl, title, instanceKey, cla
   const openLabel = embedConfig?.kind === "page" ? "Open Source Page" : "Open Source Post";
   const embedWidth = Math.max(280, Math.min(750, measuredWidth ?? 500));
   const showLiveEmbed = Boolean(embedConfig);
-  const embedRenderKey = `${instanceKey ?? "source"}-${normalizedSourceUrl ?? "none"}-${embedWidth}`;
+  const pluginWidth = embedConfig?.kind === "post" ? Math.max(350, embedWidth) : embedWidth;
+  const visualWidth = measuredWidth && measuredWidth > 0 ? measuredWidth : pluginWidth;
+  const embedScale = pluginWidth > visualWidth ? visualWidth / pluginWidth : 1;
   const embedHeight = embedConfig?.kind === "video" ? 460 : embedConfig?.kind === "page" ? 500 : 640;
+  const scaledEmbedHeight = Math.ceil(embedHeight * embedScale);
+  const embedRenderKey = `${instanceKey ?? "source"}-${normalizedSourceUrl ?? "none"}-${pluginWidth}`;
 
   useEffect(() => {
     if (!normalizedSourceUrl) return;
@@ -58,15 +62,20 @@ export default function SourcePostEmbed({ sourcePostUrl, title, instanceKey, cla
       </a>
 
       {showLiveEmbed && embedConfig ? (
-        <div className="relative overflow-hidden rounded-xl border bg-card">
+        <div className="relative overflow-hidden rounded-xl border bg-card" style={{ height: scaledEmbedHeight }}>
           <iframe
             key={embedRenderKey}
             title={`${title} Facebook source preview`}
             src={embedConfig.embedUrl}
-            width="100%"
+            width={pluginWidth}
             height={embedHeight}
-            className="block w-full border-0 bg-muted/20"
-            style={{ height: embedHeight }}
+            className="block border-0 bg-muted/20"
+            style={{
+              width: pluginWidth,
+              height: embedHeight,
+              transform: `scale(${embedScale})`,
+              transformOrigin: "top left",
+            }}
             loading="lazy"
             allow="encrypted-media; picture-in-picture; web-share"
             allowFullScreen
