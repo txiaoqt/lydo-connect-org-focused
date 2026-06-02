@@ -50,20 +50,21 @@ self.addEventListener("fetch", (event) => {
         const response = await fetch(event.request);
         if (response && response.ok) {
           cache.put("/index.html", response.clone()).catch(() => {});
+          return response;
         }
-        return response;
       } catch {
-        const cachedIndex = await cache.match("/index.html");
-        if (cachedIndex) return cachedIndex;
-
-        const rootFallback = await cache.match("/");
-        if (rootFallback) return rootFallback;
-
-        return new Response("Offline", {
-          status: 200,
-          headers: { "Content-Type": "text/plain; charset=utf-8" },
-        });
       }
+
+      const cachedIndex = await cache.match("/index.html");
+      if (cachedIndex) return cachedIndex;
+
+      const rootFallback = await cache.match("/");
+      if (rootFallback) return rootFallback;
+
+      return new Response("Offline", {
+        status: 200,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
     }
 
     const cached = await cache.match(event.request);
