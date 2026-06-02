@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Link2Off } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFacebookEmbedIssue, normalizeSourcePostUrl, toFacebookEmbedConfig } from "@/lib/source-post";
@@ -10,21 +11,47 @@ type SourcePostEmbedProps = {
 
 export default function SourcePostEmbed({ sourcePostUrl, title, className }: SourcePostEmbedProps) {
   const normalizedSourceUrl = normalizeSourcePostUrl(sourcePostUrl);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!normalizedSourceUrl) return;
+
+    const element = containerRef.current;
+    if (!element) return;
+
+    const updateWidth = () => {
+      setMeasuredWidth(Math.round(element.getBoundingClientRect().width));
+    };
+
+    updateWidth();
+
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      updateWidth();
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [normalizedSourceUrl]);
+
   if (!normalizedSourceUrl) return null;
 
   const embedIssue = getFacebookEmbedIssue(normalizedSourceUrl);
-  const embedConfig = toFacebookEmbedConfig(normalizedSourceUrl, 750);
+  const embedConfig = toFacebookEmbedConfig(normalizedSourceUrl, measuredWidth ?? 500);
   const iframeHeight = embedConfig?.kind === "video" ? 460 : 640;
+  const openLabel = embedConfig?.kind === "page" ? "Open Source Page" : "Open Source Post";
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div ref={containerRef} className={cn("space-y-3", className)}>
       <a
         href={normalizedSourceUrl}
         target="_blank"
         rel="noreferrer"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
       >
-        Open Source Post <ExternalLink className="h-4 w-4" />
+        {openLabel} <ExternalLink className="h-4 w-4" />
       </a>
 
       {embedConfig ? (
@@ -34,7 +61,9 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
             src={embedConfig.embedUrl}
             width="100%"
             height={iframeHeight}
+            className="block w-full"
             style={{ border: "none", overflow: "hidden" }}
+            loading="lazy"
             allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
             allowFullScreen
           />

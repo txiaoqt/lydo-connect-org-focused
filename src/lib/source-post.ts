@@ -1,6 +1,7 @@
 const FACEBOOK_HOST_PATTERN = /(^|\.)facebook\.com$/i;
 const FACEBOOK_PLUGIN_PATH_PATTERN = /^\/plugins\/(post|video)\.php$/i;
 const FACEBOOK_SHARE_PATH_PATTERN = /^\/share\//i;
+const FACEBOOK_PAGE_PATH_PATTERN = /^\/(?!plugins\/|share\/|story\.php|photo\.php|permalink\.php|watch\b|reel\b|videos\b|posts\b|groups\b|events\b|pages\b)([^/]+)\/?$/i;
 
 const isFacebookHost = (hostname: string) => FACEBOOK_HOST_PATTERN.test(hostname.toLowerCase());
 
@@ -40,6 +41,7 @@ export type FacebookEmbedIssue = {
 
 type ResolvedFacebookTarget = {
   targetUrl: URL;
+  kind: "post" | "video" | "page";
   issue: FacebookEmbedIssue | null;
 };
 
@@ -64,6 +66,7 @@ const resolveFacebookTarget = (sourcePostUrl?: string | null): ResolvedFacebookT
     const normalizedNestedUrl = normalizeFacebookUrl(nestedUrl);
     return {
       targetUrl: normalizedNestedUrl,
+      kind: isVideoPostUrl(normalizedNestedUrl) ? "video" : "post",
       issue: FACEBOOK_SHARE_PATH_PATTERN.test(normalizedNestedUrl.pathname)
         ? {
             code: "share_link",
@@ -76,6 +79,14 @@ const resolveFacebookTarget = (sourcePostUrl?: string | null): ResolvedFacebookT
 
   return {
     targetUrl: normalizedUrl,
+    kind:
+      isVideoPostUrl(normalizedUrl) ||
+      /\/(posts|photos|photo\.php|permalink\.php|story\.php)\b/i.test(normalizedUrl.pathname) ||
+      normalizedUrl.searchParams.has("fbid")
+        ? "post"
+        : FACEBOOK_PAGE_PATH_PATTERN.test(normalizedUrl.pathname)
+          ? "page"
+          : "page",
     issue: FACEBOOK_SHARE_PATH_PATTERN.test(normalizedUrl.pathname)
       ? {
           code: "share_link",
@@ -98,7 +109,7 @@ export const getFacebookEmbedIssue = (sourcePostUrl?: string | null): FacebookEm
   resolveFacebookTarget(sourcePostUrl)?.issue ?? null;
 
 export type FacebookEmbedConfig = {
-  kind: "post" | "video";
+  kind: "post" | "video" | "page";
   embedUrl: string;
 };
 
@@ -106,18 +117,25 @@ export const toFacebookEmbedConfig = (sourcePostUrl?: string | null, width = 500
   const resolved = resolveFacebookTarget(sourcePostUrl);
   if (!resolved || resolved.issue) return null;
 
-  const safeWidth = Math.min(750, Math.max(350, Math.round(width)));
+  const safeWidth = Math.min(750, Math.max(280, Math.round(width)));
   const href = encodeURIComponent(resolved.targetUrl.toString());
   if (isVideoPostUrl(resolved.targetUrl)) {
     return {
       kind: "video",
-      embedUrl: `https://www.facebook.com/plugins/video.php?href=${href}&show_text=false&width=${safeWidth}`,
+      embedUrl: `https://www.facebook.com/plugins/video.php?href=${href}&show_text=false&width=${safeWidth}&adapt_container_width=true`,
+    };
+  }
+
+  if (resolved.kind === "page") {
+    return {
+      kind: "page",
+      embedUrl: `https://www.facebook.com/plugins/page.php?href=${href}&tabs=timeline&width=${safeWidth}&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`,
     };
   }
 
   return {
     kind: "post",
-    embedUrl: `https://www.facebook.com/plugins/post.php?href=${href}&show_text=true&width=${safeWidth}`,
+    embedUrl: `https://www.facebook.com/plugins/post.php?href=${href}&show_text=true&width=${safeWidth}&adapt_container_width=true`,
   };
 };
 

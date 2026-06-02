@@ -213,13 +213,20 @@ export const Sidebar = ({
       </div>
 
       <div className={cn("border-t border-border/70", collapsed ? "p-2" : "p-3")}>
-        <SidebarItem
-          icon={trendsGroup.items[0].icon}
-          label={trendsGroup.items[0].label}
-          active={activeTab === trendsGroup.items[0].id}
-          collapsed={collapsed}
-          onClick={() => handleSelectTab(trendsGroup.items[0].id)}
-        />
+        <div className="space-y-2">
+          {!collapsed && (
+            <p className="px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/75">
+              {trendsGroup.label}
+            </p>
+          )}
+          <SidebarItem
+            icon={trendsGroup.items[0].icon}
+            label={trendsGroup.items[0].label}
+            active={activeTab === trendsGroup.items[0].id}
+            collapsed={collapsed}
+            onClick={() => handleSelectTab(trendsGroup.items[0].id)}
+          />
+        </div>
 
         <button
           onClick={() => setIsSignOutDialogOpen(true)}

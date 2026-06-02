@@ -434,14 +434,14 @@ export default function LocationPreviewButton({
       </button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Location Preview and Directions</DialogTitle>
-            <DialogDescription>{location}</DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[calc(100svh-1rem)] overflow-y-auto p-4 sm:max-h-[92vh] sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="text-base sm:text-lg">Location Preview and Directions</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">{location}</DialogDescription>
+        </DialogHeader>
 
-          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-            <p className="text-sm font-semibold">Set Your Starting Location</p>
+          <div className="rounded-lg border border-border bg-muted/20 p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <p className="text-sm sm:text-base font-semibold">Set Your Starting Location</p>
             <div className="space-y-2">
               <Label htmlFor="origin-search">Search your location</Label>
               <div className="relative">
@@ -450,7 +450,7 @@ export default function LocationPreviewButton({
                   value={originQuery}
                   onChange={(event) => setOriginQuery(event.target.value)}
                   placeholder="Type address, landmark, or 'lat,lng'"
-                  className="pr-10"
+                  className="pr-10 h-10 sm:h-11 text-sm sm:text-base"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {isOriginSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
@@ -460,7 +460,7 @@ export default function LocationPreviewButton({
               {originHint && <p className="text-xs text-primary">{originHint}</p>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
               <div className="space-y-2">
                 <Label htmlFor="origin-lat">Start Latitude</Label>
                 <Input
@@ -468,6 +468,7 @@ export default function LocationPreviewButton({
                   value={originLatInput}
                   onChange={(event) => setOriginLatInput(event.target.value)}
                   onBlur={applyTypedCoordinates}
+                  className="h-10 sm:h-11 text-sm sm:text-base"
                 />
               </div>
               <div className="space-y-2">
@@ -477,28 +478,29 @@ export default function LocationPreviewButton({
                   value={originLngInput}
                   onChange={(event) => setOriginLngInput(event.target.value)}
                   onBlur={applyTypedCoordinates}
+                  className="h-10 sm:h-11 text-sm sm:text-base"
                 />
               </div>
               <div className="flex items-end">
-                <Button type="button" variant="outline" className="w-full" onClick={applyTypedCoordinates}>
+                <Button type="button" variant="outline" className="w-full h-10 sm:h-11 text-sm sm:text-base" onClick={applyTypedCoordinates}>
                   Update Start Pin
                 </Button>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 sm:p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Direct Distance</p>
-              <p className="text-xl font-semibold">{directDistance != null ? `${directDistance.toFixed(2)} km` : "N/A"}</p>
+              <p className="text-lg sm:text-xl font-semibold">{directDistance != null ? `${directDistance.toFixed(2)} km` : "N/A"}</p>
             </div>
-            <div className="rounded-lg border border-border bg-muted/30 p-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 sm:p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Route Distance</p>
-              <p className="text-xl font-semibold">{routeDistance != null ? `${routeDistance.toFixed(2)} km` : "N/A"}</p>
+              <p className="text-lg sm:text-xl font-semibold">{routeDistance != null ? `${routeDistance.toFixed(2)} km` : "N/A"}</p>
             </div>
-            <div className="rounded-lg border border-border bg-muted/30 p-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 sm:p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Estimated Time</p>
-              <p className="text-xl font-semibold">{routeDuration != null ? `${Math.round(routeDuration)} min` : "N/A"}</p>
+              <p className="text-lg sm:text-xl font-semibold">{routeDuration != null ? `${Math.round(routeDuration)} min` : "N/A"}</p>
             </div>
           </div>
 
@@ -523,7 +525,7 @@ export default function LocationPreviewButton({
 
           {routeError && <p className="text-xs text-warning">{routeError}</p>}
 
-          <div className="h-[420px] rounded-lg border overflow-hidden">
+          <div className="h-[260px] sm:h-[420px] rounded-lg border overflow-hidden">
             {destination ? (
               <MapContainer
                 center={mapCenter}
