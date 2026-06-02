@@ -2,6 +2,7 @@ import { AlertCircle, Building2, CalendarDays, FileText, Filter, MapPin, Search,
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { YouthOrganization } from "@/lib/youthCatalog";
@@ -56,16 +57,12 @@ export default function Organizations() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-10 sm:py-12 md:py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-[1.9rem] sm:text-4xl md:text-5xl font-heading font-bold text-secondary-foreground mb-3 sm:mb-4">
-              Youth Organizations
-            </h1>
-            <p className="text-sm sm:text-base text-secondary-foreground/70 max-w-xl md:max-w-2xl mx-auto leading-relaxed">
-              Prototype organization records are shown for system demonstration and testing purposes.
-            </p>
-          </div>
-        </section>
+        <PageHero
+          align="center"
+          title="Youth Organizations"
+          description="Prototype organization records are shown for system demonstration and testing purposes."
+          titleClassName="mb-3 sm:mb-4"
+        />
 
         <section className="py-6 sm:py-8 md:py-12">
           <div className="container mx-auto px-4">

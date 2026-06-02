@@ -1,13 +1,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { BarChart3, DollarSign, MapPin, Shield, Users } from "lucide-react";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import ComplianceBadge from "@/components/ComplianceBadge";
 import { fetchFinancialDashboardData, type FinancialDashboardRow } from "@/lib/data-api";
 
@@ -44,6 +45,22 @@ const statusMarkerColor = (status: "compliant" | "pending" | "overdue") => {
   if (status === "overdue") return "text-destructive";
   if (status === "pending") return "text-warning";
   return "text-primary";
+};
+
+const MapSizeFix = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [map]);
+
+  return null;
 };
 
 export default function BarangayMap() {
@@ -90,39 +107,44 @@ export default function BarangayMap() {
   const data = selected ? rowByBarangay[selected] : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-10 sm:py-12">
-          <div className="container">
-            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Barangay Map</h1>
-            <p className="text-secondary-foreground/70 mt-2 max-w-xl text-sm leading-relaxed">
-              Click any marker to view youth population, budget utilization, activities, and compliance status.
-            </p>
-          </div>
-        </section>
+        <PageHero
+          title="Barangay Map"
+          description="Click any marker to view youth population, budget utilization, activities, and compliance status."
+        />
 
-        <section className="container py-6 sm:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
+        <section className="container py-5 pb-8 sm:py-7 sm:pb-10">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-8">
             <div className="lg:col-span-2">
-              <div className="bg-card rounded-lg border p-3.5 sm:p-4 card-shadow">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+              <div className="relative z-0 bg-card rounded-lg border p-3.5 sm:p-4 card-shadow">
+                <div className="flex flex-col gap-2 mb-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h2 className="font-heading font-semibold">Interactive Barangay Map</h2>
+                    <MapPin className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
+                    <h2 className="font-heading text-[15px] font-semibold sm:text-base">
+                      Interactive Barangay Map
+                    </h2>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-none text-muted-foreground sm:gap-x-3 sm:text-xs">
                     <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" />Compliant</span>
                     <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" />Pending</span>
                     <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-destructive" />Overdue</span>
                   </div>
                 </div>
 
-                <div className="h-[340px] sm:h-[420px] lg:h-[460px] w-full rounded-lg overflow-hidden border">
+                <div className="relative z-0 h-[300px] w-full overflow-hidden rounded-lg border sm:h-[360px] md:h-[420px] [&_.leaflet-container]:z-0 [&_.leaflet-control-attribution]:bg-background/90 [&_.leaflet-control-attribution]:px-2 [&_.leaflet-control-attribution]:py-1 [&_.leaflet-control-attribution]:text-[10px] [&_.leaflet-control-zoom]:ml-2 [&_.leaflet-control-zoom]:mt-2 [&_.leaflet-control-zoom]:overflow-hidden [&_.leaflet-control-zoom]:shadow-sm [&_.leaflet-control-zoom_a]:h-8 [&_.leaflet-control-zoom_a]:w-8 [&_.leaflet-control-zoom_a]:leading-8">
                   {isLoading ? (
                     <div className="h-full grid place-items-center text-sm text-muted-foreground">Loading map data...</div>
                   ) : (
-                    <MapContainer center={mapCenter} zoom={13} scrollWheelZoom className="h-full w-full">
+                    <MapContainer
+                      center={mapCenter}
+                      zoom={13}
+                      scrollWheelZoom
+                      className="h-full w-full"
+                      style={{ width: "100%", height: "100%" }}
+                    >
+                      <MapSizeFix />
                       <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -153,50 +175,59 @@ export default function BarangayMap() {
             <div>
               {data && selected ? (
                 <div className="bg-card rounded-lg border p-4 sm:p-6 card-shadow animate-fade-up">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-heading font-bold text-lg">{selected}</h3>
+                  <div className="mb-3 flex items-start justify-between gap-3 sm:mb-4">
+                    <h3 className="font-heading text-[17px] font-bold leading-tight sm:text-lg">{selected}</h3>
                     <ComplianceBadge status={data.complianceStatus} />
                   </div>
 
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
-                      <Users className="h-4 w-4 text-primary" />
+                  <div className="grid gap-2.5 sm:gap-3">
+                    <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 sm:items-center sm:p-3.5">
+                      <Users className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:mt-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Youth Population</p>
-                        <p className="font-semibold">{data.youthPopulation.toLocaleString()}</p>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Youth Population</p>
+                        <p className="font-semibold leading-tight">{data.youthPopulation.toLocaleString()}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
-                      <DollarSign className="h-4 w-4 text-accent" />
+                    <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 sm:items-center sm:p-3.5">
+                      <DollarSign className="mt-0.5 h-4 w-4 shrink-0 text-accent sm:mt-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">SK Budget</p>
-                        <p className="font-semibold">PHP {data.skBudget.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">Utilized: PHP {data.utilizedBudget.toLocaleString()}</p>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">SK Budget</p>
+                        <p className="font-semibold leading-tight">PHP {data.skBudget.toLocaleString()}</p>
+                        <p className="text-xs leading-tight text-muted-foreground">
+                          Utilized: PHP {data.utilizedBudget.toLocaleString()}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
-                      <BarChart3 className="h-4 w-4 text-primary" />
+                    <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 sm:items-center sm:p-3.5">
+                      <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:mt-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Activities and Participants</p>
-                        <p className="font-semibold">{data.activities} activities, {data.participants.toLocaleString()} participants</p>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Activities and Participants</p>
+                        <p className="font-semibold leading-tight">
+                          {data.activities} activities, {data.participants.toLocaleString()} participants
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-muted/50 rounded-lg">
-                      <Shield className="h-4 w-4 text-primary" />
+                    <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 sm:items-center sm:p-3.5">
+                      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:mt-0" />
                       <div>
-                        <p className="text-xs text-muted-foreground">SK Chairperson</p>
-                        <p className="font-semibold">{data.skChairperson}</p>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground">SK Chairperson</p>
+                        <p className="font-semibold leading-tight">{data.skChairperson}</p>
                       </div>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="bg-card rounded-lg border p-5 sm:p-8 card-shadow text-center">
-                  <MapPin className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                  <p className="text-muted-foreground text-sm">Click a marker to view barangay details</p>
+                <div className="bg-card rounded-lg border p-4 sm:p-6 card-shadow text-center">
+                  <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-muted/60 sm:h-14 sm:w-14">
+                    <MapPin className="h-6 w-6 text-muted-foreground/35 sm:h-7 sm:w-7" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">No barangay selected yet</p>
+                  <p className="mx-auto mt-1 max-w-[18rem] text-[13px] leading-relaxed text-muted-foreground sm:text-sm">
+                    Tap any marker on the map to see youth population, budget use, activities, and compliance status.
+                  </p>
                 </div>
               )}
             </div>

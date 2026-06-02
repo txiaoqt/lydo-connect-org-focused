@@ -209,10 +209,10 @@ export default function TransparencyBoard() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <div className="pt-16">
-        <section className="container py-6 sm:py-8 md:py-10 space-y-4 sm:space-y-6">
+        <section className="container py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
           <div className="text-center">
             <div className="inline-flex flex-wrap justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-muted p-1 mb-3 sm:mb-4">
               {[{ label: "SM", active: false }, { label: "LYDO", active: false }, { label: "LYDC", active: false }, { label: "SK", active: true }].map((item) => (
@@ -260,7 +260,50 @@ export default function TransparencyBoard() {
                 {isLoadingData ? (
                   <div className="p-6 text-sm text-muted-foreground">Loading board data...</div>
                 ) : rows.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <>
+                    <div className="md:hidden p-4 sm:p-5">
+                      <Accordion type="multiple" className="space-y-3">
+                        {rows.map((row) => (
+                          <AccordionItem key={row.barangay} value={row.barangay} className="overflow-hidden rounded-xl border bg-background shadow-sm">
+                            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                              <div className="flex w-full items-start justify-between gap-3 pr-1 text-left">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-foreground break-words">{row.barangay}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground break-words">{row.remarks}</p>
+                                </div>
+                                <div className="shrink-0">{statusBadge(row.remarks)}</div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-4 pb-4">
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="rounded-lg border bg-muted/20 p-2.5">
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">CBYDP</p>
+                                  <div className="mt-1">{statusIcon(row.cbydp)}</div>
+                                </div>
+                                <div className="rounded-lg border bg-muted/20 p-2.5">
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">ABYIP</p>
+                                  <div className="mt-1">{statusIcon(row.abyip)}</div>
+                                </div>
+                                <div className="rounded-lg border bg-muted/20 p-2.5">
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Annual Budget</p>
+                                  <div className="mt-1">{statusIcon(row.annualBudget)}</div>
+                                </div>
+                                <div className="rounded-lg border bg-muted/20 p-2.5">
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">RCB</p>
+                                  <div className="mt-1">{statusIcon(row.rcb)}</div>
+                                </div>
+                                <div className="col-span-2 rounded-lg border bg-muted/20 p-2.5">
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">MIL / PR</p>
+                                  <div className="mt-1">{statusIcon(row.mil)}</div>
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    </div>
+
+                    <div className="hidden md:block overflow-x-auto">
                     <table className="w-full min-w-[860px] text-xs sm:text-sm">
                       <thead>
                         <tr className="bg-muted/60 border-b">
@@ -287,7 +330,8 @@ export default function TransparencyBoard() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="p-6 text-sm text-muted-foreground">No board records in Supabase yet.</div>
                 )}

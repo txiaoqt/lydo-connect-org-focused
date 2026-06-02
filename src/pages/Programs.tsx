@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import ProgramCard from "@/components/ProgramCard";
 import type { YouthProgram } from "@/lib/youthCatalog";
 import { fetchPrograms } from "@/lib/data-api";
@@ -48,12 +49,12 @@ const Programs = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-10 sm:py-12 md:py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-[1.9rem] sm:text-4xl md:text-5xl font-heading font-bold text-secondary-foreground mb-3 sm:mb-4">Youth Programs</h1>
-            <p className="text-sm sm:text-base text-secondary-foreground/70 max-w-xl md:max-w-2xl mx-auto leading-relaxed">Includes core LYDO initiatives such as Hirayang Kabataan and Simula, alongside published local youth development activities.</p>
-          </div>
-        </section>
+        <PageHero
+          align="center"
+          title="Youth Programs"
+          description="Includes core LYDO initiatives such as Hirayang Kabataan and Simula, alongside published local youth development activities."
+          titleClassName="mb-3 sm:mb-4"
+        />
 
         <section className="py-6 sm:py-8 md:py-12">
           <div className="container mx-auto px-4">

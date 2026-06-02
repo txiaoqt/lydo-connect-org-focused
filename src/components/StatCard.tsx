@@ -20,10 +20,10 @@ export default function StatCard({
   if (compact) {
     return (
       <div className="text-center">
-        <div className="text-4xl md:text-5xl font-heading font-bold text-primary-foreground mb-1">
+        <div className="mb-1 text-3xl font-heading font-bold text-primary-foreground sm:text-4xl md:text-5xl">
           {value}
         </div>
-        <div className="text-sm text-primary-foreground/70">{label}</div>
+        <div className="text-[11px] leading-tight text-primary-foreground/70 sm:text-sm">{label}</div>
       </div>
     );
   }
@@ -43,16 +43,16 @@ export default function StatCard({
   };
 
   return (
-    <div className={`rounded-lg border p-5 card-shadow transition-all duration-200 hover:card-shadow-hover ${variantStyles[variant]}`}>
+    <div className={`rounded-lg border p-4 sm:p-5 card-shadow transition-all duration-200 hover:card-shadow-hover ${variantStyles[variant]}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-muted-foreground font-semibold">{label}</p>
-          <p className="text-2xl font-bold font-heading mt-1">{value}</p>
-          {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+          <p className="text-xs font-semibold text-muted-foreground sm:text-sm">{label}</p>
+          <p className="mt-1 text-xl font-heading font-bold sm:text-2xl">{value}</p>
+          {description && <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">{description}</p>}
         </div>
         {Icon && (
-          <div className={`p-2.5 rounded-lg border border-current/15 ${iconStyles[variant]}`}>
-            <Icon className="h-5 w-5" />
+          <div className={`rounded-lg border border-current/15 p-2 sm:p-2.5 ${iconStyles[variant]}`}>
+            <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
           </div>
         )}
       </div>

@@ -69,35 +69,35 @@ const ProgramCard = ({
 
   return (
     <div className="h-full rounded-lg border border-border bg-card card-shadow hover:card-shadow-hover transition-all duration-200 overflow-hidden group">
-      <div className="p-4 sm:p-5 h-full flex flex-col">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
-          <span className={`text-[11px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg ${typeColors[type]}`}>
+      <div className="flex h-full flex-col p-3.5 sm:p-5">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-xs ${typeColors[type]}`}>
             {type.charAt(0).toUpperCase() + type.slice(1)}
           </span>
-          <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">{sector}</span>
+          <span className="text-[10px] font-semibold text-muted-foreground sm:text-xs">{sector}</span>
           {isJoined && (
-            <span className="text-[11px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-success/12 text-success">
+            <span className="rounded-md bg-success/12 px-2 py-0.5 text-[10px] font-bold text-success sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-xs">
               {joinedLabel}
             </span>
           )}
         </div>
-        <h3 className="font-heading font-bold text-foreground text-base sm:text-lg leading-snug mb-2 min-h-[2.5rem] sm:min-h-[3.25rem] line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="mb-1.5 min-h-[2.25rem] font-heading text-sm font-bold leading-snug text-foreground transition-colors group-hover:text-primary sm:mb-2 sm:min-h-[3.25rem] sm:text-lg line-clamp-2">
           {title}
         </h3>
-        <div className="min-h-[4.5rem] sm:min-h-[4.5rem] md:min-h-[5.25rem]">
-          <p className="text-muted-foreground text-sm leading-5 sm:leading-6 line-clamp-3 md:line-clamp-3">{description}</p>
+        <div className="min-h-[3.75rem] sm:min-h-[4.5rem] md:min-h-[5.25rem]">
+          <p className="line-clamp-3 text-sm leading-5 text-muted-foreground sm:leading-6 md:line-clamp-3">{description}</p>
         </div>
         {recordHref && (
           <Link
             to={showModeActions ? detailsHref : recordHref}
-            className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80"
+            className="mt-1.5 inline-flex items-center gap-1 text-sm font-bold text-primary hover:text-primary/80"
           >
             See more
             <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </Link>
         )}
-        <div className="mt-3 border-t border-border pt-3 sm:pt-4">
-          <div className="space-y-2 text-sm text-muted-foreground min-h-[6.5rem] sm:min-h-[6.75rem]">
+        <div className="mt-2.5 border-t border-border pt-2.5 sm:mt-3 sm:pt-4">
+          <div className="min-h-[5.75rem] space-y-1.5 text-sm text-muted-foreground sm:min-h-[6.75rem] sm:space-y-2">
           {displayDate && (
             <div className="flex items-start gap-2.5 leading-relaxed">
               <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 shrink-0 text-primary" />
@@ -133,7 +133,7 @@ const ProgramCard = ({
           ) : null}
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-2 mt-auto pt-3 sm:pt-4">
+        <div className="mt-auto grid grid-cols-1 gap-2 pt-2.5 sm:pt-4">
           {recordHref && (
             showModeActions ? (
               <div className="grid grid-cols-2 gap-2">

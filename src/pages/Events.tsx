@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageHero from "@/components/PageHero";
 import ProgramCard from "@/components/ProgramCard";
 import type { YouthEvent } from "@/lib/youthCatalog";
 import { fetchEvents } from "@/lib/data-api";
@@ -41,14 +42,12 @@ const Events = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-16">
-        <section className="hero-gradient py-10 sm:py-12 md:py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-[1.9rem] sm:text-4xl md:text-5xl font-heading font-bold text-secondary-foreground mb-3 sm:mb-4">Events</h1>
-            <p className="text-sm sm:text-base text-secondary-foreground/70 max-w-xl md:max-w-2xl mx-auto leading-relaxed">
-              Official LYDO event and activity highlights from municipal public announcements, including completed youth programs.
-            </p>
-          </div>
-        </section>
+        <PageHero
+          align="center"
+          title="Events"
+          description="Official LYDO event and activity highlights from municipal public announcements, including completed youth programs."
+          titleClassName="mb-3 sm:mb-4"
+        />
 
         <section className="py-6 sm:py-8 md:py-12">
           <div className="container mx-auto px-4">
