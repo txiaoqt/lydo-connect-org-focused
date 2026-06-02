@@ -334,7 +334,7 @@ export default function EventRecord() {
                   <div className="space-y-3 sm:space-y-4">
                     <h2 className="text-base sm:text-lg font-semibold">Official Source Post</h2>
                     {event.sourcePostUrl ? (
-                      <SourcePostEmbed sourcePostUrl={event.sourcePostUrl} title={event.title} />
+                      <SourcePostEmbed sourcePostUrl={event.sourcePostUrl} title={event.title} instanceKey={event.id} />
                     ) : (
                       <div className="rounded-xl border bg-muted/25 p-4 sm:p-5 text-sm text-muted-foreground">
                         No source post URL was provided for this record.

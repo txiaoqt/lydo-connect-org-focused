@@ -6,15 +6,21 @@ import { getFacebookEmbedIssue, normalizeSourcePostUrl, toFacebookEmbedConfig } 
 type SourcePostEmbedProps = {
   sourcePostUrl?: string | null;
   title: string;
+  instanceKey?: string;
   className?: string;
 };
 
-export default function SourcePostEmbed({ sourcePostUrl, title, className }: SourcePostEmbedProps) {
+export default function SourcePostEmbed({ sourcePostUrl, title, instanceKey, className }: SourcePostEmbedProps) {
   const normalizedSourceUrl = normalizeSourcePostUrl(sourcePostUrl);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const embedRootRef = useRef<HTMLDivElement | null>(null);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
-  const [isSdkReady, setIsSdkReady] = useState(false);
+  const embedIssue = getFacebookEmbedIssue(normalizedSourceUrl);
+  const embedConfig = useMemo(() => toFacebookEmbedConfig(normalizedSourceUrl, measuredWidth ?? 500), [measuredWidth, normalizedSourceUrl]);
+  const openLabel = embedConfig?.kind === "page" ? "Open Source Page" : "Open Source Post";
+  const embedWidth = Math.max(280, Math.min(750, measuredWidth ?? 500));
+  const showLiveEmbed = Boolean(embedConfig);
+  const embedRenderKey = `${instanceKey ?? "source"}-${normalizedSourceUrl ?? "none"}-${embedWidth}`;
+  const embedHeight = embedConfig?.kind === "video" ? 460 : embedConfig?.kind === "page" ? 500 : 640;
 
   useEffect(() => {
     if (!normalizedSourceUrl) return;
@@ -38,44 +44,7 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
     return () => observer.disconnect();
   }, [normalizedSourceUrl]);
 
-  useEffect(() => {
-    if (!normalizedSourceUrl) return;
-
-    const existingScript = document.getElementById("facebook-jssdk");
-    if (existingScript) {
-      setIsSdkReady(Boolean((window as typeof window & { FB?: { XFBML?: { parse: (node?: Element | null) => void } } }).FB));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "facebook-jssdk";
-    script.async = true;
-    script.defer = true;
-    script.crossOrigin = "anonymous";
-    script.src = "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v19.0";
-    script.onload = () => {
-      setIsSdkReady(true);
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      script.onload = null;
-    };
-  }, [normalizedSourceUrl]);
-
   if (!normalizedSourceUrl) return null;
-
-  const embedIssue = getFacebookEmbedIssue(normalizedSourceUrl);
-  const embedConfig = useMemo(() => toFacebookEmbedConfig(normalizedSourceUrl, measuredWidth ?? 500), [measuredWidth, normalizedSourceUrl]);
-  const openLabel = embedConfig?.kind === "page" ? "Open Source Page" : "Open Source Post";
-  const embedWidth = Math.max(320, Math.min(750, measuredWidth ?? 500));
-  const showLiveEmbed = Boolean(embedConfig);
-
-  useEffect(() => {
-    if (!isSdkReady || !showLiveEmbed || !embedRootRef.current) return;
-    const fb = (window as typeof window & { FB?: { XFBML?: { parse: (node?: Element | null) => void } } }).FB;
-    fb?.XFBML?.parse(embedRootRef.current);
-  }, [isSdkReady, measuredWidth, showLiveEmbed]);
 
   return (
     <div ref={containerRef} className={cn("space-y-3", className)}>
@@ -90,29 +59,18 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
 
       {showLiveEmbed && embedConfig ? (
         <div className="relative overflow-hidden rounded-xl border bg-card">
-          <div
-            ref={embedRootRef}
-            className={cn("fb-embed-root", {
-              "fb-post": embedConfig.kind === "post",
-              "fb-video": embedConfig.kind === "video",
-              "fb-page": embedConfig.kind === "page",
-            })}
-            data-href={normalizedSourceUrl}
-            data-width={embedWidth}
-            data-show-text={embedConfig.kind !== "page" ? "true" : undefined}
-            data-adapt-container-width="true"
-            data-height={embedConfig.kind === "video" ? 460 : 640}
-            data-tabs={embedConfig.kind === "page" ? "timeline" : undefined}
-            data-small-header={embedConfig.kind === "page" ? "false" : undefined}
-            data-hide-cover={embedConfig.kind === "page" ? "false" : undefined}
-            data-show-facepile={embedConfig.kind === "page" ? "true" : undefined}
-          >
-            {!isSdkReady ? (
-              <div className="grid h-[640px] place-items-center bg-muted/20 text-sm text-muted-foreground">
-                Loading Facebook preview...
-              </div>
-            ) : null}
-          </div>
+          <iframe
+            key={embedRenderKey}
+            title={`${title} Facebook source preview`}
+            src={embedConfig.embedUrl}
+            width="100%"
+            height={embedHeight}
+            className="block w-full border-0 bg-muted/20"
+            style={{ height: embedHeight }}
+            loading="lazy"
+            allow="encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+          />
           <a
             href={normalizedSourceUrl}
             target="_blank"
