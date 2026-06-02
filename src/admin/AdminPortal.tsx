@@ -9,7 +9,7 @@ import { Barangays } from "./pages/Barangays";
 import { Documents } from "./pages/Documents";
 import { TransparencyBoardAdmin } from "./pages/TransparencyBoardAdmin";
 import { FinancialDss } from "./pages/FinancialDss";
-import { CitizenDeskAdmin } from "./pages/CitizenDesk";
+import { YouthDeskAdmin } from "./pages/YouthDesk";
 import { UsersPage } from "./pages/Users";
 import { Roles } from "./pages/Roles";
 import { AuditLogs } from "./pages/AuditLogs";
@@ -32,7 +32,7 @@ export default function AdminPortal() {
     documents: "Transparency Docs",
     "transparency-board": "Transparency Board",
     "financial-dss": "Financial DSS",
-    "citizen-desk": "Citizen Desk",
+    "youth-desk": "Youth Desk",
     "audit-logs": "Audit Logs",
     users: "Users",
     roles: "Roles & Permissions",
@@ -101,8 +101,8 @@ export default function AdminPortal() {
         return <TransparencyBoardAdmin />;
       case "financial-dss":
         return <FinancialDss />;
-      case "citizen-desk":
-        return <CitizenDeskAdmin />;
+      case "youth-desk":
+        return <YouthDeskAdmin />;
       case "audit-logs":
         return <AuditLogs />;
       case "users":

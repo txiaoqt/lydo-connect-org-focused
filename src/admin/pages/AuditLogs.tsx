@@ -33,8 +33,8 @@ const TABLE_LABELS: Record<string, string> = {
   barangay_youth_metrics: "Barangay Youth Metrics",
   compliance_board_status: "Compliance Board",
   monthly_compliance: "Monthly Compliance",
-  ticket_types: "Citizen Desk Ticket Types",
-  citizen_tickets: "Citizen Desk Tickets",
+  ticket_types: "Youth Desk Ticket Types",
+  youth_tickets: "Youth Desk Tickets",
   event_registrations: "Event Registrations",
   program_registrations: "Program Registrations",
   admin_accounts: "Admin Accounts",
@@ -606,3 +606,4 @@ export const AuditLogs = () => {
     </div>
   );
 };
+

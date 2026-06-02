@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
@@ -128,7 +128,7 @@ def add_matrix_table(document: Document) -> None:
         ("Organizations (Public)", "Browse organizations and view details", "Maintains organization records", "Community partner visibility"),
         ("Transparency Reports", "Search and export public disclosures", "Uploads and maintains documents", "Transparency and compliance access"),
         ("Transparency Board and Financial Disclosure", "Monitor compliance and budget utilization", "Encodes board and financial data", "Public accountability"),
-        ("Citizen Desk (Public)", "Submit and track tickets", "Updates ticket status and handling notes", "Citizen request loop"),
+        ("Youth Desk (Public)", "Submit and track tickets", "Updates ticket status and handling notes", "Youth request loop"),
         ("Admin Dashboard", "Not accessible", "Monitor KPIs, filters, quick actions", "Control center"),
         ("Programs / Events Admin", "Not accessible", "Create, edit, filter, archive records", "Program lifecycle control"),
         ("Registrations Admin", "Not accessible", "Review participants, sync, export CSV", "Attendance and data ops"),
@@ -137,7 +137,7 @@ def add_matrix_table(document: Document) -> None:
         ("Transparency Docs Admin", "Not accessible", "Upload files and metadata", "Disclosure registry maintenance"),
         ("Transparency Board Config Admin", "Not accessible", "Maintain quarterly/monthly compliance rows", "Compliance publishing inputs"),
         ("Financial DSS Admin", "Not accessible", "Maintain rows, budgets, exports", "Financial analytics and reporting"),
-        ("Citizen Desk Admin", "Not accessible", "Filter tickets and update statuses", "Service response management"),
+        ("Youth Desk Admin", "Not accessible", "Filter tickets and update statuses", "Service response management"),
         ("Users / Roles / Audit Logs", "Not accessible", "Govern access and trace changes", "Security and accountability"),
         ("Trends and Analytics", "Not accessible", "Analyze outcomes, encode result records, export reports", "Decision intelligence"),
     ]
@@ -200,7 +200,7 @@ def add_tagged_non_negotiables_section(document: Document) -> None:
             "Form errors stop registration submission until corrected.",
         ),
         (
-            "Sign in to submit Citizen Desk ticket",
+            "Sign in to submit Youth Desk ticket",
             "[NON-NEGOTIABLE]",
             "Ticket submission button and logic require authenticated user session.",
         ),
@@ -281,7 +281,7 @@ def add_tagged_non_negotiables_section(document: Document) -> None:
 
     document.add_heading("7.4 Direct Clarification on Login Example", level=2)
     document.add_paragraph(
-        "Your interpretation is correct: for Youth users, login is [NEGOTIABLE] for browsing public content, but it becomes [NON-NEGOTIABLE] for protected actions like registration, profile access, and Citizen Desk submission."
+        "Your interpretation is correct: for Youth users, login is [NEGOTIABLE] for browsing public content, but it becomes [NON-NEGOTIABLE] for protected actions like registration, profile access, and Youth Desk submission."
     )
 
 
@@ -295,7 +295,7 @@ def build_document() -> Document:
     document.add_paragraph(
         "Ang LYDO Connect ay may dalawang pangunahing user groups na may malinaw na separation ng access at responsibilities: Youth users at Admin users."
     )
-    add_bullet(document, "Youth users operate in public/youth-facing routes (home, programs, events, organizations, transparency, profile, citizen desk).")
+    add_bullet(document, "Youth users operate in public/youth-facing routes (home, programs, events, organizations, transparency, profile, Youth Desk).")
     add_bullet(document, "Admin users operate inside the Admin Portal (/admin) with role-protected access.")
     add_bullet(document, "Non-admin users cannot open protected admin pages; admins are redirected away from public-only workflows when needed.")
     add_bullet(document, "Authenticated youth users are required to accept active Terms and Privacy policy before continuing.")
@@ -388,15 +388,15 @@ def build_document() -> Document:
 
     add_step_block(
         document,
-        "2.6 Transparency and Citizen Service Flow",
+        "2.6 Transparency and Youth Service Flow",
         [
             "Open transparency pages to check disclosures, board status, financial views, and barangay map data.",
             "Use report filters and export options in disclosure registry.",
-            "Open Citizen Desk to submit concerns/requests and monitor personal ticket statuses.",
+            "Open Youth Desk to submit concerns/requests and monitor personal ticket statuses.",
         ],
         [
             "Transparency pages expose public accountability information for youth/public viewers.",
-            "Citizen Desk creates trackable tickets with status lifecycle (received to closed).",
+            "Youth Desk creates trackable tickets with status lifecycle (received to closed).",
             "Youth can monitor ticket updates in their own My Tickets area.",
         ],
     )
@@ -465,12 +465,12 @@ def build_document() -> Document:
             "Transparency Docs: upload/manage disclosure documents and metadata.",
             "Transparency Board Config: maintain board rows and monthly compliance rows.",
             "Financial DSS: maintain financial rows/budgets, review charts, export Excel/PDF.",
-            "Citizen Desk Admin: filter tickets, open details, update status and handling notes.",
+            "Youth Desk Admin: filter tickets, open details, update status and handling notes.",
         ],
         [
             "Public transparency pages are fed by these admin-maintained records.",
             "Financial and compliance data become traceable and report-ready.",
-            "Citizen requests receive lifecycle handling from received to closed.",
+            "Youth requests receive lifecycle handling from received to closed.",
         ],
     )
 
@@ -521,7 +521,7 @@ def build_document() -> Document:
         "Registrations feed admin Registrations module and analytics datasets.",
         "Admin monitors participation quality, sync health, and low-performing records.",
         "Admin encodes outcome records and uploads supporting transparency documents.",
-        "Public users view updated transparency outputs and service status via Citizen Desk.",
+        "Public users view updated transparency outputs and service status via Youth Desk.",
         "Governance modules (Users, Roles, Audit Logs) ensure continuity and accountability.",
     ]
     for step in lifecycle_steps:
@@ -531,7 +531,7 @@ def build_document() -> Document:
 
     document.add_heading("6. Condensed Role-Based Flow Map", level=1)
     document.add_paragraph("Youth flow (simplified):")
-    youth_flow = "Discover -> Sign Up/Sign In -> Accept Policy -> Browse/Join Programs and Events -> Manage Profile -> Submit/Track Citizen Desk Ticket -> Repeat Participation"
+    youth_flow = "Discover -> Sign Up/Sign In -> Accept Policy -> Browse/Join Programs and Events -> Manage Profile -> Submit/Track Youth Desk Ticket -> Repeat Participation"
     add_bullet(document, youth_flow)
     document.add_paragraph("Admin flow (simplified):")
     admin_flow = "Admin Sign In -> Dashboard -> Maintain Core Records -> Monitor Registrations and Sync -> Manage Transparency and Financial Data -> Run Trends and Analytics -> Govern Users/Roles/Audit -> Report and Iterate"
@@ -562,3 +562,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

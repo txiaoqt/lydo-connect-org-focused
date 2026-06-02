@@ -19,7 +19,7 @@ const siteMapSections: Array<{ title: string; links: Array<{ label: string; href
       { label: "Programs", href: "/programs" },
       { label: "Events", href: "/events" },
       { label: "Organizations", href: "/organizations" },
-      { label: "Youth Desk", href: "/feedback" },
+      { label: "Youth Desk", href: "/transparency/youth-desk" },
       { label: "Profile", href: "/profile" },
     ],
   },

@@ -65,7 +65,7 @@ type AdminTab =
   | "documents"
   | "transparency-board"
   | "financial-dss"
-  | "citizen-desk"
+  | "youth-desk"
   | "audit-logs"
   | "users"
   | "roles"

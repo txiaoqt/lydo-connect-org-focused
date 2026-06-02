@@ -144,7 +144,7 @@ const Index = () => {
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-card border border-border rounded-xl p-8 card-shadow hover:card-shadow-hover transition-all">
               <h2 className="text-2xl font-bold mb-3">Youth Zone</h2>
-              <p className="text-muted-foreground mb-6">Programs, events, organizations, and advocacy groups for young citizens.</p>
+              <p className="text-muted-foreground mb-6">Programs, events, organizations, and advocacy groups for young people.</p>
               <div className="grid sm:grid-cols-2 gap-4">
                 {youthFeatures.map((feature) => (
                   <Link key={feature.title} to={feature.href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">

@@ -1,4 +1,4 @@
-begin;
+﻿begin;
 
 -- Tracks row-level INSERT/UPDATE/DELETE changes on admin-managed tables.
 -- Keeps actor context from auth.jwt() + user profile/role tables when available.
@@ -231,7 +231,7 @@ declare
     'compliance_board_status',
     'monthly_compliance',
     'ticket_types',
-    'citizen_tickets',
+    'youth_tickets',
     'event_registrations',
     'program_registrations'
   ];
@@ -251,3 +251,4 @@ begin
 end $$;
 
 commit;
+

@@ -19,7 +19,7 @@ const navItems = [
 ];
 
 const transparencyItems = [
-  { label: "Citizen Desk", href: "/feedback" },
+  { label: "Youth Desk", href: "/transparency/youth-desk" },
   { label: "Disclosure Registry", href: "/transparency/reports" },
   { label: "Transparency Board", href: "/transparency/board" },
   { label: "Financial Disclosure", href: "/transparency/financial-disclosure" },

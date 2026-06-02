@@ -19,16 +19,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  fetchMyCitizenTickets,
+  fetchMyYouthTickets,
   fetchTicketTypeOptions,
-  submitCitizenTicket,
+  submitYouthTicket,
   type TicketTypeOption,
 } from "@/lib/data-api";
 
 type TicketStatus = "received" | "in_progress" | "resolved" | "closed";
 type TicketViewFilter = "recent" | TicketStatus;
 
-type CitizenTicketItem = {
+type YouthTicketItem = {
   id: string;
   referenceNo: string;
   type: string;
@@ -71,13 +71,13 @@ const formatDateTime = (value: string) => {
   });
 };
 
-export default function CitizenDesk() {
+export default function YouthDesk() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const profileEmail = user?.email ?? "";
 
   const [ticketOptions, setTicketOptions] = useState<TicketTypeOption[]>([]);
-  const [tickets, setTickets] = useState<CitizenTicketItem[]>([]);
+  const [tickets, setTickets] = useState<YouthTicketItem[]>([]);
   const [type, setType] = useState<TicketTypeOption | "">("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -119,7 +119,7 @@ export default function CitizenDesk() {
       setType((current) => (current && options.includes(current) ? current : options[0] ?? ""));
 
       if (isAuthenticated && user?.id) {
-        const myTickets = await fetchMyCitizenTickets(user.id);
+        const myTickets = await fetchMyYouthTickets(user.id);
         if (!mounted) return;
         setTickets(
           myTickets.map((ticket) => ({
@@ -150,7 +150,7 @@ export default function CitizenDesk() {
     let mounted = true;
     const refreshMyTickets = async () => {
       setIsSyncing(true);
-      const myTickets = await fetchMyCitizenTickets(user.id);
+      const myTickets = await fetchMyYouthTickets(user.id);
       if (!mounted) return;
       setTickets(
         myTickets.map((ticket) => ({
@@ -212,7 +212,7 @@ export default function CitizenDesk() {
 
     setIsSubmitting(true);
     try {
-      const created = await submitCitizenTicket({
+      const created = await submitYouthTicket({
         type,
         subject: subject.trim(),
         message: message.trim(),
@@ -220,7 +220,7 @@ export default function CitizenDesk() {
         userId: user?.id ?? null,
       });
 
-      const item: CitizenTicketItem = {
+      const item: YouthTicketItem = {
         id: created.id,
         referenceNo: created.reference_no,
         type,
@@ -268,7 +268,7 @@ export default function CitizenDesk() {
       <div className="pt-16">
         <section className="hero-gradient py-10 sm:py-12">
           <div className="container">
-            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Citizen Desk (FOI / Ugnayan)</h1>
+            <h1 className="text-[1.85rem] sm:text-3xl md:text-4xl font-bold text-secondary-foreground">Youth Desk (FOI / Ugnayan)</h1>
             <p className="text-secondary-foreground/70 mt-2 max-w-2xl text-sm leading-relaxed">
               File information requests, complaints, suggestions, and service requests linked to your account.
             </p>

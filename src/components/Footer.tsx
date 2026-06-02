@@ -22,7 +22,7 @@ const Footer = () => {
             <h4 className="font-heading font-semibold mb-4 text-secondary-foreground">Platform</h4>
             <ul className="space-y-2 text-sm text-secondary-foreground/70">
               <li><Link to="/about" className="hover:text-primary transition-colors">About</Link></li>
-              <li><Link to="/feedback" className="hover:text-primary transition-colors">Youth Desk</Link></li>
+              <li><Link to="/transparency/youth-desk" className="hover:text-primary transition-colors">Youth Desk</Link></li>
               <li><Link to="/faqs" className="hover:text-primary transition-colors">FAQs</Link></li>
               <li><Link to="/contacts" className="hover:text-primary transition-colors">Contacts</Link></li>
               <li><Link to="/site-map" className="hover:text-primary transition-colors">Site Map</Link></li>

@@ -1,4 +1,4 @@
-begin;
+﻿begin;
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -32,10 +32,10 @@ language sql
 security definer
 set search_path = public
 as $$
-  select 'LYDO-' || lpad(nextval('public.citizen_ticket_ref_seq')::text, 6, '0');
+  select 'LYDO-' || lpad(nextval('public.youth_ticket_ref_seq')::text, 6, '0');
 $$;
 
-create or replace function public.set_citizen_ticket_defaults()
+create or replace function public.set_youth_ticket_defaults()
 returns trigger
 language plpgsql
 as $$
@@ -80,7 +80,7 @@ begin
 end;
 $$;
 
-create or replace function public.track_citizen_ticket(_reference_no text, _requester_email text)
+create or replace function public.track_youth_ticket(_reference_no text, _requester_email text)
 returns table (
   reference_no text,
   ticket_type text,
@@ -94,7 +94,7 @@ security definer
 set search_path = public
 as $$
   select t.reference_no, tt.name, t.subject, t.status, t.created_at, t.updated_at
-  from public.citizen_tickets t
+  from public.youth_tickets t
   join public.ticket_types tt on tt.id = t.type_id
   where lower(t.reference_no) = lower(_reference_no)
     and lower(t.requester_email::text) = lower(_requester_email)
@@ -104,20 +104,20 @@ $$;
 create or replace view public.transparency_kpis as
 select
   (select count(*) from public.disclosure_documents) as disclosures_published,
-  (select count(*) from public.citizen_tickets) as reports_received,
-  (select count(*) from public.citizen_tickets where status in ('resolved','closed')) as reports_resolved,
+  (select count(*) from public.youth_tickets) as reports_received,
+  (select count(*) from public.youth_tickets where status in ('resolved','closed')) as reports_resolved,
   coalesce(
     (
       select round(avg(extract(epoch from (coalesce(resolved_at, updated_at) - created_at)) / 3600)::numeric, 2)
-      from public.citizen_tickets
+      from public.youth_tickets
       where status in ('resolved','closed')
     ),
     0
   ) as avg_response_hours,
-  (select count(*) from public.citizen_tickets where status in ('received','in_progress')) as pending_tickets;
+  (select count(*) from public.youth_tickets where status in ('received','in_progress')) as pending_tickets;
 
 grant execute on function public.generate_ticket_reference() to anon, authenticated;
-grant execute on function public.track_citizen_ticket(text, text) to anon, authenticated;
+grant execute on function public.track_youth_ticket(text, text) to anon, authenticated;
 grant select on public.transparency_kpis to anon, authenticated;
 
 do $$
@@ -127,7 +127,7 @@ declare
     'barangays','offices','user_profiles','programs','events','organizations',
     'user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','citizen_tickets'
+    'monthly_compliance','youth_tickets'
   ];
 begin
   foreach t in array tables loop
@@ -136,10 +136,10 @@ begin
   end loop;
 end $$;
 
-drop trigger if exists trg_citizen_ticket_defaults on public.citizen_tickets;
-create trigger trg_citizen_ticket_defaults
-before insert or update on public.citizen_tickets
-for each row execute function public.set_citizen_ticket_defaults();
+drop trigger if exists trg_youth_ticket_defaults on public.youth_tickets;
+create trigger trg_youth_ticket_defaults
+before insert or update on public.youth_tickets
+for each row execute function public.set_youth_ticket_defaults();
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -147,3 +147,4 @@ after insert on auth.users
 for each row execute function public.handle_new_auth_user();
 
 commit;
+

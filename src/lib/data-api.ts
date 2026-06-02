@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+﻿import { supabase } from "@/lib/supabase";
 import type { YouthEvent, YouthOrganization, YouthProgram } from "@/lib/youthCatalog";
 import type { DisclosureDocument } from "@/lib/transparencyPortalData";
 
@@ -495,7 +495,7 @@ export async function fetchTicketTypeOptions(): Promise<TicketTypeOption[]> {
   return data.map((row) => row.name);
 }
 
-export async function submitCitizenTicket(params: {
+export async function submitYouthTicket(params: {
   type: string;
   subject: string;
   message: string;
@@ -512,7 +512,7 @@ export async function submitCitizenTicket(params: {
   if (!typeRow) throw new Error("Ticket type is not configured in the database.");
 
   const { data, error } = await supabase
-    .from("citizen_tickets")
+    .from("youth_tickets")
     .insert({
       reference_no: "",
       type_id: typeRow.id,
@@ -531,10 +531,10 @@ export async function submitCitizenTicket(params: {
   return data;
 }
 
-export async function trackCitizenTicket(referenceNo: string, requesterEmail: string) {
+export async function trackYouthTicket(referenceNo: string, requesterEmail: string) {
   if (!supabase) return null;
 
-  const { data, error } = await supabase.rpc("track_citizen_ticket", {
+  const { data, error } = await supabase.rpc("track_youth_ticket", {
     _reference_no: referenceNo,
     _requester_email: requesterEmail,
   });
@@ -550,11 +550,11 @@ export async function trackCitizenTicket(referenceNo: string, requesterEmail: st
   };
 }
 
-export async function fetchMyCitizenTickets(userId: string) {
+export async function fetchMyYouthTickets(userId: string) {
   if (!supabase || !userId) return [];
 
   const { data, error } = await supabase
-    .from("citizen_tickets")
+    .from("youth_tickets")
     .select("id,reference_no,subject,status,created_at,updated_at,ticket_types(name)")
     .eq("created_by_user_id", userId)
     .order("created_at", { ascending: false })
@@ -747,3 +747,4 @@ export async function fetchMonthlyComplianceData(): Promise<MonthlyComplianceRow
     };
   });
 }
+

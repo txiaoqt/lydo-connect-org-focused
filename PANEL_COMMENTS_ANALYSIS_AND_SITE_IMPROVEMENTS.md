@@ -1,4 +1,4 @@
-# Panel Comments Analysis and Site Improvement Plan for LYDO Connect
+﻿# Panel Comments Analysis and Site Improvement Plan for LYDO Connect
 
 ## Purpose of This Document
 
@@ -45,7 +45,7 @@ The system already has meaningful modules:
 - transparency reports
 - financial disclosure
 - SK compliance board
-- citizen desk
+- Youth Desk
 - admin monitoring
 - audit logs
 - PWA installability and service worker support
@@ -302,7 +302,7 @@ The current system already contains:
 - SK full disclosure board
 - monthly compliance
 - barangay map
-- citizen desk
+- Youth Desk
 - admin audit logs
 
 So the problem is not absence of transparency features.
@@ -393,7 +393,7 @@ Do not imply that you are improving a mature existing website if that is not tru
 
 ### Current state
 
-- The system contains budgets, documents, board compliance, and citizen desk
+- The system contains budgets, documents, board compliance, and Youth Desk
 - but the study does not tightly define what is being made transparent
 
 ### Risk
@@ -481,7 +481,7 @@ The study must explicitly define who is covered.
 - YORP-related youth organizations, where applicable
 - partner youth-serving organizations that participate in LYDO programs
 - youth residents who access information and services
-- citizens who access transparency and citizen desk functions
+- young people who access transparency and Youth Desk functions
 
 ### Recommended out-of-scope groups
 
@@ -538,7 +538,7 @@ In this project, transparency refers to:
 - visibility of SK compliance submissions
 - visibility of budget allocation and utilization records where applicable
 - project and program status reporting
-- public access to service advisories and citizen desk status mechanisms
+- public access to service advisories and Youth Desk status mechanisms
 
 ### Important clarification
 
@@ -788,7 +788,7 @@ Example covered processes:
 - youth program information dissemination
 - participation registration
 - transparency record publication
-- citizen concern submission
+- youth concern submission
 
 ### Why this matters
 
@@ -1169,7 +1169,7 @@ Precision will make the project stronger academically, easier to defend, and mor
 - `src/pages/TransparencyReports.tsx`
 - `src/pages/TransparencyBoard.tsx`
 - `src/pages/FinancialDisclosure.tsx`
-- `src/pages/CitizenDesk.tsx`
+- `src/pages/YouthDesk.tsx`
 - `src/lib/data-api.ts`
 - `src/lib/youthCatalog.ts`
 - `supabase/sql/02_youth_tables.sql`
@@ -1178,3 +1178,5 @@ Precision will make the project stronger academically, easier to defend, and mor
 - `public/manifest-admin.webmanifest`
 - `public/sw.js`
 - `src/main.tsx`
+
+

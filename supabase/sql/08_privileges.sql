@@ -1,4 +1,4 @@
-begin;
+﻿begin;
 
 grant usage on schema public to anon, authenticated, service_role;
 
@@ -22,6 +22,7 @@ alter default privileges in schema public grant all privileges on sequences to s
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 alter default privileges in schema public grant all privileges on functions to service_role;
 
-grant usage, select on sequence public.citizen_ticket_ref_seq to anon, authenticated;
+grant usage, select on sequence public.youth_ticket_ref_seq to anon, authenticated;
 
 commit;
+

@@ -11,7 +11,7 @@ College of Computer and Information Sciences
 
 Good day!
 
-You are invited to participate in a research study about **LYDO Connect**. This pre-survey aims to understand your current experience in accessing youth-related information and services such as programs, events, organization information, transparency records, and citizen concern reporting.
+You are invited to participate in a research study about **LYDO Connect**. This pre-survey aims to understand your current experience in accessing youth-related information and services such as programs, events, organization information, transparency records, and youth concern reporting.
 
 Your participation is voluntary, and your responses will be treated with strict confidentiality. The email address collected will be used only for coordination related to system testing and the post-survey phase. You may withdraw at any time without penalty.
 
@@ -51,7 +51,7 @@ Email: ___________________________
 5. Barangay / City of residence (optional):
 _______________________
 
-6. Have you previously used any online platform for youth programs, event registration, or citizen concern reporting?
+6. Have you previously used any online platform for youth programs, event registration, or youth concern reporting?
 - Yes
 - No
 
@@ -101,7 +101,7 @@ Directions: Please indicate your level of agreement with the following statement
 
 ## [Section D: Open-Ended Questions]
 
-10. What is your biggest challenge when accessing youth-related programs, events, transparency records, or citizen services?
+10. What is your biggest challenge when accessing youth-related programs, events, transparency records, or Youth Services?
 
 ________________________________________________________________________
 
@@ -114,5 +114,6 @@ ________________________________________________________________________
 Thank you for completing the pre-survey.
 
 The LYDO Connect system testing link and post-survey questionnaire will be sent to the email address you provided and/or posted on the same platform where this survey was shared. Please monitor these channels for further instructions for the next phase of the study.
+
 
 

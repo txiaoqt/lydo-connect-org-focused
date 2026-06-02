@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { Bell, CheckCircle2, Clock, Download, Menu, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -22,7 +22,7 @@ type AdminTab =
   | "programs"
   | "events"
   | "organizations"
-  | "citizen-desk"
+  | "youth-desk"
   | "audit-logs";
 
 type AdminActivity = {
@@ -84,7 +84,7 @@ export const TopNav = ({ title = "Admin Portal", onMenuToggle, onNavigateTab }: 
         supabase.from("programs").select("id,title,created_at").order("created_at", { ascending: false }).limit(5),
         supabase.from("events").select("id,title,created_at").order("created_at", { ascending: false }).limit(5),
         supabase.from("organizations").select("id,name,created_at").order("created_at", { ascending: false }).limit(5),
-        supabase.from("citizen_tickets").select("id,subject,created_at,status").order("created_at", { ascending: false }).limit(5),
+        supabase.from("youth_tickets").select("id,subject,created_at,status").order("created_at", { ascending: false }).limit(5),
       ]);
 
       const mappedActivities: AdminActivity[] = [
@@ -115,10 +115,10 @@ export const TopNav = ({ title = "Admin Portal", onMenuToggle, onNavigateTab }: 
         ...(recentTicketsResp.data ?? []).map((row) => ({
           id: `t-${row.id}`,
           text: row.subject,
-          detail: `Citizen ticket: ${row.status}`,
+          detail: `Youth ticket: ${row.status}`,
           timestamp: row.created_at,
           status: row.status === "resolved" || row.status === "closed" ? ("completed" as const) : ("pending" as const),
-          tab: "citizen-desk" as const,
+          tab: "youth-desk" as const,
         })),
       ]
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -251,3 +251,4 @@ export const TopNav = ({ title = "Admin Portal", onMenuToggle, onNavigateTab }: 
     </header>
   );
 };
+

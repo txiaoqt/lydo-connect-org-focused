@@ -11,7 +11,7 @@ College of Computer and Information Sciences
 
 Good day!
 
-Thank you for participating in the system testing of LYDO Connect. This platform is designed to help youth and citizens access youth-related information and services, including programs, events, organization information, transparency records, and citizen concern reporting.
+Thank you for participating in the system testing of LYDO Connect. This platform is designed to help youth and youth users access youth-related information and services, including programs, events, organization information, transparency records, and citizen concern reporting.
 
 What is this task sheet all about?  
 This task sheet will guide you through the key user-side features and workflows of LYDO Connect. It includes practical tasks to help evaluate clarity, usability, and functionality during actual use.
@@ -56,8 +56,8 @@ How to use this sheet:
 | 1. Open the Barangay Map page. |  |  |
 | 2. Explore map markers or barangay-linked information. |  |  |
 | 3. Evaluate if location context helps users understand local service data. |  |  |
-| **Task 9: Citizen Desk** |  |  |
-| 1. Open Citizen Desk and review the concern submission workflow. |  |  |
+| **Task 9: Youth Desk** |  |  |
+| 1. Open Youth Desk and review the concern submission workflow. |  |  |
 | 2. Submit a sample concern/request (if allowed in test mode). |  |  |
 | 3. Check whether tracking/reference information is clear after submission. |  |  |
 | **Task 10: Profile and Participation History** |  |  |
@@ -67,7 +67,7 @@ How to use this sheet:
 
 Thank you!
 
-Your time and feedback are highly appreciated. Your testing insights will help improve LYDO Connect for youth participants, citizens, and community stakeholders.
+Your time and feedback are highly appreciated. Your testing insights will help improve LYDO Connect for youth participants, youth users, and community stakeholders.
 
 Next Step: After completing this task sheet, please proceed to answer the post-survey questionnaire.
 
@@ -124,8 +124,8 @@ How to use this sheet:
 | 1. Open Registrations admin page and inspect filters/search. |  |  |
 | 2. Review registration status flow and row-level details. |  |  |
 | 3. Test CSV export and verify output structure/content. |  |  |
-| **Task 9: Citizen Desk Admin Handling** |  |  |
-| 1. Open Citizen Desk admin page and review submitted tickets. |  |  |
+| **Task 9: Youth Desk Admin Handling** |  |  |
+| 1. Open Youth Desk admin page and review submitted tickets. |  |  |
 | 2. Update ticket status/handling fields using test records. |  |  |
 | 3. Confirm updates are stored and trackable. |  |  |
 | **Task 10: Users, Roles, and Audit Logs** |  |  |
@@ -138,3 +138,4 @@ Thank you!
 Your professional evaluation is invaluable to the refinement of LYDO Connect. Your feedback will directly support improvements in usability, reliability, transparency workflows, and governance readiness.
 
 Next Step: After completing this task sheet, please proceed to answer the expert evaluation survey.
+

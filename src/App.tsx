@@ -20,7 +20,7 @@ import TransparencyReports from "./pages/TransparencyReports";
 import FinancialDisclosure from "./pages/FinancialDisclosure";
 import BarangayMap from "./pages/BarangayMap";
 import TransparencyBoard from "./pages/TransparencyBoard";
-import CitizenDesk from "./pages/CitizenDesk";
+import YouthDesk from "./pages/YouthDesk";
 import AdminPortal from "./admin/AdminPortal";
 import LegalPolicy from "./pages/LegalPolicy";
 import Faqs from "./pages/Faqs";
@@ -357,10 +357,10 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/transparency/citizen-desk"
+                  path="/transparency/youth-desk"
                   element={
                     <RedirectAdmin>
-                      <CitizenDesk />
+                      <YouthDesk />
                     </RedirectAdmin>
                   }
                 />
@@ -368,7 +368,7 @@ const App = () => (
                   path="/feedback"
                   element={
                     <RedirectAdmin>
-                      <CitizenDesk />
+                      <YouthDesk />
                     </RedirectAdmin>
                   }
                 />

@@ -54,7 +54,7 @@ type AdminTab =
   | "documents"
   | "transparency-board"
   | "financial-dss"
-  | "citizen-desk"
+  | "youth-desk"
   | "audit-logs"
   | "users"
   | "roles";
@@ -450,7 +450,7 @@ export const Dashboard = ({ onNavigate }: DashboardProps) => {
       { label: "Transparency Docs", tab: "documents" as const, keywords: "documents uploads registry" },
       { label: "Transparency Board", tab: "transparency-board" as const, keywords: "compliance board monthly" },
       { label: "Financial DSS", tab: "financial-dss" as const, keywords: "budget finance dss rows" },
-      { label: "Citizen Desk", tab: "citizen-desk" as const, keywords: "tickets requests complaints" },
+      { label: "Youth Desk", tab: "youth-desk" as const, keywords: "tickets requests complaints" },
       { label: "Audit Logs", tab: "audit-logs" as const, keywords: "audit logs changes history admin edits" },
       { label: "Users", tab: "users" as const, keywords: "accounts profiles members" },
       { label: "Roles & Permissions", tab: "roles" as const, keywords: "roles permissions access" },

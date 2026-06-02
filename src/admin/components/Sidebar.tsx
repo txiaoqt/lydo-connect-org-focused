@@ -110,7 +110,7 @@ export const Sidebar = ({
         { id: "documents", label: "Transparency Docs", icon: FileText },
         { id: "transparency-board", label: "Transparency Board", icon: ClipboardList },
         { id: "financial-dss", label: "Financial DSS", icon: BarChart3 },
-        { id: "citizen-desk", label: "Citizen Desk", icon: MessageSquareWarning },
+        { id: "youth-desk", label: "Youth Desk", icon: MessageSquareWarning },
       ],
     },
     {

@@ -1,4 +1,4 @@
-# Information, Participation, and Transparency for LYDOs
+﻿# Information, Participation, and Transparency for LYDOs
 
 ## Purpose
 
@@ -73,7 +73,7 @@ In this project, the three columns are not just abstract themes. They reflect ho
 - viewing financial disclosure or budget-utilization information where applicable
 - viewing barangay-level governance or monitoring information made public by the system
 - viewing official public notices and service advisories
-- viewing request, application, registration, or citizen desk ticket status where available for public tracking
+- viewing request, application, registration, or Youth Desk ticket status where available for public tracking
 
 **Admin**
 
@@ -81,7 +81,7 @@ In this project, the three columns are not just abstract themes. They reflect ho
 - encoding and updating compliance board records
 - encoding and updating financial disclosure data where applicable
 - publishing project, program, or accomplishment status updates intended for public visibility
-- updating citizen desk, request, or ticket status for public tracking
+- updating Youth Desk, request, or ticket status for public tracking
 - posting service advisories, public notices, and other accountability-related updates
 - maintaining accessible archives of authorized public-facing records
 
@@ -99,7 +99,7 @@ This means certain functions should stay in their proper column.
 - `Registering for programs and events` belongs under **Participation** because it is an involvement workflow, not just an information page.
 - `Participation history`, `attendance tracking`, and `participant records` also belong under **Participation** because they measure and record engagement.
 - `Disclosure Registry`, `Transparency Board`, and `Financial Disclosure` belong under **Transparency** because they are accountability and reporting features.
-- `Citizen Desk` is partly a service module, but its public tracking or status-visibility component fits under **Transparency**.
+- `Youth Desk` is partly a service module, but its public tracking or status-visibility component fits under **Transparency**.
 - `Service Advisories` are informational in format, but in the current site they are grouped under **Transparency** because they communicate public operational status and service visibility.
 
 ## Alignment with the Current Site
@@ -108,7 +108,7 @@ The current public site already reflects this division:
 
 - **Information-facing modules:** Programs, Events, Organizations, and general public content
 - **Participation-facing workflows:** program or event registration, user profile participation history, and organization-related involvement
-- **Transparency-facing modules:** Disclosure Registry, Transparency Board, Financial Disclosure, Barangay Map, Citizen Desk status visibility, and Service Advisories
+- **Transparency-facing modules:** Disclosure Registry, Transparency Board, Financial Disclosure, Barangay Map, Youth Desk status visibility, and Service Advisories
 
 Because of this, the study should avoid defining transparency too broadly or too vaguely. In this project, transparency is better defended as a concrete scope covering:
 
@@ -210,7 +210,7 @@ To answer the panel clearly, `transparency` in this study should mean:
 - compliance records
 - budget allocation and utilization information where applicable
 - project and program status reporting intended for public visibility
-- citizen desk or service-request status visibility
+- Youth Desk or service-request status visibility
 - service advisories and public accountability updates
 
 This gives a concrete answer to:
@@ -243,7 +243,7 @@ If you want a concise position that matches the panel analysis more closely, thi
 
 Not every service-related action belongs neatly inside one of the three columns by itself.
 
-- Submitting a citizen desk ticket is primarily a service-access function.
+- Submitting a Youth Desk ticket is primarily a service-access function.
 - Tracking the status of that ticket supports **Transparency** because it gives users visibility into handling progress.
 - Organization-related registration can overlap with participation and administrative workflow, but in this study it is best placed under **Participation** when the focus is on involvement and monitoring.
 
@@ -252,3 +252,4 @@ Not every service-related action belongs neatly inside one of the three columns 
 If the table will appear in the manuscript, it is better to explain that the categories were refined using the project documents, system scope, and field-supported understanding of LYDO operations. For example:
 
 > The categories of information, participation, and transparency were refined based on the documented system scope, implemented modules, and the operational context of Local Youth Development Offices.
+

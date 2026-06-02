@@ -1,4 +1,4 @@
-# TADZ Assigned Sections (Chapter 3 Draft)
+﻿# TADZ Assigned Sections (Chapter 3 Draft)
 
 Source of truth: the current Supabase SQL migrations and `supabase/schema_supabase_all_in_one.sql`.
 
@@ -16,7 +16,7 @@ The database schema is presented as partitioned ERDs instead of one oversized di
 4. Registrations
 5. Transparency and Public Documents
 6. Barangay Financials and Compliance
-7. Citizen Services and Advisories
+7. Youth Services and Advisories
 8. Audit Logs
 
 Policy version and user policy acceptance tables are documented inside the Authentication, Users, and Roles partition because they are tied directly to authenticated user access. Expanded organization reference and project tables are documented inside the Youth Programs, Events, and Organizations partition.
@@ -38,7 +38,7 @@ The study adopts a hybrid Design Science Research (DSR) and Rapid Application De
 - DSR frames the research problem, solution objectives, artifact development, demonstration, evaluation, and communication.
 - RAD supports iterative prototyping, stakeholder review, revision, and delivery of working modules.
 
-This combined method fits LYDO Connect because the platform includes public information access, account and role management, policy agreement handling, youth participation, registration monitoring, transparency records, financial and compliance data, citizen tickets, and audit-supported administration.
+This combined method fits LYDO Connect because the platform includes public information access, account and role management, policy agreement handling, youth participation, registration monitoring, transparency records, financial and compliance data, Youth Tickets, and audit-supported administration.
 
 ### 3.3.2 Development Tools
 
@@ -55,3 +55,5 @@ For this design-and-development study, statistical treatment focuses on descript
 - Standard deviation for variability and consistency of responses.
 
 Inferential tests are not required by default unless the final adviser-approved research design explicitly compares respondent groups.
+
+

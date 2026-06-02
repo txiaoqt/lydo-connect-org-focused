@@ -1,4 +1,4 @@
-begin;
+﻿begin;
 
 do $$
 declare
@@ -7,7 +7,7 @@ declare
     'roles','user_roles','barangays','offices','user_profiles','programs','events',
     'organizations','user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','document_downloads','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','ticket_types','citizen_tickets'
+    'monthly_compliance','ticket_types','youth_tickets'
   ];
 begin
   foreach t in array all_tables loop
@@ -108,31 +108,32 @@ create policy select_document_downloads_staff on public.document_downloads
 for select
 using (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
--- Citizen tickets
-drop policy if exists select_citizen_tickets on public.citizen_tickets;
-create policy select_citizen_tickets on public.citizen_tickets
+-- Youth Tickets
+drop policy if exists select_youth_tickets on public.youth_tickets;
+create policy select_youth_tickets on public.youth_tickets
 for select
 using (created_by_user_id = auth.uid() or public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
-drop policy if exists insert_citizen_tickets_anon on public.citizen_tickets;
-create policy insert_citizen_tickets_anon on public.citizen_tickets
+drop policy if exists insert_youth_tickets_anon on public.youth_tickets;
+create policy insert_youth_tickets_anon on public.youth_tickets
 for insert to anon
 with check (created_by_user_id is null and requester_email is not null);
 
-drop policy if exists insert_citizen_tickets_auth on public.citizen_tickets;
-create policy insert_citizen_tickets_auth on public.citizen_tickets
+drop policy if exists insert_youth_tickets_auth on public.youth_tickets;
+create policy insert_youth_tickets_auth on public.youth_tickets
 for insert to authenticated
 with check (created_by_user_id = auth.uid() and requester_email is not null);
 
-drop policy if exists update_citizen_tickets on public.citizen_tickets;
-create policy update_citizen_tickets on public.citizen_tickets
+drop policy if exists update_youth_tickets on public.youth_tickets;
+create policy update_youth_tickets on public.youth_tickets
 for update
 using (created_by_user_id = auth.uid() or public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]))
 with check (created_by_user_id = auth.uid() or public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
-drop policy if exists delete_citizen_tickets_staff on public.citizen_tickets;
-create policy delete_citizen_tickets_staff on public.citizen_tickets
+drop policy if exists delete_youth_tickets_staff on public.youth_tickets;
+create policy delete_youth_tickets_staff on public.youth_tickets
 for delete
 using (public.current_user_has_any_role(array['admin','staff']::public.app_role_code[]));
 
 commit;
+

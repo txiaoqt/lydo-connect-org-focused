@@ -1,4 +1,4 @@
--- Split schema entrypoint.
+﻿-- Split schema entrypoint.
 -- Run files in supabase/sql/README.md order.
 --
 -- This project intentionally keeps SQL split into multiple files:
@@ -19,7 +19,7 @@
 --   supabase/sql/14_admin_portal_anon_manage_policies.sql (optional for frontend predefined-admin write access)
 --   supabase/sql/15_transparency_upload_and_user_manage.sql (optional for transparency file upload + user management in anon-admin mode)
 --   supabase/sql/16_user_profile_delete_removes_auth_user.sql (optional but recommended for full user deletion from auth.users)
---   supabase/sql/17_admin_citizen_tickets_anon_manage.sql (optional for Citizen Desk ticket management in anon-admin mode)
+--   supabase/sql/17_admin_youth_tickets_anon_manage.sql (optional for Youth Desk ticket management in anon-admin mode)
 --   supabase/sql/18_program_event_precise_location.sql (optional but recommended for precise lat/lng coordinates in programs/events)
 --   supabase/sql/19_program_event_time_fields.sql (optional but recommended for start/end time support in programs/events)
 --   supabase/sql/20_events_remove_legacy_time_text.sql (optional but recommended to enforce actual event time fields and remove legacy events.time_text)
@@ -33,3 +33,5 @@
 --   supabase/sql/28_policy_agreement.sql (recommended for Terms of Service / Privacy Policy versioning + user acceptance tracking)
 --   supabase/sql/30_remove_service_advisories.sql (recommended cleanup for deprecated service advisories)
 --   supabase/sql/31_remove_org_legacy_fields.sql (recommended cleanup for deprecated organization fields)
+--   supabase/sql/32_program_outcomes_analytics.sql (recommended for outcomes analytics)
+--   supabase/sql/33_rename_youth_desk_objects.sql (recommended for existing DBs to rename Youth Desk objects)

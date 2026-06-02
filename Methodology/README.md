@@ -1,6 +1,6 @@
-# Methodology Package for LYDO Connect
+﻿# Methodology Package for LYDO Connect
 
-This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement, and Transparency Management System** based on the actual repository, workflows, and database design of the current system. It is not copied from the VIG template. The current package reflects the updated public portal, admin portal, policy agreement gate, program/event registration monitoring, optional Google Forms/Sheets sync support, expanded organization references/projects, transparency modules, citizen desk, and audit logs.
+This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement, and Transparency Management System** based on the actual repository, workflows, and database design of the current system. It is not copied from the VIG template. The current package reflects the updated public portal, admin portal, policy agreement gate, program/event registration monitoring, optional Google Forms/Sheets sync support, expanded organization references/projects, transparency modules, Youth Desk, and audit logs.
 
 ## Recommended Section Decisions
 
@@ -34,3 +34,4 @@ This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement
 ## Note for Manuscript Integration
 
 These files are drafted as clean source material. You can paste them into your manuscript and adjust wording, respondent counts, evaluator tasks, and school-specific formatting rules as needed.
+

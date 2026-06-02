@@ -1,4 +1,4 @@
-begin;
+﻿begin;
 
 create table if not exists public.disclosure_documents (
   id uuid primary key default gen_random_uuid(),
@@ -100,9 +100,9 @@ create table if not exists public.ticket_types (
   created_at timestamptz not null default now()
 );
 
-create sequence if not exists public.citizen_ticket_ref_seq start with 100000 increment by 1;
+create sequence if not exists public.youth_ticket_ref_seq start with 100000 increment by 1;
 
-create table if not exists public.citizen_tickets (
+create table if not exists public.youth_tickets (
   id uuid primary key default gen_random_uuid(),
   reference_no text not null unique,
   type_id smallint not null references public.ticket_types(id) on delete restrict,
@@ -121,3 +121,4 @@ create table if not exists public.citizen_tickets (
 );
 
 commit;
+

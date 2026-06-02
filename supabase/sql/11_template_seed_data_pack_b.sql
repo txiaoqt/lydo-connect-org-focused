@@ -1,4 +1,4 @@
-begin;
+﻿begin;
 
 -- Optional Template Pack B
 -- Adds another reusable dataset (different from 09_template_seed_data.sql).
@@ -358,7 +358,7 @@ with ticket_rows as (
       'Information Request',
       'Request for SK budget breakdown',
       'Please provide the detailed SK budget utilization per activity for Q2 2026.',
-      'citizen1@example.com',
+      'youth1@example.com',
       'resolved',
       2,
       '2026-06-10T09:00:00+08:00',
@@ -370,7 +370,7 @@ with ticket_rows as (
       'Complaint / Grievance',
       'Delayed posting of barangay report',
       'The monthly compliance report for our barangay appears delayed.',
-      'citizen2@example.com',
+      'youth2@example.com',
       'in_progress',
       3,
       '2026-06-12T14:00:00+08:00',
@@ -382,7 +382,7 @@ with ticket_rows as (
       'Suggestion',
       'Add downloadable CSV for board table',
       'A CSV export for the board page would improve accessibility.',
-      'citizen3@example.com',
+      'youth3@example.com',
       'received',
       3,
       '2026-06-14T08:30:00+08:00',
@@ -394,7 +394,7 @@ with ticket_rows as (
       'Service Request',
       'Assistance with event registration',
       'Unable to complete event registration due to form validation issue.',
-      'citizen4@example.com',
+      'youth4@example.com',
       'closed',
       2,
       '2026-06-15T11:15:00+08:00',
@@ -403,7 +403,7 @@ with ticket_rows as (
     )
   ) as v(reference_no, type_name, subject, message, requester_email, status, priority, created_at, updated_at, resolved_at)
 )
-insert into public.citizen_tickets (
+insert into public.youth_tickets (
   reference_no,
   type_id,
   subject,
@@ -676,3 +676,4 @@ on conflict (barangay_id, fiscal_year, month_no) do update set
   updated_at = now();
 
 commit;
+

@@ -1,4 +1,4 @@
--- Supabase all-in-one schema + policies + functions + seed script
+﻿-- Supabase all-in-one schema + policies + functions + seed script
 -- Generated from supabase/sql/*.sql in run order
 -- Excludes: 10_template_seed_data_delete.sql (rollback script)
 -- Generated: 2026-05-22 22:38:43 +08:00
@@ -395,9 +395,9 @@ create table if not exists public.ticket_types (
   created_at timestamptz not null default now()
 );
 
-create sequence if not exists public.citizen_ticket_ref_seq start with 100000 increment by 1;
+create sequence if not exists public.youth_ticket_ref_seq start with 100000 increment by 1;
 
-create table if not exists public.citizen_tickets (
+create table if not exists public.youth_tickets (
   id uuid primary key default gen_random_uuid(),
   reference_no text not null unique,
   type_id smallint not null references public.ticket_types(id) on delete restrict,
@@ -457,10 +457,10 @@ language sql
 security definer
 set search_path = public
 as $$
-  select 'LYDO-' || lpad(nextval('public.citizen_ticket_ref_seq')::text, 6, '0');
+  select 'LYDO-' || lpad(nextval('public.youth_ticket_ref_seq')::text, 6, '0');
 $$;
 
-create or replace function public.set_citizen_ticket_defaults()
+create or replace function public.set_youth_ticket_defaults()
 returns trigger
 language plpgsql
 as $$
@@ -505,7 +505,7 @@ begin
 end;
 $$;
 
-create or replace function public.track_citizen_ticket(_reference_no text, _requester_email text)
+create or replace function public.track_youth_ticket(_reference_no text, _requester_email text)
 returns table (
   reference_no text,
   ticket_type text,
@@ -519,7 +519,7 @@ security definer
 set search_path = public
 as $$
   select t.reference_no, tt.name, t.subject, t.status, t.created_at, t.updated_at
-  from public.citizen_tickets t
+  from public.youth_tickets t
   join public.ticket_types tt on tt.id = t.type_id
   where lower(t.reference_no) = lower(_reference_no)
     and lower(t.requester_email::text) = lower(_requester_email)
@@ -529,20 +529,20 @@ $$;
 create or replace view public.transparency_kpis as
 select
   (select count(*) from public.disclosure_documents) as disclosures_published,
-  (select count(*) from public.citizen_tickets) as reports_received,
-  (select count(*) from public.citizen_tickets where status in ('resolved','closed')) as reports_resolved,
+  (select count(*) from public.youth_tickets) as reports_received,
+  (select count(*) from public.youth_tickets where status in ('resolved','closed')) as reports_resolved,
   coalesce(
     (
       select round(avg(extract(epoch from (coalesce(resolved_at, updated_at) - created_at)) / 3600)::numeric, 2)
-      from public.citizen_tickets
+      from public.youth_tickets
       where status in ('resolved','closed')
     ),
     0
   ) as avg_response_hours,
-  (select count(*) from public.citizen_tickets where status in ('received','in_progress')) as pending_tickets;
+  (select count(*) from public.youth_tickets where status in ('received','in_progress')) as pending_tickets;
 
 grant execute on function public.generate_ticket_reference() to anon, authenticated;
-grant execute on function public.track_citizen_ticket(text, text) to anon, authenticated;
+grant execute on function public.track_youth_ticket(text, text) to anon, authenticated;
 grant select on public.transparency_kpis to anon, authenticated;
 
 do $$
@@ -552,7 +552,7 @@ declare
     'barangays','offices','user_profiles','programs','events','organizations',
     'user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','citizen_tickets','policy_versions'
+    'monthly_compliance','youth_tickets','policy_versions'
   ];
 begin
   foreach t in array tables loop
@@ -561,10 +561,10 @@ begin
   end loop;
 end $$;
 
-drop trigger if exists trg_citizen_ticket_defaults on public.citizen_tickets;
-create trigger trg_citizen_ticket_defaults
-before insert or update on public.citizen_tickets
-for each row execute function public.set_citizen_ticket_defaults();
+drop trigger if exists trg_youth_ticket_defaults on public.youth_tickets;
+create trigger trg_youth_ticket_defaults
+before insert or update on public.youth_tickets
+for each row execute function public.set_youth_ticket_defaults();
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -590,8 +590,8 @@ create index if not exists idx_disclosure_filters on public.disclosure_documents
 create index if not exists idx_financial_lookup on public.barangay_financials(barangay_id,fiscal_year,month_no);
 create index if not exists idx_youth_metrics_lookup on public.barangay_youth_metrics(barangay_id,fiscal_year);
 create index if not exists idx_monthly_lookup on public.monthly_compliance(barangay_id,fiscal_year,month_no);
-create index if not exists idx_tickets_status_created on public.citizen_tickets(status,created_at desc);
-create index if not exists idx_tickets_ref_lower on public.citizen_tickets(lower(reference_no));
+create index if not exists idx_tickets_status_created on public.youth_tickets(status,created_at desc);
+create index if not exists idx_tickets_ref_lower on public.youth_tickets(lower(reference_no));
 create index if not exists idx_policy_versions_is_active on public.policy_versions(is_active);
 create index if not exists idx_user_policy_acceptance_user_id on public.user_policy_acceptance(user_id);
 create index if not exists idx_user_policy_acceptance_policy_version_id on public.user_policy_acceptance(policy_version_id);
@@ -622,7 +622,7 @@ declare
     'roles','user_roles','barangays','offices','user_profiles','programs','events',
     'organizations','user_program_memberships','user_org_memberships','event_registrations',
     'disclosure_documents','document_downloads','barangay_financials','barangay_youth_metrics','compliance_board_status',
-    'monthly_compliance','ticket_types','citizen_tickets','policy_versions','user_policy_acceptance'
+    'monthly_compliance','ticket_types','youth_tickets','policy_versions','user_policy_acceptance'
   ];
 begin
   foreach t in array all_tables loop
@@ -723,30 +723,30 @@ create policy select_document_downloads_staff on public.document_downloads
 for select
 using (public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
--- Citizen tickets
-drop policy if exists select_citizen_tickets on public.citizen_tickets;
-create policy select_citizen_tickets on public.citizen_tickets
+-- Youth Tickets
+drop policy if exists select_youth_tickets on public.youth_tickets;
+create policy select_youth_tickets on public.youth_tickets
 for select
 using (created_by_user_id = auth.uid() or public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
-drop policy if exists insert_citizen_tickets_anon on public.citizen_tickets;
-create policy insert_citizen_tickets_anon on public.citizen_tickets
+drop policy if exists insert_youth_tickets_anon on public.youth_tickets;
+create policy insert_youth_tickets_anon on public.youth_tickets
 for insert to anon
 with check (created_by_user_id is null and requester_email is not null);
 
-drop policy if exists insert_citizen_tickets_auth on public.citizen_tickets;
-create policy insert_citizen_tickets_auth on public.citizen_tickets
+drop policy if exists insert_youth_tickets_auth on public.youth_tickets;
+create policy insert_youth_tickets_auth on public.youth_tickets
 for insert to authenticated
 with check (created_by_user_id = auth.uid() and requester_email is not null);
 
-drop policy if exists update_citizen_tickets on public.citizen_tickets;
-create policy update_citizen_tickets on public.citizen_tickets
+drop policy if exists update_youth_tickets on public.youth_tickets;
+create policy update_youth_tickets on public.youth_tickets
 for update
 using (created_by_user_id = auth.uid() or public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]))
 with check (created_by_user_id = auth.uid() or public.current_user_has_any_role(array['admin','staff','sk']::public.app_role_code[]));
 
-drop policy if exists delete_citizen_tickets_staff on public.citizen_tickets;
-create policy delete_citizen_tickets_staff on public.citizen_tickets
+drop policy if exists delete_youth_tickets_staff on public.youth_tickets;
+create policy delete_youth_tickets_staff on public.youth_tickets
 for delete
 using (public.current_user_has_any_role(array['admin','staff']::public.app_role_code[]));
 
@@ -933,7 +933,7 @@ alter default privileges in schema public grant all privileges on sequences to s
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 alter default privileges in schema public grant all privileges on functions to service_role;
 
-grant usage, select on sequence public.citizen_ticket_ref_seq to anon, authenticated;
+grant usage, select on sequence public.youth_ticket_ref_seq to anon, authenticated;
 
 commit;
 
@@ -1266,18 +1266,18 @@ commit;
 -- END FILE: supabase/sql/16_user_profile_delete_removes_auth_user.sql
 
 -- ===========================================================================
--- BEGIN FILE: supabase/sql/17_admin_citizen_tickets_anon_manage.sql
+-- BEGIN FILE: supabase/sql/17_admin_youth_tickets_anon_manage.sql
 -- ===========================================================================
 
 begin;
 
--- Optional: enables predefined frontend admin (anon key) to manage Citizen Desk tickets.
+-- Optional: enables predefined frontend admin (anon key) to manage Youth Desk tickets.
 -- Use only while running frontend-only admin mode.
-grant select, insert, update, delete on table public.citizen_tickets to anon;
+grant select, insert, update, delete on table public.youth_tickets to anon;
 
-drop policy if exists anon_manage_citizen_tickets on public.citizen_tickets;
-create policy anon_manage_citizen_tickets
-on public.citizen_tickets
+drop policy if exists anon_manage_youth_tickets on public.youth_tickets;
+create policy anon_manage_youth_tickets
+on public.youth_tickets
 for all to anon
 using (true)
 with check (true);
@@ -1285,7 +1285,7 @@ with check (true);
 commit;
 
 
--- END FILE: supabase/sql/17_admin_citizen_tickets_anon_manage.sql
+-- END FILE: supabase/sql/17_admin_youth_tickets_anon_manage.sql
 
 -- ===========================================================================
 -- BEGIN FILE: supabase/sql/18_program_event_precise_location.sql
@@ -1731,7 +1731,7 @@ declare
     'compliance_board_status',
     'monthly_compliance',
     'ticket_types',
-    'citizen_tickets',
+    'youth_tickets',
     'event_registrations',
     'program_registrations'
   ];
@@ -3110,19 +3110,19 @@ on conflict (barangay_id, fiscal_year, month_no) do update set
 
 with ticket_rows as (
   select * from (values
-    ('LYDO-PROT-0001', 'Information Request', 'Testing Citizen Ticket I', 'Prototype ticket record for list and filter testing.', 'prototype.requester1@example.com', 'received', 2),
-    ('LYDO-PROT-0002', 'Service Request', 'Testing Citizen Ticket II', 'Prototype ticket record in progress.', 'prototype.requester2@example.com', 'in_progress', 3),
-    ('LYDO-PROT-0003', 'Suggestion', 'Testing Citizen Ticket III', 'Prototype ticket record resolved.', 'prototype.requester3@example.com', 'resolved', 1),
-    ('LYDO-PROT-0004', 'Complaint / Grievance', 'Testing Citizen Ticket IV', 'Prototype ticket record closed.', 'prototype.requester4@example.com', 'closed', 2),
-    ('LYDO-PROT-0005', 'Information Request', 'Testing Citizen Ticket V', 'Prototype ticket record for pending review simulation.', 'prototype.requester5@example.com', 'received', 3),
-    ('LYDO-PROT-0006', 'Service Request', 'Testing Citizen Ticket VI', 'Prototype ticket record for active workflow simulation.', 'prototype.requester6@example.com', 'in_progress', 2),
-    ('LYDO-PROT-0007', 'Suggestion', 'Testing Citizen Ticket VII', 'Prototype ticket record for feedback and suggestion testing.', 'prototype.requester7@example.com', 'resolved', 2),
-    ('LYDO-PROT-0008', 'Complaint / Grievance', 'Testing Citizen Ticket VIII', 'Prototype ticket record for grievance queue testing.', 'prototype.requester8@example.com', 'closed', 4),
-    ('LYDO-PROT-0009', 'Information Request', 'Testing Citizen Ticket IX', 'Prototype ticket record for history and pagination testing.', 'prototype.requester9@example.com', 'received', 1),
-    ('LYDO-PROT-0010', 'Service Request', 'Testing Citizen Ticket X', 'Prototype ticket record to complete 10-item demo set.', 'prototype.requester10@example.com', 'in_progress', 3)
+    ('LYDO-PROT-0001', 'Information Request', 'Testing Youth Ticket I', 'Prototype ticket record for list and filter testing.', 'prototype.requester1@example.com', 'received', 2),
+    ('LYDO-PROT-0002', 'Service Request', 'Testing Youth Ticket II', 'Prototype ticket record in progress.', 'prototype.requester2@example.com', 'in_progress', 3),
+    ('LYDO-PROT-0003', 'Suggestion', 'Testing Youth Ticket III', 'Prototype ticket record resolved.', 'prototype.requester3@example.com', 'resolved', 1),
+    ('LYDO-PROT-0004', 'Complaint / Grievance', 'Testing Youth Ticket IV', 'Prototype ticket record closed.', 'prototype.requester4@example.com', 'closed', 2),
+    ('LYDO-PROT-0005', 'Information Request', 'Testing Youth Ticket V', 'Prototype ticket record for pending review simulation.', 'prototype.requester5@example.com', 'received', 3),
+    ('LYDO-PROT-0006', 'Service Request', 'Testing Youth Ticket VI', 'Prototype ticket record for active workflow simulation.', 'prototype.requester6@example.com', 'in_progress', 2),
+    ('LYDO-PROT-0007', 'Suggestion', 'Testing Youth Ticket VII', 'Prototype ticket record for feedback and suggestion testing.', 'prototype.requester7@example.com', 'resolved', 2),
+    ('LYDO-PROT-0008', 'Complaint / Grievance', 'Testing Youth Ticket VIII', 'Prototype ticket record for grievance queue testing.', 'prototype.requester8@example.com', 'closed', 4),
+    ('LYDO-PROT-0009', 'Information Request', 'Testing Youth Ticket IX', 'Prototype ticket record for history and pagination testing.', 'prototype.requester9@example.com', 'received', 1),
+    ('LYDO-PROT-0010', 'Service Request', 'Testing Youth Ticket X', 'Prototype ticket record to complete 10-item demo set.', 'prototype.requester10@example.com', 'in_progress', 3)
   ) as v(reference_no, type_name, subject, message, requester_email, status, priority)
 )
-insert into public.citizen_tickets (
+insert into public.youth_tickets (
   reference_no, type_id, subject, message, requester_email, status, priority
 )
 select
@@ -3846,5 +3846,6 @@ alter table if exists public.organization_references
 commit;
 
 -- END FILE: supabase/sql/31_remove_org_legacy_fields.sql
+
 
 
