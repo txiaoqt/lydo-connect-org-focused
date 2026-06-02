@@ -302,21 +302,25 @@ export default function EventRecord() {
           </section>
         ) : event ? (
           <>
-            <section className="hero-gradient py-12 md:py-14">
+            <section className="hero-gradient py-8 sm:py-10 md:py-14">
               <div className="container">
-                <div className="max-w-4xl space-y-4">
-                  <p className="text-secondary-foreground/75 text-sm font-medium">{isProgramRecord ? "Program Record" : "Event Record"}</p>
-                  <h1 className="text-3xl md:text-4xl font-bold text-secondary-foreground leading-tight">{event.title}</h1>
+                <div className="max-w-4xl space-y-3 sm:space-y-4">
+                  <p className="text-[11px] sm:text-sm font-medium text-secondary-foreground/75">
+                    {isProgramRecord ? "Program Record" : "Event Record"}
+                  </p>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-secondary-foreground leading-tight">
+                    {event.title}
+                  </h1>
                   {summaryText ? (
-                    <p className="text-secondary-foreground/80 text-base leading-relaxed max-w-3xl line-clamp-3">
+                    <p className="max-w-3xl text-sm sm:text-base leading-relaxed text-secondary-foreground/80 line-clamp-2 sm:line-clamp-3">
                       {summaryText}
                     </p>
                   ) : null}
                   <div className="flex flex-wrap gap-2 pt-1">
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-secondary-foreground/95 text-primary">
+                    <span className="rounded-full bg-secondary-foreground/95 px-2.5 py-1 text-[11px] font-semibold text-primary sm:px-3 sm:text-xs">
                       {event.sector}
                     </span>
-                    <span className="text-xs font-semibold px-3 py-1 rounded-full bg-secondary-foreground/20 text-secondary-foreground capitalize border border-secondary-foreground/25">
+                    <span className="rounded-full border border-secondary-foreground/25 bg-secondary-foreground/20 px-2.5 py-1 text-[11px] font-semibold capitalize text-secondary-foreground sm:px-3 sm:text-xs">
                       {event.status}
                     </span>
                   </div>
@@ -324,15 +328,15 @@ export default function EventRecord() {
               </div>
             </section>
 
-            <section className="container py-8 md:py-10">
-              <div className="grid gap-5 lg:gap-6 xl:grid-cols-5 items-start">
-                <div className="xl:col-span-3 bg-card border rounded-xl p-5 md:p-6 card-shadow min-w-0">
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">Official Source Post</h2>
+            <section className="container py-5 sm:py-6 md:py-10">
+              <div className="grid gap-4 lg:gap-6 xl:grid-cols-5 items-start">
+                <div className="xl:col-span-3 bg-card border rounded-xl p-4 sm:p-5 md:p-6 card-shadow min-w-0">
+                  <div className="space-y-3 sm:space-y-4">
+                    <h2 className="text-base sm:text-lg font-semibold">Official Source Post</h2>
                     {event.sourcePostUrl ? (
                       <SourcePostEmbed sourcePostUrl={event.sourcePostUrl} title={event.title} />
                     ) : (
-                      <div className="rounded-xl border bg-muted/25 p-5 text-sm text-muted-foreground">
+                      <div className="rounded-xl border bg-muted/25 p-4 sm:p-5 text-sm text-muted-foreground">
                         No source post URL was provided for this record.
                       </div>
                     )}
@@ -374,34 +378,34 @@ export default function EventRecord() {
                   </div>
 
                   {view === "details" ? (
-                    <div className="bg-card border rounded-xl p-5 md:p-6 card-shadow space-y-5">
+                    <div className="bg-card border rounded-xl p-4 sm:p-5 md:p-6 card-shadow space-y-4 sm:space-y-5">
                       <div className="space-y-2">
                         <p className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                           <FileText className="h-3 w-3" />
                           Event Details
                         </p>
-                        <h2 className="text-xl font-bold leading-tight">{event.sourcePostUrl ? "Local Summary" : "Description"}</h2>
-                        <p className="text-muted-foreground leading-relaxed">
+                        <h2 className="text-lg sm:text-xl font-bold leading-tight">{event.sourcePostUrl ? "Local Summary" : "Description"}</h2>
+                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                           {event.description.trim() || "No summary was provided for this record."}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[84px] sm:min-h-[92px]">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
-                          <p className="text-sm font-semibold text-foreground mt-1">{recordTypeLabel}</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{recordTypeLabel}</p>
                         </div>
-                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[84px] sm:min-h-[92px]">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Source</p>
-                          <p className="text-sm font-semibold text-foreground mt-1">{sourceTypeLabel}</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{sourceTypeLabel}</p>
                         </div>
-                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[84px] sm:min-h-[92px]">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Date</p>
-                          <p className="text-sm font-semibold text-foreground mt-1">{event.date || "TBA"}</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{event.date || "TBA"}</p>
                         </div>
-                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[92px]">
+                        <div className="rounded-lg border bg-muted/20 p-3.5 min-h-[84px] sm:min-h-[92px]">
                           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time</p>
-                          <p className="text-sm font-semibold text-foreground mt-1">{event.time || "TBA"}</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">{event.time || "TBA"}</p>
                         </div>
                       </div>
 
@@ -412,7 +416,7 @@ export default function EventRecord() {
                             location={event.location}
                             locationLatitude={event.locationLatitude}
                             locationLongitude={event.locationLongitude}
-                            className="text-sm font-semibold"
+                            className="text-sm font-semibold leading-snug"
                           />
                           <p className="mt-1 text-[11px] text-muted-foreground">
                             Tip: click the location to open map preview and directions.
@@ -421,7 +425,7 @@ export default function EventRecord() {
                       </div>
                     </div>
                   ) : !registered ? (
-                    <form onSubmit={handleRegister} className="bg-card border rounded-xl p-5 md:p-6 card-shadow bg-muted/20 space-y-4">
+                    <form onSubmit={handleRegister} className="bg-card border rounded-xl p-4 sm:p-5 md:p-6 card-shadow bg-muted/20 space-y-4">
                       <h3 className="font-semibold flex items-center gap-2">
                         <UserCheck className="h-4 w-4 text-primary" />
                         {isProgramRecord ? "Program Registration Details" : "Event Registration Details"}
@@ -557,7 +561,7 @@ export default function EventRecord() {
                       </Button>
                     </form>
                   ) : (
-                    <div className="bg-card border rounded-xl p-5 md:p-6 card-shadow bg-primary/5">
+                    <div className="bg-card border rounded-xl p-4 sm:p-5 md:p-6 card-shadow bg-primary/5">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Registered Participant</p>
                       <p className="font-medium">{registrationInfo?.fullName ?? form.fullName}</p>
                       <p className="text-sm text-muted-foreground">{registrationInfo?.email ?? form.email}</p>

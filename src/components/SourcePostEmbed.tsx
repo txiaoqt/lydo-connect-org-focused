@@ -69,12 +69,13 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
   const embedConfig = useMemo(() => toFacebookEmbedConfig(normalizedSourceUrl, measuredWidth ?? 500), [measuredWidth, normalizedSourceUrl]);
   const openLabel = embedConfig?.kind === "page" ? "Open Source Page" : "Open Source Post";
   const embedWidth = Math.max(320, Math.min(750, measuredWidth ?? 500));
+  const showLiveEmbed = Boolean(embedConfig);
 
   useEffect(() => {
-    if (!isSdkReady || !embedConfig || !embedRootRef.current) return;
+    if (!isSdkReady || !showLiveEmbed || !embedRootRef.current) return;
     const fb = (window as typeof window & { FB?: { XFBML?: { parse: (node?: Element | null) => void } } }).FB;
     fb?.XFBML?.parse(embedRootRef.current);
-  }, [embedConfig, isSdkReady, measuredWidth]);
+  }, [isSdkReady, measuredWidth, showLiveEmbed]);
 
   return (
     <div ref={containerRef} className={cn("space-y-3", className)}>
@@ -87,8 +88,8 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
         {openLabel} <ExternalLink className="h-4 w-4" />
       </a>
 
-      {embedConfig ? (
-        <div className="overflow-hidden rounded-xl border bg-card">
+      {showLiveEmbed && embedConfig ? (
+        <div className="relative overflow-hidden rounded-xl border bg-card">
           <div
             ref={embedRootRef}
             className={cn("fb-embed-root", {
@@ -112,6 +113,15 @@ export default function SourcePostEmbed({ sourcePostUrl, title, className }: Sou
               </div>
             ) : null}
           </div>
+          <a
+            href={normalizedSourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open ${title} in Facebook`}
+            className="absolute inset-0 z-10 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2"
+          >
+            <span className="sr-only">Open this Facebook post in a new tab</span>
+          </a>
         </div>
       ) : (
         <div className="rounded-xl border bg-muted/20 p-6 md:p-8">
