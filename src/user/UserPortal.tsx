@@ -593,10 +593,23 @@ export default function UserPortal({ section }: { section: string }) {
                         <p><span className="text-muted-foreground">Status:</span> {currentProfile.profileStatus.replaceAll("_", " ")}</p>
                         <p><span className="text-muted-foreground">Major:</span> {currentProfile.majorClassification || "N/A"}</p>
                         <p><span className="text-muted-foreground">Sub:</span> {currentProfile.subClassification || "N/A"}</p>
-                        <p>
-                          <span className="text-muted-foreground">Advocacies:</span>{" "}
-                          {currentProfile.advocacies.length ? currentProfile.advocacies.join(", ") : "N/A"}
-                        </p>
+                        <div>
+                          <p className="text-muted-foreground">Advocacies:</p>
+                          {currentProfile.advocacies.length ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {currentProfile.advocacies.map((advocacy) => (
+                                <span
+                                  key={advocacy}
+                                  className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary"
+                                >
+                                  {advocacy}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">N/A</p>
+                          )}
+                        </div>
                       </>
                     ) : (
                       <p className="text-muted-foreground">No saved profile yet. Fill out the form and save it to create the organization record.</p>
