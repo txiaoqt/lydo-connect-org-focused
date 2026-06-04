@@ -1,10 +1,21 @@
-import type { LydoSeedState, OrganizationProfile, SubmissionFile, TemplateRecord } from "./lydo-connect-data";
+import type {
+  BudgetRequest,
+  BudgetRequestFile,
+  LiquidationReport,
+  LiquidationReportFile,
+  LydoSeedState,
+  OrganizationProfile,
+  SubmissionFile,
+  TemplateRecord,
+} from "./lydo-connect-data";
 import { createTemplateLocalId, legacyRemovedTemplateNames, requiredDocumentTypes } from "./lydo-connect-data";
 import { readAdminSession } from "./admin-auth";
 import { supabase } from "./supabase";
 
 const ORGANIZATION_DOCUMENTS_BUCKET = "organization-documents";
 const TEMPLATE_FILES_BUCKET = "template-files";
+const BUDGET_REQUEST_FILES_BUCKET = "budget-request-files";
+const LIQUIDATION_REPORT_FILES_BUCKET = "liquidation-report-files";
 const STORAGE_URI_PREFIX = "storage://";
 
 type RequiredDocumentTypeRow = {
@@ -76,6 +87,64 @@ type DocumentSubmissionFileRow = {
   } | Array<{ id?: string | null; name?: string | null }> | null;
 };
 
+type BudgetRequestRow = {
+  id: string;
+  organization_id: string;
+  submitted_by: string;
+  activity_title: string;
+  activity_description: string | null;
+  activity_date: string;
+  venue: string;
+  requested_amount: number | string;
+  approved_amount: number | string;
+  released_amount: number | string;
+  release_date: string | null;
+  purpose_category: string | null;
+  status: BudgetRequest["status"];
+  remarks: string | null;
+  go_signal_at: string | null;
+  hard_copy_submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type BudgetRequestFileRow = {
+  id: string;
+  budget_request_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number | string;
+  uploaded_at: string | null;
+  created_at: string;
+};
+
+type LiquidationReportRow = {
+  id: string;
+  budget_request_id: string;
+  organization_id: string;
+  submitted_by: string;
+  status: LiquidationReport["status"];
+  remarks: string | null;
+  go_signal_at: string | null;
+  deadline_at: string | null;
+  hard_copy_submitted_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type LiquidationReportFileRow = {
+  id: string;
+  liquidation_report_id: string;
+  file_url: string;
+  file_name: string;
+  file_type: string;
+  file_size: number | string;
+  uploaded_at: string | null;
+  created_at: string;
+};
+
 const localDocumentTypeByName = new Map(requiredDocumentTypes.map((documentType) => [documentType.name, documentType]));
 
 const sanitizeFileName = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -97,6 +166,15 @@ const getFileNameFromReference = (value: string) => {
   const source = parseStorageUri(value)?.path ?? value;
   const segments = source.split("/");
   return segments[segments.length - 1] || "";
+};
+
+const normalizeNumeric = (value: number | string | null | undefined) => Number(value ?? 0);
+
+const formatDateOnly = (value: string | null | undefined) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 };
 
 const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfile => ({
@@ -169,6 +247,64 @@ const mapDocumentFile = (row: DocumentSubmissionFileRow): SubmissionFile | null 
   };
 };
 
+const mapBudgetRequest = (row: BudgetRequestRow): BudgetRequest => ({
+  id: row.id,
+  organizationId: row.organization_id,
+  submittedBy: row.submitted_by,
+  activityTitle: row.activity_title,
+  activityDescription: row.activity_description ?? "",
+  activityDate: formatDateOnly(row.activity_date),
+  venue: row.venue,
+  requestedAmount: normalizeNumeric(row.requested_amount),
+  approvedAmount: normalizeNumeric(row.approved_amount),
+  releasedAmount: normalizeNumeric(row.released_amount),
+  releaseDate: formatDateOnly(row.release_date),
+  purposeCategory: row.purpose_category ?? "",
+  status: row.status,
+  remarks: row.remarks ?? "",
+  goSignalAt: row.go_signal_at ?? "",
+  hardCopySubmittedAt: row.hard_copy_submitted_at ?? "",
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapBudgetRequestFile = (row: BudgetRequestFileRow): BudgetRequestFile => ({
+  id: row.id,
+  budgetRequestId: row.budget_request_id,
+  fileName: row.file_name,
+  fileUrl: row.file_url,
+  fileType: row.file_type,
+  fileSize: normalizeNumeric(row.file_size),
+  uploadedAt: row.uploaded_at ?? "",
+  createdAt: row.created_at,
+});
+
+const mapLiquidationReport = (row: LiquidationReportRow): LiquidationReport => ({
+  id: row.id,
+  budgetRequestId: row.budget_request_id,
+  organizationId: row.organization_id,
+  submittedBy: row.submitted_by,
+  status: row.status,
+  remarks: row.remarks ?? "",
+  goSignalAt: row.go_signal_at ?? "",
+  deadlineAt: row.deadline_at ?? "",
+  hardCopySubmittedAt: row.hard_copy_submitted_at ?? "",
+  completedAt: row.completed_at ?? "",
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapLiquidationReportFile = (row: LiquidationReportFileRow): LiquidationReportFile => ({
+  id: row.id,
+  liquidationReportId: row.liquidation_report_id,
+  fileName: row.file_name,
+  fileUrl: row.file_url,
+  fileType: row.file_type,
+  fileSize: normalizeNumeric(row.file_size),
+  uploadedAt: row.uploaded_at ?? "",
+  createdAt: row.created_at,
+});
+
 const fetchOrganizationProfile = async (userId: string) => {
   const { data, error } = await supabase!
     .from("organization_profiles")
@@ -190,6 +326,52 @@ const fetchLatestSubmission = async (organizationId: string) => {
 
   if (error) throw new Error(error.message);
   return ((data as DocumentSubmissionRow[] | null) ?? [])[0] ?? null;
+};
+
+const fetchBudgetRequests = async (organizationId: string) => {
+  const { data, error } = await supabase!
+    .from("budget_requests")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as BudgetRequestRow[] | null) ?? [];
+};
+
+const fetchBudgetRequestFiles = async (budgetRequestIds: string[]) => {
+  if (!budgetRequestIds.length) return [];
+  const { data, error } = await supabase!
+    .from("budget_request_files")
+    .select("*")
+    .in("budget_request_id", budgetRequestIds)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as BudgetRequestFileRow[] | null) ?? [];
+};
+
+const fetchLiquidationReports = async (organizationId: string) => {
+  const { data, error } = await supabase!
+    .from("liquidation_reports")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as LiquidationReportRow[] | null) ?? [];
+};
+
+const fetchLiquidationReportFiles = async (liquidationReportIds: string[]) => {
+  if (!liquidationReportIds.length) return [];
+  const { data, error } = await supabase!
+    .from("liquidation_report_files")
+    .select("*")
+    .in("liquidation_report_id", liquidationReportIds)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as LiquidationReportFileRow[] | null) ?? [];
 };
 
 export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedState> | null> => {
@@ -218,11 +400,29 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
     return mappedTemplates.length ? { templates: mappedTemplates } : null;
   }
 
-  const latestSubmission = await fetchLatestSubmission(organizationProfile.id);
   const remoteState: Partial<LydoSeedState> = {
     organizationProfiles: [mapOrganizationProfile(organizationProfile)],
     templates: mappedTemplates,
   };
+
+  const [latestSubmission, budgetRows, liquidationRows] = await Promise.all([
+    fetchLatestSubmission(organizationProfile.id),
+    fetchBudgetRequests(organizationProfile.id),
+    fetchLiquidationReports(organizationProfile.id),
+  ]);
+
+  remoteState.budgetRequests = budgetRows.map(mapBudgetRequest);
+  remoteState.liquidationReports = liquidationRows.map(mapLiquidationReport);
+
+  const budgetRequestIds = budgetRows.map((row) => row.id);
+  const liquidationReportIds = liquidationRows.map((row) => row.id);
+  const [budgetFileRows, liquidationFileRows] = await Promise.all([
+    fetchBudgetRequestFiles(budgetRequestIds),
+    fetchLiquidationReportFiles(liquidationReportIds),
+  ]);
+
+  remoteState.budgetRequestFiles = budgetFileRows.map(mapBudgetRequestFile);
+  remoteState.liquidationReportFiles = liquidationFileRows.map(mapLiquidationReportFile);
 
   if (!latestSubmission) {
     return remoteState;
@@ -412,6 +612,219 @@ export const submitOrganizationDocumentToSupabase = async (params: {
     submissionId: submission.id,
     file: mappedFile,
   };
+};
+
+const getAuthenticatedOrganizationContext = async () => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) throw new Error("Please sign in with your organization account first.");
+
+  const organizationProfile = await fetchOrganizationProfile(session.user.id);
+  if (!organizationProfile) throw new Error("No organization profile was found for this account.");
+
+  return { session, organizationProfile };
+};
+
+const uploadFileToStorage = async (bucket: string, pathPrefix: string, file: File) => {
+  const safeFileName = sanitizeFileName(file.name);
+  const objectPath = `${pathPrefix}/${Date.now()}-${safeFileName}`;
+  const { error: uploadError } = await supabase!.storage.from(bucket).upload(objectPath, file, {
+    upsert: true,
+    contentType: file.type || "application/octet-stream",
+  });
+
+  if (uploadError) throw new Error(uploadError.message);
+  return buildStorageUri(bucket, objectPath);
+};
+
+const removeStorageObjects = async (values: string[]) => {
+  const parsed = values.map(parseStorageUri).filter((item): item is { bucket: string; path: string } => Boolean(item));
+  for (const bucket of new Set(parsed.map((item) => item.bucket))) {
+    const paths = parsed.filter((item) => item.bucket === bucket).map((item) => item.path);
+    if (!paths.length) continue;
+    await supabase!.storage.from(bucket).remove(paths);
+  }
+};
+
+export const createBudgetRequestInSupabase = async (params: {
+  budgetRequest: Omit<BudgetRequest, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy">;
+  file?: File | null;
+}) => {
+  const { session, organizationProfile } = await getAuthenticatedOrganizationContext();
+
+  const payload = {
+    organization_id: organizationProfile.id,
+    submitted_by: session.user.id,
+    activity_title: params.budgetRequest.activityTitle.trim(),
+    activity_description: params.budgetRequest.activityDescription.trim(),
+    activity_date: params.budgetRequest.activityDate,
+    venue: params.budgetRequest.venue.trim(),
+    requested_amount: params.budgetRequest.requestedAmount,
+    approved_amount: params.budgetRequest.approvedAmount,
+    released_amount: params.budgetRequest.releasedAmount,
+    release_date: params.budgetRequest.releaseDate || null,
+    purpose_category: params.budgetRequest.purposeCategory.trim(),
+    status: params.budgetRequest.status,
+    remarks: params.budgetRequest.remarks.trim() || null,
+    go_signal_at: params.budgetRequest.goSignalAt || null,
+    hard_copy_submitted_at: params.budgetRequest.hardCopySubmittedAt || null,
+  };
+
+  const { data, error } = await supabase!
+    .from("budget_requests")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to create the budget request.");
+
+  const createdBudget = mapBudgetRequest(data as BudgetRequestRow);
+  if (params.file) {
+    await replaceBudgetRequestFileInSupabase(createdBudget.id, params.file);
+  }
+
+  return createdBudget;
+};
+
+export const updateBudgetRequestInSupabase = async (
+  budgetRequestId: string,
+  patch: Partial<Omit<BudgetRequest, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy">>,
+) => {
+  await getAuthenticatedOrganizationContext();
+
+  const payload: Record<string, unknown> = {};
+  if (patch.activityTitle !== undefined) payload.activity_title = patch.activityTitle.trim();
+  if (patch.activityDescription !== undefined) payload.activity_description = patch.activityDescription.trim();
+  if (patch.activityDate !== undefined) payload.activity_date = patch.activityDate;
+  if (patch.venue !== undefined) payload.venue = patch.venue.trim();
+  if (patch.requestedAmount !== undefined) payload.requested_amount = patch.requestedAmount;
+  if (patch.approvedAmount !== undefined) payload.approved_amount = patch.approvedAmount;
+  if (patch.releasedAmount !== undefined) payload.released_amount = patch.releasedAmount;
+  if (patch.releaseDate !== undefined) payload.release_date = patch.releaseDate || null;
+  if (patch.purposeCategory !== undefined) payload.purpose_category = patch.purposeCategory.trim();
+  if (patch.status !== undefined) payload.status = patch.status;
+  if (patch.remarks !== undefined) payload.remarks = patch.remarks.trim() || null;
+  if (patch.goSignalAt !== undefined) payload.go_signal_at = patch.goSignalAt || null;
+  if (patch.hardCopySubmittedAt !== undefined) payload.hard_copy_submitted_at = patch.hardCopySubmittedAt || null;
+
+  const { data, error } = await supabase!
+    .from("budget_requests")
+    .update(payload)
+    .eq("id", budgetRequestId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to update the budget request.");
+  return mapBudgetRequest(data as BudgetRequestRow);
+};
+
+export const deleteBudgetRequestInSupabase = async (budgetRequestId: string) => {
+  await getAuthenticatedOrganizationContext();
+  const { data: fileRows, error: fileRowsError } = await supabase!
+    .from("budget_request_files")
+    .select("*")
+    .eq("budget_request_id", budgetRequestId);
+
+  if (fileRowsError) throw new Error(fileRowsError.message);
+
+  const { error } = await supabase!.from("budget_requests").delete().eq("id", budgetRequestId);
+  if (error) throw new Error(error.message);
+
+  const existingFiles = (fileRows as BudgetRequestFileRow[] | null) ?? [];
+  if (existingFiles.length) {
+    await removeStorageObjects(existingFiles.map((entry) => entry.file_url));
+  }
+};
+
+const replaceBudgetRequestFileInSupabase = async (budgetRequestId: string, file: File) => {
+  await getAuthenticatedOrganizationContext();
+  const { data: existingRows, error: existingError } = await supabase!
+    .from("budget_request_files")
+    .select("*")
+    .eq("budget_request_id", budgetRequestId);
+
+  if (existingError) throw new Error(existingError.message);
+  const existingFiles = (existingRows as BudgetRequestFileRow[] | null) ?? [];
+  const fileUrl = await uploadFileToStorage(BUDGET_REQUEST_FILES_BUCKET, budgetRequestId, file);
+  const { data, error } = await supabase!
+    .from("budget_request_files")
+    .insert({
+      budget_request_id: budgetRequestId,
+      file_url: fileUrl,
+      file_name: file.name,
+      file_type: file.type || "application/octet-stream",
+      file_size: file.size,
+      uploaded_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to save the budget request file.");
+
+  if (existingFiles.length) {
+    await supabase!.from("budget_request_files").delete().in(
+      "id",
+      existingFiles.map((entry) => entry.id),
+    );
+    await removeStorageObjects(existingFiles.map((entry) => entry.file_url));
+  }
+
+  return mapBudgetRequestFile(data as BudgetRequestFileRow);
+};
+
+export const uploadBudgetRequestFileToSupabase = replaceBudgetRequestFileInSupabase;
+
+export const createLiquidationReportFileInSupabase = async (params: {
+  liquidationReportId: string;
+  file: File;
+}) => {
+  await getAuthenticatedOrganizationContext();
+  const fileUrl = await uploadFileToStorage(LIQUIDATION_REPORT_FILES_BUCKET, params.liquidationReportId, params.file);
+
+  const { data, error } = await supabase!
+    .from("liquidation_report_files")
+    .insert({
+      liquidation_report_id: params.liquidationReportId,
+      file_url: fileUrl,
+      file_name: params.file.name,
+      file_type: params.file.type || "application/octet-stream",
+      file_size: params.file.size,
+      uploaded_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to save the liquidation file.");
+  return mapLiquidationReportFile(data as LiquidationReportFileRow);
+};
+
+export const updateLiquidationReportInSupabase = async (
+  liquidationReportId: string,
+  patch: Partial<Omit<LiquidationReport, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy" | "budgetRequestId">>,
+) => {
+  await getAuthenticatedOrganizationContext();
+
+  const payload: Record<string, unknown> = {};
+  if (patch.status !== undefined) payload.status = patch.status;
+  if (patch.remarks !== undefined) payload.remarks = patch.remarks.trim() || null;
+  if (patch.goSignalAt !== undefined) payload.go_signal_at = patch.goSignalAt || null;
+  if (patch.deadlineAt !== undefined) payload.deadline_at = patch.deadlineAt || null;
+  if (patch.hardCopySubmittedAt !== undefined) payload.hard_copy_submitted_at = patch.hardCopySubmittedAt || null;
+  if (patch.completedAt !== undefined) payload.completed_at = patch.completedAt || null;
+
+  const { data, error } = await supabase!
+    .from("liquidation_reports")
+    .update(payload)
+    .eq("id", liquidationReportId)
+    .select("*")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to update the liquidation report.");
+  return mapLiquidationReport(data as LiquidationReportRow);
 };
 
 export const uploadOrganizationDocumentToSupabase = submitOrganizationDocumentToSupabase;

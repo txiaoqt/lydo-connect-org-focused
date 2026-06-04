@@ -112,7 +112,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               _session_token: storedAdmin.sessionToken,
             });
             const validatedAdmin = Array.isArray(data) ? data[0] : null;
-            if (error || !validatedAdmin) {
+            const canTrustLocalAdminSession = Boolean(error && isRecoverableSupabaseAuthError(error.message));
+            if ((!validatedAdmin && !canTrustLocalAdminSession) || (error && !canTrustLocalAdminSession)) {
               writeAdminSession(null);
               setIsAuthenticated(false);
               setRole("guest");

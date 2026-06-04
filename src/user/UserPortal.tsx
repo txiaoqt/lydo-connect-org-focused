@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -12,14 +13,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { UserPortalShell } from "@/components/portal/UserPortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
+  type BudgetRequest,
   advocacyOptions,
   majorClassificationOptions,
+  type LiquidationReport,
+  type LiquidationReportFile,
   statusLabelMap,
   subClassificationOptions,
   type OrganizationProfile,
@@ -28,6 +34,11 @@ import {
 } from "@/lib/lydo-connect-data";
 import {
   loadLydoConnectSupabaseState,
+  createBudgetRequestInSupabase,
+  updateBudgetRequestInSupabase,
+  deleteBudgetRequestInSupabase,
+  uploadBudgetRequestFileToSupabase,
+  createLiquidationReportFileInSupabase,
   resolveSupabaseFileUrl,
   upsertOrganizationProfileInSupabase,
   submitOrganizationDocumentToSupabase,
@@ -38,6 +49,12 @@ const getReadiness = (filled: number, total: number) => (total === 0 ? 0 : Math.
 const hasUploadedTemplateFile = (fileUrl?: string, fileName?: string) =>
   Boolean(fileName?.trim() && fileUrl?.trim() && !fileUrl.startsWith("#"));
 const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.replaceAll("_", " ");
+const formatCurrency = (value: number) => `PHP ${value.toLocaleString()}`;
+const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
+  "approved_for_ftf_green",
+  "budget_released",
+  "completed",
+]);
 
 const createBlankOrganizationProfile = (userId: string): OrganizationProfile => ({
   id: `draft-${userId || "organization"}`,
@@ -55,6 +72,27 @@ const createBlankOrganizationProfile = (userId: string): OrganizationProfile => 
   facebookPageUrl: "",
   profileStatus: "incomplete",
   internalNotes: "",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+});
+
+const createBlankBudgetRequest = (organizationId: string, submittedBy: string): BudgetRequest => ({
+  id: `budget-${organizationId || "draft"}-${Date.now()}`,
+  organizationId,
+  submittedBy,
+  activityTitle: "",
+  activityDescription: "",
+  activityDate: "",
+  venue: "",
+  requestedAmount: 0,
+  approvedAmount: 0,
+  releasedAmount: 0,
+  releaseDate: "",
+  purposeCategory: "",
+  status: "draft",
+  remarks: "",
+  goSignalAt: "",
+  hardCopySubmittedAt: "",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
@@ -77,6 +115,11 @@ export default function UserPortal({ section }: { section: string }) {
   const [ocrPreviewOpen, setOcrPreviewOpen] = useState(false);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
+  const [savingBudgetRequest, setSavingBudgetRequest] = useState(false);
+  const [budgetFileDraft, setBudgetFileDraft] = useState<File | null>(null);
+  const [budgetForm, setBudgetForm] = useState<BudgetRequest>(() =>
+    createBlankBudgetRequest(user?.id ?? "", user?.id ?? ""),
+  );
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
@@ -101,6 +144,15 @@ export default function UserPortal({ section }: { section: string }) {
   }, [currentProfile, user?.id]);
 
   useEffect(() => {
+    if (!user) return;
+    setBudgetForm((current) =>
+      current.organizationId === (currentProfile?.id ?? "")
+        ? current
+        : createBlankBudgetRequest(currentProfile?.id ?? "", user.id),
+    );
+  }, [currentProfile?.id, user]);
+
+  useEffect(() => {
     return () => {
       if (ocrPreviewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(ocrPreviewUrl);
@@ -115,8 +167,6 @@ export default function UserPortal({ section }: { section: string }) {
 
   const profile = currentProfile ?? createBlankOrganizationProfile(user?.id ?? "");
   const submission = state.documentSubmissions[0] ?? null;
-  const budget = state.budgetRequests[0];
-  const liquidation = state.liquidationReports[0];
   const unreadNotifications = state.notifications.filter((notification) => notification.userId === user?.id && !notification.isRead);
   const templateDocuments = useMemo(
     () =>
@@ -133,6 +183,42 @@ export default function UserPortal({ section }: { section: string }) {
   const docFiles = state.documentSubmissionFiles.filter(
     (file) => file.submissionId === submissionId && validDocumentTypeIds.has(file.documentTypeId),
   );
+  const budgetRequests = useMemo(
+    () =>
+      state.budgetRequests
+        .filter((request) => request.organizationId === currentProfile?.id)
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [currentProfile?.id, state.budgetRequests],
+  );
+  const latestBudget = budgetRequests[0] ?? null;
+  const liquidationReports = useMemo(
+    () =>
+      state.liquidationReports
+        .filter(
+          (report) =>
+            report.organizationId === currentProfile?.id &&
+            budgetRequests.some(
+              (request) =>
+                request.id === report.budgetRequestId && approvedBudgetStatuses.has(request.status),
+            ),
+        )
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+    [budgetRequests, currentProfile?.id, state.liquidationReports],
+  );
+  const latestLiquidation = liquidationReports[0] ?? null;
+  const budgetRequestFilesByBudgetId = useMemo(
+    () => new Map(state.budgetRequestFiles.map((file) => [file.budgetRequestId, file])),
+    [state.budgetRequestFiles],
+  );
+  const liquidationFilesByReportId = useMemo(() => {
+    const map = new Map<string, LiquidationReportFile[]>();
+    state.liquidationReportFiles.forEach((file) => {
+      const files = map.get(file.liquidationReportId) ?? [];
+      files.push(file);
+      map.set(file.liquidationReportId, files);
+    });
+    return map;
+  }, [state.liquidationReportFiles]);
   const templatesById = useMemo(
     () => Object.fromEntries(templateDocuments.map((template) => [template.id, template])),
     [templateDocuments],
@@ -171,8 +257,8 @@ export default function UserPortal({ section }: { section: string }) {
     10,
   );
   const documentsPercent = getReadiness(completedDocs, templateDocuments.length);
-  const budgetPercent = budget ? getReadiness(budget.status === "approved_for_ftf_green" || budget.status === "budget_released" ? 1 : 0, 1) : 0;
-  const liquidationPercent = liquidation ? getReadiness(liquidation.status === "completed_liquidated" ? 1 : 0, 1) : 0;
+  const budgetPercent = latestBudget ? getReadiness(approvedBudgetStatuses.has(latestBudget.status) ? 1 : 0, 1) : 0;
+  const liquidationPercent = latestLiquidation ? getReadiness(latestLiquidation.status === "completed_liquidated" ? 1 : 0, 1) : 0;
 
   const openFile = async (fileUrl: string, downloadName?: string) => {
     try {
@@ -411,6 +497,158 @@ export default function UserPortal({ section }: { section: string }) {
     }
   };
 
+  const resetBudgetForm = () => {
+    setBudgetForm(createBlankBudgetRequest(currentProfile?.id ?? "", user?.id ?? ""));
+    setBudgetFileDraft(null);
+  };
+
+  const startEditingBudgetRequest = (request: BudgetRequest) => {
+    setBudgetForm({ ...request });
+    setBudgetFileDraft(null);
+  };
+
+  const saveBudgetRequest = async (status: BudgetRequest["status"] = budgetForm.status) => {
+    if (!user || !currentProfile) {
+      toast({
+        title: "Complete your organization profile first",
+        description: "Budget requests need an organization profile before they can be saved.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const nextBudgetRequest: BudgetRequest = {
+      ...budgetForm,
+      organizationId: currentProfile.id,
+      submittedBy: user.id,
+      activityTitle: budgetForm.activityTitle.trim(),
+      activityDescription: budgetForm.activityDescription.trim(),
+      activityDate: budgetForm.activityDate,
+      venue: budgetForm.venue.trim(),
+      requestedAmount: Number(budgetForm.requestedAmount || 0),
+      approvedAmount: Number(budgetForm.approvedAmount || 0),
+      releasedAmount: Number(budgetForm.releasedAmount || 0),
+      releaseDate: budgetForm.releaseDate,
+      purposeCategory: budgetForm.purposeCategory.trim(),
+      status,
+      remarks: budgetForm.remarks.trim(),
+      goSignalAt: budgetForm.goSignalAt,
+      hardCopySubmittedAt: budgetForm.hardCopySubmittedAt,
+      updatedAt: new Date().toISOString(),
+      createdAt: budgetForm.createdAt || new Date().toISOString(),
+    };
+
+    if (
+      !nextBudgetRequest.activityTitle ||
+      !nextBudgetRequest.activityDescription ||
+      !nextBudgetRequest.activityDate ||
+      !nextBudgetRequest.venue ||
+      !nextBudgetRequest.requestedAmount ||
+      !nextBudgetRequest.purposeCategory
+    ) {
+      toast({
+        title: "Complete the budget form",
+        description: "Activity title, description, proposed date, venue, requested amount, and purpose/category are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingBudgetRequest(true);
+    try {
+      const isExisting = budgetRequests.some((request) => request.id === nextBudgetRequest.id);
+      const file = budgetFileDraft;
+
+      if (isExisting) {
+        await updateBudgetRequestInSupabase(nextBudgetRequest.id, nextBudgetRequest);
+        if (file) {
+          await uploadBudgetRequestFileToSupabase(nextBudgetRequest.id, file);
+        }
+      } else {
+        await createBudgetRequestInSupabase({
+          budgetRequest: nextBudgetRequest,
+          file,
+        });
+      }
+
+      const remoteSnapshot = await loadLydoConnectSupabaseState();
+      if (remoteSnapshot) {
+        mergeRemoteState(remoteSnapshot);
+      }
+      resetBudgetForm();
+      toast({
+        title: isExisting ? "Budget request updated" : "Budget request saved",
+        description:
+          status === "submitted"
+            ? "The budget request is now ready for admin review."
+            : "The budget request has been saved as a draft.",
+      });
+    } catch (error) {
+      toast({
+        title: "Unable to save budget request",
+        description: error instanceof Error ? error.message : "The budget request could not be saved right now.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingBudgetRequest(false);
+    }
+  };
+
+  const handleDeleteBudgetRequest = (request: BudgetRequest) => {
+    if (!window.confirm(`Delete budget request "${request.activityTitle}"?`)) return;
+    void (async () => {
+      try {
+        await deleteBudgetRequestInSupabase(request.id);
+        const remoteSnapshot = await loadLydoConnectSupabaseState();
+        if (remoteSnapshot) {
+          mergeRemoteState(remoteSnapshot);
+        }
+        if (budgetForm.id === request.id) {
+          resetBudgetForm();
+        }
+        toast({
+          title: "Budget request deleted",
+          description: "The request and its attached files were removed.",
+        });
+      } catch (error) {
+        toast({
+          title: "Delete failed",
+          description: error instanceof Error ? error.message : "The budget request could not be deleted right now.",
+          variant: "destructive",
+        });
+      }
+    })();
+  };
+
+  const handleLiquidationFileUpload = async (report: LiquidationReport, fileList: FileList | null) => {
+    if (!fileList?.length) return;
+
+    try {
+      for (const file of Array.from(fileList)) {
+        await createLiquidationReportFileInSupabase({
+          liquidationReportId: report.id,
+          file,
+        });
+      }
+
+      const remoteSnapshot = await loadLydoConnectSupabaseState();
+      if (remoteSnapshot) {
+        mergeRemoteState(remoteSnapshot);
+      }
+
+      toast({
+        title: "Liquidation files uploaded",
+        description: "The post-activity documents were attached to the liquidation record.",
+      });
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "The liquidation files could not be uploaded.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const activeContent = useMemo(() => {
     switch (section) {
       case "dashboard":
@@ -419,8 +657,12 @@ export default function UserPortal({ section }: { section: string }) {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <PortalMetricCard label="Profile" value={`${profilePercent}%`} helper={formatStatusLabel(profile.profileStatus)} />
               <PortalMetricCard label="Documents" value={`${documentsPercent}%`} helper={`${completedDocs}/${templateDocuments.length} checked`} />
-              <PortalMetricCard label="Budget" value={`${budgetPercent}%`} helper={formatStatusLabel(budget.status)} />
-              <PortalMetricCard label="Liquidation" value={`${liquidationPercent}%`} helper={formatStatusLabel(liquidation.status)} />
+              <PortalMetricCard label="Budget" value={`${budgetPercent}%`} helper={formatStatusLabel(latestBudget?.status ?? "draft")} />
+              <PortalMetricCard
+                label="Liquidation"
+                value={`${liquidationPercent}%`}
+                helper={formatStatusLabel(latestLiquidation?.status ?? "pending_activity_completion")}
+              />
             </div>
 
             <PortalSection
@@ -452,7 +694,13 @@ export default function UserPortal({ section }: { section: string }) {
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                     <p>{submission?.status === "under_admin_review" ? "Wait for admin review remarks." : "Complete the remaining required documents."}</p>
-                    <p>{budget.status === "approved_for_ftf_green" ? "Prepare hard copies for face-to-face submission." : "Budget request is ready for administrative review."}</p>
+                    <p>
+                      {latestBudget?.status === "approved_for_ftf_green"
+                        ? "Prepare hard copies for face-to-face submission."
+                        : latestBudget
+                          ? "Budget request is ready for administrative review."
+                          : "Create your first budget request to start the review flow."}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/20">
@@ -470,11 +718,11 @@ export default function UserPortal({ section }: { section: string }) {
                     </div>
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span>Budget</span>
-                      <PortalStatusBadge status={budget.status} />
+                      {latestBudget ? <PortalStatusBadge status={latestBudget.status} /> : <span className="text-muted-foreground">No request yet</span>}
                     </div>
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span>Liquidation</span>
-                      <PortalStatusBadge status={liquidation.status} />
+                      {latestLiquidation ? <PortalStatusBadge status={latestLiquidation.status} /> : <span className="text-muted-foreground">Locked</span>}
                     </div>
                   </CardContent>
                 </Card>
@@ -871,34 +1119,215 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <div className="space-y-6">
             <PortalSection
-              title="Budget Request / Allocation Tracking"
-              description="Soft copy pre-checking before the face-to-face hard copy submission."
-              action={<PortalStatusBadge status={budget.status} />}
+              title="Budget Request"
+              description="Create, edit, delete, and submit allocation requests from one page."
+              action={<PortalStatusBadge status={latestBudget?.status ?? "draft"} />}
             >
-              <div className="grid gap-4 md:grid-cols-2">
-                {[
-                  ["Activity Title", budget.activityTitle],
-                  ["Description", budget.activityDescription],
-                  ["Proposed Date", budget.activityDate],
-                  ["Venue", budget.venue],
-                  ["Requested Amount", `PHP ${budget.requestedAmount.toLocaleString()}`],
-                  ["Purpose / Category", budget.purposeCategory],
-                ].map(([label, value]) => (
-                  <Card key={label} className="bg-muted/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0 text-sm">{value}</CardContent>
-                  </Card>
-                ))}
-              </div>
-              <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm">
-                <p className="font-medium text-foreground">Go signal</p>
-                <p className="mt-1 text-muted-foreground">
-                  {budget.status === "approved_for_ftf_green"
-                    ? "Your soft copy requirements have been pre-checked. You may now submit the hard copies face-to-face."
-                    : "Awaiting admin review."}
-                </p>
+              <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+                <Card className="border-border/70">
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      {budgetRequests.some((request) => request.id === budgetForm.id) ? "Edit Budget Request" : "New Budget Request"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="budget-title">Activity Title</Label>
+                        <Input
+                          id="budget-title"
+                          value={budgetForm.activityTitle}
+                          onChange={(event) => setBudgetForm((current) => ({ ...current, activityTitle: event.target.value }))}
+                          placeholder="Youth leadership training"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="budget-description">Description</Label>
+                        <Textarea
+                          id="budget-description"
+                          value={budgetForm.activityDescription}
+                          onChange={(event) => setBudgetForm((current) => ({ ...current, activityDescription: event.target.value }))}
+                          placeholder="Explain the activity, expected participants, and goals."
+                          rows={4}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="budget-date">Proposed Date</Label>
+                        <Input
+                          id="budget-date"
+                          type="date"
+                          value={budgetForm.activityDate}
+                          onChange={(event) => setBudgetForm((current) => ({ ...current, activityDate: event.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="budget-venue">Venue</Label>
+                        <Input
+                          id="budget-venue"
+                          value={budgetForm.venue}
+                          onChange={(event) => setBudgetForm((current) => ({ ...current, venue: event.target.value }))}
+                          placeholder="LYDO Hall"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="budget-amount">Requested Amount</Label>
+                        <Input
+                          id="budget-amount"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={budgetForm.requestedAmount || ""}
+                          onChange={(event) =>
+                            setBudgetForm((current) => ({
+                              ...current,
+                              requestedAmount: Number(event.target.value || 0),
+                            }))
+                          }
+                          placeholder="15000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="budget-category">Purpose and Category</Label>
+                        <Input
+                          id="budget-category"
+                          value={budgetForm.purposeCategory}
+                          onChange={(event) => setBudgetForm((current) => ({ ...current, purposeCategory: event.target.value }))}
+                          placeholder="Capacity building / training"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="budget-remarks">Remarks</Label>
+                        <Textarea
+                          id="budget-remarks"
+                          value={budgetForm.remarks}
+                          onChange={(event) => setBudgetForm((current) => ({ ...current, remarks: event.target.value }))}
+                          placeholder="Optional notes for the reviewer."
+                          rows={3}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="budget-file">Detailed Document</Label>
+                        <Input
+                          id="budget-file"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                          onChange={(event) => setBudgetFileDraft(event.target.files?.[0] ?? null)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Upload the detailed budget document that contains the full breakdown and supporting details.
+                        </p>
+                        {budgetFileDraft ? <p className="text-xs text-foreground">Selected file: {budgetFileDraft.name}</p> : null}
+                        {!budgetFileDraft && budgetRequestFilesByBudgetId.get(budgetForm.id) ? (
+                          <p className="text-xs text-foreground">
+                            Current file: {budgetRequestFilesByBudgetId.get(budgetForm.id)?.fileName}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        type="button"
+                        className="sm:w-auto"
+                        disabled={savingBudgetRequest}
+                        onClick={() => void saveBudgetRequest("draft")}
+                      >
+                        {savingBudgetRequest ? "Saving..." : "Save Draft"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="sm:w-auto"
+                        disabled={savingBudgetRequest}
+                        onClick={() => void saveBudgetRequest("submitted")}
+                      >
+                        Submit for Review
+                      </Button>
+                      <Button type="button" variant="ghost" className="sm:w-auto" onClick={resetBudgetForm}>
+                        Reset
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-4">
+                  {budgetRequests.length ? (
+                    budgetRequests.map((request) => {
+                      const attachedFile = budgetRequestFilesByBudgetId.get(request.id);
+                      return (
+                        <Card key={request.id} className="border-border/70">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <CardTitle className="text-base">{request.activityTitle || "Untitled request"}</CardTitle>
+                                <p className="mt-1 text-sm text-muted-foreground">{request.purposeCategory || "No category yet"}</p>
+                              </div>
+                              <PortalStatusBadge status={request.status} />
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3 text-sm text-muted-foreground">
+                            <p>{request.activityDescription || "No description provided yet."}</p>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <p>Proposed Date: {request.activityDate || "Pending"}</p>
+                              <p>Venue: {request.venue || "Pending"}</p>
+                              <p>Requested Amount: {formatCurrency(request.requestedAmount || 0)}</p>
+                              <p>Approved Amount: {formatCurrency(request.approvedAmount || 0)}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs">
+                              {attachedFile ? (
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span>{attachedFile.fileName}</span>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => void openFile(attachedFile.fileUrl, attachedFile.fileName)}>
+                                    Open File
+                                  </Button>
+                                </div>
+                              ) : (
+                                <p>No detailed document uploaded yet.</p>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button type="button" size="sm" variant="outline" onClick={() => startEditingBudgetRequest(request)}>
+                                Edit
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  void (async () => {
+                                    try {
+                                      await updateBudgetRequestInSupabase(request.id, { status: "submitted" });
+                                      const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                      if (remoteSnapshot) {
+                                        mergeRemoteState(remoteSnapshot);
+                                      }
+                                    } catch (error) {
+                                      toast({
+                                        title: "Unable to update budget",
+                                        description: error instanceof Error ? error.message : "The budget request could not be submitted right now.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  })()
+                                }
+                                disabled={savingBudgetRequest}
+                              >
+                                Submit
+                              </Button>
+                              <Button type="button" size="sm" variant="outline" onClick={() => handleDeleteBudgetRequest(request)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <PortalEmptyState
+                      title="No budget requests yet"
+                      description="Create the first request using the form on the left. Once approved, the liquidation page will unlock automatically."
+                    />
+                  )}
+                </div>
               </div>
             </PortalSection>
           </div>
@@ -907,30 +1336,92 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <PortalSection
             title="Liquidation and Reporting"
-            description="Post-activity requirements tied to the approved budget request."
-            action={<PortalStatusBadge status={liquidation.status} />}
+            description="Post-activity documents appear only after an approved budget request exists."
+            action={<PortalStatusBadge status={latestLiquidation?.status ?? "pending_activity_completion"} />}
           >
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                ["Related Budget", budget.activityTitle],
-                ["Approved Amount", `PHP ${budget.approvedAmount.toLocaleString()}`],
-                ["Budget Release Date", budget.releaseDate || "Pending"],
-                ["Go Signal Date", liquidation.goSignalAt || "Pending"],
-                ["Deadline", liquidation.deadlineAt || "Pending"],
-                ["Hard Copy Submitted", liquidation.hardCopySubmittedAt || "Not yet"],
-              ].map(([label, value]) => (
-                <Card key={label} className="bg-muted/20">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0 text-sm">{value}</CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="mt-4 rounded-xl border border-border/70 bg-background p-4 text-sm text-muted-foreground">
-              <AlertTriangle className="mb-2 h-4 w-4 text-amber-500" />
-              Submit within one month from the go signal date once the soft copy has been approved.
-            </div>
+            {liquidationReports.length ? (
+              <div className="space-y-4">
+                {liquidationReports.map((report) => {
+                  const relatedBudget = budgetRequests.find((request) => request.id === report.budgetRequestId) ?? null;
+                  const attachedFiles = liquidationFilesByReportId.get(report.id) ?? [];
+                  return (
+                    <Card key={report.id} className="border-border/70">
+                      <CardHeader>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <CardTitle className="text-base">{relatedBudget?.activityTitle || "Approved budget"}</CardTitle>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {relatedBudget?.purposeCategory || "No category"} | {relatedBudget ? formatCurrency(relatedBudget.approvedAmount || relatedBudget.requestedAmount || 0) : "PHP 0"}
+                            </p>
+                          </div>
+                          <PortalStatusBadge status={report.status} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <Card className="bg-muted/20">
+                            <CardContent className="p-4">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Go Signal Date</p>
+                              <p className="mt-2 text-sm">{report.goSignalAt || "Pending"}</p>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-muted/20">
+                            <CardContent className="p-4">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Deadline</p>
+                              <p className="mt-2 text-sm">{report.deadlineAt || "Pending"}</p>
+                            </CardContent>
+                          </Card>
+                        </div>
+                        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                          <Label htmlFor={`liquidation-upload-${report.id}`} className="text-sm font-medium text-foreground">
+                            Upload post-activity documents
+                          </Label>
+                          <Input
+                            id={`liquidation-upload-${report.id}`}
+                            type="file"
+                            multiple
+                            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                            className="mt-2"
+                            onChange={async (event) => {
+                              await handleLiquidationFileUpload(report, event.target.files);
+                              event.currentTarget.value = "";
+                            }}
+                          />
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Upload attendance sheets, photos, narrative reports, and other post-activity proof.
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="font-medium text-foreground">Uploaded files</p>
+                          {attachedFiles.length ? (
+                            <div className="space-y-2">
+                              {attachedFiles.map((file) => (
+                                <div key={file.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 p-3">
+                                  <div>
+                                    <p className="font-medium text-foreground">{file.fileName}</p>
+                                    <p className="text-xs text-muted-foreground">{file.fileType}</p>
+                                  </div>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => void openFile(file.fileUrl, file.fileName)}>
+                                    Open File
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground">No post-activity files uploaded yet.</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <PortalEmptyState
+                title="No approved budget yet"
+                description="Once the admin approves a budget request, its liquidation record will appear here for post-activity uploads."
+              />
+            )}
           </PortalSection>
         );
       case "news-releases":
@@ -992,8 +1483,11 @@ export default function UserPortal({ section }: { section: string }) {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <PortalMetricCard label="Profile" value={`${profilePercent}%`} />
                 <PortalMetricCard label="Documents" value={`${documentsPercent}%`} />
-                <PortalMetricCard label="Budget" value={formatStatusLabel(budget.status)} />
-                <PortalMetricCard label="Liquidation" value={formatStatusLabel(liquidation.status)} />
+                <PortalMetricCard label="Budget" value={formatStatusLabel(latestBudget?.status ?? "draft")} />
+                <PortalMetricCard
+                  label="Liquidation"
+                  value={formatStatusLabel(latestLiquidation?.status ?? "pending_activity_completion")}
+                />
               </div>
             </PortalSection>
             <PortalSection title="Missing Requirements" description="Items that need attention before you can move forward.">
@@ -1048,22 +1542,32 @@ export default function UserPortal({ section }: { section: string }) {
         );
     }
   }, [
-    budget.activityDescription,
-    budget.activityTitle,
-    budget.approvedAmount,
-    budget.purposeCategory,
-    budget.releaseDate,
-    budget.requestedAmount,
-    budget.status,
-    budget.venue,
+    approvedBudgetStatuses,
+    budgetFileDraft,
+    budgetForm,
+    budgetRequestFilesByBudgetId,
+    budgetRequests,
     completedDocs,
+    currentProfile,
+    documentsPercent,
     docFiles,
-    liquidation.deadlineAt,
-    liquidation.goSignalAt,
-    liquidation.hardCopySubmittedAt,
-    liquidation.status,
+    handleDeleteBudgetRequest,
+    handleLiquidationFileUpload,
+    latestBudget,
+    latestLiquidation,
+    liquidationFilesByReportId,
+    liquidationPercent,
+    liquidationReports,
     markNotificationRead,
+    majorClassificationOptions,
+    mergeRemoteState,
     navigate,
+    openFile,
+    openPreview,
+    previewEmptyMessage,
+    previewModalOpen,
+    previewTitle,
+    previewUrl,
     profile.address,
     profile.adviserName,
     profile.barangay,
@@ -1073,39 +1577,29 @@ export default function UserPortal({ section }: { section: string }) {
     profile.organizationName,
     profile.profileStatus,
     profile.representativeName,
+    profileDraft,
     profilePercent,
+    resetBudgetForm,
+    saveBudgetRequest,
+    savingBudgetRequest,
+    savingProfile,
     section,
-    mergeRemoteState,
-    openFile,
-    openPreview,
-    previewEmptyMessage,
-    previewModalOpen,
-    previewTitle,
-    previewUrl,
-    state.templates,
-    state.notifications,
     state.newsReleases,
+    state.notifications,
+    state.templates,
     state.transparencyPosts,
+    startEditingBudgetRequest,
     submission?.id,
     submission?.status,
+    subClassificationOptions,
+    templateDocuments,
+    templatesById,
+    toggleAdvocacy,
     updateDocumentFile,
     updateDocumentSubmission,
     user,
     validDocumentTypeIds,
-    templateDocuments,
-    templatesById,
-    currentProfile,
-    profileDraft,
-    savingProfile,
     advocacyOptions,
-    majorClassificationOptions,
-    subClassificationOptions,
-    handleProfileFieldChange,
-    toggleAdvocacy,
-    saveOrganizationProfile,
-    documentsPercent,
-    budgetPercent,
-    liquidationPercent,
   ]);
 
   return (

@@ -22,10 +22,37 @@ import { loadLydoConnectSupabaseState } from "./lydo-connect-supabase";
 import { supabase } from "./supabase";
 
 const STORAGE_KEY = "lydo-connect-state-v1";
+const legacySeedIds = new Set([
+  "docsub-001",
+  "budget-001",
+  "budget-file-001",
+  "liq-001",
+  "liq-file-001",
+  "remark-001",
+  "notif-001",
+  "log-001",
+]);
 
 type LydoConnectState = LydoSeedState;
 
 type UpdatePatch<T> = Partial<T> | ((current: T) => T);
+
+const createLocalId = (prefix: string) =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const addMonthsToIso = (iso: string, months: number) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return new Date().toISOString();
+  const nextDate = new Date(date);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate.toISOString();
+};
+
+const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
+  "approved_for_ftf_green",
+  "budget_released",
+  "completed",
+]);
 
 type LydoConnectContextValue = {
   state: LydoConnectState;
@@ -36,10 +63,17 @@ type LydoConnectContextValue = {
   upsertOrganizationProfile: (profile: OrganizationProfile) => void;
   updateDocumentSubmission: (id: string, patch: UpdatePatch<DocumentSubmission>) => void;
   updateDocumentFile: (id: string, patch: UpdatePatch<SubmissionFile>) => void;
+  createBudgetRequest: (budgetRequest: BudgetRequest) => void;
   updateBudgetRequest: (id: string, patch: UpdatePatch<BudgetRequest>) => void;
+  upsertBudgetRequestFile: (file: BudgetRequestFile) => void;
   updateBudgetRequestFile: (id: string, patch: UpdatePatch<BudgetRequestFile>) => void;
+  deleteBudgetRequest: (id: string) => void;
   updateLiquidationReport: (id: string, patch: UpdatePatch<LiquidationReport>) => void;
+  createLiquidationReport: (report: LiquidationReport) => void;
+  deleteLiquidationReport: (id: string) => void;
+  createLiquidationReportFile: (file: LiquidationReportFile) => void;
   updateLiquidationReportFile: (id: string, patch: UpdatePatch<LiquidationReportFile>) => void;
+  deleteLiquidationReportFile: (id: string) => void;
   updateNewsRelease: (id: string, patch: UpdatePatch<NewsRelease>) => void;
   updateTransparencyPost: (id: string, patch: UpdatePatch<TransparencyPost>) => void;
   updateComplianceRemark: (id: string, patch: UpdatePatch<ComplianceRemark>) => void;
@@ -67,17 +101,35 @@ const readState = (): LydoConnectState => {
       organizationProfiles: ((parsed.organizationProfiles ?? seedState.organizationProfiles) as OrganizationProfile[]).map(
         normalizeOrganizationProfile,
       ),
-      documentSubmissions: parsed.documentSubmissions ?? seedState.documentSubmissions,
-      documentSubmissionFiles: parsed.documentSubmissionFiles ?? seedState.documentSubmissionFiles,
-      budgetRequests: parsed.budgetRequests ?? seedState.budgetRequests,
-      budgetRequestFiles: parsed.budgetRequestFiles ?? seedState.budgetRequestFiles,
-      liquidationReports: parsed.liquidationReports ?? seedState.liquidationReports,
-      liquidationReportFiles: parsed.liquidationReportFiles ?? seedState.liquidationReportFiles,
+      documentSubmissions: ((parsed.documentSubmissions ?? seedState.documentSubmissions) as DocumentSubmission[]).filter(
+        (item) => !legacySeedIds.has(item.id),
+      ),
+      documentSubmissionFiles: ((parsed.documentSubmissionFiles ?? seedState.documentSubmissionFiles) as SubmissionFile[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.submissionId),
+      ),
+      budgetRequests: ((parsed.budgetRequests ?? seedState.budgetRequests) as BudgetRequest[]).filter(
+        (item) => !legacySeedIds.has(item.id),
+      ),
+      budgetRequestFiles: ((parsed.budgetRequestFiles ?? seedState.budgetRequestFiles) as BudgetRequestFile[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.budgetRequestId),
+      ),
+      liquidationReports: ((parsed.liquidationReports ?? seedState.liquidationReports) as LiquidationReport[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.budgetRequestId),
+      ),
+      liquidationReportFiles: ((parsed.liquidationReportFiles ?? seedState.liquidationReportFiles) as LiquidationReportFile[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.liquidationReportId),
+      ),
       newsReleases: parsed.newsReleases ?? seedState.newsReleases,
       transparencyPosts: parsed.transparencyPosts ?? seedState.transparencyPosts,
-      complianceRemarks: parsed.complianceRemarks ?? seedState.complianceRemarks,
-      notifications: parsed.notifications ?? seedState.notifications,
-      activityLogs: parsed.activityLogs ?? seedState.activityLogs,
+      complianceRemarks: ((parsed.complianceRemarks ?? seedState.complianceRemarks) as ComplianceRemark[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.relatedId),
+      ),
+      notifications: ((parsed.notifications ?? seedState.notifications) as NotificationRecord[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.relatedId),
+      ),
+      activityLogs: ((parsed.activityLogs ?? seedState.activityLogs) as ActivityLog[]).filter(
+        (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.relatedId),
+      ),
       templates: (parsed.templates ?? seedState.templates).filter((template) => !legacyRemovedTemplateNames.has(template.name)),
     };
   } catch {
@@ -90,6 +142,51 @@ const applyPatch = <T extends { id: string }>(items: T[], id: string, patch: Upd
     if (item.id !== id) return item;
     return typeof patch === "function" ? patch(item) : { ...item, ...patch };
   });
+
+const removeById = <T extends { id: string }>(items: T[], id: string) =>
+  items.filter((item) => item.id !== id);
+
+const syncLiquidationReportForBudget = (
+  liquidations: LiquidationReport[],
+  budget: BudgetRequest,
+  nowIso: string,
+) => {
+  if (!approvedBudgetStatuses.has(budget.status)) return liquidations;
+
+  const existing = liquidations.find((report) => report.budgetRequestId === budget.id) ?? null;
+  const goSignalAt = budget.goSignalAt || existing?.goSignalAt || nowIso;
+  const deadlineAt = existing?.deadlineAt || addMonthsToIso(goSignalAt, 1);
+
+  const syncedReport: LiquidationReport = existing
+    ? {
+        ...existing,
+        organizationId: budget.organizationId,
+        submittedBy: budget.submittedBy,
+        goSignalAt,
+        deadlineAt,
+        updatedAt: nowIso,
+      }
+    : {
+        id: createLocalId("liq"),
+        budgetRequestId: budget.id,
+        organizationId: budget.organizationId,
+        submittedBy: budget.submittedBy,
+        status: "pending_activity_completion",
+        remarks: "",
+        goSignalAt,
+        deadlineAt,
+        hardCopySubmittedAt: "",
+        completedAt: "",
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+  if (existing) {
+    return liquidations.map((report) => (report.id === existing.id ? syncedReport : report));
+  }
+
+  return [syncedReport, ...liquidations];
+};
 
 const normalizeOrganizationProfile = (profile: OrganizationProfile): OrganizationProfile => ({
   ...profile,
@@ -189,25 +286,129 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
           ...current,
           documentSubmissionFiles: applyPatch(current.documentSubmissionFiles, id, patch),
         })),
+      createBudgetRequest: (budgetRequest) =>
+        setState((current) => {
+          const nowIso = new Date().toISOString();
+          const normalizedBudgetRequest: BudgetRequest = {
+            ...budgetRequest,
+            createdAt: budgetRequest.createdAt || nowIso,
+            updatedAt: budgetRequest.updatedAt || nowIso,
+          };
+          return {
+            ...current,
+            budgetRequests: [normalizedBudgetRequest, ...current.budgetRequests],
+            liquidationReports: syncLiquidationReportForBudget(
+              current.liquidationReports,
+              normalizedBudgetRequest,
+              nowIso,
+            ),
+          };
+        }),
       updateBudgetRequest: (id, patch) =>
-        setState((current) => ({
-          ...current,
-          budgetRequests: applyPatch(current.budgetRequests, id, patch),
-        })),
+        setState((current) => {
+          const nowIso = new Date().toISOString();
+          const updatedBudgetRequests = applyPatch(current.budgetRequests, id, patch);
+          const updatedBudget = updatedBudgetRequests.find((request) => request.id === id) ?? null;
+
+          return {
+            ...current,
+            budgetRequests: updatedBudgetRequests.map((request) => ({
+              ...request,
+              updatedAt: request.id === id ? nowIso : request.updatedAt,
+            })),
+            liquidationReports:
+              updatedBudget && approvedBudgetStatuses.has(updatedBudget.status)
+                ? syncLiquidationReportForBudget(current.liquidationReports, { ...updatedBudget, updatedAt: nowIso }, nowIso)
+                : current.liquidationReports,
+          };
+        }),
+      upsertBudgetRequestFile: (file) =>
+        setState((current) => {
+          const existingIndex = current.budgetRequestFiles.findIndex(
+            (entry) => entry.budgetRequestId === file.budgetRequestId,
+          );
+
+          if (existingIndex < 0) {
+            return {
+              ...current,
+              budgetRequestFiles: [file, ...current.budgetRequestFiles],
+            };
+          }
+
+          const budgetRequestFiles = [...current.budgetRequestFiles];
+          budgetRequestFiles[existingIndex] = file;
+          return {
+            ...current,
+            budgetRequestFiles,
+          };
+        }),
       updateBudgetRequestFile: (id, patch) =>
         setState((current) => ({
           ...current,
           budgetRequestFiles: applyPatch(current.budgetRequestFiles, id, patch),
         })),
+      deleteBudgetRequest: (id) =>
+        setState((current) => {
+          const budgetRequest = current.budgetRequests.find((request) => request.id === id) ?? null;
+          const relatedLiquidationIds = current.liquidationReports
+            .filter((report) => report.budgetRequestId === id)
+            .map((report) => report.id);
+          return {
+            ...current,
+            budgetRequests: removeById(current.budgetRequests, id),
+            budgetRequestFiles: current.budgetRequestFiles.filter((file) => file.budgetRequestId !== id),
+            liquidationReports: current.liquidationReports.filter((report) => report.budgetRequestId !== id),
+            liquidationReportFiles: current.liquidationReportFiles.filter(
+              (file) => !relatedLiquidationIds.includes(file.liquidationReportId),
+            ),
+            notifications: budgetRequest
+              ? current.notifications.filter(
+                  (notification) =>
+                    !(notification.relatedType === "budget_request" && notification.relatedId === budgetRequest.id),
+                )
+              : current.notifications,
+            activityLogs: budgetRequest
+              ? current.activityLogs.filter(
+                  (log) => !(log.relatedType === "budget_request" && log.relatedId === budgetRequest.id),
+                )
+              : current.activityLogs,
+          };
+        }),
       updateLiquidationReport: (id, patch) =>
         setState((current) => ({
           ...current,
-          liquidationReports: applyPatch(current.liquidationReports, id, patch),
+          liquidationReports: applyPatch(current.liquidationReports, id, patch).map((report) => ({
+            ...report,
+            updatedAt: report.id === id ? new Date().toISOString() : report.updatedAt,
+          })),
+        })),
+      createLiquidationReport: (report) =>
+        setState((current) => ({
+          ...current,
+          liquidationReports: [report, ...current.liquidationReports],
+        })),
+      deleteLiquidationReport: (id) =>
+        setState((current) => ({
+          ...current,
+          liquidationReports: removeById(current.liquidationReports, id),
+          liquidationReportFiles: current.liquidationReportFiles.filter(
+            (file) => file.liquidationReportId !== id,
+          ),
+        })),
+      createLiquidationReportFile: (file) =>
+        setState((current) => ({
+          ...current,
+          liquidationReportFiles: [file, ...current.liquidationReportFiles],
         })),
       updateLiquidationReportFile: (id, patch) =>
         setState((current) => ({
           ...current,
           liquidationReportFiles: applyPatch(current.liquidationReportFiles, id, patch),
+        })),
+      deleteLiquidationReportFile: (id) =>
+        setState((current) => ({
+          ...current,
+          liquidationReportFiles: removeById(current.liquidationReportFiles, id),
         })),
       updateNewsRelease: (id, patch) =>
         setState((current) => ({

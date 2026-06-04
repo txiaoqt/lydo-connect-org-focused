@@ -21,9 +21,11 @@ import { adminNavigationGroups } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
   createTemplateRecordInSupabase,
+  updateBudgetRequestInSupabase,
   deleteTemplateRecordInSupabase,
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
+  updateLiquidationReportInSupabase,
   updateTemplateRecordInSupabase,
   uploadTemplateDocumentToSupabase,
 } from "@/lib/lydo-connect-supabase";
@@ -62,7 +64,7 @@ const renderAdvocacyChips = (advocacies: string[]) =>
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, updateBudgetRequest, updateLiquidationReport, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createNotification, createActivityLog } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createNotification, createActivityLog } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -77,8 +79,6 @@ export default function AdminPortal({ section }: { section: string }) {
   const [previewTitle, setPreviewTitle] = useState("");
 
   const profile = state.organizationProfiles[0];
-  const budget = state.budgetRequests[0];
-  const liquidation = state.liquidationReports[0];
   const unread = state.notifications.filter((item) => !item.isRead).length;
   const templateDocuments = useMemo(
     () =>
@@ -593,7 +593,8 @@ export default function AdminPortal({ section }: { section: string }) {
         return (
           <PortalSection title="Budget Utilization" description="Budget request review and go-signal control.">
             <div className="grid gap-4">
-              {state.budgetRequests.map((request) => (
+              {state.budgetRequests.length ? (
+                state.budgetRequests.map((request) => (
                 <Card key={request.id} className="border-border/70">
                   <CardContent className="grid gap-4 p-4 md:grid-cols-[1.5fr_1fr]">
                     <div className="space-y-2">
@@ -613,39 +614,90 @@ export default function AdminPortal({ section }: { section: string }) {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
-                            updateBudgetRequest(request.id, {
-                              status: "approved_for_ftf_green",
-                              goSignalAt: new Date().toISOString(),
-                              approvedAmount: request.requestedAmount,
-                            });
-                            createNotification({
-                              id: `notif-${Date.now()}`,
-                              userId: profile.userId,
-                              organizationId: profile.id,
-                              title: "Budget go signal issued",
-                              message: "Your soft copy requirements have been pre-checked. You may now submit the hard copies face-to-face.",
-                              type: "budget_go_signal",
-                              relatedType: "budget_request",
-                              relatedId: request.id,
-                              isRead: false,
-                              createdAt: new Date().toISOString(),
-                            });
-                          }}
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                await updateBudgetRequestInSupabase(request.id, {
+                                  status: "approved_for_ftf_green",
+                                  goSignalAt: new Date().toISOString(),
+                                  approvedAmount: request.requestedAmount,
+                                });
+                                const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                createNotification({
+                                  id: `notif-${Date.now()}`,
+                                  userId: profile.userId,
+                                  organizationId: profile.id,
+                                  title: "Budget go signal issued",
+                                  message: "Your soft copy requirements have been pre-checked. You may now submit the hard copies face-to-face.",
+                                  type: "budget_go_signal",
+                                  relatedType: "budget_request",
+                                  relatedId: request.id,
+                                  isRead: false,
+                                  createdAt: new Date().toISOString(),
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update budget",
+                                  description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
                         >
                           Mark Green
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => updateBudgetRequest(request.id, { status: "needs_revision" })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                await updateBudgetRequestInSupabase(request.id, { status: "needs_revision" });
+                                const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update budget",
+                                  description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
                           Needs Revision
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => updateBudgetRequest(request.id, { status: "rejected_red" })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                await updateBudgetRequestInSupabase(request.id, { status: "rejected_red" });
+                                const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update budget",
+                                  description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
                           Reject
                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              ) : (
+                <PortalEmptyState title="No budget requests yet" description="Budget requests will appear here after an organization creates one." />
+              )}
             </div>
           </PortalSection>
         );
@@ -653,7 +705,8 @@ export default function AdminPortal({ section }: { section: string }) {
         return (
           <PortalSection title="Liquidation Monitoring" description="Track deadlines and go-signal dates.">
             <div className="grid gap-4">
-              {state.liquidationReports.map((record) => (
+              {state.liquidationReports.length ? (
+                state.liquidationReports.map((record) => (
                 <Card key={record.id} className="border-border/70">
                   <CardContent className="grid gap-4 p-4 md:grid-cols-[1.5fr_1fr]">
                     <div className="space-y-2">
@@ -669,20 +722,80 @@ export default function AdminPortal({ section }: { section: string }) {
                     <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
                       <p>Remarks: {record.remarks || "None"}</p>
                       <div className="flex flex-wrap gap-2 pt-2">
-                        <Button size="sm" variant="outline" onClick={() => updateLiquidationReport(record.id, { status: "approved_for_ftf_green", goSignalAt: new Date().toISOString() })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                await updateLiquidationReportInSupabase(record.id, {
+                                  status: "approved_for_ftf_green",
+                                  goSignalAt: new Date().toISOString(),
+                                });
+                                const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update liquidation",
+                                  description: error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
                           Mark Green
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => updateLiquidationReport(record.id, { status: "needs_revision" })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                await updateLiquidationReportInSupabase(record.id, { status: "needs_revision" });
+                                const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update liquidation",
+                                  description: error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
                           Needs Revision
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => updateLiquidationReport(record.id, { status: "overdue" })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                await updateLiquidationReportInSupabase(record.id, { status: "overdue" });
+                                const remoteSnapshot = await loadLydoConnectSupabaseState();
+                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update liquidation",
+                                  description: error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
                           Mark Overdue
                         </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              ) : (
+                <PortalEmptyState title="No liquidation records yet" description="Approved budgets create liquidation records automatically." />
+              )}
             </div>
           </PortalSection>
         );
@@ -1046,10 +1159,8 @@ export default function AdminPortal({ section }: { section: string }) {
     templateFileDraft,
     templateNameDraft,
     templateModalMode,
-    updateBudgetRequest,
     updateComplianceRemark,
     updateDocumentSubmission,
-    updateLiquidationReport,
     updateNewsRelease,
     updateOrganizationProfile,
     updateTemplate,
