@@ -22,9 +22,9 @@ const complianceFeatures = [
   },
   {
     icon: FileCheck2,
-    title: "Validation and Review",
-    description: "Check OCR-extracted text before final submission and flag any missing details.",
-    href: "/validation-review",
+    title: "OCR Review",
+    description: "Check the OCR preview inside document submission before you confirm the upload.",
+    href: "/document-submission",
   },
   {
     icon: Shield,

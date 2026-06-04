@@ -77,7 +77,6 @@ export default function AdminPortal({ section }: { section: string }) {
   const [previewTitle, setPreviewTitle] = useState("");
 
   const profile = state.organizationProfiles[0];
-  const submission = state.documentSubmissions[0];
   const budget = state.budgetRequests[0];
   const liquidation = state.liquidationReports[0];
   const unread = state.notifications.filter((item) => !item.isRead).length;
@@ -436,8 +435,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                       userId: selectedOrg.userId,
                                       organizationId: selectedOrg.id,
                                       title: "Document submission approved",
-                                      message: "Your submitted documents have been marked approved / green.",
-                                      type: "document_green",
+                                      message: "Your submitted documents have been approved and are ready for the next step.",
+                                      type: "document_approved",
                                       relatedType: "document_submission",
                                       relatedId: selectedSubmission.id,
                                       isRead: false,
@@ -455,7 +454,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     });
                                   }}
                                 >
-                                  Approve / Green
+                                  Approve
                                 </Button>
                                 <Button
                                   size="sm"
@@ -464,6 +463,42 @@ export default function AdminPortal({ section }: { section: string }) {
                                   onClick={() => updateDocumentSubmission(selectedSubmission.id, { status: "needs_revision" })}
                                 >
                                   Needs Revision
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={!file}
+                                  onClick={() => {
+                                    updateDocumentSubmission(selectedSubmission.id, {
+                                      status: "rejected_red",
+                                      reviewedAt: new Date().toISOString(),
+                                      reviewedBy: adminId,
+                                    });
+                                    createNotification({
+                                      id: `notif-${Date.now()}`,
+                                      userId: selectedOrg.userId,
+                                      organizationId: selectedOrg.id,
+                                      title: "Document submission rejected",
+                                      message: "Your submitted documents were rejected. Please upload a corrected PDF and submit again.",
+                                      type: "document_rejected",
+                                      relatedType: "document_submission",
+                                      relatedId: selectedSubmission.id,
+                                      isRead: false,
+                                      createdAt: new Date().toISOString(),
+                                    });
+                                    createActivityLog({
+                                      id: `log-${Date.now()}`,
+                                      actorUserId: adminId,
+                                      organizationId: selectedOrg.id,
+                                      action: "rejected_document_submission",
+                                      relatedType: "document_submission",
+                                      relatedId: selectedSubmission.id,
+                                      description: "Document submission rejected from the registration detail view.",
+                                      createdAt: new Date().toISOString(),
+                                    });
+                                  }}
+                                >
+                                  Reject
                                 </Button>
                               </div>
                             </div>
@@ -1006,7 +1041,6 @@ export default function AdminPortal({ section }: { section: string }) {
     state.templates,
     state.transparencyPosts,
     selectedTemplate,
-    submission.status,
     templateDescriptionDraft,
     templateDocuments,
     templateFileDraft,

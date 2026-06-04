@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, MessageSquare, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
@@ -19,6 +20,7 @@ import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
   advocacyOptions,
   majorClassificationOptions,
+  statusLabelMap,
   subClassificationOptions,
   type OrganizationProfile,
   userNavigationGroups,
@@ -28,12 +30,14 @@ import {
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
   upsertOrganizationProfileInSupabase,
-  uploadOrganizationDocumentToSupabase,
+  submitOrganizationDocumentToSupabase,
 } from "@/lib/lydo-connect-supabase";
+import { scanPdfForOcr, type DocumentOcrIssue, type DocumentOcrScanResult } from "@/lib/document-ocr";
 
 const getReadiness = (filled: number, total: number) => (total === 0 ? 0 : Math.round((filled / total) * 100));
 const hasUploadedTemplateFile = (fileUrl?: string, fileName?: string) =>
   Boolean(fileName?.trim() && fileUrl?.trim() && !fileUrl.startsWith("#"));
+const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.replaceAll("_", " ");
 
 const createBlankOrganizationProfile = (userId: string): OrganizationProfile => ({
   id: `draft-${userId || "organization"}`,
@@ -64,15 +68,24 @@ export default function UserPortal({ section }: { section: string }) {
     upsertOrganizationProfile,
     updateDocumentFile,
     updateDocumentSubmission,
-    setDocumentSubmissionStatus,
     markNotificationRead,
   } = useLydoConnect();
-  const [uploadingDocumentId, setUploadingDocumentId] = useState<string | null>(null);
+  const [scanningDocumentId, setScanningDocumentId] = useState<string | null>(null);
+  const [submittingDocumentId, setSubmittingDocumentId] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [ocrPreviewOpen, setOcrPreviewOpen] = useState(false);
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+  const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
+  const [pendingDocumentScan, setPendingDocumentScan] = useState<{
+    documentTypeId: string;
+    documentTypeName: string;
+    file: File;
+    result: DocumentOcrScanResult;
+  } | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
   const [profileDraft, setProfileDraft] = useState<OrganizationProfile>(
     currentProfile ? { ...currentProfile, advocacies: [...currentProfile.advocacies] } : createBlankOrganizationProfile(user?.id ?? ""),
@@ -87,7 +100,7 @@ export default function UserPortal({ section }: { section: string }) {
   }, [currentProfile, user?.id]);
 
   const profile = currentProfile ?? createBlankOrganizationProfile(user?.id ?? "");
-  const submission = state.documentSubmissions[0];
+  const submission = state.documentSubmissions[0] ?? null;
   const budget = state.budgetRequests[0];
   const liquidation = state.liquidationReports[0];
   const unreadNotifications = state.notifications.filter((notification) => notification.userId === user?.id && !notification.isRead);
@@ -102,8 +115,9 @@ export default function UserPortal({ section }: { section: string }) {
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
     [templateDocuments],
   );
+  const submissionId = submission?.id ?? "";
   const docFiles = state.documentSubmissionFiles.filter(
-    (file) => file.submissionId === submission.id && validDocumentTypeIds.has(file.documentTypeId),
+    (file) => file.submissionId === submissionId && validDocumentTypeIds.has(file.documentTypeId),
   );
   const templatesById = useMemo(
     () => Object.fromEntries(templateDocuments.map((template) => [template.id, template])),
@@ -203,44 +217,102 @@ export default function UserPortal({ section }: { section: string }) {
     }
   };
 
+  const resetDocumentScan = () => {
+    setPendingDocumentScan(null);
+    setConfirmSubmitOpen(false);
+    setOcrPreviewOpen(false);
+    setSubmissionSuccessOpen(false);
+  };
+
   const handleDocumentUpload = async (documentTypeName: string, file: File | null) => {
     if (!file) return;
 
     const localDocumentType = templateDocuments.find((documentType) => documentType.name === documentTypeName);
     if (!localDocumentType) return;
 
-    setUploadingDocumentId(localDocumentType.id);
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      toast({
+        title: "PDF only",
+        description: "Please upload a PDF file. Other file types are not accepted for document submission.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setScanningDocumentId(localDocumentType.id);
 
     try {
-      const uploadResult = await uploadOrganizationDocumentToSupabase({
+      const result = await scanPdfForOcr(file);
+      setPendingDocumentScan({
+        documentTypeId: localDocumentType.id,
         documentTypeName,
         file,
+        result,
+      });
+      setOcrPreviewOpen(true);
+      setConfirmSubmitOpen(false);
+      setSubmissionSuccessOpen(false);
+    } catch (error) {
+      toast({
+        title: "OCR scan failed",
+        description: error instanceof Error ? error.message : "The PDF could not be scanned right now.",
+        variant: "destructive",
+      });
+    } finally {
+      setScanningDocumentId(null);
+    }
+  };
+
+  const submitScannedDocument = async () => {
+    if (!pendingDocumentScan || !user) return;
+    if (!pendingDocumentScan.result.canSubmit) {
+      toast({
+        title: "Reupload required",
+        description: "The OCR scan did not meet the approval threshold. Please upload a cleaner PDF.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingDocumentId(pendingDocumentScan.documentTypeId);
+
+    try {
+      const warningNotes = pendingDocumentScan.result.issues
+        .filter((issue) => issue.severity === "warning")
+        .map((issue) => issue.title)
+        .join("; ");
+
+      const submissionResult = await submitOrganizationDocumentToSupabase({
+        documentTypeName: pendingDocumentScan.documentTypeName,
+        file: pendingDocumentScan.file,
+        ocrText: pendingDocumentScan.result.text,
+        ocrConfidence: pendingDocumentScan.result.confidence,
+        validationStatus: "correct",
+        adminRemarks: warningNotes ? `OCR review notes: ${warningNotes}` : "Awaiting admin review.",
       });
 
-      updateDocumentFile(uploadResult.file.id, uploadResult.file);
-      updateDocumentSubmission(uploadResult.submissionId, {
-        status: "uploaded",
-        userConfirmed: false,
-        updatedAt: new Date().toISOString(),
-      });
-
+      updateDocumentFile(submissionResult.file.id, submissionResult.file);
       const remoteSnapshot = await loadLydoConnectSupabaseState();
       if (remoteSnapshot) {
         mergeRemoteState(remoteSnapshot);
       }
 
+      setConfirmSubmitOpen(false);
+      setOcrPreviewOpen(false);
+      setSubmissionSuccessOpen(true);
       toast({
-        title: "Document uploaded",
-        description: `${documentTypeName} was saved to Supabase successfully.`,
+        title: "Document submitted",
+        description: "The OCR-checked PDF has been submitted for admin approval.",
       });
     } catch (error) {
       toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "The document could not be uploaded.",
+        title: "Submission failed",
+        description: error instanceof Error ? error.message : "The document could not be submitted.",
         variant: "destructive",
       });
     } finally {
-      setUploadingDocumentId(null);
+      setSubmittingDocumentId(null);
     }
   };
 
@@ -327,10 +399,10 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <PortalMetricCard label="Profile" value={`${profilePercent}%`} helper={profile.profileStatus.replaceAll("_", " ")} />
+              <PortalMetricCard label="Profile" value={`${profilePercent}%`} helper={formatStatusLabel(profile.profileStatus)} />
               <PortalMetricCard label="Documents" value={`${documentsPercent}%`} helper={`${completedDocs}/${templateDocuments.length} checked`} />
-              <PortalMetricCard label="Budget" value={`${budgetPercent}%`} helper={budget.status.replaceAll("_", " ")} />
-              <PortalMetricCard label="Liquidation" value={`${liquidationPercent}%`} helper={liquidation.status.replaceAll("_", " ")} />
+              <PortalMetricCard label="Budget" value={`${budgetPercent}%`} helper={formatStatusLabel(budget.status)} />
+              <PortalMetricCard label="Liquidation" value={`${liquidationPercent}%`} helper={formatStatusLabel(liquidation.status)} />
             </div>
 
             <PortalSection
@@ -361,7 +433,7 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardTitle className="text-base">Next Action Needed</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <p>{submission.status === "under_admin_review" ? "Wait for admin review remarks." : "Complete the remaining required documents."}</p>
+                    <p>{submission?.status === "under_admin_review" ? "Wait for admin review remarks." : "Complete the remaining required documents."}</p>
                     <p>{budget.status === "approved_for_ftf_green" ? "Prepare hard copies for face-to-face submission." : "Budget request is ready for administrative review."}</p>
                   </CardContent>
                 </Card>
@@ -376,7 +448,7 @@ export default function UserPortal({ section }: { section: string }) {
                     </div>
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span>Documents</span>
-                      <PortalStatusBadge status={submission.status} />
+                      {submission ? <PortalStatusBadge status={submission.status} /> : <span className="text-muted-foreground">No submission yet</span>}
                     </div>
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span>Budget</span>
@@ -625,8 +697,8 @@ export default function UserPortal({ section }: { section: string }) {
           <div className="space-y-6">
             <PortalSection
               title="Document Submission"
-              description="Live template-driven upload slots with templates and admin remarks."
-              action={<PortalStatusBadge status={submission.status} />}
+              description="Upload a PDF, review the OCR preview, and submit only after you confirm the extracted details."
+              action={submission ? <PortalStatusBadge status={submission.status} /> : null}
             >
               <div className="grid gap-4">
                 {templateDocuments.map((documentType) => {
@@ -638,7 +710,11 @@ export default function UserPortal({ section }: { section: string }) {
                         <div className="space-y-2">
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <p className="font-medium leading-snug">{documentType.name}</p>
-                            <PortalStatusBadge status={file?.validationStatus === "correct" ? "approved_green" : file ? "needs_revision" : "not_started"} />
+                            {file ? (
+                              <PortalStatusBadge status={file.validationStatus === "correct" ? "ready_for_review" : "needs_revision"} />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No file uploaded yet</span>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">{documentType.description}</p>
                           <p className="text-xs text-muted-foreground">Primary file type: PDF</p>
@@ -686,7 +762,7 @@ export default function UserPortal({ section }: { section: string }) {
                             <label>
                               <input
                                 type="file"
-                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                accept=".pdf,application/pdf"
                                 className="sr-only"
                                 onChange={(event) => {
                                   void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);
@@ -698,36 +774,45 @@ export default function UserPortal({ section }: { section: string }) {
                                 variant="secondary"
                                 size="sm"
                                 asChild
-                                disabled={uploadingDocumentId === documentType.id}
+                                disabled={scanningDocumentId === documentType.id || submittingDocumentId === documentType.id}
                                 className="w-full sm:w-auto"
                               >
                                 <span>
                                   <FileUp className="mr-2 h-4 w-4" />
-                                  {uploadingDocumentId === documentType.id ? "Uploading..." : "Upload File"}
+                                  {scanningDocumentId === documentType.id ? "Scanning..." : "Upload PDF"}
                                 </span>
                               </Button>
                             </label>
                           </div>
                         </div>
-                        <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
-                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <span className="text-muted-foreground">Admin remark</span>
-                            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        {file ? (
+                          <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">OCR status</span>
+                              <span className="text-right">{formatStatusLabel(file.ocrStatus)}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Confidence</span>
+                              <span className="text-right">{file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Submission state</span>
+                              <span className="text-right">{formatStatusLabel(submission?.status ?? "draft")}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Admin remarks</span>
+                              <span className="text-right">{file.adminRemarks || "Awaiting admin review."}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Template</span>
+                              <span className="break-all text-right">{template?.templateFileName || "Not uploaded yet"}</span>
+                            </div>
                           </div>
-                          <p>{file?.adminRemarks || "No remarks yet."}</p>
-                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <span className="text-muted-foreground">Admin template</span>
-                            <span className="break-all text-right">{template?.templateFileName || "Not uploaded yet"}</span>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
+                            No submitted file yet. Upload a PDF to run the OCR scanner and open the preview modal.
                           </div>
-                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <span className="text-muted-foreground">OCR</span>
-                            <span className="text-right">{file?.ocrStatus ?? "pending"}</span>
-                          </div>
-                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <span className="text-muted-foreground">Confidence</span>
-                            <span className="text-right">{file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
-                          </div>
-                        </div>
+                        )}
                       </CardContent>
                     </Card>
                   );
@@ -735,68 +820,34 @@ export default function UserPortal({ section }: { section: string }) {
               </div>
             </PortalSection>
 
-            <PortalSection title="Submission Controls" description="Final submission is unlocked once the checklist is complete.">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {completedDocs}/{templateDocuments.length} documents reviewed by the user.
-                </p>
-                <Button
-                  type="button"
-                  className="w-full sm:w-auto"
-                  onClick={() =>
-                    setDocumentSubmissionStatus(
-                      submission.id,
-                      completedDocs === templateDocuments.length ? "submitted" : "needs_revision",
-                      completedDocs === templateDocuments.length
-                        ? "User confirmed that all uploaded files and OCR details are ready for LYDO/PCYDO review."
-                        : "Please complete the missing document slots before final submission.",
-                    )
-                  }
-                >
-                  Confirm Final Submission
-                </Button>
+            <PortalSection
+              title="Submission Flow"
+              description="After OCR scans the file, a preview modal will show the extracted text, flags, and confidence. You must confirm before the PDF is submitted to LYDO."
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card className="bg-muted/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">What happens next</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 text-sm text-muted-foreground">
+                    Upload a PDF, inspect the OCR preview, confirm the details, and submit only when the confidence reaches 90% or higher.
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Current state</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0 text-sm text-muted-foreground">
+                    {submission ? (
+                      <p>{formatStatusLabel(submission.status)}</p>
+                    ) : (
+                      <p>No submission has been created yet. It will appear automatically after the first confirmed PDF upload.</p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </PortalSection>
           </div>
-        );
-      case "validation-review":
-        return (
-          <PortalSection
-            title="Validation and Review"
-            description="Review OCR output and mark whether the files are correct or need re-upload."
-            action={<PortalStatusBadge status={submission.status} />}
-          >
-            <div className="grid gap-4 xl:grid-cols-2">
-              {docFiles.map((file) => (
-                <Card key={file.id} className="border-border/70">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{templatesById[file.documentTypeId]?.name ?? file.documentTypeId}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">Readable</span>
-                      <PortalStatusBadge status={file.ocrStatus === "completed" ? "approved_green" : "under_review"} />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-muted-foreground">OCR confidence</span>
-                      <span>{file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
-                    </div>
-                    <p className="rounded-lg bg-muted/30 p-3 text-muted-foreground">{file.ocrText || "No extracted text yet."}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm">
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Details are correct
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <ShieldAlert className="mr-2 h-4 w-4" />
-                        Needs re-upload
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </PortalSection>
         );
       case "budget-request":
         return (
@@ -923,8 +974,8 @@ export default function UserPortal({ section }: { section: string }) {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <PortalMetricCard label="Profile" value={`${profilePercent}%`} />
                 <PortalMetricCard label="Documents" value={`${documentsPercent}%`} />
-                <PortalMetricCard label="Budget" value={budget.status} />
-                <PortalMetricCard label="Liquidation" value={liquidation.status} />
+                <PortalMetricCard label="Budget" value={formatStatusLabel(budget.status)} />
+                <PortalMetricCard label="Liquidation" value={formatStatusLabel(liquidation.status)} />
               </div>
             </PortalSection>
             <PortalSection title="Missing Requirements" description="Items that need attention before you can move forward.">
@@ -1006,7 +1057,6 @@ export default function UserPortal({ section }: { section: string }) {
     profile.representativeName,
     profilePercent,
     section,
-    setDocumentSubmissionStatus,
     mergeRemoteState,
     openFile,
     openPreview,
@@ -1018,15 +1068,14 @@ export default function UserPortal({ section }: { section: string }) {
     state.notifications,
     state.newsReleases,
     state.transparencyPosts,
-    submission.id,
-    submission.status,
+    submission?.id,
+    submission?.status,
     updateDocumentFile,
     updateDocumentSubmission,
     user,
     validDocumentTypeIds,
     templateDocuments,
     templatesById,
-    uploadingDocumentId,
     currentProfile,
     profileDraft,
     savingProfile,
@@ -1082,6 +1131,178 @@ export default function UserPortal({ section }: { section: string }) {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={ocrPreviewOpen && Boolean(pendingDocumentScan)}
+        onOpenChange={(open) => {
+          setOcrPreviewOpen(open);
+          if (!open) {
+            setConfirmSubmitOpen(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>OCR Preview</DialogTitle>
+            <DialogDescription>
+              Review the OCR output, flagged issues, and confidence score before you submit the PDF to LYDO.
+            </DialogDescription>
+          </DialogHeader>
+          {pendingDocumentScan ? (
+            <div className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Card className="bg-muted/20">
+                  <CardContent className="p-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document</p>
+                    <p className="mt-2 text-sm font-medium">{pendingDocumentScan.documentTypeName}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{pendingDocumentScan.file.name}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/20">
+                  <CardContent className="p-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Confidence</p>
+                    <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.confidence}%</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Only 90% and above can be submitted.</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/20">
+                  <CardContent className="p-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Pages scanned</p>
+                    <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.pageCount}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {pendingDocumentScan.result.canSubmit ? "Ready for confirmation." : "Reupload is required."}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <Card className="border-border/70">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">OCR Extracted Text</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="max-h-[35vh] overflow-auto whitespace-pre-wrap rounded-xl border border-border/70 bg-muted/20 p-4 text-sm leading-relaxed">
+                      {pendingDocumentScan.result.text || "No readable text was extracted."}
+                    </pre>
+                  </CardContent>
+                </Card>
+                <Card className="border-border/70">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Flags and Review Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {pendingDocumentScan.result.issues.length ? (
+                      <div className="space-y-2">
+                        {pendingDocumentScan.result.issues.map((issue, index) => (
+                          <div
+                            key={`${issue.title}-${index}`}
+                            className={`rounded-xl border p-3 text-sm ${
+                              issue.severity === "error"
+                                ? "border-destructive/30 bg-destructive/5 text-destructive"
+                                : "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300"
+                            }`}
+                          >
+                            <p className="font-medium">{issue.title}</p>
+                            <p className="mt-1 text-sm opacity-90">{issue.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                        No OCR issues were detected. The file is ready for your confirmation.
+                      </div>
+                    )}
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
+                      If anything looks wrong, close this preview and reupload a cleaner PDF. The file will not be submitted until you confirm it.
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOcrPreviewOpen(false)}>
+                  Review Later
+                </Button>
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  disabled={!pendingDocumentScan.result.canSubmit || submittingDocumentId === pendingDocumentScan.documentTypeId}
+                  onClick={() => setConfirmSubmitOpen(true)}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Submit for Review
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmSubmitOpen && Boolean(pendingDocumentScan)} onOpenChange={setConfirmSubmitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Submission</DialogTitle>
+            <DialogDescription>Are you sure the details are correct and checked by you?</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            {pendingDocumentScan
+              ? `${pendingDocumentScan.documentTypeName} will be submitted to LYDO and marked under review for admin approval.`
+              : "The selected PDF will be submitted for admin approval."}
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setConfirmSubmitOpen(false)}>
+              No
+            </Button>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              disabled={submittingDocumentId === pendingDocumentScan?.documentTypeId}
+              onClick={() => void submitScannedDocument()}
+            >
+              {submittingDocumentId === pendingDocumentScan?.documentTypeId ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Yes, submit"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={submissionSuccessOpen}
+        onOpenChange={(open) => {
+          setSubmissionSuccessOpen(open);
+          if (!open) {
+            resetDocumentScan();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Document Submitted</DialogTitle>
+            <DialogDescription>
+              The documents have been submitted to the LYDO. This will be subjected for approval.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            Your submission is now under admin review. You can continue checking the other portal sections while the admin evaluates the file.
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setSubmissionSuccessOpen(false);
+                resetDocumentScan();
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

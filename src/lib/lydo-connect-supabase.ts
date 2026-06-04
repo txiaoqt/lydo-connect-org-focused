@@ -326,9 +326,13 @@ const fetchRequiredDocumentTypeRowByName = async (name: string) => {
   return data as RequiredDocumentTypeRow;
 };
 
-export const uploadOrganizationDocumentToSupabase = async (params: {
+export const submitOrganizationDocumentToSupabase = async (params: {
   documentTypeName: string;
   file: File;
+  ocrText: string;
+  ocrConfidence: number;
+  validationStatus: SubmissionFile["validationStatus"];
+  adminRemarks?: string;
 }) => {
   if (!supabase) throw new Error("Supabase is not configured.");
 
@@ -361,7 +365,7 @@ export const uploadOrganizationDocumentToSupabase = async (params: {
   if (uploadError) throw new Error(uploadError.message);
 
   const storageUri = buildStorageUri(ORGANIZATION_DOCUMENTS_BUCKET, objectPath);
-  const uploadedAt = new Date().toISOString();
+  const submittedAt = new Date().toISOString();
 
   const { data, error } = await supabase!
     .from("document_submission_files")
@@ -373,13 +377,14 @@ export const uploadOrganizationDocumentToSupabase = async (params: {
         file_name: params.file.name,
         file_type: params.file.type || "application/octet-stream",
         file_size: params.file.size,
-        ocr_text: "",
-        ocr_status: "pending",
-        ocr_confidence: 0,
-        validation_status: "correct",
-        admin_status: "draft",
-        admin_remarks: "",
-        uploaded_at: uploadedAt,
+        ocr_text: params.ocrText.trim(),
+        ocr_status: "completed",
+        ocr_confidence: params.ocrConfidence,
+        validation_status: params.validationStatus,
+        admin_status: "under_review",
+        admin_remarks: params.adminRemarks?.trim() || "Awaiting admin review.",
+        uploaded_at: submittedAt,
+        reviewed_at: null,
       },
       {
         onConflict: "submission_id,document_type_id",
@@ -393,9 +398,10 @@ export const uploadOrganizationDocumentToSupabase = async (params: {
   await supabase
     .from("document_submissions")
     .update({
-      status: "uploaded",
-      user_confirmed: false,
-      updated_at: uploadedAt,
+      status: "under_admin_review",
+      user_confirmed: true,
+      submitted_at: submittedAt,
+      updated_at: submittedAt,
     })
     .eq("id", submission.id);
 
@@ -407,6 +413,8 @@ export const uploadOrganizationDocumentToSupabase = async (params: {
     file: mappedFile,
   };
 };
+
+export const uploadOrganizationDocumentToSupabase = submitOrganizationDocumentToSupabase;
 
 export const uploadTemplateDocumentToSupabase = async (params: {
   documentTypeName: string;

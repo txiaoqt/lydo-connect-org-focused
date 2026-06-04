@@ -23,7 +23,6 @@ const siteMapSections: Array<{ title: string; links: Array<{ label: string; href
       { label: "Dashboard", href: "/dashboard" },
       { label: "Organization Profile", href: "/organization-profile" },
       { label: "Document Submission", href: "/document-submission" },
-      { label: "Validation and Review", href: "/validation-review" },
       { label: "Budget Request", href: "/budget-request" },
       { label: "Liquidation and Reporting", href: "/liquidation-reporting" },
       { label: "News Releases", href: "/news-releases" },

@@ -205,7 +205,7 @@ const App = () => (
                       <Route path="/dashboard" element={<RequireUser><UserPortal section="dashboard" /></RequireUser>} />
                       <Route path="/organization-profile" element={<RequireUser><UserPortal section="organization-profile" /></RequireUser>} />
                       <Route path="/document-submission" element={<RequireUser><UserPortal section="document-submission" /></RequireUser>} />
-                      <Route path="/validation-review" element={<RequireUser><UserPortal section="validation-review" /></RequireUser>} />
+                      <Route path="/validation-review" element={<Navigate to="/document-submission" replace />} />
                       <Route path="/budget-request" element={<RequireUser><UserPortal section="budget-request" /></RequireUser>} />
                       <Route path="/liquidation-reporting" element={<RequireUser><UserPortal section="liquidation-reporting" /></RequireUser>} />
                       <Route path="/news-releases" element={<RequireUser><UserPortal section="news-releases" /></RequireUser>} />

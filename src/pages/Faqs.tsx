@@ -15,12 +15,12 @@ const faqs = [
   {
     question: "What changes once I am signed in?",
     answer:
-      "Signed-in users go straight to the portal workflow. The public links are hidden, and the portal navigation shows Dashboard, Organization Profile, Document Submission, Validation and Review, Budget Request, Liquidation and Reporting, News Releases, Public Transparency Posting, Notifications, and Compliance Status.",
+      "Signed-in users go straight to the portal workflow. The public links are hidden, and the portal navigation shows Dashboard, Organization Profile, Document Submission, Budget Request, Liquidation and Reporting, News Releases, Public Transparency Posting, Notifications, and Compliance Status.",
   },
   {
     question: "How does document submission work?",
     answer:
-      "You upload the required compliance files in Document Submission, then review the OCR and validation results in Validation and Review before the record goes to admin review.",
+      "You upload a PDF in Document Submission, review the OCR preview and flagged issues, then confirm the submission so the record moves to admin review.",
   },
   {
     question: "What happens after a budget request is approved?",
