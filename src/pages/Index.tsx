@@ -115,7 +115,7 @@ const Index = () => {
               Built for organization setup, compliance, and review
             </h2>
             <p className="text-sm text-muted-foreground sm:text-base">
-              The site now centers on registration, document submission, budget requests, liquidation, and public transparency.
+              The site centers on registration, document submission, budget requests, liquidation, and public transparency.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
