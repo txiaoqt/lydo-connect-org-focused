@@ -39,14 +39,19 @@ export const PortalSection = ({
   action?: React.ReactNode;
 }) => (
   <Card className="border-border/70 bg-card/90 shadow-sm">
-    <CardHeader className={cn(action ? "flex flex-row items-start justify-between gap-4" : undefined)}>
+  <CardHeader
+    className={cn(
+      "gap-2 sm:gap-4",
+      action ? "flex flex-col sm:flex-row sm:items-start sm:justify-between" : "block",
+    )}
+  >
       <div className="min-w-0">
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
         {description ? <CardDescription className="mt-1">{description}</CardDescription> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
-    </CardHeader>
-    <CardContent>{children}</CardContent>
+  </CardHeader>
+  <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">{children}</CardContent>
   </Card>
 );
 
@@ -65,4 +70,3 @@ export const PortalEmptyState = ({
     {action ? <div className="mt-4">{action}</div> : null}
   </div>
 );
-

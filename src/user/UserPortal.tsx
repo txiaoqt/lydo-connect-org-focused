@@ -634,21 +634,22 @@ export default function UserPortal({ section }: { section: string }) {
                   const template = templatesById[documentType.id];
                   return (
                     <Card key={documentType.id} className="border-border/70">
-                      <CardContent className="grid gap-4 p-4 md:grid-cols-[1.7fr_1fr]">
+                      <CardContent className="grid gap-4 p-4 sm:p-5 md:grid-cols-[1.7fr_1fr]">
                         <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium">{documentType.name}</p>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                            <p className="font-medium leading-snug">{documentType.name}</p>
                             <PortalStatusBadge status={file?.validationStatus === "correct" ? "approved_green" : file ? "needs_revision" : "not_started"} />
                           </div>
                           <p className="text-sm text-muted-foreground">{documentType.description}</p>
                           <p className="text-xs text-muted-foreground">Primary file type: PDF</p>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             {hasUploadedTemplateFile(template?.templateFileUrl, template?.templateFileName) ? (
                               <>
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="sm"
+                                  className="w-full sm:w-auto"
                                   onClick={() => void openPreview(template.templateFileUrl, template.templateFileName || documentType.name)}
                                 >
                                     <Eye className="mr-2 h-4 w-4" />
@@ -658,6 +659,7 @@ export default function UserPortal({ section }: { section: string }) {
                                   type="button"
                                   variant="outline"
                                   size="sm"
+                                  className="w-full sm:w-auto"
                                   onClick={() =>
                                     void openFile(
                                       template.templateFileUrl,
@@ -674,6 +676,7 @@ export default function UserPortal({ section }: { section: string }) {
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                className="w-full sm:w-auto"
                                 onClick={() => void openPreview(template?.templateFileUrl ?? "", template?.templateFileName || documentType.name)}
                               >
                                 <Eye className="mr-2 h-4 w-4" />
@@ -690,7 +693,14 @@ export default function UserPortal({ section }: { section: string }) {
                                   event.currentTarget.value = "";
                                 }}
                               />
-                              <Button type="button" variant="secondary" size="sm" asChild disabled={uploadingDocumentId === documentType.id}>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                asChild
+                                disabled={uploadingDocumentId === documentType.id}
+                                className="w-full sm:w-auto"
+                              >
                                 <span>
                                   <FileUp className="mr-2 h-4 w-4" />
                                   {uploadingDocumentId === documentType.id ? "Uploading..." : "Upload File"}
@@ -700,22 +710,22 @@ export default function UserPortal({ section }: { section: string }) {
                           </div>
                         </div>
                         <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <span className="text-muted-foreground">Admin remark</span>
                             <MessageSquare className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <p>{file?.adminRemarks || "No remarks yet."}</p>
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <span className="text-muted-foreground">Admin template</span>
-                            <span>{template?.templateFileName || "Not uploaded yet"}</span>
+                            <span className="break-all text-right">{template?.templateFileName || "Not uploaded yet"}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <span className="text-muted-foreground">OCR</span>
-                            <span>{file?.ocrStatus ?? "pending"}</span>
+                            <span className="text-right">{file?.ocrStatus ?? "pending"}</span>
                           </div>
-                          <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <span className="text-muted-foreground">Confidence</span>
-                            <span>{file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
+                            <span className="text-right">{file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
                           </div>
                         </div>
                       </CardContent>
@@ -726,12 +736,13 @@ export default function UserPortal({ section }: { section: string }) {
             </PortalSection>
 
             <PortalSection title="Submission Controls" description="Final submission is unlocked once the checklist is complete.">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {completedDocs}/{templateDocuments.length} documents reviewed by the user.
                 </p>
                 <Button
                   type="button"
+                  className="w-full sm:w-auto"
                   onClick={() =>
                     setDocumentSubmissionStatus(
                       submission.id,

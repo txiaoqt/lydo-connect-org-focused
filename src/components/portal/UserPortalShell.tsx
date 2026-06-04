@@ -45,7 +45,7 @@ export const UserPortalShell = ({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur-xl">
-        <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4">
+        <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-3 sm:px-4">
           <div className="flex min-w-0 items-center gap-3">
             <BrandLogo showText imgClassName="h-10 w-10" textClassName="min-w-0" className="min-w-0" />
             <div className="hidden min-w-0 lg:block">
@@ -160,19 +160,19 @@ export const UserPortalShell = ({
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 sm:py-8">
-        <section className="mb-6 rounded-3xl border border-border/70 bg-card/80 p-5 shadow-sm sm:p-6">
+      <main className="container mx-auto px-3 py-4 sm:px-4 sm:py-8">
+        <section className="mb-4 rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm sm:mb-6 sm:p-6">
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/75">
             {subtitle}
           </p>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-2 flex flex-col gap-3 sm:mt-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold sm:text-3xl">{title}</h1>
+              <h1 className="text-xl font-semibold sm:text-3xl">{title}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 Navigate the organization workflow from the grouped menu above.
               </p>
             </div>
-            <div className="inline-flex w-fit rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-sm font-medium text-primary">
+            <div className="inline-flex w-fit rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-medium text-primary sm:text-sm">
               {activeItem?.label ?? title}
             </div>
           </div>
