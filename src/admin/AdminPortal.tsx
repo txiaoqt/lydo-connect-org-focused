@@ -43,6 +43,22 @@ const routeMap: Record<string, string> = {
 
 const adminId = "admin-demo";
 
+const renderAdvocacyChips = (advocacies: string[]) =>
+  advocacies.length ? (
+    <div className="flex flex-wrap gap-2">
+      {advocacies.map((advocacy) => (
+        <span
+          key={advocacy}
+          className="inline-flex items-center rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary"
+        >
+          {advocacy}
+        </span>
+      ))}
+    </div>
+  ) : (
+    <span className="text-sm text-muted-foreground">N/A</span>
+  );
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -364,13 +380,16 @@ export default function AdminPortal({ section }: { section: string }) {
                     ["Barangay", selectedOrg.barangay],
                     ["Major Classification", selectedOrg.majorClassification || "N/A"],
                     ["Sub Classification", selectedOrg.subClassification || "N/A"],
-                    ["Advocacies", selectedOrg.advocacies.length ? selectedOrg.advocacies.join(", ") : "N/A"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-border/70 bg-muted/20 p-3">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{label}</p>
                       <p className="mt-1 text-sm font-medium">{value}</p>
                     </div>
                   ))}
+                </div>
+                <div className="rounded-md border border-border/70 bg-muted/20 p-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
+                  <div className="mt-2">{renderAdvocacyChips(selectedOrg.advocacies)}</div>
                 </div>
               </PortalSection>
 
@@ -498,7 +517,10 @@ export default function AdminPortal({ section }: { section: string }) {
                         <p>{org.barangay}</p>
                         <p>{org.majorClassification || "N/A"}</p>
                         <p>{org.subClassification || "N/A"}</p>
-                        <p>{org.advocacies.length ? org.advocacies.join(", ") : "N/A"}</p>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
+                          <div className="mt-2">{renderAdvocacyChips(org.advocacies)}</div>
+                        </div>
                         <p className="pt-2 font-medium text-foreground">
                           Documents submitted: {submittedCount}/{templateDocuments.length}
                         </p>
