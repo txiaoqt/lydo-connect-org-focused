@@ -17,7 +17,7 @@ const complianceFeatures = [
   {
     icon: FileText,
     title: "Document Submission",
-    description: "Upload the six required registration and compliance documents in one place.",
+    description: "Upload the required registration and compliance documents in one place.",
     href: "/document-submission",
   },
   {
@@ -38,7 +38,7 @@ const systemFeatures = [
   {
     icon: Bell,
     title: "Notifications",
-    description: "See admin remarks, green lights, revision requests, and overdue reminders.",
+    description: "See admin remarks, approvals, revision requests, and overdue reminders.",
   },
   {
     icon: Shield,
