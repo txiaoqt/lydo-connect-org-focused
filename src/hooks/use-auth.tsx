@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { ADMIN_SESSION_STORAGE_KEY, PREDEFINED_ADMIN_CREDENTIALS, PREDEFINED_ADMIN_USER } from "@/lib/admin-auth";
+import { readAdminSession, type SeededAdminUser, writeAdminSession } from "@/lib/admin-auth";
 import { getAuthCallbackUrl } from "@/lib/auth-redirect";
 import { IS_USER_SURFACE } from "@/lib/deployment-surface";
 import { supabase } from "@/lib/supabase";
@@ -44,29 +44,13 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const ADMIN_USERNAME = PREDEFINED_ADMIN_CREDENTIALS.username;
-const ADMIN_PASSWORD = PREDEFINED_ADMIN_CREDENTIALS.password;
-const ADMIN_USER: AuthUser = PREDEFINED_ADMIN_USER;
 const LOCAL_ADMIN_ALLOWED = !IS_USER_SURFACE;
 
-const readAdminSession = () => {
-  if (!LOCAL_ADMIN_ALLOWED) return false;
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(ADMIN_SESSION_STORAGE_KEY) === "active";
-};
-
-const writeAdminSession = (active: boolean) => {
-  if (typeof window === "undefined") return;
-  if (!LOCAL_ADMIN_ALLOWED) {
-    window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-    return;
-  }
-  if (active) {
-    window.localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, "active");
-    return;
-  }
-  window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-};
+const toAuthUser = (adminUser: SeededAdminUser): AuthUser => ({
+  id: adminUser.id,
+  email: adminUser.email,
+  displayName: adminUser.displayName,
+});
 
 const priorityRole = (codes: string[]): UserRole => {
   if (codes.includes("admin")) return "admin";
@@ -92,10 +76,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!mounted) return;
 
       if (!session?.user) {
-        if (readAdminSession()) {
+        const storedAdmin = LOCAL_ADMIN_ALLOWED ? readAdminSession() : null;
+        if (storedAdmin) {
+          if (supabaseClient) {
+            const { data, error } = await supabaseClient.rpc("validate_admin_session_token", {
+              _session_token: storedAdmin.sessionToken,
+            });
+            const validatedAdmin = Array.isArray(data) ? data[0] : null;
+            if (error || !validatedAdmin) {
+              writeAdminSession(null);
+              setIsAuthenticated(false);
+              setRole("guest");
+              setUser(null);
+              setIsInitialized(true);
+              return;
+            }
+          }
           setIsAuthenticated(true);
           setRole("admin");
-          setUser(ADMIN_USER);
+          setUser(toAuthUser(storedAdmin));
           setIsInitialized(true);
           return;
         }
@@ -152,15 +151,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsInitialized(true);
     };
 
-    if (readAdminSession()) {
+    const storedAdmin = LOCAL_ADMIN_ALLOWED ? readAdminSession() : null;
+    if (storedAdmin) {
       setIsAuthenticated(true);
       setRole("admin");
-      setUser(ADMIN_USER);
+      setUser(toAuthUser(storedAdmin));
       setIsInitialized(true);
     }
 
     if (!supabaseClient) {
-      if (!readAdminSession()) {
+      if (!storedAdmin) {
         setIsInitialized(true);
       }
       return;
@@ -186,22 +186,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: "Admin login is disabled on this deployment." };
       }
 
-      const username = params.username.trim();
-      if (username !== ADMIN_USERNAME || params.password !== ADMIN_PASSWORD) {
+      if (!supabase) {
+        return {
+          error: "Supabase is not configured. Admin login now requires the seeded Supabase admin account table.",
+        };
+      }
+
+      const { data, error } = await supabase.rpc("authenticate_admin_account", {
+        _username: params.username.trim(),
+        _password: params.password,
+      });
+
+      if (error) return { error: error.message };
+
+      const adminAccount = Array.isArray(data) ? data[0] : null;
+      if (!adminAccount) {
         return { error: "Invalid admin credentials." };
       }
 
-      writeAdminSession(true);
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
+      const adminUser: SeededAdminUser = {
+        id: String(adminAccount.admin_id),
+        username: String(adminAccount.username ?? params.username.trim()),
+        email: String(adminAccount.email ?? ""),
+        displayName: String(adminAccount.display_name ?? "Admin User"),
+        sessionToken: String(adminAccount.session_token ?? ""),
+        expiresAt: String(adminAccount.expires_at ?? ""),
+      };
+
+      await supabase.auth.signOut();
+      writeAdminSession(adminUser);
       setIsAuthenticated(true);
       setRole("admin");
-      setUser(ADMIN_USER);
+      setUser(toAuthUser(adminUser));
       return {};
     }
 
-    writeAdminSession(false);
+    writeAdminSession(null);
 
     if (!supabase) {
       return {
@@ -253,7 +273,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    writeAdminSession(false);
+    const storedAdmin = readAdminSession();
+    if (supabase && storedAdmin?.sessionToken) {
+      await supabase.rpc("revoke_admin_session_token", {
+        _session_token: storedAdmin.sessionToken,
+      });
+    }
+    writeAdminSession(null);
     if (supabase) await supabase.auth.signOut();
     setIsAuthenticated(false);
     setRole("guest");

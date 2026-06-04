@@ -5,22 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
-import Programs from "./pages/Programs";
-import Events from "./pages/Events";
-import Organizations from "./pages/Organizations";
 import About from "./pages/About";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
-import EventRecord from "./pages/EventRecord";
-import Profile from "./pages/Profile";
-import TransparencyReports from "./pages/TransparencyReports";
-import FinancialDisclosure from "./pages/FinancialDisclosure";
-import BarangayMap from "./pages/BarangayMap";
-import TransparencyBoard from "./pages/TransparencyBoard";
-import YouthDesk from "./pages/YouthDesk";
 import AdminPortal from "./admin/AdminPortal";
 import LegalPolicy from "./pages/LegalPolicy";
 import Faqs from "./pages/Faqs";
@@ -28,6 +18,8 @@ import Contacts from "./pages/Contacts";
 import SiteMap from "./pages/SiteMap";
 import { usePolicyAgreement } from "./hooks/use-policy-agreement";
 import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
+import UserPortal from "./user/UserPortal";
+import { LydoConnectProvider } from "./lib/lydo-connect-store";
 import {
   ADMIN_SIGNIN_PATH,
   EFFECTIVE_ADMIN_SIGNIN_PATH,
@@ -102,18 +94,18 @@ const PolicyAgreementGate = ({ children }: { children: JSX.Element }) => {
   );
 };
 
-const RedirectAdmin = ({ children }: { children: JSX.Element }) => {
-  const { isInitialized, role } = useAuth();
-  if (!isInitialized) return <FullScreenLoader />;
-  if (IS_ADMIN_SURFACE) return <Navigate to={EFFECTIVE_ADMIN_SIGNIN_PATH} replace />;
-  if (role === "admin") return <Navigate to="/admin" replace />;
-  return children;
-};
-
 const RequireAdmin = ({ children }: { children: JSX.Element }) => {
   const { isInitialized, role } = useAuth();
   if (!isInitialized) return <FullScreenLoader />;
   if (role !== "admin") return <Navigate to={EFFECTIVE_ADMIN_SIGNIN_PATH} replace />;
+  return children;
+};
+
+const RequireUser = ({ children }: { children: JSX.Element }) => {
+  const { isInitialized, isAuthenticated, role } = useAuth();
+  if (!isInitialized) return <FullScreenLoader />;
+  if (role === "admin") return <Navigate to="/admin" replace />;
+  if (!isAuthenticated) return <Navigate to={USER_SIGNIN_PATH} replace />;
   return children;
 };
 
@@ -151,236 +143,86 @@ const SurfaceThemeClass = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <PolicyAgreementGate>
-          <>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <ScrollToTopOnRouteChange />
-              <SurfaceThemeClass />
-              <Routes>
-            {IS_ADMIN_SURFACE ? (
-              <>
-                <Route
-                  path={ADMIN_SIGNIN_PATH}
-                  element={
-                    <SignIn forcedMode="admin" />
-                  }
-                />
-                <Route path={USER_SIGNIN_PATH} element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
-                <Route
-                  path="/admin"
-                  element={
-                    <RequireAdmin>
-                      <AdminPortal />
-                    </RequireAdmin>
-                  }
-                />
-                <Route path="/" element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
-                <Route path="*" element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
-              </>
-            ) : (
-              <>
-                {IS_COMBINED_SURFACE ? (
-                  <Route
-                    path="/admin"
-                    element={
-                      <RequireAdmin>
-                        <AdminPortal />
-                      </RequireAdmin>
-                    }
-                  />
-                ) : (
-                  <Route path="/admin/*" element={<Navigate to="/" replace />} />
-                )}
-                <Route
-                  path="/"
-                  element={
-                    <RedirectAdmin>
-                      <Index />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/programs"
-                  element={
-                    <RedirectAdmin>
-                      <Programs />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/events"
-                  element={
-                    <RedirectAdmin>
-                      <Events />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/organizations"
-                  element={
-                    <RedirectAdmin>
-                      <Organizations />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/about"
-                  element={
-                    <RedirectAdmin>
-                      <About />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/faqs"
-                  element={
-                    <RedirectAdmin>
-                      <Faqs />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/contacts"
-                  element={
-                    <RedirectAdmin>
-                      <Contacts />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/site-map"
-                  element={
-                    <RedirectAdmin>
-                      <SiteMap />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/terms"
-                  element={
-                    <RedirectAdmin>
-                      <LegalPolicy />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/privacy"
-                  element={
-                    <RedirectAdmin>
-                      <LegalPolicy />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/advocacy"
-                  element={
-                    <RedirectAdmin>
-                      <About />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path={USER_SIGNIN_PATH}
-                  element={
-                    <RedirectAdmin>
-                      <SignIn forcedMode={IS_USER_SURFACE ? "user" : undefined} />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route
-                  path="/signup"
-                  element={
-                    <RedirectAdmin>
-                      <SignUp />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/events/:eventId"
-                  element={
-                    <RedirectAdmin>
-                      <EventRecord />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/programs/:programId"
-                  element={
-                    <RedirectAdmin>
-                      <EventRecord />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <RedirectAdmin>
-                      <Profile />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/transparency/reports"
-                  element={
-                    <RedirectAdmin>
-                      <TransparencyReports />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/transparency/board"
-                  element={
-                    <RedirectAdmin>
-                      <TransparencyBoard />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/transparency/financial-disclosure"
-                  element={
-                    <RedirectAdmin>
-                      <FinancialDisclosure />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/transparency/barangay-map"
-                  element={
-                    <RedirectAdmin>
-                      <BarangayMap />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/transparency/youth-desk"
-                  element={
-                    <RedirectAdmin>
-                      <YouthDesk />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route
-                  path="/feedback"
-                  element={
-                    <RedirectAdmin>
-                      <YouthDesk />
-                    </RedirectAdmin>
-                  }
-                />
-                <Route path="*" element={<NotFoundRoute />} />
-              </>
-            )}
-              </Routes>
-            </BrowserRouter>
-          </>
-        </PolicyAgreementGate>
-      </TooltipProvider>
-    </AuthProvider>
+    <LydoConnectProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <PolicyAgreementGate>
+            <>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <ScrollToTopOnRouteChange />
+                <SurfaceThemeClass />
+                <Routes>
+                  {IS_ADMIN_SURFACE ? (
+                    <>
+                      <Route path={ADMIN_SIGNIN_PATH} element={<SignIn forcedMode="admin" />} />
+                      <Route path={USER_SIGNIN_PATH} element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
+                      <Route path="/admin" element={<RequireAdmin><AdminPortal section="overview" /></RequireAdmin>} />
+                      <Route path="/admin/registrations" element={<RequireAdmin><AdminPortal section="registrations" /></RequireAdmin>} />
+                      <Route path="/admin/users" element={<RequireAdmin><AdminPortal section="users" /></RequireAdmin>} />
+                      <Route path="/admin/document-validation" element={<Navigate to="/admin/registrations" replace />} />
+                      <Route path="/admin/budget-utilization" element={<RequireAdmin><AdminPortal section="budget-utilization" /></RequireAdmin>} />
+                      <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
+                      <Route path="/admin/remarks-consequences" element={<RequireAdmin><AdminPortal section="remarks-consequences" /></RequireAdmin>} />
+                      <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
+                      <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
+                      <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
+                      <Route path="/admin/notifications-activity" element={<RequireAdmin><AdminPortal section="notifications-activity" /></RequireAdmin>} />
+                      <Route path="/" element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
+                      <Route path="*" element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
+                    </>
+                  ) : (
+                    <>
+                      {IS_COMBINED_SURFACE ? (
+                        <>
+                          <Route path="/admin" element={<RequireAdmin><AdminPortal section="overview" /></RequireAdmin>} />
+                          <Route path="/admin/registrations" element={<RequireAdmin><AdminPortal section="registrations" /></RequireAdmin>} />
+                          <Route path="/admin/users" element={<RequireAdmin><AdminPortal section="users" /></RequireAdmin>} />
+                          <Route path="/admin/document-validation" element={<Navigate to="/admin/registrations" replace />} />
+                          <Route path="/admin/budget-utilization" element={<RequireAdmin><AdminPortal section="budget-utilization" /></RequireAdmin>} />
+                          <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
+                          <Route path="/admin/remarks-consequences" element={<RequireAdmin><AdminPortal section="remarks-consequences" /></RequireAdmin>} />
+                          <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
+                          <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
+                          <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
+                          <Route path="/admin/notifications-activity" element={<RequireAdmin><AdminPortal section="notifications-activity" /></RequireAdmin>} />
+                        </>
+                      ) : (
+                        <Route path="/admin/*" element={<Navigate to="/" replace />} />
+                      )}
+                      <Route path="/" element={<Index />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/faqs" element={<Faqs />} />
+                      <Route path="/contacts" element={<Contacts />} />
+                      <Route path="/site-map" element={<SiteMap />} />
+                      <Route path="/terms" element={<LegalPolicy />} />
+                      <Route path="/privacy" element={<LegalPolicy />} />
+                      <Route path="/advocacy" element={<About />} />
+                      <Route path={USER_SIGNIN_PATH} element={<SignIn forcedMode={IS_USER_SURFACE ? "user" : undefined} />} />
+                      <Route path="/auth/callback" element={<AuthCallback />} />
+                      <Route path="/signup" element={<SignUp />} />
+                      <Route path="/dashboard" element={<RequireUser><UserPortal section="dashboard" /></RequireUser>} />
+                      <Route path="/organization-profile" element={<RequireUser><UserPortal section="organization-profile" /></RequireUser>} />
+                      <Route path="/document-submission" element={<RequireUser><UserPortal section="document-submission" /></RequireUser>} />
+                      <Route path="/validation-review" element={<RequireUser><UserPortal section="validation-review" /></RequireUser>} />
+                      <Route path="/budget-request" element={<RequireUser><UserPortal section="budget-request" /></RequireUser>} />
+                      <Route path="/liquidation-reporting" element={<RequireUser><UserPortal section="liquidation-reporting" /></RequireUser>} />
+                      <Route path="/news-releases" element={<RequireUser><UserPortal section="news-releases" /></RequireUser>} />
+                      <Route path="/public-transparency" element={<RequireUser><UserPortal section="public-transparency" /></RequireUser>} />
+                      <Route path="/compliance-status" element={<RequireUser><UserPortal section="compliance-status" /></RequireUser>} />
+                      <Route path="/notifications" element={<RequireUser><UserPortal section="notifications" /></RequireUser>} />
+                      <Route path="/profile" element={<Navigate to="/organization-profile" replace />} />
+                      <Route path="*" element={<NotFoundRoute />} />
+                    </>
+                  )}
+                </Routes>
+              </BrowserRouter>
+            </>
+          </PolicyAgreementGate>
+        </TooltipProvider>
+      </AuthProvider>
+    </LydoConnectProvider>
   </QueryClientProvider>
 );
 

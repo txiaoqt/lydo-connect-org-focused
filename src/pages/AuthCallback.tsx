@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated, isInitialized, role } = useAuth();
   const [readyToFallback, setReadyToFallback] = useState(false);
   const hasAuthParams = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -15,13 +15,13 @@ const AuthCallback = () => {
   useEffect(() => {
     if (!isInitialized) return;
     if (isAuthenticated) {
-      navigate("/", { replace: true });
+      navigate(role === "admin" ? "/admin" : "/organization-profile", { replace: true });
       return;
     }
     if (!hasAuthParams || readyToFallback) {
       navigate("/signin", { replace: true });
     }
-  }, [hasAuthParams, isAuthenticated, isInitialized, navigate, readyToFallback]);
+  }, [hasAuthParams, isAuthenticated, isInitialized, navigate, readyToFallback, role]);
 
   useEffect(() => {
     if (!isInitialized || isAuthenticated || !hasAuthParams) return;

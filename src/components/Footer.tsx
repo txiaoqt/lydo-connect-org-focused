@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import BrandLogo from "@/components/BrandLogo";
+
 const Footer = () => {
   return (
     <footer className="hero-gradient text-secondary-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-10">
-          <div className="space-y-2.5">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.3fr_1fr_1fr_1.1fr] md:gap-10">
+          <div className="space-y-3">
             <div>
               <BrandLogo
                 imgClassName="h-8 w-8 sm:h-9 sm:w-9"
@@ -13,38 +14,48 @@ const Footer = () => {
                 textClassName="text-sm sm:text-base text-secondary-foreground"
               />
             </div>
-            <p className="max-w-xs text-sm leading-relaxed text-secondary-foreground/70">
-              Empowering youth through programs, opportunities, and transparent governance in one platform.
+            <p className="max-w-sm text-sm leading-relaxed text-secondary-foreground/70">
+              LYDO Connect brings organization registration, compliance document submission, review updates, and reporting into one workflow for youth organizations.
+            </p>
+            <p className="text-xs uppercase tracking-[0.16em] text-secondary-foreground/55">
+              LYDO / PCYDO Organization Compliance Portal
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:col-span-2 md:grid-cols-2">
-            <div>
-              <h4 className="mb-2.5 text-sm font-semibold text-secondary-foreground">Platform</h4>
-              <ul className="space-y-2 text-sm text-secondary-foreground/70">
-                <li><Link to="/about" className="hover:text-primary transition-colors">About</Link></li>
-                <li><Link to="/transparency/youth-desk" className="hover:text-primary transition-colors">Youth Desk</Link></li>
-                <li><Link to="/faqs" className="hover:text-primary transition-colors">FAQs</Link></li>
-                <li><Link to="/contacts" className="hover:text-primary transition-colors">Contacts</Link></li>
-                <li><Link to="/site-map" className="hover:text-primary transition-colors">Site Map</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="mb-2.5 text-sm font-semibold text-secondary-foreground">Transparency</h4>
-              <ul className="space-y-2 text-sm text-secondary-foreground/70">
-                <li><Link to="/transparency/reports" className="hover:text-primary transition-colors">Disclosure Registry</Link></li>
-                <li><Link to="/transparency/board" className="hover:text-primary transition-colors">Transparency Board</Link></li>
-                <li><Link to="/transparency/financial-disclosure" className="hover:text-primary transition-colors">Financial Disclosure</Link></li>
-                <li><Link to="/transparency/barangay-map" className="hover:text-primary transition-colors">Barangay Map</Link></li>
-                <li><Link to="/transparency/board" className="hover:text-primary transition-colors">Monthly Compliance</Link></li>
-              </ul>
-            </div>
+          <div>
+            <h4 className="mb-3 text-sm font-semibold text-secondary-foreground">Explore</h4>
+            <ul className="space-y-2 text-sm text-secondary-foreground/70">
+              <li><Link to="/" className="transition-colors hover:text-primary">Home</Link></li>
+              <li><Link to="/about" className="transition-colors hover:text-primary">About LYDO Connect</Link></li>
+              <li><Link to="/faqs" className="transition-colors hover:text-primary">FAQs</Link></li>
+              <li><Link to="/site-map" className="transition-colors hover:text-primary">Site Map</Link></li>
+            </ul>
           </div>
 
+          <div>
+            <h4 className="mb-3 text-sm font-semibold text-secondary-foreground">Portal Access</h4>
+            <ul className="space-y-2 text-sm text-secondary-foreground/70">
+              <li><Link to="/signin" className="transition-colors hover:text-primary">Sign In</Link></li>
+              <li><Link to="/signup" className="transition-colors hover:text-primary">Create Account</Link></li>
+              <li><Link to="/dashboard" className="transition-colors hover:text-primary">Organization Portal</Link></li>
+              <li><Link to="/contacts" className="transition-colors hover:text-primary">Contact Directory</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-semibold text-secondary-foreground">Support</h4>
+            <div className="space-y-2 text-sm text-secondary-foreground/70">
+              <p>For office details and staff contacts, open the dedicated Contact Directory page.</p>
+              <p>
+                <Link to="/contacts" className="transition-colors hover:text-primary">
+                  View contact information
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-6 border-t border-secondary-foreground/10 pt-4">
+        <div className="mt-8 border-t border-secondary-foreground/10 pt-5">
           <div className="flex flex-col items-center gap-2.5 text-center">
             <p className="text-[11px] sm:text-xs text-secondary-foreground/55 leading-relaxed">
               (c) 2026 LYDO Connect - Prototype LYDO Portal. Compliant with RA 10742.

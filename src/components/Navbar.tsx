@@ -10,36 +10,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { userNavigationGroups, userRouteMap } from "@/lib/lydo-connect-data";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "Programs", href: "/programs" },
-  { label: "Events", href: "/events" },
-  { label: "Organizations", href: "/organizations" },
-];
-
-const transparencyItems = [
-  { label: "Youth Desk", href: "/transparency/youth-desk" },
-  { label: "Disclosure Registry", href: "/transparency/reports" },
-  { label: "Transparency Board", href: "/transparency/board" },
-  { label: "Financial Disclosure", href: "/transparency/financial-disclosure" },
-  { label: "Barangay Map", href: "/transparency/barangay-map" },
+  { label: "FAQs", href: "/faqs" },
 ];
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileTransparencyOpen, setMobileTransparencyOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, signOut, role } = useAuth();
 
   const handleSignOut = () => {
     signOut();
     setMobileOpen(false);
     navigate("/");
   };
-
-  const isTransparencyPath = location.pathname.startsWith("/transparency") || location.pathname === "/feedback";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-primary/15">
@@ -66,31 +54,52 @@ const Navbar = () => {
               {item.label}
             </Link>
           ))}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger
-              className={`inline-flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isTransparencyPath
-                  ? "bg-primary/12 text-primary border border-primary/25"
-                  : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-              }`}
-            >
-              Transparency <ChevronDown className="h-3.5 w-3.5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {transparencyItems.map((item) => (
-                <DropdownMenuItem key={item.href} asChild>
-                  <Link to={item.href}>{item.label}</Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isAuthenticated && role !== "admin"
+            ? userNavigationGroups.map((group) => {
+                const isGroupActive = group.items.some((item) => location.pathname === userRouteMap[item.id]);
+                return (
+                  <DropdownMenu key={group.id}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className={`gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
+                          isGroupActive
+                            ? "bg-primary/12 text-primary border border-primary/25"
+                            : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                        }`}
+                      >
+                        {group.label}
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="min-w-[240px]">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const active = location.pathname === userRouteMap[item.id];
+                        return (
+                          <DropdownMenuItem
+                            key={item.id}
+                            className={active ? "bg-primary/10 text-primary focus:bg-primary/10 focus:text-primary" : ""}
+                            onClick={() => navigate(userRouteMap[item.id])}
+                          >
+                            <Icon className="mr-2 h-4 w-4" />
+                            {item.label}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              })
+            : null}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
             <>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/profile">Profile</Link>
+                <Link to={role === "admin" ? "/admin" : "/dashboard"}>{role === "admin" ? "Admin Portal" : "Open Portal"}</Link>
               </Button>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 Sign Out
@@ -137,37 +146,43 @@ const Navbar = () => {
               {item.label}
             </Link>
           ))}
-          <button
-            type="button"
-            onClick={() => setMobileTransparencyOpen(!mobileTransparencyOpen)}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium ${
-              isTransparencyPath ? "bg-primary/12 text-primary border border-primary/25" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-            }`}
-          >
-            <span>Transparency</span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${mobileTransparencyOpen ? "rotate-180" : ""}`} />
-          </button>
-          {mobileTransparencyOpen && (
-            <div className="ml-4 space-y-1">
-              {transparencyItems.map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={`block px-4 py-2 rounded-lg text-sm ${
-                    location.pathname === item.href ? "bg-primary/12 text-primary border border-primary/25" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
-                  }`}
-                >
-                  {item.label}
-                </Link>
+          {isAuthenticated && role !== "admin" ? (
+            <div className="mt-3 space-y-3 px-4">
+              {userNavigationGroups.map((group) => (
+                <div key={group.id}>
+                  <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/75">
+                    {group.label}
+                  </p>
+                  <div className="space-y-1">
+                    {group.items.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          navigate(userRouteMap[item.id]);
+                          setMobileOpen(false);
+                        }}
+                        className={`block w-full rounded-lg px-4 py-3 text-left text-sm font-medium ${
+                          location.pathname === userRouteMap[item.id]
+                            ? "bg-primary/12 text-primary border border-primary/25"
+                            : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-          )}
+          ) : null}
           <div className="flex gap-2 mt-3 px-4">
             {isAuthenticated ? (
               <>
                 <Button variant="outline" size="sm" className="flex-1" asChild>
-                  <Link to="/profile" onClick={() => setMobileOpen(false)}>Profile</Link>
+                  <Link to={role === "admin" ? "/admin" : "/dashboard"} onClick={() => setMobileOpen(false)}>
+                    {role === "admin" ? "Admin Portal" : "Open Portal"}
+                  </Link>
                 </Button>
                 <Button variant="ghost" size="sm" className="flex-1" onClick={handleSignOut}>
                   Sign Out

@@ -43,7 +43,7 @@ const SignUp = () => {
   const passwordsMatch = password === confirmPassword;
   const isGmailEmail = /^[a-z0-9._%+-]+@gmail\.com$/i.test(email.trim());
   const normalizedContactNumber = contactNumber.trim();
-  const isContactNumberValid = normalizedContactNumber === "" || /^09\d{9}$/.test(normalizedContactNumber);
+  const isContactNumberValid = /^09\d{9}$/.test(normalizedContactNumber);
   const selectedBarangayName = barangays.find((item) => item.id === barangayId)?.name ?? "N/A";
   const canSubmit = Boolean(
     useSupabaseAuth &&
@@ -212,7 +212,7 @@ const SignUp = () => {
             {email && !isGmailEmail && <p className="text-xs text-destructive">Email must end with @gmail.com.</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="contactNumber" className="text-foreground">Contact Number (Optional)</Label>
+            <Label htmlFor="contactNumber" className="text-foreground">Contact Number</Label>
             <Input
               id="contactNumber"
               placeholder="09XXXXXXXXX"
@@ -221,8 +221,9 @@ const SignUp = () => {
               className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
               inputMode="numeric"
               maxLength={11}
+              required
             />
-            {contactNumber && !isContactNumberValid && (
+            {!isContactNumberValid && (
               <p className="text-xs text-destructive">Contact number must be 11 digits and start with 09.</p>
             )}
           </div>

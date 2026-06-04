@@ -28,13 +28,24 @@ const SignIn = ({ forcedMode }: SignInProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { signIn, isInitialized } = useAuth();
+  const { signIn, isAuthenticated, isInitialized, role } = useAuth();
   const useSupabaseAuth = Boolean(supabase);
   const roleSelectionEnabled = !forcedMode && !IS_ADMIN_SURFACE && !IS_USER_SURFACE;
 
   useEffect(() => {
     setMode(inferredMode);
   }, [inferredMode]);
+
+  useEffect(() => {
+    if (!isInitialized || !isAuthenticated) return;
+
+    if (role === "admin") {
+      navigate("/admin", { replace: true });
+      return;
+    }
+
+    navigate("/organization-profile", { replace: true });
+  }, [isAuthenticated, isInitialized, navigate, role]);
 
   const isAdminMode = mode === "admin";
   const canSubmit = isAdminMode
@@ -64,7 +75,7 @@ const SignIn = ({ forcedMode }: SignInProps) => {
     setEmail("");
     setPassword("");
     setShowPassword(false);
-    navigate(isAdminMode ? "/admin" : "/", { replace: true });
+    navigate(isAdminMode ? "/admin" : "/organization-profile", { replace: true });
   };
 
   return (

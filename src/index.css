@@ -5,6 +5,18 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  html.portal-shell-active,
+  body.portal-shell-active {
+    height: 100%;
+    overflow: hidden;
+  }
+
   :root {
     --brand-deep-blue: 218 64% 29%;
     --brand-mid-blue: 212 64% 40%;
