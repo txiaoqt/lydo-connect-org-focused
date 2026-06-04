@@ -80,6 +80,26 @@ export type PortalNavGroup = {
   items: PortalNavItem[];
 };
 
+export const majorClassificationOptions = ["Youth Organization", "Youth-Serving Organization"] as const;
+export type MajorClassification = (typeof majorClassificationOptions)[number];
+
+export const subClassificationOptions = ["community-based", "school-based", "faith-based", "consortium/federation"] as const;
+export type SubClassification = (typeof subClassificationOptions)[number];
+
+export const advocacyOptions = [
+  "education",
+  "environment",
+  "health",
+  "peace building and security",
+  "governance",
+  "active citizenship",
+  "global mobility",
+  "social inclusion and equity",
+  "economic empowerment",
+  "agriculture",
+] as const;
+export type Advocacy = (typeof advocacyOptions)[number];
+
 export const requiredDocumentTypes: RequiredDocumentType[] = [
   {
     id: "constitution-bylaws",
@@ -231,7 +251,9 @@ export type OrganizationProfile = {
   organizationEmail: string;
   contactNumber: string;
   barangay: string;
-  organizationType: string;
+  majorClassification: MajorClassification | "";
+  subClassification: SubClassification | "";
+  advocacies: Advocacy[];
   adviserName: string;
   representativeName: string;
   address: string;
@@ -436,7 +458,9 @@ export const seedState: LydoSeedState = {
       organizationEmail: "lydo.youth@example.com",
       contactNumber: "09123456789",
       barangay: "San Antonio",
-      organizationType: "Barangay-based Youth Organization",
+      majorClassification: "Youth Organization",
+      subClassification: "community-based",
+      advocacies: ["education", "governance"],
       adviserName: "Ms. Carla Reyes",
       representativeName: "Jasper Dela Cruz",
       address: "San Antonio, Pasig City",

@@ -33,6 +33,7 @@ type LydoConnectContextValue = {
   createTemplate: (template: TemplateRecord) => void;
   removeTemplate: (id: string) => void;
   updateOrganizationProfile: (id: string, patch: UpdatePatch<OrganizationProfile>) => void;
+  upsertOrganizationProfile: (profile: OrganizationProfile) => void;
   updateDocumentSubmission: (id: string, patch: UpdatePatch<DocumentSubmission>) => void;
   updateDocumentFile: (id: string, patch: UpdatePatch<SubmissionFile>) => void;
   updateBudgetRequest: (id: string, patch: UpdatePatch<BudgetRequest>) => void;
@@ -63,7 +64,9 @@ const readState = (): LydoConnectState => {
     return {
       ...seedState,
       ...parsed,
-      organizationProfiles: parsed.organizationProfiles ?? seedState.organizationProfiles,
+      organizationProfiles: ((parsed.organizationProfiles ?? seedState.organizationProfiles) as OrganizationProfile[]).map(
+        normalizeOrganizationProfile,
+      ),
       documentSubmissions: parsed.documentSubmissions ?? seedState.documentSubmissions,
       documentSubmissionFiles: parsed.documentSubmissionFiles ?? seedState.documentSubmissionFiles,
       budgetRequests: parsed.budgetRequests ?? seedState.budgetRequests,
@@ -87,6 +90,13 @@ const applyPatch = <T extends { id: string }>(items: T[], id: string, patch: Upd
     if (item.id !== id) return item;
     return typeof patch === "function" ? patch(item) : { ...item, ...patch };
   });
+
+const normalizeOrganizationProfile = (profile: OrganizationProfile): OrganizationProfile => ({
+  ...profile,
+  majorClassification: profile.majorClassification ?? "",
+  subClassification: profile.subClassification ?? "",
+  advocacies: profile.advocacies ?? [],
+});
 
 export const LydoConnectProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, setState] = useState<LydoConnectState>(() => readState());
@@ -149,6 +159,26 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
           ...current,
           organizationProfiles: applyPatch(current.organizationProfiles, id, patch),
         })),
+      upsertOrganizationProfile: (profile) =>
+        setState((current) => {
+          const existingIndex = current.organizationProfiles.findIndex(
+            (item) => item.id === profile.id || item.userId === profile.userId,
+          );
+
+          if (existingIndex < 0) {
+            return {
+              ...current,
+              organizationProfiles: [profile, ...current.organizationProfiles],
+            };
+          }
+
+          const organizationProfiles = [...current.organizationProfiles];
+          organizationProfiles[existingIndex] = profile;
+          return {
+            ...current,
+            organizationProfiles,
+          };
+        }),
       updateDocumentSubmission: (id, patch) =>
         setState((current) => ({
           ...current,

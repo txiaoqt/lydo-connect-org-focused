@@ -362,7 +362,9 @@ export default function AdminPortal({ section }: { section: string }) {
                     ["Email", selectedOrg.organizationEmail],
                     ["Contact Number", selectedOrg.contactNumber],
                     ["Barangay", selectedOrg.barangay],
-                    ["Organization Type", selectedOrg.organizationType],
+                    ["Major Classification", selectedOrg.majorClassification || "N/A"],
+                    ["Sub Classification", selectedOrg.subClassification || "N/A"],
+                    ["Advocacies", selectedOrg.advocacies.length ? selectedOrg.advocacies.join(", ") : "N/A"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-border/70 bg-muted/20 p-3">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{label}</p>
@@ -494,8 +496,10 @@ export default function AdminPortal({ section }: { section: string }) {
                         <p>{org.organizationEmail}</p>
                         <p>{org.contactNumber}</p>
                         <p>{org.barangay}</p>
-                        <p>{org.organizationType}</p>
-                          <p className="pt-2 font-medium text-foreground">
+                        <p>{org.majorClassification || "N/A"}</p>
+                        <p>{org.subClassification || "N/A"}</p>
+                        <p>{org.advocacies.length ? org.advocacies.join(", ") : "N/A"}</p>
+                        <p className="pt-2 font-medium text-foreground">
                           Documents submitted: {submittedCount}/{templateDocuments.length}
                         </p>
                       </CardContent>

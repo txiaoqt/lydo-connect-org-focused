@@ -26,7 +26,9 @@ type OrganizationProfileRow = {
   organization_email: string;
   contact_number: string;
   barangay: string;
-  organization_type: string | null;
+  major_classification: string | null;
+  sub_classification: string | null;
+  advocacies: string[] | null;
   adviser_name: string | null;
   representative_name: string | null;
   address: string | null;
@@ -104,7 +106,9 @@ const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfil
   organizationEmail: row.organization_email,
   contactNumber: row.contact_number,
   barangay: row.barangay,
-  organizationType: row.organization_type ?? "",
+  majorClassification: (row.major_classification ?? "") as OrganizationProfile["majorClassification"],
+  subClassification: (row.sub_classification ?? "") as OrganizationProfile["subClassification"],
+  advocacies: (row.advocacies ?? []) as OrganizationProfile["advocacies"],
   adviserName: row.adviser_name ?? "",
   representativeName: row.representative_name ?? "",
   address: row.address ?? "",
@@ -252,6 +256,43 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
     .filter((file): file is SubmissionFile => Boolean(file));
 
   return remoteState;
+};
+
+export const upsertOrganizationProfileInSupabase = async (profile: OrganizationProfile) => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) throw new Error("Please sign in with your organization account first.");
+
+  const payload = {
+    user_id: session.user.id,
+    organization_name: profile.organizationName.trim(),
+    organization_email: profile.organizationEmail.trim(),
+    contact_number: profile.contactNumber.trim(),
+    barangay: profile.barangay.trim(),
+    major_classification: profile.majorClassification || null,
+    sub_classification: profile.subClassification || null,
+    advocacies: profile.advocacies,
+    adviser_name: profile.adviserName.trim() || null,
+    representative_name: profile.representativeName.trim() || null,
+    address: profile.address.trim() || null,
+    facebook_page_url: profile.facebookPageUrl.trim() || null,
+    profile_status: profile.profileStatus,
+    internal_notes: profile.internalNotes.trim() || null,
+  };
+
+  const { data, error } = await supabase
+    .from("organization_profiles")
+    .upsert(payload, { onConflict: "user_id" })
+    .select("id,user_id,organization_name,organization_email,contact_number,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,internal_notes,created_at,updated_at")
+    .single();
+
+  if (error || !data) throw new Error(error?.message ?? "Failed to save organization profile.");
+
+  return mapOrganizationProfile(data as OrganizationProfileRow);
 };
 
 const ensureDocumentSubmission = async (organizationId: string, userId: string) => {

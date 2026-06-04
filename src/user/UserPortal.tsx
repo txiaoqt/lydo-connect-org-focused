@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, MessageSquare, ShieldAlert, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,24 +16,77 @@ import { UserPortalShell } from "@/components/portal/UserPortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
-import { userNavigationGroups, userRouteMap } from "@/lib/lydo-connect-data";
-import { loadLydoConnectSupabaseState, resolveSupabaseFileUrl, uploadOrganizationDocumentToSupabase } from "@/lib/lydo-connect-supabase";
+import {
+  advocacyOptions,
+  majorClassificationOptions,
+  subClassificationOptions,
+  type OrganizationProfile,
+  userNavigationGroups,
+  userRouteMap,
+} from "@/lib/lydo-connect-data";
+import {
+  loadLydoConnectSupabaseState,
+  resolveSupabaseFileUrl,
+  upsertOrganizationProfileInSupabase,
+  uploadOrganizationDocumentToSupabase,
+} from "@/lib/lydo-connect-supabase";
 
 const getReadiness = (filled: number, total: number) => (total === 0 ? 0 : Math.round((filled / total) * 100));
 const hasUploadedTemplateFile = (fileUrl?: string, fileName?: string) =>
   Boolean(fileName?.trim() && fileUrl?.trim() && !fileUrl.startsWith("#"));
 
+const createBlankOrganizationProfile = (userId: string): OrganizationProfile => ({
+  id: `draft-${userId || "organization"}`,
+  userId,
+  organizationName: "",
+  organizationEmail: "",
+  contactNumber: "",
+  barangay: "",
+  majorClassification: "",
+  subClassification: "",
+  advocacies: [],
+  adviserName: "",
+  representativeName: "",
+  address: "",
+  facebookPageUrl: "",
+  profileStatus: "incomplete",
+  internalNotes: "",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+});
+
 export default function UserPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const { state, mergeRemoteState, updateDocumentFile, updateDocumentSubmission, setDocumentSubmissionStatus, markNotificationRead } = useLydoConnect();
+  const {
+    state,
+    mergeRemoteState,
+    upsertOrganizationProfile,
+    updateDocumentFile,
+    updateDocumentSubmission,
+    setDocumentSubmissionStatus,
+    markNotificationRead,
+  } = useLydoConnect();
   const [uploadingDocumentId, setUploadingDocumentId] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
+  const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
+  const [profileDraft, setProfileDraft] = useState<OrganizationProfile>(
+    currentProfile ? { ...currentProfile, advocacies: [...currentProfile.advocacies] } : createBlankOrganizationProfile(user?.id ?? ""),
+  );
 
-  const profile = state.organizationProfiles[0];
+  useEffect(() => {
+    setProfileDraft(
+      currentProfile
+        ? { ...currentProfile, advocacies: [...currentProfile.advocacies] }
+        : createBlankOrganizationProfile(user?.id ?? ""),
+    );
+  }, [currentProfile, user?.id]);
+
+  const profile = currentProfile ?? createBlankOrganizationProfile(user?.id ?? "");
   const submission = state.documentSubmissions[0];
   const budget = state.budgetRequests[0];
   const liquidation = state.liquidationReports[0];
@@ -57,12 +110,38 @@ export default function UserPortal({ section }: { section: string }) {
     [templateDocuments],
   );
   const completedDocs = docFiles.filter((file) => file.validationStatus === "correct").length;
-  const profilePercent = profile
+  const profilePercent = currentProfile
     ? getReadiness(
-        [profile.organizationName, profile.organizationEmail, profile.contactNumber, profile.barangay].filter(Boolean).length,
-        4,
+        [
+          currentProfile.organizationName,
+          currentProfile.organizationEmail,
+          currentProfile.contactNumber,
+          currentProfile.barangay,
+          currentProfile.majorClassification,
+          currentProfile.subClassification,
+          currentProfile.advocacies.length > 0 ? "advocacies" : "",
+          currentProfile.adviserName,
+          currentProfile.representativeName,
+          currentProfile.address,
+        ].filter(Boolean).length,
+        10,
       )
     : 0;
+  const profileDraftPercent = getReadiness(
+    [
+      profileDraft.organizationName,
+      profileDraft.organizationEmail,
+      profileDraft.contactNumber,
+      profileDraft.barangay,
+      profileDraft.majorClassification,
+      profileDraft.subClassification,
+      profileDraft.advocacies.length > 0 ? "advocacies" : "",
+      profileDraft.adviserName,
+      profileDraft.representativeName,
+      profileDraft.address,
+    ].filter(Boolean).length,
+    10,
+  );
   const documentsPercent = getReadiness(completedDocs, templateDocuments.length);
   const budgetPercent = budget ? getReadiness(budget.status === "approved_for_ftf_green" || budget.status === "budget_released" ? 1 : 0, 1) : 0;
   const liquidationPercent = liquidation ? getReadiness(liquidation.status === "completed_liquidated" ? 1 : 0, 1) : 0;
@@ -162,6 +241,83 @@ export default function UserPortal({ section }: { section: string }) {
       });
     } finally {
       setUploadingDocumentId(null);
+    }
+  };
+
+  const handleProfileFieldChange = <K extends keyof OrganizationProfile>(field: K, value: OrganizationProfile[K]) => {
+    setProfileDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const toggleAdvocacy = (advocacy: OrganizationProfile["advocacies"][number]) => {
+    setProfileDraft((current) => ({
+      ...current,
+      advocacies: current.advocacies.includes(advocacy)
+        ? current.advocacies.filter((item) => item !== advocacy)
+        : [...current.advocacies, advocacy],
+    }));
+  };
+
+  const saveOrganizationProfile = async () => {
+    if (!user) return;
+
+    const trimmedProfile: OrganizationProfile = {
+      ...profileDraft,
+      userId: user.id,
+      organizationName: profileDraft.organizationName.trim(),
+      organizationEmail: profileDraft.organizationEmail.trim(),
+      contactNumber: profileDraft.contactNumber.trim(),
+      barangay: profileDraft.barangay.trim(),
+      majorClassification: profileDraft.majorClassification,
+      subClassification: profileDraft.subClassification,
+      advocacies: [...profileDraft.advocacies],
+      adviserName: profileDraft.adviserName.trim(),
+      representativeName: profileDraft.representativeName.trim(),
+      address: profileDraft.address.trim(),
+      facebookPageUrl: profileDraft.facebookPageUrl.trim(),
+      profileStatus: "pending_review",
+      internalNotes: profileDraft.internalNotes.trim(),
+      updatedAt: new Date().toISOString(),
+      createdAt: currentProfile?.createdAt ?? profileDraft.createdAt ?? new Date().toISOString(),
+    };
+
+    if (
+      !trimmedProfile.organizationName ||
+      !trimmedProfile.organizationEmail ||
+      !trimmedProfile.contactNumber ||
+      !trimmedProfile.barangay ||
+      !trimmedProfile.majorClassification ||
+      !trimmedProfile.subClassification ||
+      trimmedProfile.advocacies.length === 0
+    ) {
+      toast({
+        title: "Complete the profile",
+        description: "Please fill in the required organization details, classifications, and at least one advocacy.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const savedProfile = await upsertOrganizationProfileInSupabase(trimmedProfile);
+      upsertOrganizationProfile(savedProfile);
+      setProfileDraft(savedProfile);
+
+      toast({
+        title: "Profile saved",
+        description: "Your organization profile has been updated and sent for admin review.",
+      });
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "The organization profile could not be saved.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -271,33 +427,183 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <PortalSection
             title="Organization Profile Setup"
-            description="This is the primary profile record linked to the authenticated account."
-            action={<PortalStatusBadge status={profile.profileStatus} />}
+            description="Edit the organization profile linked to your account. Save changes to update the admin dashboard review record."
+            action={<PortalStatusBadge status={profileDraft.profileStatus} />}
           >
-            <div className="grid gap-4 md:grid-cols-2">
-              {[
-                ["Organization Name", profile.organizationName],
-                ["Organization Email", profile.organizationEmail],
-                ["Contact Number", profile.contactNumber],
-                ["Barangay", profile.barangay],
-                ["Organization Type", profile.organizationType],
-                ["Representative", profile.representativeName],
-                ["Adviser", profile.adviserName],
-                ["Address", profile.address],
-                ["Facebook Page", profile.facebookPageUrl],
-              ].map(([label, value]) => (
-                <Card key={label} className="bg-muted/20">
+            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <Card className="border-border/70">
+                <CardContent className="space-y-5 p-4 sm:p-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FieldGroup label="Organization Name" required>
+                      <input
+                        value={profileDraft.organizationName}
+                        onChange={(event) => handleProfileFieldChange("organizationName", event.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="Enter organization name"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Organization Email" required>
+                      <input
+                        type="email"
+                        value={profileDraft.organizationEmail}
+                        onChange={(event) => handleProfileFieldChange("organizationEmail", event.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="Enter organization email"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Contact Number" required>
+                      <input
+                        value={profileDraft.contactNumber}
+                        onChange={(event) => handleProfileFieldChange("contactNumber", event.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="09XXXXXXXXX"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Barangay" required>
+                      <input
+                        value={profileDraft.barangay}
+                        onChange={(event) => handleProfileFieldChange("barangay", event.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="Enter barangay"
+                      />
+                    </FieldGroup>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FieldGroup label="Major Classification" required>
+                      <select
+                        value={profileDraft.majorClassification}
+                        onChange={(event) =>
+                          handleProfileFieldChange("majorClassification", event.target.value as OrganizationProfile["majorClassification"])
+                        }
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                      >
+                        <option value="">Select major classification</option>
+                        {majorClassificationOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </FieldGroup>
+                    <FieldGroup label="Sub Classification" required>
+                      <select
+                        value={profileDraft.subClassification}
+                        onChange={(event) =>
+                          handleProfileFieldChange("subClassification", event.target.value as OrganizationProfile["subClassification"])
+                        }
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                      >
+                        <option value="">Select sub classification</option>
+                        {subClassificationOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </FieldGroup>
+                  </div>
+
+                  <FieldGroup label="Advocacies" required>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {advocacyOptions.map((advocacy) => (
+                        <label
+                          key={advocacy}
+                          className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm transition-colors hover:bg-muted/40"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={profileDraft.advocacies.includes(advocacy)}
+                            onChange={() => toggleAdvocacy(advocacy)}
+                            className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="capitalize">{advocacy}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FieldGroup>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FieldGroup label="Representative">
+                      <input
+                        value={profileDraft.representativeName}
+                        onChange={(event) => handleProfileFieldChange("representativeName", event.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="Enter representative name"
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="Adviser">
+                      <input
+                        value={profileDraft.adviserName}
+                        onChange={(event) => handleProfileFieldChange("adviserName", event.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="Enter adviser name"
+                      />
+                    </FieldGroup>
+                  </div>
+
+                  <FieldGroup label="Address">
+                    <textarea
+                      value={profileDraft.address}
+                      onChange={(event) => handleProfileFieldChange("address", event.target.value)}
+                      className="min-h-24 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                      placeholder="Enter organization address"
+                    />
+                  </FieldGroup>
+
+                  <FieldGroup label="Facebook Page">
+                    <input
+                      value={profileDraft.facebookPageUrl}
+                      onChange={(event) => handleProfileFieldChange("facebookPageUrl", event.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                      placeholder="https://facebook.com/..."
+                    />
+                  </FieldGroup>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      Save changes to update the shared profile record seen by the admin dashboard.
+                    </p>
+                    <Button type="button" onClick={() => void saveOrganizationProfile()} disabled={savingProfile}>
+                      {savingProfile ? "Saving..." : "Save Profile"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-4">
+                <Card className="bg-muted/20">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Profile readiness</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 text-sm">{value}</CardContent>
+                  <CardContent className="pt-0">
+                    <Progress className="mt-1" value={profileDraftPercent} />
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {profileDraftPercent}% complete. Required details should stay updated so the organization can submit documents and budget requests.
+                    </p>
+                  </CardContent>
                 </Card>
-              ))}
-            </div>
-            <div className="mt-4 rounded-xl border border-border/70 bg-background p-4 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Profile readiness</p>
-              <Progress className="mt-3" value={profilePercent} />
-              <p className="mt-2">{profilePercent}% complete. Critical fields should stay accurate so the organization can submit documents and budget requests.</p>
+                <Card className="bg-muted/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Saved Profile</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 pt-0 text-sm">
+                    {currentProfile ? (
+                      <>
+                        <p><span className="text-muted-foreground">Status:</span> {currentProfile.profileStatus.replaceAll("_", " ")}</p>
+                        <p><span className="text-muted-foreground">Major:</span> {currentProfile.majorClassification || "N/A"}</p>
+                        <p><span className="text-muted-foreground">Sub:</span> {currentProfile.subClassification || "N/A"}</p>
+                        <p>
+                          <span className="text-muted-foreground">Advocacies:</span>{" "}
+                          {currentProfile.advocacies.length ? currentProfile.advocacies.join(", ") : "N/A"}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">No saved profile yet. Fill out the form and save it to create the organization record.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </PortalSection>
         );
@@ -672,7 +978,6 @@ export default function UserPortal({ section }: { section: string }) {
     profile.facebookPageUrl,
     profile.organizationEmail,
     profile.organizationName,
-    profile.organizationType,
     profile.profileStatus,
     profile.representativeName,
     profilePercent,
@@ -698,6 +1003,15 @@ export default function UserPortal({ section }: { section: string }) {
     templateDocuments,
     templatesById,
     uploadingDocumentId,
+    currentProfile,
+    profileDraft,
+    savingProfile,
+    advocacyOptions,
+    majorClassificationOptions,
+    subClassificationOptions,
+    handleProfileFieldChange,
+    toggleAdvocacy,
+    saveOrganizationProfile,
     documentsPercent,
     budgetPercent,
     liquidationPercent,
@@ -747,5 +1061,25 @@ export default function UserPortal({ section }: { section: string }) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function FieldGroup({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-foreground">
+        {label}
+        {required ? <span className="ml-1 text-destructive">*</span> : null}
+      </label>
+      {children}
+    </div>
   );
 }
