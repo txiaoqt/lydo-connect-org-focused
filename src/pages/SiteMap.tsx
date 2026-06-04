@@ -32,21 +32,6 @@ const siteMapSections: Array<{ title: string; links: Array<{ label: string; href
       { label: "Notifications", href: "/notifications" },
     ],
   },
-  {
-    title: "Admin Portal",
-    links: [
-      { label: "Admin Portal", href: "/admin" },
-      { label: "Registrations", href: "/admin/registrations" },
-      { label: "Users", href: "/admin/users" },
-      { label: "Budget Utilization", href: "/admin/budget-utilization" },
-      { label: "Liquidation Monitoring", href: "/admin/liquidation-monitoring" },
-      { label: "Remarks and Consequences", href: "/admin/remarks-consequences" },
-      { label: "News Releases", href: "/admin/news-releases" },
-      { label: "Public Transparency Posts", href: "/admin/public-transparency-posts" },
-      { label: "Templates", href: "/admin/templates" },
-      { label: "Notifications / Activity Logs", href: "/admin/notifications-activity" },
-    ],
-  },
 ];
 
 const SiteMap = () => {
@@ -60,7 +45,7 @@ const SiteMap = () => {
               Site Map
             </h1>
             <p className="text-secondary-foreground/70 text-sm sm:text-base md:text-lg leading-relaxed">
-              Complete directory of the LYDO Connect public pages and key portal routes.
+              Complete directory of the LYDO Connect public pages and user portal routes.
             </p>
           </div>
         </section>

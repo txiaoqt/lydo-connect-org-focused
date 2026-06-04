@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FeatureCard from "@/components/FeatureCard";
-import StatCard from "@/components/StatCard";
 import heroImage from "@/assets/hero-image.png";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -108,17 +107,6 @@ const Index = () => {
         </div>
       </section>
 
-      <section className="stats-gradient py-6 sm:py-8 md:py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-8">
-            <StatCard value="6" label="Required Documents" compact />
-            <StatCard value="1 mo" label="Liquidation Deadline" compact />
-            <StatCard value="OCR" label="Assisted Review" compact />
-            <StatCard value="2 sides" label="User + Admin Aligned" compact />
-          </div>
-        </div>
-      </section>
-
       <section className="bg-background py-12 sm:py-14 md:py-24">
         <div className="container mx-auto px-4">
           <div className="mb-8 max-w-2xl text-center sm:mb-12 mx-auto">
@@ -162,20 +150,6 @@ const Index = () => {
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">{feature.description}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-background py-12 sm:py-14 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-6 text-center shadow-sm sm:p-8">
-            <span className="mb-2 block text-xs font-semibold uppercase tracking-widest text-primary">Final Note</span>
-            <h2 className="text-[1.55rem] font-heading font-bold text-foreground sm:text-3xl md:text-4xl">
-              OCR helps, but LYDO/PCYDO still makes the final call
-            </h2>
-            <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-              The portal stores extracted text and validation hints, but the official decision and remarks stay with the admin side.
-            </p>
           </div>
         </div>
       </section>
