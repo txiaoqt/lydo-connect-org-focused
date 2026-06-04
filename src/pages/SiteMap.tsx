@@ -4,42 +4,47 @@ import Footer from "@/components/Footer";
 
 const siteMapSections: Array<{ title: string; links: Array<{ label: string; href: string }> }> = [
   {
-    title: "Main",
+    title: "Public Pages",
     links: [
       { label: "Home", href: "/" },
       { label: "About", href: "/about" },
       { label: "FAQs", href: "/faqs" },
       { label: "Contacts", href: "/contacts" },
       { label: "Site Map", href: "/site-map" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
     ],
   },
   {
-    title: "Youth Services",
-    links: [
-      { label: "Programs", href: "/programs" },
-      { label: "Events", href: "/events" },
-      { label: "Organizations", href: "/organizations" },
-      { label: "Youth Desk", href: "/transparency/youth-desk" },
-      { label: "Profile", href: "/profile" },
-    ],
-  },
-  {
-    title: "Transparency",
-    links: [
-      { label: "Disclosure Registry", href: "/transparency/reports" },
-      { label: "Transparency Board", href: "/transparency/board" },
-      { label: "Financial Disclosure", href: "/transparency/financial-disclosure" },
-      { label: "Barangay Map", href: "/transparency/barangay-map" },
-    ],
-  },
-  {
-    title: "Access and Policies",
+    title: "User Portal",
     links: [
       { label: "Sign In", href: "/signin" },
       { label: "Sign Up", href: "/signup" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Organization Profile", href: "/organization-profile" },
+      { label: "Document Submission", href: "/document-submission" },
+      { label: "Validation and Review", href: "/validation-review" },
+      { label: "Budget Request", href: "/budget-request" },
+      { label: "Liquidation and Reporting", href: "/liquidation-reporting" },
+      { label: "News Releases", href: "/news-releases" },
+      { label: "Public Transparency Posting", href: "/public-transparency" },
+      { label: "Compliance Status", href: "/compliance-status" },
+      { label: "Notifications", href: "/notifications" },
+    ],
+  },
+  {
+    title: "Admin Portal",
+    links: [
       { label: "Admin Portal", href: "/admin" },
+      { label: "Registrations", href: "/admin/registrations" },
+      { label: "Users", href: "/admin/users" },
+      { label: "Budget Utilization", href: "/admin/budget-utilization" },
+      { label: "Liquidation Monitoring", href: "/admin/liquidation-monitoring" },
+      { label: "Remarks and Consequences", href: "/admin/remarks-consequences" },
+      { label: "News Releases", href: "/admin/news-releases" },
+      { label: "Public Transparency Posts", href: "/admin/public-transparency-posts" },
+      { label: "Templates", href: "/admin/templates" },
+      { label: "Notifications / Activity Logs", href: "/admin/notifications-activity" },
     ],
   },
 ];

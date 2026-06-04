@@ -5,27 +5,37 @@ const faqs = [
   {
     question: "What is LYDO Connect?",
     answer:
-      "LYDO Connect is a centralized youth governance platform where users can discover programs, events, organizations, and transparency resources in one place.",
+      "LYDO Connect is a youth organization compliance portal for registration, profile setup, document submission, validation, budget requests, liquidation, and official updates.",
   },
   {
-    question: "How can I join youth programs?",
+    question: "What can I access before signing in?",
     answer:
-      "Go to the Programs page, open a program record, and follow the registration instructions shown for that specific opportunity.",
+      "Before sign-in, the public navbar stays simple: Home and FAQs only. You can still open About, Contacts, Site Map, Terms, and Privacy from the footer.",
   },
   {
-    question: "How do I register for events?",
+    question: "What changes once I am signed in?",
     answer:
-      "Visit the Events page, choose an event, and complete the registration process listed in the event details.",
+      "Signed-in users go straight to the portal workflow. The public links are hidden, and the portal navigation shows Dashboard, Organization Profile, Document Submission, Validation and Review, Budget Request, Liquidation and Reporting, News Releases, Public Transparency Posting, Notifications, and Compliance Status.",
   },
   {
-    question: "Where can I send concerns or requests?",
+    question: "How does document submission work?",
     answer:
-      "Use the Youth Desk page to submit information requests, feedback, and service concerns linked to your account.",
+      "You upload the required compliance files in Document Submission, then review the OCR and validation results in Validation and Review before the record goes to admin review.",
   },
   {
-    question: "Where can I read privacy and terms information?",
+    question: "What happens after a budget request is approved?",
     answer:
-      "You can review platform policies through the Terms of Service and Privacy Policy pages in the footer.",
+      "Approved budget requests can move to face-to-face or hard copy submission, then release tracking and liquidation reporting follow after the activity is completed.",
+  },
+  {
+    question: "Where do I see reminders, remarks, and status updates?",
+    answer:
+      "Notifications show workflow updates, while Compliance Status summarizes your current standing. Admin remarks and public updates are also reflected in the portal sections when available.",
+  },
+  {
+    question: "How do admins manage records?",
+    answer:
+      "Admins use the Admin Portal to review registrations, manage users, review budget and liquidation records, publish news and transparency posts, manage templates, and track notification activity.",
   },
 ];
 
