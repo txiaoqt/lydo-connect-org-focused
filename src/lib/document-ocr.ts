@@ -13,12 +13,21 @@ export type DocumentOcrIssue = {
   description: string;
 };
 
+export type DocumentOcrField = {
+  key: string;
+  label: string;
+  value: string;
+  confidence: number;
+  source: string;
+};
+
 export type DocumentOcrScanResult = {
   text: string;
   confidence: number;
   pageCount: number;
   issues: DocumentOcrIssue[];
   canSubmit: boolean;
+  extractedFields: DocumentOcrField[];
 };
 
 const commonOcrTypos = [
@@ -34,7 +43,165 @@ const commonOcrTypos = [
   "wich",
 ];
 
-const compactText = (value: string) => value.replace(/\s+/g, " ").trim();
+const normalizeOcrLine = (value: string) => value.replace(/\s+/g, " ").trim();
+const compactText = (value: string) => normalizeOcrLine(value);
+const splitOcrLines = (value: string) =>
+  value
+    .replace(/\r/g, "")
+    .split(/\n+/)
+    .map((line) => normalizeOcrLine(line))
+    .filter(Boolean);
+
+type ExtractedFieldDefinition = {
+  key: string;
+  label: string;
+  labelPatterns: RegExp[];
+};
+
+const fieldDefinitions: ExtractedFieldDefinition[] = [
+  {
+    key: "organizationName",
+    label: "Organization Name",
+    labelPatterns: [/^(?:organization\s*name|name\s*of\s*organization)\s*[:\-–]?\s*(.+)$/i],
+  },
+  {
+    key: "organizationEmail",
+    label: "Email Address",
+    labelPatterns: [
+      /^(?:official\s+organizational\s+email\s+address|organization\s+email\s+address|email\s+address)\s*[:\-–]?\s*(.+)$/i,
+    ],
+  },
+  {
+    key: "contactNumber",
+    label: "Contact Number",
+    labelPatterns: [
+      /^(?:contact\s+number|telephone|cellphone|mobile\s+number)\s*[:\-–]?\s*(.+)$/i,
+    ],
+  },
+  {
+    key: "addressBuildingNo",
+    label: "Building No.",
+    labelPatterns: [
+      /^(?:organization\s+address\s+building\s+no\.?|building\s+no\.?|house\s+no\.?|bldg\.?\s+no\.?)\s*[:\-–]?\s*(.+)$/i,
+    ],
+  },
+  {
+    key: "addressStreet",
+    label: "Street",
+    labelPatterns: [/^(?:organization\s+address\s+street|street)\s*[:\-–]?\s*(.+)$/i],
+  },
+  {
+    key: "addressBarangay",
+    label: "Barangay",
+    labelPatterns: [/^(?:organization\s+address\s+barangay|barangay)\s*[:\-–]?\s*(.+)$/i],
+  },
+  {
+    key: "addressDistrict",
+    label: "District",
+    labelPatterns: [/^(?:organization\s+address\s+district|district)\s*[:\-–]?\s*(.+)$/i],
+  },
+  {
+    key: "addressCity",
+    label: "Municipality / City",
+    labelPatterns: [/^(?:organization\s+address\s+municipality\s*\/?\s*city|municipality\s*\/?\s*city|city)\s*[:\-–]?\s*(.+)$/i],
+  },
+  {
+    key: "website",
+    label: "Website",
+    labelPatterns: [/^(?:organization\s+website|website)\s*[:\-–]?\s*(.+)$/i],
+  },
+];
+
+const emailPattern = /[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/;
+const phonePattern = /(?:\+?63|0)\s?\d[\d\s-]{7,}\d/;
+const urlPattern = /https?:\/\/[^\s)]+/i;
+
+const extractFieldValue = (lines: string[], definition: ExtractedFieldDefinition): DocumentOcrField | null => {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    for (const pattern of definition.labelPatterns) {
+      const match = line.match(pattern);
+      if (!match) continue;
+
+      const inlineValue = compactText(match[1] ?? "");
+      if (inlineValue) {
+        return {
+          key: definition.key,
+          label: definition.label,
+          value: inlineValue,
+          confidence: 96,
+          source: line,
+        };
+      }
+
+      for (let nextIndex = index + 1; nextIndex < Math.min(lines.length, index + 4); nextIndex += 1) {
+        const candidate = lines[nextIndex];
+        if (!candidate || candidate === line) continue;
+        if (definition.labelPatterns.some((otherPattern) => otherPattern.test(candidate))) continue;
+        if (candidate.length < 2) continue;
+
+        return {
+          key: definition.key,
+          label: definition.label,
+          value: candidate,
+          confidence: 90,
+          source: line,
+        };
+      }
+    }
+  }
+
+  return null;
+};
+
+const extractStandaloneField = (
+  text: string,
+  key: string,
+  label: string,
+  pattern: RegExp,
+  confidence = 84,
+): DocumentOcrField | null => {
+  const match = text.match(pattern);
+  if (!match) return null;
+
+  const value = compactText(match[1] ?? match[0]);
+  if (!value) return null;
+
+  return {
+    key,
+    label,
+    value,
+    confidence,
+    source: match[0],
+  };
+};
+
+const extractOcrFields = (text: string): DocumentOcrField[] => {
+  const lines = splitOcrLines(text);
+  const extracted: DocumentOcrField[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const definition of fieldDefinitions) {
+    const field = extractFieldValue(lines, definition);
+    if (!field || seenKeys.has(field.key)) continue;
+    extracted.push(field);
+    seenKeys.add(field.key);
+  }
+
+  const fallbackFields = [
+    extractStandaloneField(text, "organizationEmail", "Email Address", emailPattern, 82),
+    extractStandaloneField(text, "contactNumber", "Contact Number", phonePattern, 78),
+    extractStandaloneField(text, "website", "Website", urlPattern, 78),
+  ].filter((field): field is DocumentOcrField => Boolean(field) && !seenKeys.has(field.key));
+
+  for (const field of fallbackFields) {
+    extracted.push(field);
+    seenKeys.add(field.key);
+  }
+
+  return extracted;
+};
 
 const buildIssues = (text: string, confidence: number): DocumentOcrIssue[] => {
   const issues: DocumentOcrIssue[] = [];
@@ -159,7 +326,7 @@ export const scanPdfForOcr = async (
 
       onProgress?.({ stage: "ocr", page: pageNumber, totalPages: pdfDocument.numPages });
       const result = await worker.recognize(canvas);
-      const text = compactText(result.data.text || "");
+      const text = (result.data.text || "").replace(/\r/g, "").trim();
 
       if (text) {
         pageTextParts.push(text);
@@ -175,6 +342,7 @@ export const scanPdfForOcr = async (
       ? Math.round(pageConfidences.reduce((sum, value) => sum + value, 0) / pageConfidences.length)
       : 0;
     const issues = buildIssues(text, confidence);
+    const extractedFields = extractOcrFields(text);
 
     return {
       text,
@@ -182,6 +350,7 @@ export const scanPdfForOcr = async (
       pageCount: pdfDocument.numPages,
       issues,
       canSubmit: confidence >= 90 && !issues.some((issue) => issue.severity === "error"),
+      extractedFields,
     };
   } finally {
     await worker.terminate();

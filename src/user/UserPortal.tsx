@@ -80,6 +80,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
+  const [ocrPreviewUrl, setOcrPreviewUrl] = useState("");
   const [pendingDocumentScan, setPendingDocumentScan] = useState<{
     documentTypeId: string;
     documentTypeName: string;
@@ -98,6 +99,19 @@ export default function UserPortal({ section }: { section: string }) {
         : createBlankOrganizationProfile(user?.id ?? ""),
     );
   }, [currentProfile, user?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (ocrPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(ocrPreviewUrl);
+      }
+    };
+  }, [ocrPreviewUrl]);
+
+  useEffect(() => {
+    if (!ocrPreviewOpen || ocrPreviewUrl || !pendingDocumentScan) return;
+    setOcrPreviewUrl(URL.createObjectURL(pendingDocumentScan.file));
+  }, [ocrPreviewOpen, ocrPreviewUrl, pendingDocumentScan]);
 
   const profile = currentProfile ?? createBlankOrganizationProfile(user?.id ?? "");
   const submission = state.documentSubmissions[0] ?? null;
@@ -222,6 +236,7 @@ export default function UserPortal({ section }: { section: string }) {
     setConfirmSubmitOpen(false);
     setOcrPreviewOpen(false);
     setSubmissionSuccessOpen(false);
+    setOcrPreviewUrl("");
   };
 
   const handleDocumentUpload = async (documentTypeName: string, file: File | null) => {
@@ -241,6 +256,7 @@ export default function UserPortal({ section }: { section: string }) {
     }
 
     setScanningDocumentId(localDocumentType.id);
+    const previewObjectUrl = URL.createObjectURL(file);
 
     try {
       const result = await scanPdfForOcr(file);
@@ -250,10 +266,12 @@ export default function UserPortal({ section }: { section: string }) {
         file,
         result,
       });
+      setOcrPreviewUrl(previewObjectUrl);
       setOcrPreviewOpen(true);
       setConfirmSubmitOpen(false);
       setSubmissionSuccessOpen(false);
     } catch (error) {
+      URL.revokeObjectURL(previewObjectUrl);
       toast({
         title: "OCR scan failed",
         description: error instanceof Error ? error.message : "The PDF could not be scanned right now.",
@@ -1139,104 +1157,178 @@ export default function UserPortal({ section }: { section: string }) {
           setOcrPreviewOpen(open);
           if (!open) {
             setConfirmSubmitOpen(false);
+            setOcrPreviewUrl("");
           }
         }}
       >
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>OCR Preview</DialogTitle>
-            <DialogDescription>
-              Review the OCR output, flagged issues, and confidence score before you submit the PDF to LYDO.
-            </DialogDescription>
-          </DialogHeader>
-          {pendingDocumentScan ? (
-            <div className="space-y-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Card className="bg-muted/20">
-                  <CardContent className="p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document</p>
-                    <p className="mt-2 text-sm font-medium">{pendingDocumentScan.documentTypeName}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{pendingDocumentScan.file.name}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/20">
-                  <CardContent className="p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Confidence</p>
-                    <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.confidence}%</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Only 90% and above can be submitted.</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/20">
-                  <CardContent className="p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Pages scanned</p>
-                    <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.pageCount}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {pendingDocumentScan.result.canSubmit ? "Ready for confirmation." : "Reupload is required."}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <Card className="border-border/70">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">OCR Extracted Text</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="max-h-[35vh] overflow-auto whitespace-pre-wrap rounded-xl border border-border/70 bg-muted/20 p-4 text-sm leading-relaxed">
-                      {pendingDocumentScan.result.text || "No readable text was extracted."}
-                    </pre>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/70">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Flags and Review Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {pendingDocumentScan.result.issues.length ? (
-                      <div className="space-y-2">
-                        {pendingDocumentScan.result.issues.map((issue, index) => (
-                          <div
-                            key={`${issue.title}-${index}`}
-                            className={`rounded-xl border p-3 text-sm ${
-                              issue.severity === "error"
-                                ? "border-destructive/30 bg-destructive/5 text-destructive"
-                                : "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300"
-                            }`}
-                          >
-                            <p className="font-medium">{issue.title}</p>
-                            <p className="mt-1 text-sm opacity-90">{issue.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-                        No OCR issues were detected. The file is ready for your confirmation.
-                      </div>
-                    )}
-                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-                      If anything looks wrong, close this preview and reupload a cleaner PDF. The file will not be submitted until you confirm it.
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <DialogFooter className="flex-col gap-2 sm:flex-row">
-                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOcrPreviewOpen(false)}>
-                  Review Later
-                </Button>
-                <Button
-                  type="button"
-                  className="w-full sm:w-auto"
-                  disabled={!pendingDocumentScan.result.canSubmit || submittingDocumentId === pendingDocumentScan.documentTypeId}
-                  onClick={() => setConfirmSubmitOpen(true)}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Submit for Review
-                </Button>
-              </DialogFooter>
+        <DialogContent className="max-w-[96vw] sm:max-w-6xl p-0 overflow-hidden">
+          <div className="max-h-[92vh] overflow-y-auto">
+            <div className="border-b border-border/70 px-4 pb-4 pt-5 sm:px-6 sm:pb-5">
+              <DialogHeader>
+                <DialogTitle>OCR Preview</DialogTitle>
+                <DialogDescription>
+                  Review the uploaded PDF, the fields we detected automatically, and any issues before you submit it to LYDO.
+                </DialogDescription>
+              </DialogHeader>
             </div>
-          ) : null}
+
+            {pendingDocumentScan ? (
+              <div className="space-y-5 px-4 py-5 sm:px-6">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <Card className="bg-muted/20">
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document</p>
+                      <p className="mt-2 text-sm font-medium">{pendingDocumentScan.documentTypeName}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{pendingDocumentScan.file.name}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/20">
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Confidence</p>
+                      <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.confidence}%</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Only 90% and above can be submitted.</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/20">
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Pages scanned</p>
+                      <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.pageCount}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {pendingDocumentScan.result.canSubmit ? "Ready for confirmation." : "Reupload is required."}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/20">
+                    <CardContent className="p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Fields detected</p>
+                      <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.extractedFields.length}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {pendingDocumentScan.result.extractedFields.length ? "Structured values were found automatically." : "No structured fields were detected yet."}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                  <Card className="border-border/70">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Document Preview</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm">
+                        {ocrPreviewUrl ? (
+                          <iframe
+                            src={ocrPreviewUrl}
+                            title={pendingDocumentScan.documentTypeName}
+                            className="h-[28rem] w-full sm:h-[36rem] lg:h-[42rem]"
+                          />
+                        ) : (
+                          <div className="grid h-[28rem] place-items-center p-6 text-center text-sm text-muted-foreground sm:h-[36rem] lg:h-[42rem]">
+                            Preview unavailable.
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Tip: on mobile, scroll this dialog vertically and use the preview pane first before checking the extracted fields.
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <div className="space-y-4">
+                    <Card className="border-border/70">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Extracted Fields</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {pendingDocumentScan.result.extractedFields.length ? (
+                          <div className="space-y-3">
+                            {pendingDocumentScan.result.extractedFields.map((field) => (
+                              <div key={field.key} className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-medium text-foreground">{field.label}</p>
+                                    <p className="mt-1 text-sm text-foreground/90 break-words">{field.value}</p>
+                                  </div>
+                                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                                    {field.confidence}%
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-[11px] text-muted-foreground">
+                                  Auto-detected from: <span className="break-words">{field.source}</span>
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                            No structured fields were detected automatically yet. The raw OCR text is still available below for review.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-border/70">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Flags and Review Notes</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {pendingDocumentScan.result.issues.length ? (
+                          <div className="space-y-2">
+                            {pendingDocumentScan.result.issues.map((issue, index) => (
+                              <div
+                                key={`${issue.title}-${index}`}
+                                className={`rounded-xl border p-3 text-sm ${
+                                  issue.severity === "error"
+                                    ? "border-destructive/30 bg-destructive/5 text-destructive"
+                                    : "border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300"
+                                }`}
+                              >
+                                <p className="font-medium">{issue.title}</p>
+                                <p className="mt-1 text-sm opacity-90">{issue.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                            No OCR issues were detected. The file is ready for your confirmation.
+                          </div>
+                        )}
+                        <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
+                          If anything looks wrong, close this preview and reupload a cleaner PDF. The file will not be submitted until you confirm it.
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-border/70">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Raw OCR Text</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-border/70 bg-muted/20 p-4 text-xs leading-relaxed sm:text-sm">
+                          {pendingDocumentScan.result.text || "No readable text was extracted."}
+                        </pre>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
+                <DialogFooter className="flex-col gap-2 sm:flex-row">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setOcrPreviewOpen(false)}>
+                    Review Later
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full sm:w-auto"
+                    disabled={!pendingDocumentScan.result.canSubmit || submittingDocumentId === pendingDocumentScan.documentTypeId}
+                    onClick={() => setConfirmSubmitOpen(true)}
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Submit for Review
+                  </Button>
+                </DialogFooter>
+              </div>
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog open={confirmSubmitOpen && Boolean(pendingDocumentScan)} onOpenChange={setConfirmSubmitOpen}>
