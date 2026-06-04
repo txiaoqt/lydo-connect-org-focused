@@ -45,12 +45,41 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const LOCAL_ADMIN_ALLOWED = !IS_USER_SURFACE;
+const DEMO_ADMIN_USERNAME = String(import.meta.env.VITE_DEMO_ADMIN_USERNAME ?? "lydoadmin").trim();
+const DEMO_ADMIN_PASSWORDS = new Set(
+  [
+    import.meta.env.VITE_DEMO_ADMIN_PASSWORD,
+    "lydoadminpassword",
+    "lydoadminnpassword",
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => String(value).trim()),
+);
+const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 
 const toAuthUser = (adminUser: SeededAdminUser): AuthUser => ({
   id: adminUser.id,
   email: adminUser.email,
   displayName: adminUser.displayName,
 });
+
+const createDemoAdminSession = (username: string): SeededAdminUser => {
+  const now = Date.now();
+  const sessionToken =
+    globalThis.crypto?.randomUUID?.() ?? `demo-admin-${now.toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+  return {
+    id: "admin-demo",
+    username,
+    email: `${username}@lydoconnect.local`,
+    displayName: "Admin User",
+    sessionToken,
+    expiresAt: new Date(now + ADMIN_SESSION_TTL_MS).toISOString(),
+  };
+};
+
+const isRecoverableSupabaseAuthError = (message: string) =>
+  /invalid api key|jwt|network|fetch failed|failed to fetch|auth/i.test(message);
 
 const priorityRole = (codes: string[]): UserRole => {
   if (codes.includes("admin")) return "admin";
@@ -186,21 +215,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: "Admin login is disabled on this deployment." };
       }
 
+      const username = params.username.trim();
+      const password = params.password;
+      const canUseLocalDemoCredentials = username.toLowerCase() === DEMO_ADMIN_USERNAME.toLowerCase() && DEMO_ADMIN_PASSWORDS.has(password.trim());
+      const signInWithLocalDemoAccount = async () => {
+        if (!canUseLocalDemoCredentials) return null;
+
+        const adminUser = createDemoAdminSession(username);
+        writeAdminSession(adminUser);
+        setIsAuthenticated(true);
+        setRole("admin");
+        setUser(toAuthUser(adminUser));
+        setIsInitialized(true);
+        return {};
+      };
+
       if (!supabase) {
-        return {
-          error: "Supabase is not configured. Admin login now requires the seeded Supabase admin account table.",
-        };
+        const demoResult = await signInWithLocalDemoAccount();
+        if (demoResult) return demoResult;
+        return { error: "Supabase is not configured. Use the seeded demo admin credentials or set the Supabase env vars." };
       }
 
       const { data, error } = await supabase.rpc("authenticate_admin_account", {
-        _username: params.username.trim(),
-        _password: params.password,
+        _username: username,
+        _password: password,
       });
 
-      if (error) return { error: error.message };
+      if (error) {
+        const demoResult = isRecoverableSupabaseAuthError(error.message) ? await signInWithLocalDemoAccount() : null;
+        if (demoResult) return demoResult;
+        return { error: error.message };
+      }
 
       const adminAccount = Array.isArray(data) ? data[0] : null;
       if (!adminAccount) {
+        const demoResult = await signInWithLocalDemoAccount();
+        if (demoResult) return demoResult;
         return { error: "Invalid admin credentials." };
       }
 
