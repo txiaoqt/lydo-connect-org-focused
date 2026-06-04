@@ -16,6 +16,7 @@ import LegalPolicy from "./pages/LegalPolicy";
 import Faqs from "./pages/Faqs";
 import Contacts from "./pages/Contacts";
 import SiteMap from "./pages/SiteMap";
+import NewsReleaseRecord from "./pages/NewsReleaseRecord";
 import { usePolicyAgreement } from "./hooks/use-policy-agreement";
 import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
 import UserPortal from "./user/UserPortal";
@@ -209,6 +210,7 @@ const App = () => (
                       <Route path="/budget-request" element={<RequireUser><UserPortal section="budget-request" /></RequireUser>} />
                       <Route path="/liquidation-reporting" element={<RequireUser><UserPortal section="liquidation-reporting" /></RequireUser>} />
                       <Route path="/news-releases" element={<RequireUser><UserPortal section="news-releases" /></RequireUser>} />
+                      <Route path="/news-releases/:newsReleaseId" element={<RequireUser><NewsReleaseRecord /></RequireUser>} />
                       <Route path="/public-transparency" element={<RequireUser><UserPortal section="public-transparency" /></RequireUser>} />
                       <Route path="/compliance-status" element={<RequireUser><UserPortal section="compliance-status" /></RequireUser>} />
                       <Route path="/notifications" element={<RequireUser><UserPortal section="notifications" /></RequireUser>} />

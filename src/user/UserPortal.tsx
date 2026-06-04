@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1429,11 +1429,9 @@ export default function UserPortal({ section }: { section: string }) {
           <PortalSection title="News Releases" description="Announcements and Facebook post previews.">
             <div className="grid gap-4 md:grid-cols-2">
               {state.newsReleases.map((news) => (
-                <a
+                <Link
                   key={news.id}
-                  href={news.facebookPostUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                  to={`/news-releases/${news.id}`}
                   className="group block rounded-2xl border border-border/70 bg-card p-5 transition-transform hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1444,7 +1442,8 @@ export default function UserPortal({ section }: { section: string }) {
                     <PortalStatusBadge status={news.visibilityStatus} />
                   </div>
                   <p className="mt-4 text-xs uppercase tracking-[0.16em] text-muted-foreground/70">{news.datePosted}</p>
-                </a>
+                  <p className="mt-2 text-sm font-medium text-primary">Click to preview the source post</p>
+                </Link>
               ))}
             </div>
           </PortalSection>
