@@ -97,6 +97,32 @@ const formatVerifiedDateLabel = (value: string) => {
   }).format(date).toUpperCase();
 };
 
+const renderRegistrationDetailCard = (params: {
+  title: string;
+  value: string;
+  className?: string;
+  wrap?: boolean;
+  linkHref?: string;
+}) => (
+  <div className={`rounded-xl border border-border/70 bg-card p-4 shadow-sm ${params.className ?? ""}`.trim()}>
+    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{params.title}</p>
+    {params.linkHref && params.value !== "N/A" ? (
+      <a
+        href={params.linkHref}
+        target="_blank"
+        rel="noreferrer"
+        className={`mt-2 block text-sm font-medium text-primary underline-offset-4 hover:underline ${params.wrap ? "break-all" : ""}`}
+      >
+        {params.value}
+      </a>
+    ) : (
+      <p className={`mt-2 text-sm font-medium text-foreground ${params.wrap ? "break-all" : ""}`}>
+        {params.value}
+      </p>
+    )}
+  </div>
+);
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -662,115 +688,152 @@ export default function AdminPortal({ section }: { section: string }) {
                 description="Registration details and submitted documents for validation."
                 action={<PortalStatusBadge status={selectedSubmission?.status ?? selectedOrg.profileStatus} />}
               >
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <Button size="sm" variant="outline" onClick={() => setSelectedRegistrationId(null)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to registrations
-                  </Button>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        void (async () => {
-                          try {
-                            const verifiedAt = new Date().toISOString();
-                            await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
-                              profileStatus: "verified",
-                              verifiedAt,
-                            });
-                            await refreshAdminState();
-                            await appendAuditLog(
-                              "Verified organization",
-                              "organization_profile",
-                              selectedOrg.id,
-                              `Marked ${selectedOrg.organizationName} as verified on ${formatVerifiedDateLabel(verifiedAt)}.`,
-                              selectedOrg.id,
-                            );
-                            toast({
-                              title: "Organization verified",
-                              description: `${selectedOrg.organizationName} is now marked as verified.`,
-                            });
-                          } catch (error) {
-                            toast({
-                              title: "Unable to verify organization",
-                              description: error instanceof Error ? error.message : "The organization could not be verified right now.",
-                              variant: "destructive",
-                            });
-                          }
-                        })()
-                      }
-                    >
-                      Mark Verified
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        void (async () => {
-                          try {
-                            await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
-                              profileStatus: "needs_update",
-                              verifiedAt: "",
-                            });
-                            await refreshAdminState();
-                            await appendAuditLog(
-                              "Marked needs update",
-                              "organization_profile",
-                              selectedOrg.id,
-                              `Marked ${selectedOrg.organizationName} for an organization profile update.`,
-                              selectedOrg.id,
-                            );
-                            toast({
-                              title: "Organization marked for update",
-                              description: `${selectedOrg.organizationName} needs to update the submitted profile details.`,
-                            });
-                          } catch (error) {
-                            toast({
-                              title: "Unable to update review status",
-                              description: error instanceof Error ? error.message : "The review status could not be updated right now.",
-                              variant: "destructive",
-                            });
-                          }
-                        })()
-                      }
-                    >
-                      Needs Update
-                    </Button>
+                <div className="mb-6 rounded-2xl border border-border/70 bg-muted/20 p-4 sm:p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                      <Button size="sm" variant="outline" onClick={() => setSelectedRegistrationId(null)} className="w-full sm:w-auto">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back to registrations
+                      </Button>
+                      {selectedOrg.profileStatus === "verified" && selectedOrg.verifiedAt ? (
+                        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                          VERIFIED ON {formatVerifiedDateLabel(selectedOrg.verifiedAt)}
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-border/80 bg-background px-4 py-2 text-sm text-muted-foreground">
+                          Pending verification
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() =>
+                          void (async () => {
+                            try {
+                              const verifiedAt = new Date().toISOString();
+                              await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
+                                profileStatus: "verified",
+                                verifiedAt,
+                              });
+                              await refreshAdminState();
+                              await appendAuditLog(
+                                "Verified organization",
+                                "organization_profile",
+                                selectedOrg.id,
+                                `Marked ${selectedOrg.organizationName} as verified on ${formatVerifiedDateLabel(verifiedAt)}.`,
+                                selectedOrg.id,
+                              );
+                              toast({
+                                title: "Organization verified",
+                                description: `${selectedOrg.organizationName} is now marked as verified.`,
+                              });
+                            } catch (error) {
+                              toast({
+                                title: "Unable to verify organization",
+                                description: error instanceof Error ? error.message : "The organization could not be verified right now.",
+                                variant: "destructive",
+                              });
+                            }
+                          })()
+                        }
+                      >
+                        Mark Verified
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() =>
+                          void (async () => {
+                            try {
+                              await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
+                                profileStatus: "needs_update",
+                                verifiedAt: "",
+                              });
+                              await refreshAdminState();
+                              await appendAuditLog(
+                                "Marked needs update",
+                                "organization_profile",
+                                selectedOrg.id,
+                                `Marked ${selectedOrg.organizationName} for an organization profile update.`,
+                                selectedOrg.id,
+                              );
+                              toast({
+                                title: "Organization marked for update",
+                                description: `${selectedOrg.organizationName} needs to update the submitted profile details.`,
+                              });
+                            } catch (error) {
+                              toast({
+                                title: "Unable to update review status",
+                                description: error instanceof Error ? error.message : "The review status could not be updated right now.",
+                                variant: "destructive",
+                              });
+                            }
+                          })()
+                        }
+                      >
+                        Needs Update
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    ["Email", selectedOrg.organizationEmail],
-                    ["Contact Number", selectedOrg.contactNumber],
-                    ["Barangay", selectedOrg.barangay],
-                    ["Major Classification", selectedOrg.majorClassification || "N/A"],
-                    ["Sub Classification", selectedOrg.subClassification || "N/A"],
-                    ["Representative", selectedOrg.representativeName || "N/A"],
-                    ["Adviser", selectedOrg.adviserName || "N/A"],
-                    ["Facebook Page", selectedOrg.facebookPageUrl || "N/A"],
-                    ["Date of Creation", selectedOrg.verifiedAt ? formatVerifiedDateLabel(selectedOrg.verifiedAt) : "Pending verification"],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-md border border-border/70 bg-muted/20 p-3">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{label}</p>
-                      <p className="mt-1 text-sm font-medium">{value}</p>
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Contact</p>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        {renderRegistrationDetailCard({ title: "Email", value: selectedOrg.organizationEmail })}
+                        {renderRegistrationDetailCard({ title: "Contact Number", value: selectedOrg.contactNumber })}
+                        {renderRegistrationDetailCard({ title: "Barangay", value: selectedOrg.barangay })}
+                        {renderRegistrationDetailCard({
+                          title: "Facebook Page",
+                          value: selectedOrg.facebookPageUrl || "N/A",
+                          wrap: true,
+                          linkHref: selectedOrg.facebookPageUrl || undefined,
+                        })}
+                        {renderRegistrationDetailCard({
+                          title: "Address",
+                          value: selectedOrg.address || "N/A",
+                          className: "md:col-span-2",
+                          wrap: true,
+                        })}
+                      </div>
                     </div>
-                  ))}
-                </div>
-                {selectedOrg.profileStatus === "verified" && selectedOrg.verifiedAt ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                    VERIFIED ON {formatVerifiedDateLabel(selectedOrg.verifiedAt)}
+
+                    <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Classification</p>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {renderRegistrationDetailCard({ title: "Major Classification", value: selectedOrg.majorClassification || "N/A" })}
+                        {renderRegistrationDetailCard({ title: "Sub Classification", value: selectedOrg.subClassification || "N/A" })}
+                        {renderRegistrationDetailCard({
+                          title: "Date of Creation",
+                          value: selectedOrg.verifiedAt ? formatVerifiedDateLabel(selectedOrg.verifiedAt) : "Pending verification",
+                        })}
+                      </div>
+                    </div>
                   </div>
-                ) : null}
-                <div className="rounded-md border border-border/70 bg-muted/20 p-3">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Address</p>
-                  <p className="mt-1 text-sm font-medium">{selectedOrg.address || "N/A"}</p>
-                </div>
-                <div className="rounded-md border border-border/70 bg-muted/20 p-3">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
-                  <div className="mt-2">{renderAdvocacyChips(selectedOrg.advocacies)}</div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Leadership</p>
+                      <div className="mt-4 grid gap-4">
+                        {renderRegistrationDetailCard({ title: "Representative", value: selectedOrg.representativeName || "N/A" })}
+                        {renderRegistrationDetailCard({ title: "Adviser", value: selectedOrg.adviserName || "N/A" })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Advocacies</p>
+                      <div className="mt-4 rounded-xl border border-border/70 bg-card p-4 shadow-sm">
+                        {renderAdvocacyChips(selectedOrg.advocacies)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </PortalSection>
 
