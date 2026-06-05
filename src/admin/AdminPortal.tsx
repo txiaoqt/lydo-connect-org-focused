@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Download, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -187,6 +188,14 @@ type BudgetMonitoringEntry = {
   riskLabel: "On Track" | "Needs Attention" | "Overdue" | "Completed";
 };
 
+type BudgetMonitoringChartRow = {
+  riskLabel: BudgetMonitoringEntry["riskLabel"];
+  count: number;
+  approvedAmount: number;
+  releasedAmount: number;
+  remainingAmount: number;
+};
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -335,12 +344,17 @@ export default function AdminPortal({ section }: { section: string }) {
         const utilizationRate = approvedAmount > 0 ? Math.round((releasedAmount / approvedAmount) * 100) : 0;
         const deadlineDate = liquidation?.deadlineAt ? new Date(liquidation.deadlineAt) : null;
         const completedAtDate = liquidation?.completedAt ? new Date(liquidation.completedAt) : null;
+        const requestAgeInDays = Math.max(Math.ceil((now.getTime() - new Date(request.updatedAt || request.createdAt).getTime()) / 86400000), 0);
         const goSignalAt = liquidation?.goSignalAt || request.goSignalAt || "Pending";
         const liquidationStatus = liquidation?.status ?? "pending_activity_completion";
         let riskLabel: BudgetMonitoringEntry["riskLabel"] = "Needs Attention";
 
         if (liquidationStatus === "completed_liquidated" || request.status === "completed") {
           riskLabel = "Completed";
+        } else if (!liquidation && requestAgeInDays >= 7) {
+          riskLabel = "Overdue";
+        } else if (!liquidation && requestAgeInDays >= 2) {
+          riskLabel = "Needs Attention";
         } else if (
           liquidationStatus === "overdue" ||
           (deadlineDate && !Number.isNaN(deadlineDate.getTime()) && deadlineDate.getTime() < now.getTime() && !completedAtDate)
@@ -352,6 +366,15 @@ export default function AdminPortal({ section }: { section: string }) {
           liquidationStatus === "hard_copy_submitted"
         ) {
           riskLabel = "On Track";
+        } else if (liquidation && deadlineDate && !Number.isNaN(deadlineDate.getTime())) {
+          const daysUntilDeadline = Math.ceil((deadlineDate.getTime() - now.getTime()) / 86400000);
+          if (daysUntilDeadline <= 0) {
+            riskLabel = completedAtDate ? "Completed" : "Overdue";
+          } else if (daysUntilDeadline <= 3 || utilizationRate < 50) {
+            riskLabel = "Needs Attention";
+          } else {
+            riskLabel = "On Track";
+          }
         }
 
         return {
@@ -418,6 +441,79 @@ export default function AdminPortal({ section }: { section: string }) {
       insights,
     };
   }, [budgetMonitoringEntries]);
+  const budgetMonitoringChartData = useMemo<BudgetMonitoringChartRow[]>(() => {
+    const rows: BudgetMonitoringChartRow[] = [
+      { riskLabel: "On Track", count: 0, approvedAmount: 0, releasedAmount: 0, remainingAmount: 0 },
+      { riskLabel: "Needs Attention", count: 0, approvedAmount: 0, releasedAmount: 0, remainingAmount: 0 },
+      { riskLabel: "Overdue", count: 0, approvedAmount: 0, releasedAmount: 0, remainingAmount: 0 },
+      { riskLabel: "Completed", count: 0, approvedAmount: 0, releasedAmount: 0, remainingAmount: 0 },
+    ];
+    const bucketByLabel = new Map(rows.map((row) => [row.riskLabel, row]));
+    budgetMonitoringEntries.forEach((entry) => {
+      const bucket = bucketByLabel.get(entry.riskLabel);
+      if (!bucket) return;
+      bucket.count += 1;
+      bucket.approvedAmount += entry.approvedAmount;
+      bucket.releasedAmount += entry.releasedAmount;
+      bucket.remainingAmount += entry.remainingAmount;
+    });
+    return rows;
+  }, [budgetMonitoringEntries]);
+  const budgetMonitoringReportRows = useMemo(
+    () =>
+      budgetMonitoringEntries.map((entry) => [
+        entry.organizationName,
+        entry.title,
+        String(entry.approvedAmount),
+        String(entry.releasedAmount),
+        String(entry.remainingAmount),
+        String(entry.utilizationRate),
+        entry.budgetStatus,
+        entry.liquidationStatus,
+        entry.goSignalAt,
+        entry.deadlineAt,
+        entry.hardCopySubmittedAt,
+        entry.completedAt,
+        entry.riskLabel,
+        entry.remarks,
+      ]),
+    [budgetMonitoringEntries],
+  );
+  const exportBudgetMonitoringReport = () => {
+    if (!budgetMonitoringEntries.length) {
+      toast({ title: "No Data", description: "No monitored budgets are available to export." });
+      return;
+    }
+
+    const headers = [
+      "Organization",
+      "Activity",
+      "Approved Amount",
+      "Released Amount",
+      "Remaining Amount",
+      "Utilization Rate",
+      "Budget Status",
+      "Liquidation Status",
+      "Go Signal",
+      "Deadline",
+      "Hard Copy Submitted",
+      "Completed At",
+      "Risk Label",
+      "Remarks",
+    ];
+    const csv = [headers, ...budgetMonitoringReportRows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `budget-monitoring-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const validDocumentTypeIds = useMemo(
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
     [templateDocuments],
@@ -2782,13 +2878,51 @@ export default function AdminPortal({ section }: { section: string }) {
             title="Budget Monitoring"
             description="Approved budgets are monitored automatically after approval so release, utilization, and liquidation progress stay visible."
             action={
-              <Button type="button" onClick={() => navigate("/admin/budget-utilization")}>
-                <ClipboardList className="mr-2 h-4 w-4" />
-                Review Budget Requests
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={exportBudgetMonitoringReport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Report
+                </Button>
+                <Button type="button" onClick={() => navigate("/admin/budget-utilization")}>
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Review Budget Requests
+                </Button>
+              </div>
             }
           >
             <div className="grid gap-4">
+              <Card className="border-border/70">
+                <CardContent className="space-y-4 p-4 sm:p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Risk Distribution</p>
+                      <h3 className="mt-2 text-lg font-semibold text-foreground">Budget Monitoring Overview</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {budgetMonitoringEntries.length} monitored budget{budgetMonitoringEntries.length === 1 ? "" : "s"}.
+                    </p>
+                  </div>
+                  <div className="h-72">
+                    {budgetMonitoringChartData.some((entry) => entry.count > 0) ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={budgetMonitoringChartData} layout="vertical" margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" allowDecimals={false} />
+                          <YAxis type="category" dataKey="riskLabel" width={110} />
+                          <Tooltip formatter={(value: number) => [String(value), "Count"]} />
+                          <Legend />
+                          <Bar dataKey="count" name="Count" fill="#2460A7" radius={[0, 6, 6, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="grid h-full place-items-center rounded-xl border border-dashed border-border/70 bg-muted/10 text-sm text-muted-foreground">
+                        No monitored budgets yet.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <PortalMetricCard title="Approved Budgets" value={budgetMonitoringEntries.length.toLocaleString()} />
                 <PortalMetricCard title="Released Amount" value={`PHP ${budgetMonitoringAnalysis.totalReleased.toLocaleString()}`} />
