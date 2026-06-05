@@ -2574,103 +2574,11 @@ export default function AdminPortal({ section }: { section: string }) {
                         </div>
                         <p className="text-sm text-muted-foreground">Remarks: {record.remarks || "None"}</p>
                       </div>
-                      <div className="flex flex-col items-stretch gap-2">
+                      <div className="flex items-start justify-end">
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openLiquidationDetails(record.id)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </Button>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full sm:w-auto"
-                            onClick={() =>
-                              void (async () => {
-                                try {
-                                  await updateLiquidationReportInSupabase(record.id, {
-                                    status: "approved_for_ftf_green",
-                                    goSignalAt: new Date().toISOString(),
-                                  });
-                                  await refreshAdminState();
-                                  await appendAuditLog(
-                                    "Approved liquidation report",
-                                    "liquidation_report",
-                                    record.id,
-                                    "Marked liquidation report as approved for face-to-face green.",
-                                    record.organizationId,
-                                  );
-                                } catch (error) {
-                                  toast({
-                                    title: "Unable to update liquidation",
-                                    description:
-                                      error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              })()
-                            }
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full sm:w-auto"
-                            onClick={() =>
-                              void (async () => {
-                                try {
-                                  await updateLiquidationReportInSupabase(record.id, { status: "needs_revision" });
-                                  await refreshAdminState();
-                                  await appendAuditLog(
-                                    "Liquidation needs revision",
-                                    "liquidation_report",
-                                    record.id,
-                                    "Marked liquidation report as needing revision.",
-                                    record.organizationId,
-                                  );
-                                } catch (error) {
-                                  toast({
-                                    title: "Unable to update liquidation",
-                                    description:
-                                      error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              })()
-                            }
-                          >
-                            Needs Revision
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full sm:w-auto"
-                            onClick={() =>
-                              void (async () => {
-                                try {
-                                  await updateLiquidationReportInSupabase(record.id, { status: "overdue" });
-                                  await refreshAdminState();
-                                  await appendAuditLog(
-                                    "Marked liquidation overdue",
-                                    "liquidation_report",
-                                    record.id,
-                                    "Marked liquidation report as overdue.",
-                                    record.organizationId,
-                                  );
-                                } catch (error) {
-                                  toast({
-                                    title: "Unable to update liquidation",
-                                    description:
-                                      error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              })()
-                            }
-                          >
-                            Mark Overdue
-                          </Button>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
