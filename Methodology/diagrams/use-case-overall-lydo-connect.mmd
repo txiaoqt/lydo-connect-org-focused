@@ -1,0 +1,54 @@
+flowchart LR
+    PV[Public Visitor]
+    OU[Organization User]
+    AD[LYDO Admin]
+
+    subgraph SYS[LYDO Connect System]
+      UC1((Sign up / sign in))
+      UC2((Sign out))
+      UC3((Accept policy))
+      UC4((Manage organization profile))
+      UC5((Submit documents))
+      UC6((Manage budget requests))
+      UC7((Submit liquidation report))
+      UC8((View news release preview))
+      UC9((View public transparency posts))
+      UC10((View notifications))
+      UC11((Review organization records))
+      UC12((Manage news releases))
+      UC13((Manage transparency posts))
+      UC14((Manage required document types))
+      UC15((Review notifications and activity logs))
+    end
+
+    PV --> UC1
+    PV --> UC8
+    PV --> UC9
+
+    OU --> UC1
+    OU --> UC2
+    OU --> UC3
+    OU --> UC4
+    OU --> UC5
+    OU --> UC6
+    OU --> UC7
+    OU --> UC8
+    OU --> UC9
+    OU --> UC10
+
+    AD --> UC11
+    AD --> UC12
+    AD --> UC13
+    AD --> UC14
+    AD --> UC15
+
+    UC6 --> UC7
+    UC11 --> UC12
+    UC11 --> UC13
+    UC11 --> UC14
+    UC11 --> UC15
+
+    classDef actor fill:#e0f2fe,stroke:#0f172a,stroke-width:1px,color:#0f172a;
+    classDef usecase fill:#ffffff,stroke:#0f172a,stroke-width:1px,color:#0f172a;
+    class PV,OU,AD actor;
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15 usecase;
