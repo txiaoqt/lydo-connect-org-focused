@@ -114,7 +114,7 @@ export const serviceAdvisories = [
     title: "Facebook-to-Portal Sync Reminder",
     status: "Notice",
     updatedAt: "2026-03-07 09:15",
-    message: "Please link source Facebook post URLs for newly encoded events and programs.",
+    message: "Please link source Facebook post URLs for newly encoded initiatives.",
   },
 ];
 

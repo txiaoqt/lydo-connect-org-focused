@@ -84,7 +84,7 @@ export const documentTypeLegendItems: LegendItem[] = [
   {
     key: "program_outcome",
     label: "Program Outcome",
-    description: "Reports or outputs related to completed programs.",
+    description: "Reports or outputs related to completed initiatives.",
     badge: makeDocBadge("Program Outcome", "program_outcome"),
   },
   {
@@ -118,4 +118,3 @@ export const documentTypeLegendItems: LegendItem[] = [
     badge: makeDocBadge("Other / Custom Type", "other"),
   },
 ];
-

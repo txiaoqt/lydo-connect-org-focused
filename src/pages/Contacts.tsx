@@ -16,9 +16,9 @@ const staffContacts = [
     contactEmail: "lydo.staff@prototype.local",
   },
   {
-    name: "Youth Programs Support",
+    name: "Youth Support",
     contactNumber: "+63 919 345 6789",
-    contactEmail: "lydo.programs@prototype.local",
+    contactEmail: "lydo.support@prototype.local",
   },
 ];
 

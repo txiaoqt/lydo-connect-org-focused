@@ -15,7 +15,7 @@ const About = () => {
             </h1>
             <p className="text-secondary-foreground/70 text-sm sm:text-base md:text-lg leading-relaxed">
               Youth Governance Transparency and Accountability System is a centralized digital platform developed for
-              local youth development offices to consolidate youth programs, events, and organizations
+              local youth development offices to consolidate youth initiatives and organizations
               while improving information dissemination and transparency.
             </p>
           </div>
@@ -32,19 +32,19 @@ const About = () => {
                   Why Youth Governance Transparency and Accountability System?
                 </h2>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-3 sm:mb-4">
-                  Youth programs are often promoted across fragmented channels, including separate Facebook
+                  Youth initiatives are often promoted across fragmented channels, including separate Facebook
                   pages, Messenger groups, and face-to-face assemblies. This makes it difficult for youth to discover
                   opportunities, coordinate participation, or access program information efficiently.
                 </p>
                 <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                   Youth Governance Transparency and Accountability System solves this by providing a single, searchable,
-                  role-based platform that connects youth with programs, events, organizations, and transparency
+                  role-based platform that connects youth with initiatives, organizations, and transparency
                   services offered by LYDO offices and partner youth groups.
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <FeatureCard icon={Users} title="Prototype Coverage" description="Youth engagement across LYDOs" />
-                <FeatureCard icon={Target} title="Programs" description="Programs and initiatives offered" />
+                <FeatureCard icon={Target} title="Initiatives" description="Programs and activities offered" />
                 <FeatureCard icon={Heart} title="Organizations" description="Active advocacy groups and partners" />
                 <FeatureCard icon={Award} title="Barangays" description="Barangays monitored for accountability" />
               </div>
@@ -62,7 +62,7 @@ const About = () => {
                   {
                     name: "LYDO",
                     full: "Local Youth Development Office",
-                    desc: "The central coordinating body responsible for youth development policies, programs, and services across participating LGUs.",
+                    desc: "The central coordinating body responsible for youth development policies, initiatives, and services across participating LGUs.",
                   },
                   {
                     name: "LYDC",
@@ -77,7 +77,7 @@ const About = () => {
                   {
                     name: "SK Network",
                     full: "Sangguniang Kabataan Network",
-                    desc: "Barangay youth governance network aligned with LYDO accountability and youth participation programs.",
+                    desc: "Barangay youth governance network aligned with LYDO accountability and youth participation initiatives.",
                   },
                 ].map((sector) => (
                   <div key={sector.name} className="bg-card border border-border rounded-xl p-4 sm:p-6 card-shadow">

@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useState } from "react";
+ÿþimport React, { FormEvent, useEffect, useState } from "react";
 import { Filter, Plus, Search } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { StatusBadge } from "../components/StatusBadge";
@@ -732,4 +732,5 @@ export const Organizations = () => {
   );
 };
 
-
+ 
+ 

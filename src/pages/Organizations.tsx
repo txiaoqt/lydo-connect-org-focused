@@ -185,7 +185,7 @@ export default function Organizations() {
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Programs / Projects / Activities</h4>
+                    <h4 className="font-semibold text-foreground mb-1">Initiatives / Projects / Activities</h4>
                     <p className="text-muted-foreground leading-6">
                       {showValue(selectedOrganization.programs ?? selectedOrganization.activities ?? selectedOrganization.relatedInitiatives)}
                     </p>

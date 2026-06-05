@@ -1,5 +1,5 @@
-import { Building2, Calendar, Camera, FolderOpen, Save, Settings } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Building2, Camera, Save, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -8,14 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { UserSettings, useUserProfile } from "@/hooks/use-user-profile";
-import type { YouthEvent, YouthOrganization, YouthProgram } from "@/lib/youthCatalog";
-import { fetchEvents, fetchOrganizations, fetchPrograms } from "@/lib/data-api";
+import type { YouthOrganization } from "@/lib/youthCatalog";
+import { fetchOrganizations } from "@/lib/data-api";
 import { useToast } from "@/hooks/use-toast";
-
-const findLabel = (
-  list: Array<{ id: string; title?: string; name?: string }>,
-  id: string,
-) => list.find((item) => item.id === id)?.title ?? list.find((item) => item.id === id)?.name ?? id;
 
 const initialsFrom = (name: string) => {
   const parts = name.trim().split(" ").filter(Boolean);
@@ -34,15 +29,11 @@ const roleTagLabel = (role: string) => {
 
 export default function Profile() {
   const { isAuthenticated, user, isInitialized, role } = useAuth();
-  const { profile, updateSettings, leave, joinedCounts } = useUserProfile();
+  const { profile, updateSettings } = useUserProfile();
   const { toast } = useToast();
   const [catalog, setCatalog] = useState<{
-    events: YouthEvent[];
-    programs: YouthProgram[];
     organizations: YouthOrganization[];
   }>({
-    events: [],
-    programs: [],
     organizations: [],
   });
   const [settings, setSettings] = useState<UserSettings>(profile.settings);
@@ -54,28 +45,15 @@ export default function Profile() {
   useEffect(() => {
     let mounted = true;
     const loadCatalog = async () => {
-      const [events, programs, organizations] = await Promise.all([
-        fetchEvents(),
-        fetchPrograms(),
-        fetchOrganizations(),
-      ]);
+      const organizations = await fetchOrganizations();
       if (!mounted) return;
-      setCatalog({ events, programs, organizations });
+      setCatalog({ organizations });
     };
     void loadCatalog();
     return () => {
       mounted = false;
     };
   }, []);
-
-  const joinedEvents = useMemo(
-    () => profile.joined.events.map((id) => ({ id, label: findLabel(catalog.events, id) })),
-    [catalog.events, profile.joined.events],
-  );
-  const joinedPrograms = useMemo(
-    () => profile.joined.programs.map((id) => ({ id, label: findLabel(catalog.programs, id) })),
-    [catalog.programs, profile.joined.programs],
-  );
 
   if (!isInitialized) {
     return (
@@ -108,28 +86,6 @@ export default function Profile() {
       <div className="pt-16">
         <section className="container py-8 space-y-6 max-w-5xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-card border rounded-xl p-5 card-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
-                  <Calendar className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Joined Events</p>
-                  <p className="text-3xl leading-none font-semibold mt-1">{joinedCounts.events}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-card border rounded-xl p-5 card-shadow">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
-                  <FolderOpen className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Joined Programs</p>
-                  <p className="text-3xl leading-none font-semibold mt-1">{joinedCounts.programs}</p>
-                </div>
-              </div>
-            </div>
             <div className="bg-card border rounded-xl p-5 card-shadow">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
@@ -202,47 +158,7 @@ export default function Profile() {
             </div>
           </form>
 
-          <div className="grid lg:grid-cols-3 gap-4">
-            <div className="bg-card border rounded-xl p-6 card-shadow">
-              <h3 className="font-semibold mb-4 flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" /> My Events</h3>
-              <div className="space-y-3">
-                {joinedEvents.length === 0 && <p className="text-sm text-muted-foreground">No joined events.</p>}
-                {joinedEvents.map((item) => (
-                  <div key={item.id} className="space-y-2">
-                    <p className="text-sm">{item.label}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/events/${item.id}`}>Details</Link>
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("events", item.id)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-card border rounded-xl p-6 card-shadow">
-              <h3 className="font-semibold mb-4 flex items-center gap-2"><FolderOpen className="h-4 w-4 text-muted-foreground" /> My Programs</h3>
-              <div className="space-y-3">
-                {joinedPrograms.length === 0 && <p className="text-sm text-muted-foreground">No joined programs.</p>}
-                {joinedPrograms.map((item) => (
-                  <div key={item.id} className="space-y-2">
-                    <p className="text-sm">{item.label}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" asChild>
-                        <Link to={`/programs/${item.id}`}>Details</Link>
-                      </Button>
-                      <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:text-destructive" onClick={() => leave("programs", item.id)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+          <div className="grid lg:grid-cols-1 gap-4">
             <div className="bg-card border rounded-xl p-6 card-shadow">
               <h3 className="font-semibold mb-4 flex items-center gap-2"><Building2 className="h-4 w-4 text-muted-foreground" /> Organizations</h3>
               <div className="space-y-3">
