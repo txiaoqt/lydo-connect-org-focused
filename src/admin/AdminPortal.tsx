@@ -179,6 +179,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [approvalAcknowledged, setApprovalAcknowledged] = useState(false);
   const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
+  const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -288,6 +289,14 @@ export default function AdminPortal({ section }: { section: string }) {
 
   const toggleRegistrationCard = (organizationId: string) => {
     setExpandedRegistrationIds((current) =>
+      current.includes(organizationId)
+        ? current.filter((id) => id !== organizationId)
+        : [...current, organizationId],
+    );
+  };
+
+  const toggleUserCard = (organizationId: string) => {
+    setExpandedUserIds((current) =>
       current.includes(organizationId)
         ? current.filter((id) => id !== organizationId)
         : [...current, organizationId],
@@ -1259,31 +1268,74 @@ export default function AdminPortal({ section }: { section: string }) {
           <PortalSection title="Users" description="Linked accounts and access levels.">
             {state.organizationProfiles.length ? (
               <div className="space-y-3">
-                {state.organizationProfiles.map((organization) => (
-                  <Card key={organization.id} className="border-border/70">
-                    <CardContent className="p-0">
-                      <div className="grid gap-3 p-4 md:grid-cols-2">
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Name / Email</p>
-                          <p className="mt-1 font-medium">{organization.organizationName}</p>
-                          <p className="text-sm text-muted-foreground">{organization.organizationEmail}</p>
-                          <p className="text-sm text-muted-foreground">{organization.contactNumber}</p>
-                          <p className="text-sm text-muted-foreground">{organization.barangay}</p>
+                {state.organizationProfiles.map((organization) => {
+                  const isExpanded = expandedUserIds.includes(organization.id);
+                  return (
+                    <Card key={organization.id} className="border-border/70 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Name / Email</p>
+                            <CardTitle className="text-base">{organization.organizationName}</CardTitle>
+                            <p className="text-sm text-muted-foreground">{organization.organizationEmail}</p>
+                          </div>
+                          <div className="flex flex-col gap-2 sm:items-end">
+                            <div>
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Role</p>
+                              <p className="mt-1 font-medium text-foreground">Organization User</p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="w-full sm:w-auto"
+                              onClick={() => toggleUserCard(organization.id)}
+                            >
+                              {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
+                              {isExpanded ? "Hide details" : "Show details"}
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Role</p>
-                          <p className="mt-1 font-medium">Organization User</p>
-                          <p className="text-sm text-muted-foreground">Linked organization account</p>
-                          <p className="text-sm text-muted-foreground">Representative: {organization.representativeName || "N/A"}</p>
-                          <p className="text-sm text-muted-foreground">Adviser: {organization.adviserName || "N/A"}</p>
-                          <p className="text-sm text-muted-foreground">Address: {organization.address || "N/A"}</p>
-                          <p className="text-sm text-muted-foreground">Facebook: {organization.facebookPageUrl || "N/A"}</p>
-                          <p className="text-sm text-muted-foreground">Date of Creation: {organization.verifiedAt ? formatVerifiedDateLabel(organization.verifiedAt) : "Pending verification"}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      {isExpanded ? (
+                        <CardContent className="space-y-4 border-t border-border/70 pt-4 text-sm text-muted-foreground">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Contact Number</p>
+                              <p className="mt-1 font-medium text-foreground">{organization.contactNumber}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Barangay</p>
+                              <p className="mt-1 font-medium text-foreground">{organization.barangay}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Representative</p>
+                              <p className="mt-1 font-medium text-foreground">{organization.representativeName || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Adviser</p>
+                              <p className="mt-1 font-medium text-foreground">{organization.adviserName || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:col-span-2">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Address</p>
+                              <p className="mt-1 font-medium text-foreground">{organization.address || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:col-span-2">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Facebook</p>
+                              <p className="mt-1 break-all font-medium text-foreground">{organization.facebookPageUrl || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:col-span-2">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Date of Creation</p>
+                              <p className="mt-1 font-medium text-foreground">
+                                {organization.verifiedAt ? formatVerifiedDateLabel(organization.verifiedAt) : "Pending verification"}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      ) : null}
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <PortalEmptyState
