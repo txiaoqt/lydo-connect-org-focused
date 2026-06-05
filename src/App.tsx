@@ -167,7 +167,8 @@ const App = () => (
                       <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
                       <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
                       <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
-                      <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
+                      <Route path="/admin/budget-monitoring" element={<RequireAdmin><AdminPortal section="budget-monitoring" /></RequireAdmin>} />
+                      <Route path="/admin/public-transparency-posts" element={<Navigate to="/admin/budget-monitoring" replace />} />
                       <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
                       <Route path="/admin/notifications" element={<RequireAdmin><AdminPortal section="notifications" /></RequireAdmin>} />
                       <Route path="/admin/activity-logs" element={<RequireAdmin><AdminPortal section="activity-logs" /></RequireAdmin>} />
@@ -187,7 +188,8 @@ const App = () => (
                           <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
                           <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
                           <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
-                          <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
+                          <Route path="/admin/budget-monitoring" element={<RequireAdmin><AdminPortal section="budget-monitoring" /></RequireAdmin>} />
+                          <Route path="/admin/public-transparency-posts" element={<Navigate to="/admin/budget-monitoring" replace />} />
                           <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
                           <Route path="/admin/notifications" element={<RequireAdmin><AdminPortal section="notifications" /></RequireAdmin>} />
                           <Route path="/admin/activity-logs" element={<RequireAdmin><AdminPortal section="activity-logs" /></RequireAdmin>} />

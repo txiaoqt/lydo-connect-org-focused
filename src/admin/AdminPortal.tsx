@@ -57,7 +57,7 @@ const routeMap: Record<string, string> = {
   "budget-utilization": "/admin/budget-utilization",
   "liquidation-monitoring": "/admin/liquidation-monitoring",
   "news-releases": "/admin/news-releases",
-  "public-transparency-posts": "/admin/public-transparency-posts",
+  "budget-monitoring": "/admin/budget-monitoring",
   templates: "/admin/templates",
   notifications: "/admin/notifications",
   "activity-logs": "/admin/activity-logs",
@@ -166,6 +166,26 @@ type PendingDeleteConfirmation =
       id: string;
       title: string;
     };
+
+type BudgetMonitoringEntry = {
+  budgetRequestId: string;
+  liquidationReportId: string | null;
+  title: string;
+  organizationName: string;
+  approvedAmount: number;
+  releasedAmount: number;
+  remainingAmount: number;
+  utilizationRate: number;
+  budgetStatus: string;
+  liquidationStatus: string;
+  goSignalAt: string;
+  deadlineAt: string;
+  hardCopySubmittedAt: string;
+  completedAt: string;
+  remarks: string;
+  ageInDays: number;
+  riskLabel: "On Track" | "Needs Attention" | "Overdue" | "Completed";
+};
 
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
@@ -301,6 +321,103 @@ export default function AdminPortal({ section }: { section: string }) {
     () => state.organizationProfiles.find((org) => org.id === selectedLiquidationReport?.organizationId) ?? null,
     [selectedLiquidationReport?.organizationId, state.organizationProfiles],
   );
+  const budgetMonitoringEntries = useMemo<BudgetMonitoringEntry[]>(() => {
+    const now = new Date();
+    const approvedStatuses = new Set(["approved_for_ftf_green", "budget_released", "completed"]);
+
+    return state.budgetRequests
+      .filter((request) => approvedStatuses.has(request.status))
+      .map((request) => {
+        const liquidation = state.liquidationReports.find((item) => item.budgetRequestId === request.id) ?? null;
+        const approvedAmount = Number(request.approvedAmount || request.requestedAmount || 0);
+        const releasedAmount = Number(request.releasedAmount || 0);
+        const remainingAmount = Math.max(approvedAmount - releasedAmount, 0);
+        const utilizationRate = approvedAmount > 0 ? Math.round((releasedAmount / approvedAmount) * 100) : 0;
+        const deadlineDate = liquidation?.deadlineAt ? new Date(liquidation.deadlineAt) : null;
+        const completedAtDate = liquidation?.completedAt ? new Date(liquidation.completedAt) : null;
+        const goSignalAt = liquidation?.goSignalAt || request.goSignalAt || "Pending";
+        const liquidationStatus = liquidation?.status ?? "pending_activity_completion";
+        let riskLabel: BudgetMonitoringEntry["riskLabel"] = "Needs Attention";
+
+        if (liquidationStatus === "completed_liquidated" || request.status === "completed") {
+          riskLabel = "Completed";
+        } else if (
+          liquidationStatus === "overdue" ||
+          (deadlineDate && !Number.isNaN(deadlineDate.getTime()) && deadlineDate.getTime() < now.getTime() && !completedAtDate)
+        ) {
+          riskLabel = "Overdue";
+        } else if (
+          liquidationStatus === "approved_for_ftf_green" ||
+          liquidationStatus === "budget_released" ||
+          liquidationStatus === "hard_copy_submitted"
+        ) {
+          riskLabel = "On Track";
+        }
+
+        return {
+          budgetRequestId: request.id,
+          liquidationReportId: liquidation?.id ?? null,
+          title: request.activityTitle,
+          organizationName: state.organizationProfiles.find((org) => org.id === request.organizationId)?.organizationName ?? "Unknown organization",
+          approvedAmount,
+          releasedAmount,
+          remainingAmount,
+          utilizationRate,
+          budgetStatus: request.status,
+          liquidationStatus,
+          goSignalAt,
+          deadlineAt: liquidation?.deadlineAt || "Pending",
+          hardCopySubmittedAt: liquidation?.hardCopySubmittedAt || "Pending",
+          completedAt: liquidation?.completedAt || "Pending",
+          remarks: liquidation?.remarks || "None",
+          ageInDays: liquidation?.deadlineAt ? Math.max(Math.ceil((now.getTime() - new Date(liquidation.deadlineAt).getTime()) / 86400000), 0) : 0,
+          riskLabel,
+        };
+      })
+      .sort((left, right) => {
+        if (left.riskLabel !== right.riskLabel) {
+          const order = new Map<BudgetMonitoringEntry["riskLabel"], number>([
+            ["Overdue", 0],
+            ["Needs Attention", 1],
+            ["On Track", 2],
+            ["Completed", 3],
+          ]);
+          return (order.get(left.riskLabel) ?? 99) - (order.get(right.riskLabel) ?? 99);
+        }
+        return right.approvedAmount - left.approvedAmount;
+      });
+  }, [state.budgetRequests, state.liquidationReports, state.organizationProfiles]);
+  const budgetMonitoringAnalysis = useMemo(() => {
+    const totalApproved = budgetMonitoringEntries.reduce((sum, entry) => sum + entry.approvedAmount, 0);
+    const totalReleased = budgetMonitoringEntries.reduce((sum, entry) => sum + entry.releasedAmount, 0);
+    const totalRemaining = Math.max(totalApproved - totalReleased, 0);
+    const utilizationRate = totalApproved > 0 ? Math.round((totalReleased / totalApproved) * 100) : 0;
+    const overdueCount = budgetMonitoringEntries.filter((entry) => entry.riskLabel === "Overdue").length;
+    const needsAttentionCount = budgetMonitoringEntries.filter((entry) => entry.riskLabel === "Needs Attention").length;
+    const completedCount = budgetMonitoringEntries.filter((entry) => entry.riskLabel === "Completed").length;
+    const onTrackCount = budgetMonitoringEntries.filter((entry) => entry.riskLabel === "On Track").length;
+    const pendingLiquidationCount = budgetMonitoringEntries.filter((entry) => !entry.liquidationReportId).length;
+
+    const insights = [
+      `${budgetMonitoringEntries.length} approved budget${budgetMonitoringEntries.length === 1 ? "" : "s"} are now under automatic monitoring.`,
+      `${pendingLiquidationCount} budget${pendingLiquidationCount === 1 ? "" : "s"} still need an attached liquidation record.`,
+      `${overdueCount} budget${overdueCount === 1 ? "" : "s"} are flagged overdue or past deadline.`,
+      `${utilizationRate}% of approved funds have been released so far.`,
+    ];
+
+    return {
+      totalApproved,
+      totalReleased,
+      totalRemaining,
+      utilizationRate,
+      overdueCount,
+      needsAttentionCount,
+      completedCount,
+      onTrackCount,
+      pendingLiquidationCount,
+      insights,
+    };
+  }, [budgetMonitoringEntries]);
   const validDocumentTypeIds = useMemo(
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
     [templateDocuments],
@@ -2750,102 +2867,139 @@ export default function AdminPortal({ section }: { section: string }) {
             </Dialog>
           </>
         );
+      case "budget-monitoring":
       case "public-transparency-posts":
         return (
-          <>
-            <PortalSection
-              title="Public Transparency Posts"
-              description="Simplified transparency content for public-facing visibility."
-              action={
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setTransparencyModalMode("create");
-                    setEditingTransparencyPostId(null);
-                    setTransparencyTitleDraft("");
-                    setTransparencyDescriptionDraft("");
-                    setTransparencyCategoryDraft("");
-                    setTransparencyAttachmentUrlDraft("");
-                    setTransparencyPostDateDraft(new Date().toISOString().slice(0, 10));
-                    setTransparencyVisibilityDraft("draft");
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Transparency Post
-                </Button>
-              }
-            >
-              {transparencyPosts.length ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {transparencyPosts.map((post) => (
-                    <Card key={post.id} className="border-border/70">
-                      <CardContent className="space-y-3 p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium">{post.title}</p>
-                          <PortalStatusBadge status={post.visibilityStatus} />
+          <PortalSection
+            title="Budget Monitoring"
+            description="Approved budgets are monitored automatically after approval so release, utilization, and liquidation progress stay visible."
+            action={
+              <Button type="button" onClick={() => navigate("/admin/budget-utilization")}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Review Budget Requests
+              </Button>
+            }
+          >
+            <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <PortalMetricCard title="Approved Budgets" value={budgetMonitoringEntries.length.toLocaleString()} />
+                <PortalMetricCard title="Released Amount" value={`PHP ${budgetMonitoringAnalysis.totalReleased.toLocaleString()}`} />
+                <PortalMetricCard title="Remaining Amount" value={`PHP ${budgetMonitoringAnalysis.totalRemaining.toLocaleString()}`} />
+                <PortalMetricCard title="Utilization Rate" value={`${budgetMonitoringAnalysis.utilizationRate}%`} />
+              </div>
+
+              <Card className="border-border/70">
+                <CardContent className="space-y-4 p-4 sm:p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Financial DSS Analysis</p>
+                      <h3 className="mt-2 text-lg font-semibold text-foreground">Budget Health Snapshot</h3>
+                    </div>
+                    <PortalStatusBadge status={budgetMonitoringAnalysis.overdueCount > 0 ? "overdue" : "completed_liquidated"} />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">On Track</p>
+                      <p className="mt-2 text-2xl font-bold text-foreground">{budgetMonitoringAnalysis.onTrackCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Needs Attention</p>
+                      <p className="mt-2 text-2xl font-bold text-foreground">{budgetMonitoringAnalysis.needsAttentionCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Overdue</p>
+                      <p className="mt-2 text-2xl font-bold text-foreground">{budgetMonitoringAnalysis.overdueCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Completed</p>
+                      <p className="mt-2 text-2xl font-bold text-foreground">{budgetMonitoringAnalysis.completedCount}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background p-4">
+                    <p className="text-sm font-medium text-foreground">Analysis Notes</p>
+                    <ul className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                      {budgetMonitoringAnalysis.insights.map((insight) => (
+                        <li key={insight} className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+                          {insight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {budgetMonitoringEntries.length ? (
+                <div className="grid gap-4">
+                  {budgetMonitoringEntries.map((entry) => (
+                    <Card key={entry.budgetRequestId} className="border-border/70">
+                      <CardContent className="grid gap-4 p-4 md:grid-cols-[1.5fr_1fr]">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-medium">{entry.title}</p>
+                              <p className="text-sm text-muted-foreground">{entry.organizationName}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <PortalStatusBadge status={entry.budgetStatus} />
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                  entry.riskLabel === "Overdue"
+                                    ? "bg-destructive/15 text-destructive"
+                                    : entry.riskLabel === "Completed"
+                                      ? "bg-emerald-500/15 text-emerald-700"
+                                      : entry.riskLabel === "On Track"
+                                        ? "bg-primary/15 text-primary"
+                                        : "bg-warning/15 text-warning"
+                                }`}
+                              >
+                                {entry.riskLabel}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                            <p>Approved Amount: PHP {entry.approvedAmount.toLocaleString()}</p>
+                            <p>Released Amount: PHP {entry.releasedAmount.toLocaleString()}</p>
+                            <p>Remaining Amount: PHP {entry.remainingAmount.toLocaleString()}</p>
+                            <p>Utilization: {entry.utilizationRate}%</p>
+                            <p>Go Signal: {entry.goSignalAt || "Pending"}</p>
+                            <p>Deadline: {entry.deadlineAt || "Pending"}</p>
+                            <p>Hard Copy Submitted: {entry.hardCopySubmittedAt || "Pending"}</p>
+                            <p>Liquidation Status: {entry.liquidationStatus}</p>
+                          </div>
+                          <div className="rounded-xl border border-border/70 bg-muted/10 p-3 text-sm text-muted-foreground">
+                            <p className="font-medium text-foreground">Monitoring Analysis</p>
+                            <p className="mt-1">
+                              {entry.riskLabel === "Overdue"
+                                ? "This approved budget is past its expected timeline and should be escalated."
+                                : entry.riskLabel === "Needs Attention"
+                                  ? "The budget is approved, but liquidation tracking is still incomplete or awaiting a stronger signal."
+                                  : entry.riskLabel === "Completed"
+                                    ? "The budget has been fully liquidated and is considered closed."
+                                    : "The budget is progressing normally and remains within monitoring targets."}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">{post.description}</p>
-                        <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-                          <p className="font-medium text-foreground">{post.category}</p>
-                          <p className="mt-1">Posted {post.postDate}</p>
-                          <p className="mt-1 break-all">{post.attachmentUrl || "No attachment URL provided."}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              void (async () => {
-                                try {
-                                  const updatedPost = await updateTransparencyPostInSupabase(post.id, {
-                                    visibilityStatus: "published",
-                                  });
-                                  updateTransparencyPost(post.id, updatedPost);
-                                  await appendAuditLog("Published transparency post", "transparency_post", post.id, `Published transparency post "${updatedPost.title}".`);
-                                  await refreshAdminState();
-                                } catch (error) {
-                                  toast({
-                                    title: "Unable to update transparency post",
-                                    description: error instanceof Error ? error.message : "The transparency post could not be updated.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              })()
-                            }
-                          >
-                            Publish
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              void (async () => {
-                                try {
-                                  const updatedPost = await updateTransparencyPostInSupabase(post.id, {
-                                    visibilityStatus: "hidden",
-                                  });
-                                  updateTransparencyPost(post.id, updatedPost);
-                                  await appendAuditLog("Hidden transparency post", "transparency_post", post.id, `Hidden transparency post "${updatedPost.title}".`);
-                                  await refreshAdminState();
-                                } catch (error) {
-                                  toast({
-                                    title: "Unable to update transparency post",
-                                    description: error instanceof Error ? error.message : "The transparency post could not be updated.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              })()
-                            }
-                          >
-                            Hide
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => startEditingTransparencyPost(post.id)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => void handleDeleteTransparencyPost(post.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                        <div className="space-y-3 rounded-xl border border-border/70 bg-muted/15 p-4 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Risk Metrics</p>
+                            <p className="mt-2 font-medium text-foreground">
+                              Monitoring age: {entry.ageInDays} day{entry.ageInDays === 1 ? "" : "s"}
+                            </p>
+                            <p className="mt-1 text-muted-foreground">
+                              Approved budgets appear here automatically once the budget request is approved.
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-border/70 bg-background p-3">
+                            <div className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-muted-foreground/75">
+                              <span>Release Progress</span>
+                              <span>{entry.utilizationRate}%</span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(entry.utilizationRate, 100)}%` }} />
+                            </div>
+                          </div>
+                          <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/admin/budget-utilization")}>
+                            Open Budget Review
                           </Button>
                         </div>
                       </CardContent>
@@ -2854,101 +3008,12 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               ) : (
                 <PortalEmptyState
-                  title="No transparency posts yet"
-                  description="Create the first public transparency post so it appears on the user-facing side."
+                  title="No approved budgets yet"
+                  description="Approved budget requests automatically appear here once the budget review marks them green."
                 />
               )}
-            </PortalSection>
-            <Dialog open={transparencyModalMode === "create" || transparencyModalMode === "edit"} onOpenChange={(open) => (!open ? resetTransparencyForm() : undefined)}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{transparencyModalMode === "edit" ? "Edit Transparency Post" : "Add Transparency Post"}</DialogTitle>
-                  <DialogDescription>
-                    {transparencyModalMode === "edit"
-                      ? "Update the public transparency details and visibility."
-                      : "Create a transparency post that will also appear on the user side."}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="transparency-post-title" className="text-sm font-medium">Title</label>
-                    <Input
-                      id="transparency-post-title"
-                      name="transparencyPostTitle"
-                      value={transparencyTitleDraft}
-                      onChange={(event) => setTransparencyTitleDraft(event.target.value)}
-                      placeholder="Enter transparency post title"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="transparency-post-description" className="text-sm font-medium">Description</label>
-                    <Textarea
-                      id="transparency-post-description"
-                      name="transparencyPostDescription"
-                      value={transparencyDescriptionDraft}
-                      onChange={(event) => setTransparencyDescriptionDraft(event.target.value)}
-                      placeholder="Write the transparency summary shown to users."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="transparency-post-category" className="text-sm font-medium">Category</label>
-                    <Input
-                      id="transparency-post-category"
-                      name="transparencyPostCategory"
-                      value={transparencyCategoryDraft}
-                      onChange={(event) => setTransparencyCategoryDraft(event.target.value)}
-                      placeholder="Approved registrations"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="transparency-post-attachment-url" className="text-sm font-medium">Attachment URL</label>
-                    <Input
-                      id="transparency-post-attachment-url"
-                      name="transparencyPostAttachmentUrl"
-                      value={transparencyAttachmentUrlDraft}
-                      onChange={(event) => setTransparencyAttachmentUrlDraft(event.target.value)}
-                      placeholder="https://example.com/file.pdf"
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label htmlFor="transparency-post-date" className="text-sm font-medium">Post Date</label>
-                      <Input
-                        id="transparency-post-date"
-                        name="transparencyPostDate"
-                        type="date"
-                        value={transparencyPostDateDraft}
-                        onChange={(event) => setTransparencyPostDateDraft(event.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="transparency-post-visibility" className="text-sm font-medium">Visibility</label>
-                      <select
-                        id="transparency-post-visibility"
-                        name="transparencyPostVisibility"
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={transparencyVisibilityDraft}
-                        onChange={(event) => setTransparencyVisibilityDraft(event.target.value as TransparencyPost["visibilityStatus"])}
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
-                        <option value="hidden">Hidden</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={resetTransparencyForm}>
-                    Cancel
-                  </Button>
-                  <Button type="button" onClick={() => void handleSaveTransparencyPost()} disabled={savingTransparencyPost}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {savingTransparencyPost ? "Saving..." : transparencyModalMode === "edit" ? "Save Changes" : "Create Transparency Post"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </>
+            </div>
+          </PortalSection>
         );
       case "templates":
         return (
