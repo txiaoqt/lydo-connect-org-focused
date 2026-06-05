@@ -209,3 +209,231 @@ begin
     news_releases.updated_at;
 end;
 $$;
+
+alter table if exists public.activity_logs
+  alter column action type text using action::text;
+
+create or replace function public.create_admin_transparency_post(
+  _session_token text,
+  _title text,
+  _description text,
+  _category text,
+  _attachment_url text,
+  _post_date date,
+  _visibility_status public.visibility_status
+)
+returns table (
+  id uuid,
+  title text,
+  description text,
+  category text,
+  attachment_url text,
+  visibility_status public.visibility_status,
+  post_date date,
+  created_by uuid,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  insert into public.transparency_posts (
+    title,
+    description,
+    category,
+    attachment_url,
+    visibility_status,
+    post_date,
+    created_by
+  )
+  values (
+    trim(_title),
+    coalesce(_description, ''),
+    trim(_category),
+    nullif(trim(coalesce(_attachment_url, '')), ''),
+    coalesce(_visibility_status, 'draft'::public.visibility_status),
+    _post_date,
+    null
+  )
+  returning
+    transparency_posts.id,
+    transparency_posts.title,
+    transparency_posts.description,
+    transparency_posts.category,
+    transparency_posts.attachment_url,
+    transparency_posts.visibility_status,
+    transparency_posts.post_date,
+    transparency_posts.created_by,
+    transparency_posts.created_at,
+    transparency_posts.updated_at;
+end;
+$$;
+
+create or replace function public.update_admin_transparency_post(
+  _session_token text,
+  _post_id uuid,
+  _title text,
+  _description text,
+  _category text,
+  _attachment_url text,
+  _post_date date,
+  _visibility_status public.visibility_status
+)
+returns table (
+  id uuid,
+  title text,
+  description text,
+  category text,
+  attachment_url text,
+  visibility_status public.visibility_status,
+  post_date date,
+  created_by uuid,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  update public.transparency_posts
+  set
+    title = coalesce(trim(_title), transparency_posts.title),
+    description = coalesce(_description, transparency_posts.description),
+    category = coalesce(trim(_category), transparency_posts.category),
+    attachment_url = case
+      when _attachment_url is null then transparency_posts.attachment_url
+      else nullif(trim(_attachment_url), '')
+    end,
+    post_date = coalesce(_post_date, transparency_posts.post_date),
+    visibility_status = coalesce(_visibility_status, transparency_posts.visibility_status),
+    updated_at = now()
+  where transparency_posts.id = _post_id
+  returning
+    transparency_posts.id,
+    transparency_posts.title,
+    transparency_posts.description,
+    transparency_posts.category,
+    transparency_posts.attachment_url,
+    transparency_posts.visibility_status,
+    transparency_posts.post_date,
+    transparency_posts.created_by,
+    transparency_posts.created_at,
+    transparency_posts.updated_at;
+end;
+$$;
+
+create or replace function public.delete_admin_transparency_post(
+  _session_token text,
+  _post_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  delete from public.transparency_posts
+  where id = _post_id;
+end;
+$$;
+
+create or replace function public.create_admin_activity_log(
+  _session_token text,
+  _organization_id uuid,
+  _action text,
+  _related_type text,
+  _related_id uuid,
+  _description text
+)
+returns table (
+  id uuid,
+  actor_user_id uuid,
+  organization_id uuid,
+  action text,
+  related_type text,
+  related_id uuid,
+  description text,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  insert into public.activity_logs (
+    actor_user_id,
+    organization_id,
+    action,
+    related_type,
+    related_id,
+    description
+  )
+  values (
+    null,
+    _organization_id,
+    trim(_action),
+    trim(_related_type),
+    _related_id,
+    _description
+  )
+  returning
+    activity_logs.id,
+    activity_logs.actor_user_id,
+    activity_logs.organization_id,
+    activity_logs.action,
+    activity_logs.related_type,
+    activity_logs.related_id,
+    activity_logs.description,
+    activity_logs.created_at;
+end;
+$$;

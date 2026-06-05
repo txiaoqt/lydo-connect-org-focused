@@ -17,16 +17,21 @@ import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
-import { adminNavigationGroups as baseAdminNavigationGroups, type NewsRelease } from "@/lib/lydo-connect-data";
+import { adminNavigationGroups as baseAdminNavigationGroups, type NewsRelease, type TransparencyPost } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
+  createAdminActivityLogInSupabase,
   createNewsReleaseInSupabase,
+  createTransparencyPostInSupabase,
   createTemplateRecordInSupabase,
   deleteNewsReleaseInSupabase,
+  deleteTransparencyPostInSupabase,
   updateBudgetRequestInSupabase,
   deleteTemplateRecordInSupabase,
+  loadAdminPortalSupabaseState,
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
+  updateTransparencyPostInSupabase,
   updateLiquidationReportInSupabase,
   updateNewsReleaseInSupabase,
   updateTemplateRecordInSupabase,
@@ -64,8 +69,6 @@ const splitNotificationsGroup = baseAdminNavigationGroups.map((group) =>
     : group,
 );
 
-const createLogId = () => `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
 const renderAdvocacyChips = (advocacies: string[]) =>
   advocacies.length ? (
     <div className="flex flex-wrap gap-2">
@@ -85,7 +88,7 @@ const renderAdvocacyChips = (advocacies: string[]) =>
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead, createActivityLog } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -106,6 +109,15 @@ export default function AdminPortal({ section }: { section: string }) {
   const [newsDatePostedDraft, setNewsDatePostedDraft] = useState("");
   const [newsVisibilityDraft, setNewsVisibilityDraft] = useState<NewsRelease["visibilityStatus"]>("draft");
   const [savingNewsRelease, setSavingNewsRelease] = useState(false);
+  const [transparencyModalMode, setTransparencyModalMode] = useState<"create" | "edit" | null>(null);
+  const [editingTransparencyPostId, setEditingTransparencyPostId] = useState<string | null>(null);
+  const [transparencyTitleDraft, setTransparencyTitleDraft] = useState("");
+  const [transparencyDescriptionDraft, setTransparencyDescriptionDraft] = useState("");
+  const [transparencyCategoryDraft, setTransparencyCategoryDraft] = useState("");
+  const [transparencyAttachmentUrlDraft, setTransparencyAttachmentUrlDraft] = useState("");
+  const [transparencyPostDateDraft, setTransparencyPostDateDraft] = useState("");
+  const [transparencyVisibilityDraft, setTransparencyVisibilityDraft] = useState<TransparencyPost["visibilityStatus"]>("draft");
+  const [savingTransparencyPost, setSavingTransparencyPost] = useState(false);
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -125,6 +137,15 @@ export default function AdminPortal({ section }: { section: string }) {
         return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
       }),
     [state.newsReleases],
+  );
+  const transparencyPosts = useMemo(
+    () =>
+      [...state.transparencyPosts].sort((left, right) => {
+        const dateDelta = new Date(right.postDate).getTime() - new Date(left.postDate).getTime();
+        if (dateDelta !== 0) return dateDelta;
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      }),
+    [state.transparencyPosts],
   );
   const validDocumentTypeIds = useMemo(
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
@@ -147,22 +168,26 @@ export default function AdminPortal({ section }: { section: string }) {
     [state],
   );
 
-  const appendAuditLog = (
+  const refreshAdminState = async () => {
+    const remoteSnapshot = (await loadAdminPortalSupabaseState()) ?? (await loadLydoConnectSupabaseState());
+    if (remoteSnapshot) {
+      mergeRemoteState(remoteSnapshot);
+    }
+  };
+
+  const appendAuditLog = async (
     action: string,
     relatedType: string,
     relatedId: string,
     description: string,
     organizationId = profile?.id ?? "",
   ) => {
-    createActivityLog({
-      id: createLogId(),
-      actorUserId: adminId,
+    await createAdminActivityLogInSupabase({
       organizationId,
       action,
       relatedType,
       relatedId,
       description,
-      createdAt: new Date().toISOString(),
     });
   };
 
@@ -182,6 +207,17 @@ export default function AdminPortal({ section }: { section: string }) {
     setNewsFacebookPostUrlDraft("");
     setNewsDatePostedDraft("");
     setNewsVisibilityDraft("draft");
+  };
+
+  const resetTransparencyForm = () => {
+    setTransparencyModalMode(null);
+    setEditingTransparencyPostId(null);
+    setTransparencyTitleDraft("");
+    setTransparencyDescriptionDraft("");
+    setTransparencyCategoryDraft("");
+    setTransparencyAttachmentUrlDraft("");
+    setTransparencyPostDateDraft("");
+    setTransparencyVisibilityDraft("draft");
   };
 
   const startEditingTemplate = (templateId: string) => {
@@ -204,6 +240,19 @@ export default function AdminPortal({ section }: { section: string }) {
     setNewsFacebookPostUrlDraft(newsRelease.facebookPostUrl);
     setNewsDatePostedDraft(newsRelease.datePosted);
     setNewsVisibilityDraft(newsRelease.visibilityStatus);
+  };
+
+  const startEditingTransparencyPost = (postId: string) => {
+    const post = transparencyPosts.find((entry) => entry.id === postId);
+    if (!post) return;
+    setTransparencyModalMode("edit");
+    setEditingTransparencyPostId(postId);
+    setTransparencyTitleDraft(post.title);
+    setTransparencyDescriptionDraft(post.description);
+    setTransparencyCategoryDraft(post.category);
+    setTransparencyAttachmentUrlDraft(post.attachmentUrl);
+    setTransparencyPostDateDraft(post.postDate);
+    setTransparencyVisibilityDraft(post.visibilityStatus);
   };
 
   const handleCreateTemplate = async () => {
@@ -233,9 +282,8 @@ export default function AdminPortal({ section }: { section: string }) {
         updateTemplate(newTemplate.id, uploadedTemplate);
         setUploadingTemplateId(null);
       }
-      const remoteSnapshot = await loadLydoConnectSupabaseState();
-      if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
-      appendAuditLog("Created template", "template", newTemplate.databaseId, `Created template "${newTemplate.name}" and uploaded a new file.`);
+      await appendAuditLog("Created template", "template", newTemplate.databaseId, `Created template "${newTemplate.name}" and uploaded a new file.`);
+      await refreshAdminState();
       resetTemplateForm();
       toast({ title: "Template created", description: `${newTemplate.name} was added successfully.` });
     } catch (error) {
@@ -278,6 +326,8 @@ export default function AdminPortal({ section }: { section: string }) {
           visibilityStatus: newsVisibilityDraft,
         });
         updateNewsRelease(editingNewsReleaseId, updatedNewsRelease);
+        await appendAuditLog("Updated news release", "news_release", updatedNewsRelease.id, `Updated news release "${updatedNewsRelease.title}".`);
+        await refreshAdminState();
         toast({ title: "News release updated", description: `${updatedNewsRelease.title} was updated successfully.` });
       } else {
         const createdNewsRelease = await createNewsReleaseInSupabase({
@@ -288,6 +338,8 @@ export default function AdminPortal({ section }: { section: string }) {
           visibilityStatus: newsVisibilityDraft,
         });
         createNewsRelease(createdNewsRelease);
+        await appendAuditLog("Created news release", "news_release", createdNewsRelease.id, `Created news release "${createdNewsRelease.title}".`);
+        await refreshAdminState();
         toast({ title: "News release created", description: `${createdNewsRelease.title} was added successfully.` });
       }
       resetNewsReleaseForm();
@@ -312,6 +364,8 @@ export default function AdminPortal({ section }: { section: string }) {
     try {
       await deleteNewsReleaseInSupabase(newsReleaseId);
       removeNewsRelease(newsReleaseId);
+      await appendAuditLog("Deleted news release", "news_release", newsRelease.id, `Deleted news release "${newsRelease.title}".`);
+      await refreshAdminState();
       if (editingNewsReleaseId === newsReleaseId) {
         resetNewsReleaseForm();
       }
@@ -352,9 +406,8 @@ export default function AdminPortal({ section }: { section: string }) {
         updateTemplate(template.id, uploadedTemplate);
         setUploadingTemplateId(null);
       }
-      const remoteSnapshot = await loadLydoConnectSupabaseState();
-      if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
-      appendAuditLog("Updated template", "template", template.databaseId, `Updated template "${template.name}" to "${updatedTemplate.name}".`);
+      await appendAuditLog("Updated template", "template", template.databaseId, `Updated template "${template.name}" to "${updatedTemplate.name}".`);
+      await refreshAdminState();
       resetTemplateForm();
       toast({ title: "Template updated", description: `${updatedTemplate.name} was updated successfully.` });
     } catch (error) {
@@ -375,9 +428,8 @@ export default function AdminPortal({ section }: { section: string }) {
     try {
       await deleteTemplateRecordInSupabase(template.databaseId, template.name);
       removeTemplate(template.id);
-      const remoteSnapshot = await loadLydoConnectSupabaseState();
-      if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
-      appendAuditLog("Deleted template", "template", template.databaseId, `Deleted template "${template.name}" from the active list.`);
+      await appendAuditLog("Deleted template", "template", template.databaseId, `Deleted template "${template.name}" from the active list.`);
+      await refreshAdminState();
       if (editingTemplateId === template.id || templateModalMode === "delete") {
         resetTemplateForm();
       }
@@ -442,6 +494,87 @@ export default function AdminPortal({ section }: { section: string }) {
   const selectedTemplate = editingTemplateId
     ? templateDocuments.find((template) => template.id === editingTemplateId) ?? null
     : null;
+
+  const handleSaveTransparencyPost = async () => {
+    if (!transparencyTitleDraft.trim()) {
+      toast({ title: "Title required", description: "Please enter a transparency post title.", variant: "destructive" });
+      return;
+    }
+    if (!transparencyDescriptionDraft.trim()) {
+      toast({ title: "Description required", description: "Please enter a transparency post description.", variant: "destructive" });
+      return;
+    }
+    if (!transparencyCategoryDraft.trim()) {
+      toast({ title: "Category required", description: "Please enter a transparency category.", variant: "destructive" });
+      return;
+    }
+    if (!transparencyPostDateDraft) {
+      toast({ title: "Post date required", description: "Please select a post date.", variant: "destructive" });
+      return;
+    }
+
+    setSavingTransparencyPost(true);
+    try {
+      if (transparencyModalMode === "edit" && editingTransparencyPostId) {
+        const updatedPost = await updateTransparencyPostInSupabase(editingTransparencyPostId, {
+          title: transparencyTitleDraft,
+          description: transparencyDescriptionDraft,
+          category: transparencyCategoryDraft,
+          attachmentUrl: transparencyAttachmentUrlDraft,
+          postDate: transparencyPostDateDraft,
+          visibilityStatus: transparencyVisibilityDraft,
+        });
+        updateTransparencyPost(editingTransparencyPostId, updatedPost);
+        await appendAuditLog("Updated transparency post", "transparency_post", updatedPost.id, `Updated transparency post "${updatedPost.title}".`);
+        await refreshAdminState();
+        toast({ title: "Transparency post updated", description: `${updatedPost.title} was updated successfully.` });
+      } else {
+        const createdPost = await createTransparencyPostInSupabase({
+          title: transparencyTitleDraft,
+          description: transparencyDescriptionDraft,
+          category: transparencyCategoryDraft,
+          attachmentUrl: transparencyAttachmentUrlDraft,
+          postDate: transparencyPostDateDraft,
+          visibilityStatus: transparencyVisibilityDraft,
+        });
+        await appendAuditLog("Created transparency post", "transparency_post", createdPost.id, `Created transparency post "${createdPost.title}".`);
+        await refreshAdminState();
+        toast({ title: "Transparency post created", description: `${createdPost.title} was added successfully.` });
+      }
+      resetTransparencyForm();
+    } catch (error) {
+      toast({
+        title: transparencyModalMode === "edit" ? "Update failed" : "Create failed",
+        description: error instanceof Error ? error.message : "The transparency post could not be saved.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingTransparencyPost(false);
+    }
+  };
+
+  const handleDeleteTransparencyPost = async (postId: string) => {
+    const post = transparencyPosts.find((entry) => entry.id === postId);
+    if (!post) return;
+    const confirmed = window.confirm(`Delete "${post.title}"? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteTransparencyPostInSupabase(postId);
+      await appendAuditLog("Deleted transparency post", "transparency_post", post.id, `Deleted transparency post "${post.title}".`);
+      await refreshAdminState();
+      if (editingTransparencyPostId === postId) {
+        resetTransparencyForm();
+      }
+      toast({ title: "Transparency post deleted", description: `${post.title} was removed successfully.` });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "The transparency post could not be deleted.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const activeContent = useMemo(() => {
     switch (section) {
@@ -616,16 +749,13 @@ export default function AdminPortal({ section }: { section: string }) {
                                       isRead: false,
                                       createdAt: new Date().toISOString(),
                                     });
-                                    createActivityLog({
-                                      id: `log-${Date.now()}`,
-                                      actorUserId: adminId,
-                                      organizationId: selectedOrg.id,
-                                      action: "approved_document_submission",
-                                      relatedType: "document_submission",
-                                      relatedId: selectedSubmission.id,
-                                      description: "Document submission approved from the registration detail view.",
-                                      createdAt: new Date().toISOString(),
-                                    });
+                                    void appendAuditLog(
+                                      "Approved document submission",
+                                      "document_submission",
+                                      selectedSubmission.id,
+                                      "Document submission approved from the registration detail view.",
+                                      selectedOrg.id,
+                                    );
                                   }}
                                 >
                                   Approve
@@ -660,16 +790,13 @@ export default function AdminPortal({ section }: { section: string }) {
                                       isRead: false,
                                       createdAt: new Date().toISOString(),
                                     });
-                                    createActivityLog({
-                                      id: `log-${Date.now()}`,
-                                      actorUserId: adminId,
-                                      organizationId: selectedOrg.id,
-                                      action: "rejected_document_submission",
-                                      relatedType: "document_submission",
-                                      relatedId: selectedSubmission.id,
-                                      description: "Document submission rejected from the registration detail view.",
-                                      createdAt: new Date().toISOString(),
-                                    });
+                                    void appendAuditLog(
+                                      "Rejected document submission",
+                                      "document_submission",
+                                      selectedSubmission.id,
+                                      "Document submission rejected from the registration detail view.",
+                                      selectedOrg.id,
+                                    );
                                   }}
                                 >
                                   Reject
@@ -814,8 +941,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                   goSignalAt: new Date().toISOString(),
                                   approvedAmount: request.requestedAmount,
                                 });
-                                const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                await refreshAdminState();
                                 createNotification({
                                   id: `notif-${Date.now()}`,
                                   userId: request.submittedBy,
@@ -828,6 +954,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                   isRead: false,
                                   createdAt: new Date().toISOString(),
                                 });
+                                await appendAuditLog("Approved budget request", "budget_request", request.id, `Marked budget request "${request.activityTitle}" as approved for face-to-face green.`, request.organizationId);
                               } catch (error) {
                                 toast({
                                   title: "Unable to update budget",
@@ -847,8 +974,8 @@ export default function AdminPortal({ section }: { section: string }) {
                             void (async () => {
                               try {
                                 await updateBudgetRequestInSupabase(request.id, { status: "needs_revision" });
-                                const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                await refreshAdminState();
+                                await appendAuditLog("Budget request needs revision", "budget_request", request.id, `Marked budget request "${request.activityTitle}" as needing revision.`, request.organizationId);
                               } catch (error) {
                                 toast({
                                   title: "Unable to update budget",
@@ -868,8 +995,8 @@ export default function AdminPortal({ section }: { section: string }) {
                             void (async () => {
                               try {
                                 await updateBudgetRequestInSupabase(request.id, { status: "rejected_red" });
-                                const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                await refreshAdminState();
+                                await appendAuditLog("Rejected budget request", "budget_request", request.id, `Rejected budget request "${request.activityTitle}".`, request.organizationId);
                               } catch (error) {
                                 toast({
                                   title: "Unable to update budget",
@@ -924,8 +1051,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                   status: "approved_for_ftf_green",
                                   goSignalAt: new Date().toISOString(),
                                 });
-                                const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                await refreshAdminState();
+                                await appendAuditLog("Approved liquidation report", "liquidation_report", record.id, "Marked liquidation report as approved for face-to-face green.", record.organizationId);
                               } catch (error) {
                                 toast({
                                   title: "Unable to update liquidation",
@@ -945,8 +1072,8 @@ export default function AdminPortal({ section }: { section: string }) {
                             void (async () => {
                               try {
                                 await updateLiquidationReportInSupabase(record.id, { status: "needs_revision" });
-                                const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                await refreshAdminState();
+                                await appendAuditLog("Liquidation needs revision", "liquidation_report", record.id, "Marked liquidation report as needing revision.", record.organizationId);
                               } catch (error) {
                                 toast({
                                   title: "Unable to update liquidation",
@@ -966,8 +1093,8 @@ export default function AdminPortal({ section }: { section: string }) {
                             void (async () => {
                               try {
                                 await updateLiquidationReportInSupabase(record.id, { status: "overdue" });
-                                const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+                                await refreshAdminState();
+                                await appendAuditLog("Marked liquidation overdue", "liquidation_report", record.id, "Marked liquidation report as overdue.", record.organizationId);
                               } catch (error) {
                                 toast({
                                   title: "Unable to update liquidation",
@@ -1077,6 +1204,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                   visibilityStatus: "published",
                                 });
                                 updateNewsRelease(news.id, updatedNewsRelease);
+                                await appendAuditLog("Published news release", "news_release", news.id, `Published news release "${updatedNewsRelease.title}".`);
+                                await refreshAdminState();
                               } catch (error) {
                                 toast({
                                   title: "Unable to update news release",
@@ -1099,6 +1228,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                   visibilityStatus: "hidden",
                                 });
                                 updateNewsRelease(news.id, updatedNewsRelease);
+                                await appendAuditLog("Hidden news release", "news_release", news.id, `Hidden news release "${updatedNewsRelease.title}".`);
+                                await refreshAdminState();
                               } catch (error) {
                                 toast({
                                   title: "Unable to update news release",
@@ -1196,29 +1327,171 @@ export default function AdminPortal({ section }: { section: string }) {
         );
       case "public-transparency-posts":
         return (
-          <PortalSection title="Public Transparency Posts" description="Simplified transparency content for public-facing visibility.">
-            <div className="grid gap-4 md:grid-cols-2">
-              {state.transparencyPosts.map((post) => (
-                <Card key={post.id} className="border-border/70">
-                  <CardContent className="space-y-3 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{post.title}</p>
-                      <PortalStatusBadge status={post.visibilityStatus} />
+          <>
+            <PortalSection
+              title="Public Transparency Posts"
+              description="Simplified transparency content for public-facing visibility."
+              action={
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setTransparencyModalMode("create");
+                    setEditingTransparencyPostId(null);
+                    setTransparencyTitleDraft("");
+                    setTransparencyDescriptionDraft("");
+                    setTransparencyCategoryDraft("");
+                    setTransparencyAttachmentUrlDraft("");
+                    setTransparencyPostDateDraft(new Date().toISOString().slice(0, 10));
+                    setTransparencyVisibilityDraft("draft");
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Transparency Post
+                </Button>
+              }
+            >
+              {transparencyPosts.length ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {transparencyPosts.map((post) => (
+                    <Card key={post.id} className="border-border/70">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{post.title}</p>
+                          <PortalStatusBadge status={post.visibilityStatus} />
+                        </div>
+                        <p className="text-sm text-muted-foreground">{post.description}</p>
+                        <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                          <p className="font-medium text-foreground">{post.category}</p>
+                          <p className="mt-1">Posted {post.postDate}</p>
+                          <p className="mt-1 break-all">{post.attachmentUrl || "No attachment URL provided."}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              void (async () => {
+                                try {
+                                  const updatedPost = await updateTransparencyPostInSupabase(post.id, {
+                                    visibilityStatus: "published",
+                                  });
+                                  updateTransparencyPost(post.id, updatedPost);
+                                  await appendAuditLog("Published transparency post", "transparency_post", post.id, `Published transparency post "${updatedPost.title}".`);
+                                  await refreshAdminState();
+                                } catch (error) {
+                                  toast({
+                                    title: "Unable to update transparency post",
+                                    description: error instanceof Error ? error.message : "The transparency post could not be updated.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              })()
+                            }
+                          >
+                            Publish
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              void (async () => {
+                                try {
+                                  const updatedPost = await updateTransparencyPostInSupabase(post.id, {
+                                    visibilityStatus: "hidden",
+                                  });
+                                  updateTransparencyPost(post.id, updatedPost);
+                                  await appendAuditLog("Hidden transparency post", "transparency_post", post.id, `Hidden transparency post "${updatedPost.title}".`);
+                                  await refreshAdminState();
+                                } catch (error) {
+                                  toast({
+                                    title: "Unable to update transparency post",
+                                    description: error instanceof Error ? error.message : "The transparency post could not be updated.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              })()
+                            }
+                          >
+                            Hide
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => startEditingTransparencyPost(post.id)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => void handleDeleteTransparencyPost(post.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <PortalEmptyState
+                  title="No transparency posts yet"
+                  description="Create the first public transparency post so it appears on the user-facing side."
+                />
+              )}
+            </PortalSection>
+            <Dialog open={transparencyModalMode === "create" || transparencyModalMode === "edit"} onOpenChange={(open) => (!open ? resetTransparencyForm() : undefined)}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{transparencyModalMode === "edit" ? "Edit Transparency Post" : "Add Transparency Post"}</DialogTitle>
+                  <DialogDescription>
+                    {transparencyModalMode === "edit"
+                      ? "Update the public transparency details and visibility."
+                      : "Create a transparency post that will also appear on the user side."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Title</label>
+                    <Input value={transparencyTitleDraft} onChange={(event) => setTransparencyTitleDraft(event.target.value)} placeholder="Enter transparency post title" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea value={transparencyDescriptionDraft} onChange={(event) => setTransparencyDescriptionDraft(event.target.value)} placeholder="Write the transparency summary shown to users." />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Category</label>
+                    <Input value={transparencyCategoryDraft} onChange={(event) => setTransparencyCategoryDraft(event.target.value)} placeholder="Approved registrations" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Attachment URL</label>
+                    <Input value={transparencyAttachmentUrlDraft} onChange={(event) => setTransparencyAttachmentUrlDraft(event.target.value)} placeholder="https://example.com/file.pdf" />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Post Date</label>
+                      <Input type="date" value={transparencyPostDateDraft} onChange={(event) => setTransparencyPostDateDraft(event.target.value)} />
                     </div>
-                    <p className="text-sm text-muted-foreground">{post.category}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => updateTransparencyPost(post.id, { visibilityStatus: "published" })}>
-                        Publish
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateTransparencyPost(post.id, { visibilityStatus: "hidden" })}>
-                        Hide
-                      </Button>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Visibility</label>
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={transparencyVisibilityDraft}
+                        onChange={(event) => setTransparencyVisibilityDraft(event.target.value as TransparencyPost["visibilityStatus"])}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="hidden">Hidden</option>
+                      </select>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </PortalSection>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={resetTransparencyForm}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={() => void handleSaveTransparencyPost()} disabled={savingTransparencyPost}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {savingTransparencyPost ? "Saving..." : transparencyModalMode === "edit" ? "Save Changes" : "Create Transparency Post"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         );
       case "templates":
         return (
@@ -1443,6 +1716,9 @@ export default function AdminPortal({ section }: { section: string }) {
                 <div key={activity.id} className="rounded-xl border border-border/70 bg-background p-4 text-sm">
                   <p className="font-medium">{activity.action}</p>
                   <p className="mt-1 text-muted-foreground">{activity.description}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted-foreground/75">
+                    {new Date(activity.createdAt).toLocaleString()}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1462,16 +1738,18 @@ export default function AdminPortal({ section }: { section: string }) {
         );
     }
   }, [
-    createActivityLog,
     createNotification,
     createNewsRelease,
     createTemplate,
     deleteNewsReleaseInSupabase,
     editingTemplateId,
+    editingTransparencyPostId,
     handleCreateTemplate,
     handleDeleteTemplate,
     handleDeleteNewsRelease,
+    handleDeleteTransparencyPost,
     handleSaveNewsRelease,
+    handleSaveTransparencyPost,
     mergeRemoteState,
     markNotificationRead,
     navigate,
@@ -1506,6 +1784,14 @@ export default function AdminPortal({ section }: { section: string }) {
     templateFileDraft,
     templateNameDraft,
     templateModalMode,
+    transparencyAttachmentUrlDraft,
+    transparencyCategoryDraft,
+    transparencyDescriptionDraft,
+    transparencyModalMode,
+    transparencyPostDateDraft,
+    transparencyPosts,
+    transparencyTitleDraft,
+    transparencyVisibilityDraft,
     removeNewsRelease,
     updateComplianceRemark,
     updateDocumentSubmission,
@@ -1515,8 +1801,11 @@ export default function AdminPortal({ section }: { section: string }) {
     updateTransparencyPost,
     updateNewsReleaseInSupabase,
     resetNewsReleaseForm,
+    resetTransparencyForm,
     savingNewsRelease,
+    savingTransparencyPost,
     startEditingNewsRelease,
+    startEditingTransparencyPost,
     validDocumentTypeIds,
     savingTemplate,
     uploadingTemplateId,

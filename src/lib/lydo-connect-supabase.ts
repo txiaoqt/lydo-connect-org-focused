@@ -1105,6 +1105,82 @@ export const deleteNewsReleaseInSupabase = async (newsReleaseId: string) => {
   if (error) throw new Error(error.message);
 };
 
+export const createTransparencyPostInSupabase = async (params: {
+  title: string;
+  description: string;
+  category: string;
+  attachmentUrl: string;
+  postDate: string;
+  visibilityStatus: TransparencyPost["visibilityStatus"];
+}) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("create_admin_transparency_post", {
+    _session_token: adminSession.sessionToken,
+    _title: params.title.trim(),
+    _description: params.description.trim(),
+    _category: params.category.trim(),
+    _attachment_url: params.attachmentUrl.trim(),
+    _post_date: params.postDate,
+    _visibility_status: params.visibilityStatus,
+  });
+
+  const createdRow = Array.isArray(data) ? data[0] : null;
+  if (error || !createdRow) throw new Error(error?.message ?? "Failed to create the transparency post.");
+  return mapTransparencyPost(createdRow as TransparencyPostRow);
+};
+
+export const updateTransparencyPostInSupabase = async (
+  postId: string,
+  patch: Partial<Pick<TransparencyPost, "title" | "description" | "category" | "attachmentUrl" | "postDate" | "visibilityStatus">>,
+) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("update_admin_transparency_post", {
+    _session_token: adminSession.sessionToken,
+    _post_id: postId,
+    _title: patch.title?.trim() ?? null,
+    _description: patch.description?.trim() ?? null,
+    _category: patch.category?.trim() ?? null,
+    _attachment_url: patch.attachmentUrl?.trim() ?? null,
+    _post_date: patch.postDate ?? null,
+    _visibility_status: patch.visibilityStatus ?? null,
+  });
+
+  const updatedRow = Array.isArray(data) ? data[0] : null;
+  if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the transparency post.");
+  return mapTransparencyPost(updatedRow as TransparencyPostRow);
+};
+
+export const deleteTransparencyPostInSupabase = async (postId: string) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { error } = await supabase!.rpc("delete_admin_transparency_post", {
+    _session_token: adminSession.sessionToken,
+    _post_id: postId,
+  });
+  if (error) throw new Error(error.message);
+};
+
+export const createAdminActivityLogInSupabase = async (params: {
+  organizationId?: string;
+  action: string;
+  relatedType: string;
+  relatedId?: string;
+  description: string;
+}) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("create_admin_activity_log", {
+    _session_token: adminSession.sessionToken,
+    _organization_id: params.organizationId || null,
+    _action: params.action.trim(),
+    _related_type: params.relatedType.trim(),
+    _related_id: params.relatedId || null,
+    _description: params.description.trim(),
+  });
+
+  const createdRow = Array.isArray(data) ? data[0] : null;
+  if (error || !createdRow) throw new Error(error?.message ?? "Failed to create the activity log.");
+  return mapActivityLog(createdRow as ActivityLogRow);
+};
+
 export const updateLiquidationReportInSupabase = async (
   liquidationReportId: string,
   patch: Partial<Omit<LiquidationReport, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy" | "budgetRequestId">>,
