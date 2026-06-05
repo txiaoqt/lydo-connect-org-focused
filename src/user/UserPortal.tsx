@@ -57,6 +57,21 @@ const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
 ]);
 const ADMIN_RECIPIENT_ID = "admin-demo";
 const createNotificationId = () => `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const getOrganizationProfileCompletionCount = (profile?: OrganizationProfile | null) =>
+  [
+    profile?.organizationName?.trim(),
+    profile?.organizationEmail?.trim(),
+    profile?.contactNumber?.trim(),
+    profile?.barangay?.trim(),
+    profile?.majorClassification?.trim(),
+    profile?.subClassification?.trim(),
+    profile?.advocacies?.length ? "advocacies" : "",
+    profile?.adviserName?.trim(),
+    profile?.representativeName?.trim(),
+    profile?.address?.trim(),
+  ].filter(Boolean).length;
+const isOrganizationProfileComplete = (profile?: OrganizationProfile | null) =>
+  getOrganizationProfileCompletionCount(profile) === 10;
 
 const createBlankOrganizationProfile = (userId: string): OrganizationProfile => ({
   id: `draft-${userId || "organization"}`,
@@ -118,6 +133,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [ocrPreviewOpen, setOcrPreviewOpen] = useState(false);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
+  const [profileRequiredModalOpen, setProfileRequiredModalOpen] = useState(false);
   const [savingBudgetRequest, setSavingBudgetRequest] = useState(false);
   const [budgetFileDraft, setBudgetFileDraft] = useState<File | null>(null);
   const [budgetForm, setBudgetForm] = useState<BudgetRequest>(() =>
@@ -131,7 +147,7 @@ export default function UserPortal({ section }: { section: string }) {
     documentTypeId: string;
     documentTypeName: string;
     file: File;
-    result: DocumentOcrScanResult;
+    result: DocumentOcrScanResult | null;
   } | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
   const [profileDraft, setProfileDraft] = useState<OrganizationProfile>(
@@ -164,7 +180,7 @@ export default function UserPortal({ section }: { section: string }) {
   }, [ocrPreviewUrl]);
 
   useEffect(() => {
-    if (!ocrPreviewOpen || ocrPreviewUrl || !pendingDocumentScan) return;
+    if (!ocrPreviewOpen || ocrPreviewUrl || !pendingDocumentScan?.result) return;
     setOcrPreviewUrl(URL.createObjectURL(pendingDocumentScan.file));
   }, [ocrPreviewOpen, ocrPreviewUrl, pendingDocumentScan]);
 
@@ -227,38 +243,9 @@ export default function UserPortal({ section }: { section: string }) {
     [templateDocuments],
   );
   const completedDocs = docFiles.filter((file) => file.validationStatus === "correct").length;
-  const profilePercent = currentProfile
-    ? getReadiness(
-        [
-          currentProfile.organizationName,
-          currentProfile.organizationEmail,
-          currentProfile.contactNumber,
-          currentProfile.barangay,
-          currentProfile.majorClassification,
-          currentProfile.subClassification,
-          currentProfile.advocacies.length > 0 ? "advocacies" : "",
-          currentProfile.adviserName,
-          currentProfile.representativeName,
-          currentProfile.address,
-        ].filter(Boolean).length,
-        10,
-      )
-    : 0;
-  const profileDraftPercent = getReadiness(
-    [
-      profileDraft.organizationName,
-      profileDraft.organizationEmail,
-      profileDraft.contactNumber,
-      profileDraft.barangay,
-      profileDraft.majorClassification,
-      profileDraft.subClassification,
-      profileDraft.advocacies.length > 0 ? "advocacies" : "",
-      profileDraft.adviserName,
-      profileDraft.representativeName,
-      profileDraft.address,
-    ].filter(Boolean).length,
-    10,
-  );
+  const profilePercent = getReadiness(getOrganizationProfileCompletionCount(currentProfile), 10);
+  const profileDraftPercent = getReadiness(getOrganizationProfileCompletionCount(profileDraft), 10);
+  const profileComplete = isOrganizationProfileComplete(currentProfile);
   const documentsPercent = getReadiness(completedDocs, templateDocuments.length);
   const budgetPercent = latestBudget ? getReadiness(approvedBudgetStatuses.has(latestBudget.status) ? 1 : 0, 1) : 0;
   const liquidationPercent = latestLiquidation ? getReadiness(latestLiquidation.status === "completed_liquidated" ? 1 : 0, 1) : 0;
@@ -349,19 +336,45 @@ export default function UserPortal({ section }: { section: string }) {
     setOcrPreviewUrl("");
   };
 
+  const ensureCompletedOrganizationProfile = () => {
+    if (profileComplete) return true;
+    setProfileRequiredModalOpen(true);
+    return false;
+  };
+
   const handleDocumentUpload = async (documentTypeName: string, file: File | null) => {
     if (!file) return;
+    if (!ensureCompletedOrganizationProfile()) return;
 
     const localDocumentType = templateDocuments.find((documentType) => documentType.name === documentTypeName);
     if (!localDocumentType) return;
 
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
+    const isSpreadsheet =
+      file.name.toLowerCase().endsWith(".xls") ||
+      file.name.toLowerCase().endsWith(".xlsx") ||
+      file.type === "application/vnd.ms-excel" ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (!isPdf && !isSpreadsheet) {
       toast({
-        title: "PDF only",
-        description: "Please upload a PDF file. Other file types are not accepted for document submission.",
+        title: "Unsupported file type",
+        description: "Please upload a PDF, XLS, or XLSX file for document submission.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (isSpreadsheet) {
+      setPendingDocumentScan({
+        documentTypeId: localDocumentType.id,
+        documentTypeName,
+        file,
+        result: null,
+      });
+      setOcrPreviewUrl("");
+      setOcrPreviewOpen(false);
+      setConfirmSubmitOpen(true);
+      setSubmissionSuccessOpen(false);
       return;
     }
 
@@ -394,7 +407,8 @@ export default function UserPortal({ section }: { section: string }) {
 
   const submitScannedDocument = async () => {
     if (!pendingDocumentScan || !user) return;
-    if (!pendingDocumentScan.result.canSubmit) {
+    if (!ensureCompletedOrganizationProfile()) return;
+    if (pendingDocumentScan.result && !pendingDocumentScan.result.canSubmit) {
       toast({
         title: "Reupload required",
         description: "The OCR scan did not meet the approval threshold. Please upload a cleaner PDF.",
@@ -406,18 +420,23 @@ export default function UserPortal({ section }: { section: string }) {
     setSubmittingDocumentId(pendingDocumentScan.documentTypeId);
 
     try {
-      const warningNotes = pendingDocumentScan.result.issues
-        .filter((issue) => issue.severity === "warning")
-        .map((issue) => issue.title)
-        .join("; ");
+      const warningNotes =
+        pendingDocumentScan.result?.issues
+          .filter((issue) => issue.severity === "warning")
+          .map((issue) => issue.title)
+          .join("; ") ?? "";
 
       const submissionResult = await submitOrganizationDocumentToSupabase({
         documentTypeName: pendingDocumentScan.documentTypeName,
         file: pendingDocumentScan.file,
-        ocrText: pendingDocumentScan.result.text,
-        ocrConfidence: pendingDocumentScan.result.confidence,
+        ocrText: pendingDocumentScan.result?.text ?? "",
+        ocrConfidence: pendingDocumentScan.result?.confidence ?? 0,
         validationStatus: "correct",
-        adminRemarks: warningNotes ? `OCR review notes: ${warningNotes}` : "Awaiting admin review.",
+        adminRemarks: warningNotes
+          ? `OCR review notes: ${warningNotes}`
+          : pendingDocumentScan.result
+            ? "Awaiting admin review."
+            : "Spreadsheet uploaded and awaiting admin review.",
       });
 
       updateDocumentFile(submissionResult.file.id, submissionResult.file);
@@ -438,7 +457,9 @@ export default function UserPortal({ section }: { section: string }) {
       setSubmissionSuccessOpen(true);
       toast({
         title: "Document submitted",
-        description: "The OCR-checked PDF has been submitted for admin approval.",
+        description: pendingDocumentScan.result
+          ? "The OCR-checked PDF has been submitted for admin approval."
+          : "The spreadsheet has been submitted for admin approval.",
       });
     } catch (error) {
       toast({
@@ -731,7 +752,7 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardTitle className="text-base">Next Action Needed</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <p>{submission?.status === "under_admin_review" ? "Wait for admin review remarks." : "Complete the remaining required documents."}</p>
+                      <p>{submission?.status === "under_admin_review" ? "Wait for admin review remarks." : "Complete the remaining required documents."}</p>
                     <p>
                       {latestBudget?.status === "approved_for_ftf_green"
                         ? "Prepare hard copies for face-to-face submission."
@@ -1021,7 +1042,7 @@ export default function UserPortal({ section }: { section: string }) {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">{documentType.description}</p>
-                          <p className="text-xs text-muted-foreground">Primary file type: PDF</p>
+                          <p className="text-xs text-muted-foreground">Primary file type: PDF or XLSX</p>
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             {hasUploadedTemplateFile(template?.templateFileUrl, template?.templateFileName) ? (
                               <>
@@ -1063,10 +1084,15 @@ export default function UserPortal({ section }: { section: string }) {
                                 View Template
                               </Button>
                             )}
-                            <label>
+                            <label
+                              onClick={(event) => {
+                                if (ensureCompletedOrganizationProfile()) return;
+                                event.preventDefault();
+                              }}
+                            >
                               <input
                                 type="file"
-                                accept=".pdf,application/pdf"
+                                accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                 className="sr-only"
                                 onChange={(event) => {
                                   void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);
@@ -1083,7 +1109,7 @@ export default function UserPortal({ section }: { section: string }) {
                               >
                                 <span>
                                   <FileUp className="mr-2 h-4 w-4" />
-                                  {scanningDocumentId === documentType.id ? "Scanning..." : "Upload PDF"}
+                                  {scanningDocumentId === documentType.id ? "Scanning..." : "Upload Document"}
                                 </span>
                               </Button>
                             </label>
@@ -1114,7 +1140,7 @@ export default function UserPortal({ section }: { section: string }) {
                           </div>
                         ) : (
                           <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                            No submitted file yet. Upload a PDF to run the OCR scanner and open the preview modal.
+                            No submitted file yet. Upload a PDF to run the OCR scanner, or an XLS/XLSX file to submit it directly for review.
                           </div>
                         )}
                       </CardContent>
@@ -1134,7 +1160,7 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardTitle className="text-sm font-medium text-muted-foreground">What happens next</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 text-sm text-muted-foreground">
-                    Upload a PDF, inspect the OCR preview, confirm the details, and submit only when the confidence reaches 90% or higher.
+                    Upload a PDF to inspect the OCR preview before submission, or upload an XLS/XLSX file to send the spreadsheet directly for review.
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/20">
@@ -1145,7 +1171,7 @@ export default function UserPortal({ section }: { section: string }) {
                     {submission ? (
                       <p>{formatStatusLabel(submission.status)}</p>
                     ) : (
-                      <p>No submission has been created yet. It will appear automatically after the first confirmed PDF upload.</p>
+                      <p>No submission has been created yet. It will appear automatically after the first confirmed file upload.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -1608,6 +1634,7 @@ export default function UserPortal({ section }: { section: string }) {
     profile.address,
     profile.adviserName,
     profile.barangay,
+    profileComplete,
     profile.contactNumber,
     profile.facebookPageUrl,
     profile.organizationEmail,
@@ -1693,7 +1720,7 @@ export default function UserPortal({ section }: { section: string }) {
         </DialogContent>
       </Dialog>
       <Dialog
-        open={ocrPreviewOpen && Boolean(pendingDocumentScan)}
+        open={ocrPreviewOpen && Boolean(pendingDocumentScan?.result)}
         onOpenChange={(open) => {
           setOcrPreviewOpen(open);
           if (!open) {
@@ -1713,7 +1740,7 @@ export default function UserPortal({ section }: { section: string }) {
               </DialogHeader>
             </div>
 
-            {pendingDocumentScan ? (
+            {pendingDocumentScan?.result ? (
               <div className="space-y-5 px-4 py-5 sm:px-6">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <Card className="bg-muted/20">
@@ -1880,8 +1907,10 @@ export default function UserPortal({ section }: { section: string }) {
           </DialogHeader>
           <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
             {pendingDocumentScan
-              ? `${pendingDocumentScan.documentTypeName} will be submitted to LYDO and marked under review for admin approval.`
-              : "The selected PDF will be submitted for admin approval."}
+              ? pendingDocumentScan.result
+                ? `${pendingDocumentScan.documentTypeName} will be submitted to LYDO and marked under review for admin approval.`
+                : `${pendingDocumentScan.documentTypeName} will be submitted as a spreadsheet and marked under review for admin approval.`
+              : "The selected file will be submitted for admin approval."}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setConfirmSubmitOpen(false)}>
@@ -1934,6 +1963,24 @@ export default function UserPortal({ section }: { section: string }) {
               }}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={profileRequiredModalOpen} onOpenChange={setProfileRequiredModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Complete the Organization Profile First</DialogTitle>
+            <DialogDescription>
+              Finish filling up the organization profile first before uploading documents or submitting them for review.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            Required fields like the organization details, classifications, advocacies, adviser, representative, and address must be completed and saved first.
+          </div>
+          <DialogFooter>
+            <Button type="button" className="w-full sm:w-auto" onClick={() => setProfileRequiredModalOpen(false)}>
+              Okay
             </Button>
           </DialogFooter>
         </DialogContent>
