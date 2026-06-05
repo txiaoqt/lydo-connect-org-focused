@@ -1882,7 +1882,6 @@ export default function AdminPortal({ section }: { section: string }) {
     updateComplianceRemark,
     updateDocumentSubmission,
     updateNewsRelease,
-    updateOrganizationProfile,
     updateTemplate,
     updateTransparencyPost,
     updateNewsReleaseInSupabase,
