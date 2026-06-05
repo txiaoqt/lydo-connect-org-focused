@@ -1380,7 +1380,7 @@ begin
   update public.document_submission_files
   set
     admin_status = _status,
-    admin_remarks = coalesce(_admin_remarks, admin_remarks),
+    admin_remarks = coalesce(_admin_remarks, document_submission_files.admin_remarks),
     reviewed_at = _reviewed_at,
     updated_at = _reviewed_at
   where submission_id = _submission_id;
@@ -1391,7 +1391,7 @@ begin
     status = _status,
     reviewed_by = null,
     reviewed_at = _reviewed_at,
-    overall_remarks = coalesce(_overall_remarks, overall_remarks),
+    overall_remarks = coalesce(_overall_remarks, document_submissions.overall_remarks),
     updated_at = _reviewed_at
   where document_submissions.id = _submission_id
   returning
