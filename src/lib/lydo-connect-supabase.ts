@@ -1357,7 +1357,7 @@ export const resolveSupabaseFileUrl = async (value: string) => {
   const parsed = parseStorageUri(value);
   if (!parsed) return value;
 
-  const { data, error } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 60);
+  const { data, error } = await supabase.storage.from(parsed.bucket).createSignedUrl(parsed.path, 3600);
   if (error || !data?.signedUrl) throw new Error(error?.message ?? "Failed to create a file URL.");
   return data.signedUrl;
 };

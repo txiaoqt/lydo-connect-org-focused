@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Download, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -98,6 +98,8 @@ const formatVerifiedDateLabel = (value: string) => {
   }).format(date).toUpperCase();
 };
 
+const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
+
 const renderRegistrationDetailCard = (params: {
   title: string;
   value: string;
@@ -159,6 +161,8 @@ export default function AdminPortal({ section }: { section: string }) {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
+  const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
+  const [previewCanInline, setPreviewCanInline] = useState(false);
   const [newsModalMode, setNewsModalMode] = useState<"create" | "edit" | null>(null);
   const [editingNewsReleaseId, setEditingNewsReleaseId] = useState<string | null>(null);
   const [newsTitleDraft, setNewsTitleDraft] = useState("");
@@ -795,6 +799,15 @@ export default function AdminPortal({ section }: { section: string }) {
   };
 
   const openPreview = async (fileUrl: string, title: string) => {
+    if (!fileUrl.trim() || fileUrl.startsWith("#")) {
+      setPreviewUrl("");
+      setPreviewTitle(title);
+      setPreviewEmptyMessage("No file uploaded yet.");
+      setPreviewCanInline(false);
+      setPreviewModalOpen(true);
+      return;
+    }
+
     try {
       const resolvedUrl = await resolveSupabaseFileUrl(fileUrl);
       if (!resolvedUrl) {
@@ -803,6 +816,8 @@ export default function AdminPortal({ section }: { section: string }) {
 
       setPreviewUrl(resolvedUrl);
       setPreviewTitle(title);
+      setPreviewEmptyMessage("");
+      setPreviewCanInline(canInlinePreviewFile(title) || canInlinePreviewFile(resolvedUrl));
       setPreviewModalOpen(true);
     } catch (error) {
       toast({
@@ -2211,22 +2226,57 @@ export default function AdminPortal({ section }: { section: string }) {
                 if (!open) {
                   setPreviewUrl("");
                   setPreviewTitle("");
+                  setPreviewEmptyMessage("");
+                  setPreviewCanInline(false);
                 }
               }}
             >
-              <DialogContent className="max-w-5xl">
-                <DialogHeader>
-                  <DialogTitle>{previewTitle || "Template Preview"}</DialogTitle>
-                  <DialogDescription>Preview the uploaded template file here.</DialogDescription>
-                </DialogHeader>
-                <div className="h-[70vh] overflow-hidden rounded-md border border-border/70 bg-muted/20">
-                  {previewUrl ? (
-                    <iframe
-                      src={previewUrl}
-                      title={previewTitle || "Template preview"}
-                      className="h-full w-full"
-                    />
-                  ) : null}
+              <DialogContent className="h-[100dvh] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-auto sm:max-w-5xl sm:rounded-xl sm:border">
+                <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
+                  <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
+                    <DialogHeader>
+                      <DialogTitle className="max-w-[calc(100vw-5rem)] break-words text-lg leading-tight sm:max-w-none sm:text-xl">
+                        {previewTitle || "File Preview"}
+                      </DialogTitle>
+                      <DialogDescription className="text-sm">
+                        Preview the uploaded file here.
+                      </DialogDescription>
+                    </DialogHeader>
+                  </div>
+                  <div className="flex-1 overflow-hidden p-4 sm:p-6">
+                    <div className="h-[calc(100dvh-11rem)] overflow-hidden rounded-md border border-border/70 bg-muted/20 sm:h-[70vh]">
+                      {previewUrl && previewCanInline ? (
+                        <iframe
+                          src={previewUrl}
+                          title={previewTitle || "File preview"}
+                          className="h-full w-full"
+                        />
+                      ) : previewUrl ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                          <div className="space-y-2">
+                            <p className="text-base font-medium text-foreground">Preview not available in the browser</p>
+                            <p className="max-w-md text-sm text-muted-foreground">
+                              This file type cannot be shown inline. Open or download the file to review it in a compatible app.
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Button type="button" variant="outline" onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Open File
+                            </Button>
+                            <Button type="button" onClick={() => void openFile(previewUrl, previewTitle || "uploaded-file")}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download File
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid h-full place-items-center p-6 text-center text-sm text-muted-foreground">
+                          {previewEmptyMessage || "No file uploaded yet."}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>

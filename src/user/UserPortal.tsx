@@ -1144,6 +1144,37 @@ export default function UserPortal({ section }: { section: string }) {
                               </Button>
                             </label>
                           </div>
+                          {file ? (
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Uploaded file</p>
+                              <p className="mt-2 break-words text-sm font-medium text-foreground">{file.fileName}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Uploaded {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : "recently"}
+                              </p>
+                              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => void openPreview(file.fileUrl, file.fileName)}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Review Uploaded File
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full sm:w-auto"
+                                  onClick={() => void openFile(file.fileUrl, file.fileName)}
+                                >
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Download Uploaded File
+                                </Button>
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                         {file ? (
                           <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
@@ -1157,7 +1188,7 @@ export default function UserPortal({ section }: { section: string }) {
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                               <span className="text-muted-foreground">Submission state</span>
-                              <span className="text-right">{formatStatusLabel(submission?.status ?? "draft")}</span>
+                              <span className="text-right">{formatStatusLabel(file.adminStatus || submission?.status || "draft")}</span>
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                               <span className="text-muted-foreground">Admin remarks</span>
@@ -1170,7 +1201,7 @@ export default function UserPortal({ section }: { section: string }) {
                           </div>
                         ) : (
                           <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                            No submitted file yet. Upload a PDF to run the OCR scanner, or an XLS/XLSX file to submit it directly for review.
+                            No submitted file yet. Upload a PDF to run the OCR scanner and review it before submission.
                           </div>
                         )}
                       </CardContent>
