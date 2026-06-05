@@ -187,6 +187,13 @@ export default function AdminPortal({ section }: { section: string }) {
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [expandedDocumentFileIds, setExpandedDocumentFileIds] = useState<string[]>([]);
   const [expandedOcrFileIds, setExpandedOcrFileIds] = useState<string[]>([]);
+  const [selectedBudgetRequestId, setSelectedBudgetRequestId] = useState<string | null>(null);
+  const [selectedBudgetFileId, setSelectedBudgetFileId] = useState<string | null>(null);
+  const [budgetPreviewUrl, setBudgetPreviewUrl] = useState("");
+  const [budgetPreviewTitle, setBudgetPreviewTitle] = useState("");
+  const [budgetPreviewEmptyMessage, setBudgetPreviewEmptyMessage] = useState("");
+  const [budgetPreviewCanInline, setBudgetPreviewCanInline] = useState(false);
+  const [budgetPreviewLoading, setBudgetPreviewLoading] = useState(false);
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
   const documentPreviewSourceRef = useRef<Record<string, string>>({});
 
@@ -217,6 +224,27 @@ export default function AdminPortal({ section }: { section: string }) {
         return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
       }),
     [state.transparencyPosts],
+  );
+  const selectedBudgetRequest = useMemo(
+    () => state.budgetRequests.find((item) => item.id === selectedBudgetRequestId) ?? null,
+    [selectedBudgetRequestId, state.budgetRequests],
+  );
+  const selectedBudgetRequestFiles = useMemo(
+    () =>
+      selectedBudgetRequest
+        ? [...state.budgetRequestFiles]
+            .filter((file) => file.budgetRequestId === selectedBudgetRequest.id)
+            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+        : [],
+    [selectedBudgetRequest, state.budgetRequestFiles],
+  );
+  const selectedBudgetRequestFile = useMemo(
+    () => selectedBudgetRequestFiles.find((file) => file.id === selectedBudgetFileId) ?? selectedBudgetRequestFiles[0] ?? null,
+    [selectedBudgetRequestFiles, selectedBudgetFileId],
+  );
+  const selectedBudgetOrganization = useMemo(
+    () => state.organizationProfiles.find((org) => org.id === selectedBudgetRequest?.organizationId) ?? null,
+    [selectedBudgetRequest?.organizationId, state.organizationProfiles],
   );
   const validDocumentTypeIds = useMemo(
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
@@ -295,6 +323,56 @@ export default function AdminPortal({ section }: { section: string }) {
       isActive = false;
     };
   }, [documentPreviewUrls, state.documentSubmissionFiles]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!selectedBudgetRequestFile) {
+      setBudgetPreviewUrl("");
+      setBudgetPreviewEmptyMessage(selectedBudgetRequest ? "No budget request file was uploaded." : "");
+      setBudgetPreviewCanInline(false);
+      setBudgetPreviewLoading(false);
+      return;
+    }
+
+    const previewTitle = selectedBudgetRequestFile.fileName || selectedBudgetRequest.activityTitle || "Budget Request File";
+    setBudgetPreviewTitle(previewTitle);
+
+    if (!selectedBudgetRequestFile.fileUrl.trim()) {
+      setBudgetPreviewUrl("");
+      setBudgetPreviewEmptyMessage("No budget request file was uploaded.");
+      setBudgetPreviewCanInline(false);
+      setBudgetPreviewLoading(false);
+      return;
+    }
+
+    setBudgetPreviewLoading(true);
+    setBudgetPreviewUrl("");
+    setBudgetPreviewEmptyMessage("");
+
+    void (async () => {
+      try {
+        const resolvedUrl = await resolveSupabaseFileUrl(selectedBudgetRequestFile.fileUrl);
+        if (!isActive) return;
+        const finalUrl = resolvedUrl ?? "";
+        setBudgetPreviewUrl(finalUrl);
+        setBudgetPreviewCanInline(canInlinePreviewFile(previewTitle) || canInlinePreviewFile(finalUrl));
+      } catch (error) {
+        if (!isActive) return;
+        setBudgetPreviewUrl("");
+        setBudgetPreviewCanInline(false);
+        setBudgetPreviewEmptyMessage(
+          error instanceof Error ? error.message : "The budget request file preview could not be loaded right now.",
+        );
+      } finally {
+        if (isActive) setBudgetPreviewLoading(false);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedBudgetRequest, selectedBudgetRequestFile]);
 
   const refreshAdminState = async () => {
     const remoteSnapshot = (await loadAdminPortalSupabaseState()) ?? (await loadLydoConnectSupabaseState());
@@ -858,6 +936,124 @@ export default function AdminPortal({ section }: { section: string }) {
       toast({
         title: "Unable to open preview",
         description: error instanceof Error ? error.message : "The file preview could not be opened right now.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openBudgetRequestDetails = (requestId: string) => {
+    const requestFiles = [...state.budgetRequestFiles]
+      .filter((file) => file.budgetRequestId === requestId)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+
+    setSelectedBudgetRequestId(requestId);
+    setSelectedBudgetFileId(requestFiles[0]?.id ?? null);
+  };
+
+  const closeBudgetRequestDetails = () => {
+    setSelectedBudgetRequestId(null);
+    setSelectedBudgetFileId(null);
+    setBudgetPreviewUrl("");
+    setBudgetPreviewTitle("");
+    setBudgetPreviewEmptyMessage("");
+    setBudgetPreviewCanInline(false);
+    setBudgetPreviewLoading(false);
+  };
+
+  const performBudgetRequestStatusUpdate = async (
+    request: {
+      id: string;
+      organizationId: string;
+      organizationName: string;
+      submittedBy: string;
+      activityTitle: string;
+      requestedAmount: number;
+    },
+    action: "approve" | "needs_revision" | "reject",
+  ) => {
+    try {
+      if (action === "approve") {
+        await updateBudgetRequestInSupabase(request.id, {
+          status: "approved_for_ftf_green",
+          goSignalAt: new Date().toISOString(),
+          approvedAmount: request.requestedAmount,
+        });
+        await refreshAdminState();
+        notifyOrganizationUser({
+          userId: request.submittedBy,
+          organizationId: request.organizationId,
+          title: "Budget request approved",
+          message: "The admin approved your budget request and issued the go signal for the next step.",
+          type: "budget_go_signal",
+          relatedType: "budget_request",
+          relatedId: request.id,
+        });
+        await appendAuditLog(
+          "Approved budget request",
+          "budget_request",
+          request.id,
+          `Marked budget request "${request.activityTitle}" as approved for face-to-face green.`,
+          request.organizationId,
+        );
+        toast({
+          title: "Budget approved",
+          description: `${request.organizationName}'s budget request is now marked green.`,
+        });
+        return;
+      }
+
+      if (action === "needs_revision") {
+        await updateBudgetRequestInSupabase(request.id, { status: "needs_revision" });
+        await refreshAdminState();
+        notifyOrganizationUser({
+          userId: request.submittedBy,
+          organizationId: request.organizationId,
+          title: "Budget request needs revision",
+          message: "The admin reviewed your budget request and requested revisions before approval.",
+          type: "budget_revision",
+          relatedType: "budget_request",
+          relatedId: request.id,
+        });
+        await appendAuditLog(
+          "Budget request needs revision",
+          "budget_request",
+          request.id,
+          `Marked budget request "${request.activityTitle}" as needing revision.`,
+          request.organizationId,
+        );
+        toast({
+          title: "Revision requested",
+          description: `${request.organizationName} was asked to revise the budget request.`,
+        });
+        return;
+      }
+
+      await updateBudgetRequestInSupabase(request.id, { status: "rejected_red" });
+      await refreshAdminState();
+      notifyOrganizationUser({
+        userId: request.submittedBy,
+        organizationId: request.organizationId,
+        title: "Budget request rejected",
+        message: "The admin rejected your budget request. Please review the requirements and submit an updated request if needed.",
+        type: "budget_rejected",
+        relatedType: "budget_request",
+        relatedId: request.id,
+      });
+      await appendAuditLog(
+        "Rejected budget request",
+        "budget_request",
+        request.id,
+        `Rejected budget request "${request.activityTitle}".`,
+        request.organizationId,
+      );
+      toast({
+        title: "Budget rejected",
+        description: `${request.organizationName}'s budget request was rejected.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Unable to update budget",
+        description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
         variant: "destructive",
       });
     }
@@ -1560,130 +1756,274 @@ export default function AdminPortal({ section }: { section: string }) {
         );
       case "budget-utilization":
         return (
-          <PortalSection title="Budget Utilization" description="Budget request review and go-signal control.">
-            <div className="grid gap-4">
-              {state.budgetRequests.length ? (
-                state.budgetRequests.map((request) => (
-                <Card key={request.id} className="border-border/70">
-                  <CardContent className="grid gap-4 p-4 md:grid-cols-[1.5fr_1fr]">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{request.activityTitle}</p>
-                          <p className="text-sm text-muted-foreground">{request.activityDescription}</p>
+          <>
+            <PortalSection title="Budget Utilization" description="Budget request review and go-signal control.">
+              <div className="grid gap-4">
+                {state.budgetRequests.length ? (
+                  state.budgetRequests.map((request) => {
+                    const requestOrganization = state.organizationProfiles.find((org) => org.id === request.organizationId) ?? null;
+                    const requestFiles = state.budgetRequestFiles
+                      .filter((file) => file.budgetRequestId === request.id)
+                      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+
+                    return (
+                      <Card key={request.id} className="border-border/70">
+                        <CardContent className="grid gap-4 p-4 md:grid-cols-[1.6fr_0.9fr]">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-medium">{request.activityTitle}</p>
+                                <p className="text-sm text-muted-foreground">{request.activityDescription || "No description provided."}</p>
+                              </div>
+                              <PortalStatusBadge status={request.status} />
+                            </div>
+                            <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                              <p>Organization: {requestOrganization?.organizationName ?? "Unknown organization"}</p>
+                              <p>Requested: PHP {request.requestedAmount.toLocaleString()}</p>
+                              <p>Venue: {request.venue}</p>
+                              <p>Attached files: {requestFiles.length}</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground">Remarks: {request.remarks || "None"}</p>
+                          </div>
+                          <div className="flex items-start justify-end">
+                            <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openBudgetRequestDetails(request.id)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <PortalEmptyState title="No budget requests yet" description="Budget requests will appear here after an organization creates one." />
+                )}
+              </div>
+            </PortalSection>
+
+            <Dialog open={selectedBudgetRequest !== null} onOpenChange={(open) => { if (!open) closeBudgetRequestDetails(); }}>
+              <DialogContent className="max-w-5xl">
+                <DialogHeader>
+                  <DialogTitle>{selectedBudgetRequest?.activityTitle ?? "Budget Request Details"}</DialogTitle>
+                  <DialogDescription>Review organization details and attached files before updating the request status.</DialogDescription>
+                </DialogHeader>
+
+                {selectedBudgetRequest ? (
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          {renderRegistrationDetailCard({
+                            title: "Organization Name",
+                            value: selectedBudgetOrganization?.organizationName ?? "N/A",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Organization Email",
+                            value: selectedBudgetOrganization?.organizationEmail ?? "N/A",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Contact Number",
+                            value: selectedBudgetOrganization?.contactNumber ?? "N/A",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Barangay",
+                            value: selectedBudgetOrganization?.barangay ?? "N/A",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "District",
+                            value: selectedBudgetOrganization?.district || "N/A",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Submitted By",
+                            value: selectedBudgetRequest.submittedBy,
+                            wrap: true,
+                            className: "md:col-span-2",
+                          })}
                         </div>
-                        <PortalStatusBadge status={request.status} />
                       </div>
-                      <p className="text-sm text-muted-foreground">Requested: PHP {request.requestedAmount.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">Venue: {request.venue}</p>
-                    </div>
-                    <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
-                      <p>Remarks: {request.remarks || "None"}</p>
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void (async () => {
-                              try {
-                                await updateBudgetRequestInSupabase(request.id, {
-                                  status: "approved_for_ftf_green",
-                                  goSignalAt: new Date().toISOString(),
-                                  approvedAmount: request.requestedAmount,
-                                });
-                                await refreshAdminState();
-                                notifyOrganizationUser({
-                                  userId: request.submittedBy,
-                                  organizationId: request.organizationId,
-                                  title: "Budget request approved",
-                                  message: "The admin approved your budget request and issued the go signal for the next step.",
-                                  type: "budget_go_signal",
-                                  relatedType: "budget_request",
-                                  relatedId: request.id,
-                                });
-                                await appendAuditLog("Approved budget request", "budget_request", request.id, `Marked budget request "${request.activityTitle}" as approved for face-to-face green.`, request.organizationId);
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update budget",
-                                  description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
-                          }
-                        >
-                          Mark Green
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void (async () => {
-                              try {
-                                await updateBudgetRequestInSupabase(request.id, { status: "needs_revision" });
-                                await refreshAdminState();
-                                notifyOrganizationUser({
-                                  userId: request.submittedBy,
-                                  organizationId: request.organizationId,
-                                  title: "Budget request needs revision",
-                                  message: "The admin reviewed your budget request and requested revisions before approval.",
-                                  type: "budget_revision",
-                                  relatedType: "budget_request",
-                                  relatedId: request.id,
-                                });
-                                await appendAuditLog("Budget request needs revision", "budget_request", request.id, `Marked budget request "${request.activityTitle}" as needing revision.`, request.organizationId);
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update budget",
-                                  description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
-                          }
-                        >
-                          Needs Revision
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void (async () => {
-                              try {
-                                await updateBudgetRequestInSupabase(request.id, { status: "rejected_red" });
-                                await refreshAdminState();
-                                notifyOrganizationUser({
-                                  userId: request.submittedBy,
-                                  organizationId: request.organizationId,
-                                  title: "Budget request rejected",
-                                  message: "The admin rejected your budget request. Please review the requirements and submit an updated request if needed.",
-                                  type: "budget_rejected",
-                                  relatedType: "budget_request",
-                                  relatedId: request.id,
-                                });
-                                await appendAuditLog("Rejected budget request", "budget_request", request.id, `Rejected budget request "${request.activityTitle}".`, request.organizationId);
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update budget",
-                                  description: error instanceof Error ? error.message : "The budget request could not be updated right now.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
-                          }
-                        >
-                          Reject
-                        </Button>
+
+                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Request Details</p>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          {renderRegistrationDetailCard({ title: "Requested Amount", value: `PHP ${selectedBudgetRequest.requestedAmount.toLocaleString()}` })}
+                          {renderRegistrationDetailCard({
+                            title: "Approved Amount",
+                            value: `PHP ${selectedBudgetRequest.approvedAmount.toLocaleString()}`,
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Released Amount",
+                            value: `PHP ${selectedBudgetRequest.releasedAmount.toLocaleString()}`,
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Activity Date",
+                            value: selectedBudgetRequest.activityDate || "N/A",
+                          })}
+                          {renderRegistrationDetailCard({ title: "Venue", value: selectedBudgetRequest.venue, wrap: true, className: "md:col-span-2" })}
+                          {renderRegistrationDetailCard({
+                            title: "Purpose Category",
+                            value: selectedBudgetRequest.purposeCategory || "N/A",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Go Signal",
+                            value: selectedBudgetRequest.goSignalAt || "Pending",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Hard Copy Submitted",
+                            value: selectedBudgetRequest.hardCopySubmittedAt || "Pending",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Release Date",
+                            value: selectedBudgetRequest.releaseDate || "Pending",
+                          })}
+                          {renderRegistrationDetailCard({
+                            title: "Remarks",
+                            value: selectedBudgetRequest.remarks || "None",
+                            wrap: true,
+                            className: "md:col-span-2",
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-                ))
-              ) : (
-                <PortalEmptyState title="No budget requests yet" description="Budget requests will appear here after an organization creates one." />
-              )}
-            </div>
-          </PortalSection>
+
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Attached Files</p>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {selectedBudgetRequestFiles.length
+                                ? `${selectedBudgetRequestFiles.length} file${selectedBudgetRequestFiles.length === 1 ? "" : "s"} uploaded.`
+                                : "No attached files were uploaded for this request."}
+                            </p>
+                          </div>
+                          <PortalStatusBadge status={selectedBudgetRequest.status} />
+                        </div>
+
+                        {selectedBudgetRequestFiles.length ? (
+                          <div className="mt-4 space-y-3">
+                            <div className="flex flex-wrap gap-2">
+                              {selectedBudgetRequestFiles.map((file) => (
+                                <Button
+                                  key={file.id}
+                                  type="button"
+                                  size="sm"
+                                  variant={selectedBudgetRequestFile?.id === file.id ? "default" : "outline"}
+                                  onClick={() => setSelectedBudgetFileId(file.id)}
+                                >
+                                  {file.fileName}
+                                </Button>
+                              ))}
+                            </div>
+
+                            <div className="rounded-xl border border-border/70 bg-background p-3">
+                              {budgetPreviewLoading ? (
+                                <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
+                              ) : budgetPreviewUrl && budgetPreviewCanInline ? (
+                                <iframe
+                                  title={budgetPreviewTitle || "Budget Request Preview"}
+                                  src={budgetPreviewUrl}
+                                  className="h-[30rem] w-full rounded-md border-0 bg-background"
+                                />
+                              ) : budgetPreviewUrl ? (
+                                <div className="space-y-3 p-3 text-sm text-muted-foreground">
+                                  <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
+                                  <Button type="button" variant="outline" onClick={() => window.open(budgetPreviewUrl, "_blank", "noopener,noreferrer")}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Open File
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="grid min-h-[18rem] place-items-center rounded-md border border-dashed border-border/70 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                                  {budgetPreviewEmptyMessage || "No budget request file was uploaded."}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-sm text-muted-foreground">
+                            No attached budget request files were submitted.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Current status: <span className="font-medium text-foreground">{selectedBudgetRequest.status}</span>
+                        </p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              void performBudgetRequestStatusUpdate(
+                                {
+                                  id: selectedBudgetRequest.id,
+                                  organizationId: selectedBudgetRequest.organizationId,
+                                  organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                  submittedBy: selectedBudgetRequest.submittedBy,
+                                  activityTitle: selectedBudgetRequest.activityTitle,
+                                  requestedAmount: selectedBudgetRequest.requestedAmount,
+                                },
+                                "approve",
+                              )
+                            }
+                          >
+                            Mark Green
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              void performBudgetRequestStatusUpdate(
+                                {
+                                  id: selectedBudgetRequest.id,
+                                  organizationId: selectedBudgetRequest.organizationId,
+                                  organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                  submittedBy: selectedBudgetRequest.submittedBy,
+                                  activityTitle: selectedBudgetRequest.activityTitle,
+                                  requestedAmount: selectedBudgetRequest.requestedAmount,
+                                },
+                                "needs_revision",
+                              )
+                            }
+                          >
+                            Needs Revision
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              void performBudgetRequestStatusUpdate(
+                                {
+                                  id: selectedBudgetRequest.id,
+                                  organizationId: selectedBudgetRequest.organizationId,
+                                  organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                  submittedBy: selectedBudgetRequest.submittedBy,
+                                  activityTitle: selectedBudgetRequest.activityTitle,
+                                  requestedAmount: selectedBudgetRequest.requestedAmount,
+                                },
+                                "reject",
+                              )
+                            }
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={closeBudgetRequestDetails}>
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         );
       case "liquidation-monitoring":
         return (

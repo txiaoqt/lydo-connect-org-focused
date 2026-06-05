@@ -1061,6 +1061,27 @@ export const updateBudgetRequestInSupabase = async (
   budgetRequestId: string,
   patch: Partial<Omit<BudgetRequest, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy">>,
 ) => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const adminSession = readAdminSession();
+  if (adminSession?.sessionToken) {
+    const { data, error } = await supabase.rpc("update_admin_budget_request", {
+      _session_token: adminSession.sessionToken,
+      _budget_request_id: budgetRequestId,
+      _status: patch.status ?? null,
+      _approved_amount: patch.approvedAmount ?? null,
+      _released_amount: patch.releasedAmount ?? null,
+      _release_date: patch.releaseDate || null,
+      _remarks: patch.remarks?.trim() || null,
+      _go_signal_at: patch.goSignalAt || null,
+      _hard_copy_submitted_at: patch.hardCopySubmittedAt || null,
+    });
+
+    const updatedRow = Array.isArray(data) ? data[0] : null;
+    if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the budget request.");
+    return mapBudgetRequest(updatedRow as BudgetRequestRow);
+  }
+
   await getAuthenticatedOrganizationContext();
 
   const payload: Record<string, unknown> = {};
@@ -1308,6 +1329,26 @@ export const updateLiquidationReportInSupabase = async (
   liquidationReportId: string,
   patch: Partial<Omit<LiquidationReport, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy" | "budgetRequestId">>,
 ) => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const adminSession = readAdminSession();
+  if (adminSession?.sessionToken) {
+    const { data, error } = await supabase.rpc("update_admin_liquidation_report", {
+      _session_token: adminSession.sessionToken,
+      _liquidation_report_id: liquidationReportId,
+      _status: patch.status ?? null,
+      _remarks: patch.remarks?.trim() || null,
+      _go_signal_at: patch.goSignalAt || null,
+      _deadline_at: patch.deadlineAt || null,
+      _hard_copy_submitted_at: patch.hardCopySubmittedAt || null,
+      _completed_at: patch.completedAt || null,
+    });
+
+    const updatedRow = Array.isArray(data) ? data[0] : null;
+    if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the liquidation report.");
+    return mapLiquidationReport(updatedRow as LiquidationReportRow);
+  }
+
   await getAuthenticatedOrganizationContext();
 
   const payload: Record<string, unknown> = {};
