@@ -1624,23 +1624,33 @@ export default function UserPortal({ section }: { section: string }) {
           }
         }}
       >
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>{previewTitle || "Template Preview"}</DialogTitle>
-            <DialogDescription>Preview the uploaded template file here.</DialogDescription>
-          </DialogHeader>
-          <div className="h-[70vh] overflow-hidden rounded-md border border-border/70 bg-muted/20">
-            {previewUrl ? (
-              <iframe
-                src={previewUrl}
-                title={previewTitle || "Template preview"}
-                className="h-full w-full"
-              />
-            ) : (
-              <div className="grid h-full place-items-center p-6 text-center text-sm text-muted-foreground">
-                {previewEmptyMessage || "No file uploaded yet."}
+        <DialogContent className="h-[100dvh] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-auto sm:max-w-5xl sm:rounded-xl sm:border">
+          <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
+            <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
+              <DialogHeader>
+                <DialogTitle className="max-w-[calc(100vw-5rem)] break-words text-lg leading-tight sm:max-w-none sm:text-xl">
+                  {previewTitle || "Template Preview"}
+                </DialogTitle>
+                <DialogDescription className="text-sm">
+                  Preview the uploaded template file here.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="flex-1 overflow-hidden p-4 sm:p-6">
+              <div className="h-[calc(100dvh-11rem)] overflow-hidden rounded-md border border-border/70 bg-muted/20 sm:h-[70vh]">
+                {previewUrl ? (
+                  <iframe
+                    src={previewUrl}
+                    title={previewTitle || "Template preview"}
+                    className="h-full w-full"
+                  />
+                ) : (
+                  <div className="grid h-full place-items-center p-6 text-center text-sm text-muted-foreground">
+                    {previewEmptyMessage || "No file uploaded yet."}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
