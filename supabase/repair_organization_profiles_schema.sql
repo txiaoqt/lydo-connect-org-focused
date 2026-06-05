@@ -11,6 +11,7 @@ alter table if exists public.organization_profiles
   add column if not exists address text,
   add column if not exists facebook_page_url text,
   add column if not exists profile_status public.profile_status,
+  add column if not exists verified_at timestamptz,
   add column if not exists internal_notes text;
 
 update public.organization_profiles

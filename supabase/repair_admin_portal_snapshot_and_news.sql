@@ -1,6 +1,9 @@
 -- Run this in the Supabase SQL editor for existing LYDO Connect projects.
 -- It adds the admin snapshot RPC used by the admin portal after sign-in.
 
+alter table if exists public.organization_profiles
+  add column if not exists verified_at timestamptz;
+
 create or replace function public.get_admin_portal_snapshot(_session_token text)
 returns jsonb
 language plpgsql
@@ -435,5 +438,79 @@ begin
     activity_logs.related_id,
     activity_logs.description,
     activity_logs.created_at;
+end;
+$$;
+
+create or replace function public.update_admin_organization_profile_review(
+  _session_token text,
+  _organization_profile_id uuid,
+  _profile_status public.profile_status,
+  _verified_at timestamptz default null
+)
+returns table (
+  id uuid,
+  user_id uuid,
+  organization_name text,
+  organization_email citext,
+  contact_number text,
+  barangay text,
+  major_classification text,
+  sub_classification text,
+  advocacies text[],
+  adviser_name text,
+  representative_name text,
+  address text,
+  facebook_page_url text,
+  profile_status public.profile_status,
+  verified_at timestamptz,
+  internal_notes text,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  update public.organization_profiles
+  set
+    profile_status = _profile_status,
+    verified_at = case
+      when _profile_status = 'verified'::public.profile_status then coalesce(_verified_at, now())
+      else null
+    end,
+    updated_at = now()
+  where organization_profiles.id = _organization_profile_id
+  returning
+    organization_profiles.id,
+    organization_profiles.user_id,
+    organization_profiles.organization_name,
+    organization_profiles.organization_email,
+    organization_profiles.contact_number,
+    organization_profiles.barangay,
+    organization_profiles.major_classification,
+    organization_profiles.sub_classification,
+    organization_profiles.advocacies,
+    organization_profiles.adviser_name,
+    organization_profiles.representative_name,
+    organization_profiles.address,
+    organization_profiles.facebook_page_url,
+    organization_profiles.profile_status,
+    organization_profiles.verified_at,
+    organization_profiles.internal_notes,
+    organization_profiles.created_at,
+    organization_profiles.updated_at;
 end;
 $$;

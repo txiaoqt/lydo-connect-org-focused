@@ -257,6 +257,7 @@ export type OrganizationProfile = {
   address: string;
   facebookPageUrl: string;
   profileStatus: ProfileStatus;
+  verifiedAt: string;
   internalNotes: string;
   createdAt: string;
   updatedAt: string;

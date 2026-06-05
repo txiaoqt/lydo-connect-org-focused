@@ -50,6 +50,7 @@ type OrganizationProfileRow = {
   address: string | null;
   facebook_page_url: string | null;
   profile_status: OrganizationProfile["profileStatus"];
+  verified_at: string | null;
   internal_notes: string | null;
   created_at: string;
   updated_at: string;
@@ -279,6 +280,7 @@ const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfil
   address: row.address ?? "",
   facebookPageUrl: row.facebook_page_url ?? "",
   profileStatus: row.profile_status,
+  verifiedAt: row.verified_at ?? "",
   internalNotes: row.internal_notes ?? "",
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -701,13 +703,14 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
     address: profile.address.trim() || null,
     facebook_page_url: profile.facebookPageUrl.trim() || null,
     profile_status: profile.profileStatus,
+    verified_at: profile.verifiedAt.trim() || null,
     internal_notes: profile.internalNotes.trim() || null,
   };
 
   const { data, error } = await supabase
     .from("organization_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("id,user_id,organization_name,organization_email,contact_number,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,internal_notes,created_at,updated_at")
+    .select("id,user_id,organization_name,organization_email,contact_number,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,verified_at,internal_notes,created_at,updated_at")
     .single();
 
   if (error || !data) {
@@ -721,6 +724,23 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
   }
 
   return mapOrganizationProfile(data as OrganizationProfileRow);
+};
+
+export const updateOrganizationProfileReviewInSupabase = async (
+  organizationProfileId: string,
+  patch: Pick<OrganizationProfile, "profileStatus" | "verifiedAt">,
+) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("update_admin_organization_profile_review", {
+    _session_token: adminSession.sessionToken,
+    _organization_profile_id: organizationProfileId,
+    _profile_status: patch.profileStatus,
+    _verified_at: patch.verifiedAt || null,
+  });
+
+  const updatedRow = Array.isArray(data) ? data[0] : null;
+  if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the organization review status.");
+  return mapOrganizationProfile(updatedRow as OrganizationProfileRow);
 };
 
 const ensureDocumentSubmission = async (organizationId: string, userId: string) => {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ArrowLeft, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Bell, ArrowLeft, CheckCircle2, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -34,6 +34,7 @@ import {
   updateTransparencyPostInSupabase,
   updateLiquidationReportInSupabase,
   updateNewsReleaseInSupabase,
+  updateOrganizationProfileReviewInSupabase,
   updateTemplateRecordInSupabase,
   uploadTemplateDocumentToSupabase,
 } from "@/lib/lydo-connect-supabase";
@@ -85,10 +86,21 @@ const renderAdvocacyChips = (advocacies: string[]) =>
     <span className="text-sm text-muted-foreground">N/A</span>
   );
 
+const formatVerifiedDateLabel = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "Asia/Manila",
+  }).format(date).toUpperCase();
+};
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -659,20 +671,69 @@ export default function AdminPortal({ section }: { section: string }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        updateOrganizationProfile(selectedOrg.id, { profileStatus: "verified" });
-                        appendAuditLog("Verified organization", "organization_profile", selectedOrg.id, `Marked ${selectedOrg.organizationName} as verified.`);
-                      }}
+                      onClick={() =>
+                        void (async () => {
+                          try {
+                            const verifiedAt = new Date().toISOString();
+                            await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
+                              profileStatus: "verified",
+                              verifiedAt,
+                            });
+                            await refreshAdminState();
+                            await appendAuditLog(
+                              "Verified organization",
+                              "organization_profile",
+                              selectedOrg.id,
+                              `Marked ${selectedOrg.organizationName} as verified on ${formatVerifiedDateLabel(verifiedAt)}.`,
+                              selectedOrg.id,
+                            );
+                            toast({
+                              title: "Organization verified",
+                              description: `${selectedOrg.organizationName} is now marked as verified.`,
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Unable to verify organization",
+                              description: error instanceof Error ? error.message : "The organization could not be verified right now.",
+                              variant: "destructive",
+                            });
+                          }
+                        })()
+                      }
                     >
                       Mark Verified
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        updateOrganizationProfile(selectedOrg.id, { profileStatus: "needs_update" });
-                        appendAuditLog("Marked needs update", "organization_profile", selectedOrg.id, `Marked ${selectedOrg.organizationName} for an update.`);
-                      }}
+                      onClick={() =>
+                        void (async () => {
+                          try {
+                            await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
+                              profileStatus: "needs_update",
+                              verifiedAt: "",
+                            });
+                            await refreshAdminState();
+                            await appendAuditLog(
+                              "Marked needs update",
+                              "organization_profile",
+                              selectedOrg.id,
+                              `Marked ${selectedOrg.organizationName} for an organization profile update.`,
+                              selectedOrg.id,
+                            );
+                            toast({
+                              title: "Organization marked for update",
+                              description: `${selectedOrg.organizationName} needs to update the submitted profile details.`,
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Unable to update review status",
+                              description: error instanceof Error ? error.message : "The review status could not be updated right now.",
+                              variant: "destructive",
+                            });
+                          }
+                        })()
+                      }
                     >
                       Needs Update
                     </Button>
@@ -686,12 +747,26 @@ export default function AdminPortal({ section }: { section: string }) {
                     ["Barangay", selectedOrg.barangay],
                     ["Major Classification", selectedOrg.majorClassification || "N/A"],
                     ["Sub Classification", selectedOrg.subClassification || "N/A"],
+                    ["Representative", selectedOrg.representativeName || "N/A"],
+                    ["Adviser", selectedOrg.adviserName || "N/A"],
+                    ["Facebook Page", selectedOrg.facebookPageUrl || "N/A"],
+                    ["Date of Creation", selectedOrg.verifiedAt ? formatVerifiedDateLabel(selectedOrg.verifiedAt) : "Pending verification"],
                   ].map(([label, value]) => (
                     <div key={label} className="rounded-md border border-border/70 bg-muted/20 p-3">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{label}</p>
                       <p className="mt-1 text-sm font-medium">{value}</p>
                     </div>
                   ))}
+                </div>
+                {selectedOrg.profileStatus === "verified" && selectedOrg.verifiedAt ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4" />
+                    VERIFIED ON {formatVerifiedDateLabel(selectedOrg.verifiedAt)}
+                  </div>
+                ) : null}
+                <div className="rounded-md border border-border/70 bg-muted/20 p-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Address</p>
+                  <p className="mt-1 text-sm font-medium">{selectedOrg.address || "N/A"}</p>
                 </div>
                 <div className="rounded-md border border-border/70 bg-muted/20 p-3">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
@@ -854,6 +929,10 @@ export default function AdminPortal({ section }: { section: string }) {
                           <p>{org.barangay}</p>
                           <p>{org.majorClassification || "N/A"}</p>
                           <p>{org.subClassification || "N/A"}</p>
+                          <p>Representative: {org.representativeName || "N/A"}</p>
+                          <p>Adviser: {org.adviserName || "N/A"}</p>
+                          <p>Facebook: {org.facebookPageUrl || "N/A"}</p>
+                          <p>Date of Creation: {org.verifiedAt ? formatVerifiedDateLabel(org.verifiedAt) : "Pending verification"}</p>
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
                             <div className="mt-2">{renderAdvocacyChips(org.advocacies)}</div>
@@ -889,11 +968,18 @@ export default function AdminPortal({ section }: { section: string }) {
                           <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Name / Email</p>
                           <p className="mt-1 font-medium">{organization.organizationName}</p>
                           <p className="text-sm text-muted-foreground">{organization.organizationEmail}</p>
+                          <p className="text-sm text-muted-foreground">{organization.contactNumber}</p>
+                          <p className="text-sm text-muted-foreground">{organization.barangay}</p>
                         </div>
                         <div>
                           <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Role</p>
                           <p className="mt-1 font-medium">Organization User</p>
                           <p className="text-sm text-muted-foreground">Linked organization account</p>
+                          <p className="text-sm text-muted-foreground">Representative: {organization.representativeName || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">Adviser: {organization.adviserName || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">Address: {organization.address || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">Facebook: {organization.facebookPageUrl || "N/A"}</p>
+                          <p className="text-sm text-muted-foreground">Date of Creation: {organization.verifiedAt ? formatVerifiedDateLabel(organization.verifiedAt) : "Pending verification"}</p>
                         </div>
                       </div>
                     </CardContent>

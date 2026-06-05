@@ -50,6 +50,19 @@ const hasUploadedTemplateFile = (fileUrl?: string, fileName?: string) =>
   Boolean(fileName?.trim() && fileUrl?.trim() && !fileUrl.startsWith("#"));
 const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.replaceAll("_", " ");
 const formatCurrency = (value: number) => `PHP ${value.toLocaleString()}`;
+const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const philippineContactNumberPattern = /^09\d{9}$/;
+const normalizePhilippineContactNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 11);
+const formatVerifiedDateLabel = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "Asia/Manila",
+  }).format(date).toUpperCase();
+};
 const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
   "approved_for_ftf_green",
   "budget_released",
@@ -88,6 +101,7 @@ const createBlankOrganizationProfile = (userId: string): OrganizationProfile => 
   address: "",
   facebookPageUrl: "",
   profileStatus: "incomplete",
+  verifiedAt: "",
   internalNotes: "",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -506,6 +520,7 @@ export default function UserPortal({ section }: { section: string }) {
       address: profileDraft.address.trim(),
       facebookPageUrl: profileDraft.facebookPageUrl.trim(),
       profileStatus: "pending_review",
+      verifiedAt: "",
       internalNotes: profileDraft.internalNotes.trim(),
       updatedAt: new Date().toISOString(),
       createdAt: currentProfile?.createdAt ?? profileDraft.createdAt ?? new Date().toISOString(),
@@ -523,6 +538,24 @@ export default function UserPortal({ section }: { section: string }) {
       toast({
         title: "Complete the profile",
         description: "Please fill in the required organization details, classifications, and at least one advocacy.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!organizationEmailPattern.test(trimmedProfile.organizationEmail)) {
+      toast({
+        title: "Invalid organization email",
+        description: "Please enter a valid email address for the organization.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!philippineContactNumberPattern.test(trimmedProfile.contactNumber)) {
+      toast({
+        title: "Invalid contact number",
+        description: "Please enter an 11-digit Philippine mobile number starting with 09.",
         variant: "destructive",
       });
       return;
@@ -851,7 +884,9 @@ export default function UserPortal({ section }: { section: string }) {
                     <FieldGroup label="Contact Number" required>
                       <input
                         value={profileDraft.contactNumber}
-                        onChange={(event) => handleProfileFieldChange("contactNumber", event.target.value)}
+                        onChange={(event) => handleProfileFieldChange("contactNumber", normalizePhilippineContactNumberInput(event.target.value))}
+                        inputMode="numeric"
+                        maxLength={11}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
                         placeholder="09XXXXXXXXX"
                       />
@@ -988,8 +1023,18 @@ export default function UserPortal({ section }: { section: string }) {
                     {currentProfile ? (
                       <>
                         <p><span className="text-muted-foreground">Status:</span> {currentProfile.profileStatus.replaceAll("_", " ")}</p>
+                        {currentProfile.profileStatus === "verified" && currentProfile.verifiedAt ? (
+                          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span className="font-medium">VERIFIED ON {formatVerifiedDateLabel(currentProfile.verifiedAt)}</span>
+                          </div>
+                        ) : null}
                         <p><span className="text-muted-foreground">Major:</span> {currentProfile.majorClassification || "N/A"}</p>
                         <p><span className="text-muted-foreground">Sub:</span> {currentProfile.subClassification || "N/A"}</p>
+                        <p><span className="text-muted-foreground">Representative:</span> {currentProfile.representativeName || "N/A"}</p>
+                        <p><span className="text-muted-foreground">Adviser:</span> {currentProfile.adviserName || "N/A"}</p>
+                        <p><span className="text-muted-foreground">Address:</span> {currentProfile.address || "N/A"}</p>
+                        <p><span className="text-muted-foreground">Facebook Page:</span> {currentProfile.facebookPageUrl || "N/A"}</p>
                         <div>
                           <p className="text-muted-foreground">Advocacies:</p>
                           {currentProfile.advocacies.length ? (
