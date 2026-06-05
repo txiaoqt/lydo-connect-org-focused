@@ -200,7 +200,11 @@ export default function UserPortal({ section }: { section: string }) {
 
   const profile = currentProfile ?? createBlankOrganizationProfile(user?.id ?? "");
   const submission = state.documentSubmissions[0] ?? null;
-  const unreadNotifications = state.notifications.filter((notification) => notification.userId === user?.id && !notification.isRead);
+  const userNotifications = useMemo(
+    () => state.notifications.filter((notification) => notification.userId === user?.id),
+    [state.notifications, user?.id],
+  );
+  const unreadNotifications = userNotifications.filter((notification) => !notification.isRead);
   const templateDocuments = useMemo(
     () =>
       [...state.templates]
@@ -1619,7 +1623,7 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <PortalSection title="Notifications" description="Admin remarks, go signals, revisions, and deadlines.">
             <div className="space-y-3">
-              {state.notifications.map((notification) => (
+              {userNotifications.map((notification) => (
                 <button
                   key={notification.id}
                   type="button"
@@ -1706,6 +1710,7 @@ export default function UserPortal({ section }: { section: string }) {
     toggleAdvocacy,
     updateDocumentFile,
     updateDocumentSubmission,
+    userNotifications,
     user,
     validDocumentTypeIds,
     advocacyOptions,

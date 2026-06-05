@@ -229,6 +229,29 @@ export default function AdminPortal({ section }: { section: string }) {
     });
   };
 
+  const notifyOrganizationUser = (params: {
+    userId: string;
+    organizationId: string;
+    title: string;
+    message: string;
+    type: string;
+    relatedType: string;
+    relatedId: string;
+  }) => {
+    createNotification({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      userId: params.userId,
+      organizationId: params.organizationId,
+      title: params.title,
+      message: params.message,
+      type: params.type,
+      relatedType: params.relatedType,
+      relatedId: params.relatedId,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
   const resetTemplateForm = () => {
     setTemplateModalMode(null);
     setEditingTemplateId(null);
@@ -727,6 +750,15 @@ export default function AdminPortal({ section }: { section: string }) {
                                 `Marked ${selectedOrg.organizationName} as verified on ${formatVerifiedDateLabel(verifiedAt)}.`,
                                 selectedOrg.id,
                               );
+                              notifyOrganizationUser({
+                                userId: selectedOrg.userId,
+                                organizationId: selectedOrg.id,
+                                title: "Registration verified",
+                                message: `The admin verified your organization registration on ${formatVerifiedDateLabel(verifiedAt)}.`,
+                                type: "registration_verified",
+                                relatedType: "organization_profile",
+                                relatedId: selectedOrg.id,
+                              });
                               toast({
                                 title: "Organization verified",
                                 description: `${selectedOrg.organizationName} is now marked as verified.`,
@@ -762,6 +794,15 @@ export default function AdminPortal({ section }: { section: string }) {
                                 `Marked ${selectedOrg.organizationName} for an organization profile update.`,
                                 selectedOrg.id,
                               );
+                              notifyOrganizationUser({
+                                userId: selectedOrg.userId,
+                                organizationId: selectedOrg.id,
+                                title: "Registration needs update",
+                                message: "The admin reviewed your organization profile and requested updates before verification.",
+                                type: "registration_needs_update",
+                                relatedType: "organization_profile",
+                                relatedId: selectedOrg.id,
+                              });
                               toast({
                                 title: "Organization marked for update",
                                 description: `${selectedOrg.organizationName} needs to update the submitted profile details.`,
@@ -902,7 +943,18 @@ export default function AdminPortal({ section }: { section: string }) {
                                   size="sm"
                                   variant="outline"
                                   disabled={!file}
-                                  onClick={() => updateDocumentSubmission(selectedSubmission.id, { status: "needs_revision" })}
+                                  onClick={() => {
+                                    updateDocumentSubmission(selectedSubmission.id, { status: "needs_revision" });
+                                    notifyOrganizationUser({
+                                      userId: selectedOrg.userId,
+                                      organizationId: selectedOrg.id,
+                                      title: "Document revision requested",
+                                      message: "The admin reviewed your submitted documents and requested revisions before approval.",
+                                      type: "document_revision",
+                                      relatedType: "document_submission",
+                                      relatedId: selectedSubmission.id,
+                                    });
+                                  }}
                                 >
                                   Needs Revision
                                 </Button>
@@ -1091,17 +1143,14 @@ export default function AdminPortal({ section }: { section: string }) {
                                   approvedAmount: request.requestedAmount,
                                 });
                                 await refreshAdminState();
-                                createNotification({
-                                  id: `notif-${Date.now()}`,
+                                notifyOrganizationUser({
                                   userId: request.submittedBy,
                                   organizationId: request.organizationId,
-                                  title: "Budget go signal issued",
-                                  message: "Your soft copy requirements have been pre-checked. You may now submit the hard copies face-to-face.",
+                                  title: "Budget request approved",
+                                  message: "The admin approved your budget request and issued the go signal for the next step.",
                                   type: "budget_go_signal",
                                   relatedType: "budget_request",
                                   relatedId: request.id,
-                                  isRead: false,
-                                  createdAt: new Date().toISOString(),
                                 });
                                 await appendAuditLog("Approved budget request", "budget_request", request.id, `Marked budget request "${request.activityTitle}" as approved for face-to-face green.`, request.organizationId);
                               } catch (error) {
@@ -1124,6 +1173,15 @@ export default function AdminPortal({ section }: { section: string }) {
                               try {
                                 await updateBudgetRequestInSupabase(request.id, { status: "needs_revision" });
                                 await refreshAdminState();
+                                notifyOrganizationUser({
+                                  userId: request.submittedBy,
+                                  organizationId: request.organizationId,
+                                  title: "Budget request needs revision",
+                                  message: "The admin reviewed your budget request and requested revisions before approval.",
+                                  type: "budget_revision",
+                                  relatedType: "budget_request",
+                                  relatedId: request.id,
+                                });
                                 await appendAuditLog("Budget request needs revision", "budget_request", request.id, `Marked budget request "${request.activityTitle}" as needing revision.`, request.organizationId);
                               } catch (error) {
                                 toast({
@@ -1145,6 +1203,15 @@ export default function AdminPortal({ section }: { section: string }) {
                               try {
                                 await updateBudgetRequestInSupabase(request.id, { status: "rejected_red" });
                                 await refreshAdminState();
+                                notifyOrganizationUser({
+                                  userId: request.submittedBy,
+                                  organizationId: request.organizationId,
+                                  title: "Budget request rejected",
+                                  message: "The admin rejected your budget request. Please review the requirements and submit an updated request if needed.",
+                                  type: "budget_rejected",
+                                  relatedType: "budget_request",
+                                  relatedId: request.id,
+                                });
                                 await appendAuditLog("Rejected budget request", "budget_request", request.id, `Rejected budget request "${request.activityTitle}".`, request.organizationId);
                               } catch (error) {
                                 toast({
