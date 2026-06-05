@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -180,6 +180,8 @@ export default function AdminPortal({ section }: { section: string }) {
   const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
+  const [expandedOcrFileIds, setExpandedOcrFileIds] = useState<string[]>([]);
+  const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -229,6 +231,36 @@ export default function AdminPortal({ section }: { section: string }) {
     }),
     [state],
   );
+
+  useEffect(() => {
+    let isActive = true;
+    const filesWithUploads = state.documentSubmissionFiles.filter((file) => file.fileUrl.trim());
+
+    if (!filesWithUploads.length) {
+      setDocumentPreviewUrls({});
+      return;
+    }
+
+    void (async () => {
+      const resolvedEntries = await Promise.all(
+        filesWithUploads.map(async (file) => {
+          try {
+            const resolvedUrl = await resolveSupabaseFileUrl(file.fileUrl);
+            return [file.id, resolvedUrl ?? ""] as const;
+          } catch {
+            return [file.id, ""] as const;
+          }
+        }),
+      );
+
+      if (!isActive) return;
+      setDocumentPreviewUrls(Object.fromEntries(resolvedEntries));
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [state.documentSubmissionFiles]);
 
   const refreshAdminState = async () => {
     const remoteSnapshot = (await loadAdminPortalSupabaseState()) ?? (await loadLydoConnectSupabaseState());
@@ -300,6 +332,14 @@ export default function AdminPortal({ section }: { section: string }) {
       current.includes(organizationId)
         ? current.filter((id) => id !== organizationId)
         : [...current, organizationId],
+    );
+  };
+
+  const toggleOcrPreview = (fileId: string) => {
+    setExpandedOcrFileIds((current) =>
+      current.includes(fileId)
+        ? current.filter((id) => id !== fileId)
+        : [...current, fileId],
     );
   };
 
@@ -1058,6 +1098,8 @@ export default function AdminPortal({ section }: { section: string }) {
                   <div className="space-y-3">
                     {templateDocuments.map((documentType) => {
                       const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
+                      const previewUrl = file ? documentPreviewUrls[file.id] ?? "" : "";
+                      const isOcrExpanded = file ? expandedOcrFileIds.includes(file.id) : false;
                       return (
                         <Card key={documentType.id} className="border-border/70">
                           <CardContent className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
@@ -1068,9 +1110,57 @@ export default function AdminPortal({ section }: { section: string }) {
                                 <PortalStatusBadge status={file ? file.validationStatus === "correct" ? "ready_for_review" : "needs_revision" : "not_started"} />
                               </div>
                               <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
-                              <p className="max-h-80 overflow-y-auto rounded-md bg-muted/30 p-3 text-sm text-muted-foreground">
-                                {file?.ocrText || "No OCR text available yet."}
-                              </p>
+                              {file ? (
+                                <div className="space-y-3">
+                                  <div className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
+                                    {previewUrl ? (
+                                      <iframe
+                                        src={previewUrl}
+                                        title={file.fileName}
+                                        className="h-[24rem] w-full sm:h-[28rem] xl:h-[32rem]"
+                                      />
+                                    ) : (
+                                      <div className="grid h-[24rem] place-items-center p-6 text-center text-sm text-muted-foreground sm:h-[28rem] xl:h-[32rem]">
+                                        Preview unavailable. Use the buttons below to open the uploaded file.
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="w-full sm:w-auto"
+                                      onClick={() => void openPreview(file.fileUrl, file.fileName)}
+                                    >
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      Open Uploaded File
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="w-full sm:w-auto"
+                                      onClick={() => toggleOcrPreview(file.id)}
+                                    >
+                                      {isOcrExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
+                                      {isOcrExpanded ? "Hide OCR Scan" : "Open OCR Scan"}
+                                    </Button>
+                                  </div>
+                                  {isOcrExpanded ? (
+                                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">OCR Extracted Text</p>
+                                      <div className="mt-3 max-h-80 overflow-y-auto rounded-md bg-background p-3 text-sm text-muted-foreground">
+                                        {file.ocrText || "No OCR text available yet."}
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <div className="grid min-h-[18rem] place-items-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                                  No uploaded file submitted yet for this requirement.
+                                </div>
+                              )}
                             </div>
                             <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
                               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
