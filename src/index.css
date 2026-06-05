@@ -23,14 +23,14 @@
     --brand-sk-gold: 49 92% 48%;
     --brand-sk-red: 354 73% 46%;
 
-    --admin-page-bg: 60 7% 95%;
+    --admin-page-bg: 244 100% 98%;
     --admin-surface: 0 0% 100%;
-    --admin-border: 0 0% 87%;
-    --admin-nav-dark: 218 64% 29%;
-    --admin-heading: 218 64% 29%;
+    --admin-border: 247 46% 89%;
+    --admin-nav-dark: 218 64% 23%;
+    --admin-heading: 225 61% 27%;
     --admin-link: 212 64% 40%;
-    --admin-body: 0 0% 24%;
-    --admin-meta: 0 0% 47%;
+    --admin-body: 180 12% 21%;
+    --admin-meta: 240 13% 48%;
     --admin-on-dark: 0 0% 100%;
     --admin-active-on-dark: 49 92% 48%;
 
@@ -48,7 +48,7 @@
     --semantic-success: 146 40% 30%;
     --semantic-warning: 47 100% 24%;
     --semantic-danger: 354 73% 46%;
-    --semantic-info-admin: 218 64% 29%;
+    --semantic-info-admin: 225 61% 27%;
     --semantic-info-user: 225 61% 27%;
     --semantic-disabled: 0 0% 73%;
     --semantic-placeholder: 0 0% 67%;
@@ -62,13 +62,13 @@
     --popover: var(--admin-surface);
     --popover-foreground: var(--admin-body);
 
-    --primary: var(--admin-heading);
+    --primary: var(--brand-mid-blue);
     --primary-foreground: var(--admin-on-dark);
 
-    --secondary: var(--admin-link);
+    --secondary: var(--brand-deep-blue);
     --secondary-foreground: var(--admin-on-dark);
 
-    --muted: 0 0% 96%;
+    --muted: 244 62% 96%;
     --muted-foreground: var(--admin-meta);
 
     --accent: var(--admin-link);
@@ -79,7 +79,7 @@
 
     --border: var(--admin-border);
     --input: var(--admin-border);
-    --ring: var(--admin-link);
+    --ring: var(--brand-mid-blue);
 
     --radius: 0.625rem;
 
@@ -100,11 +100,11 @@
     --sidebar-ring: var(--admin-active-on-dark);
 
     /* Custom tokens */
-    --hero-gradient: linear-gradient(135deg, hsl(var(--admin-nav-dark)), hsl(var(--admin-heading)), hsl(var(--admin-link)));
-    --stats-gradient: linear-gradient(135deg, hsl(var(--admin-nav-dark)), hsl(var(--admin-heading)), hsl(var(--admin-link)));
-    --card-shadow: 0 1px 2px hsl(0 0% 10% / 0.06), 0 10px 24px hsl(0 0% 10% / 0.08);
-    --card-shadow-hover: 0 4px 14px hsl(0 0% 10% / 0.1), 0 16px 34px hsl(0 0% 10% / 0.1);
-    --glow-primary: 0 0 20px hsl(var(--admin-link) / 0.24);
+    --hero-gradient: linear-gradient(135deg, hsl(var(--admin-nav-dark)), hsl(var(--brand-deep-blue)), hsl(var(--brand-mid-blue)));
+    --stats-gradient: linear-gradient(135deg, hsl(var(--brand-deep-blue)), hsl(var(--admin-heading)), hsl(var(--brand-mid-blue)));
+    --card-shadow: 0 1px 2px hsl(225 45% 16% / 0.06), 0 10px 24px hsl(225 45% 16% / 0.08);
+    --card-shadow-hover: 0 4px 14px hsl(225 45% 16% / 0.1), 0 16px 34px hsl(225 45% 16% / 0.1);
+    --glow-primary: 0 0 20px hsl(var(--brand-mid-blue) / 0.24);
   }
 
   body.public-shell {
