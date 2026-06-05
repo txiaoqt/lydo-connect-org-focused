@@ -159,6 +159,7 @@ type NewsReleaseRow = {
 };
 
 const localDocumentTypeByName = new Map(requiredDocumentTypes.map((documentType) => [documentType.name, documentType]));
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const sanitizeFileName = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "-");
 
@@ -561,6 +562,15 @@ const fetchRequiredDocumentTypeRowByName = async (name: string) => {
   if (error) throw new Error(error.message);
   if (!data) throw new Error(`Required document type not found for ${name}.`);
   return data as RequiredDocumentTypeRow;
+};
+
+const resolveTemplateDatabaseId = async (databaseId: string, name?: string) => {
+  if (UUID_PATTERN.test(databaseId)) return databaseId;
+  if (name?.trim()) {
+    const row = await fetchRequiredDocumentTypeRowByName(name.trim());
+    return row.id;
+  }
+  return databaseId;
 };
 
 export const submitOrganizationDocumentToSupabase = async (params: {
@@ -995,6 +1005,7 @@ export const createTemplateRecordInSupabase = async (params: {
 
 export const updateTemplateRecordInSupabase = async (params: {
   databaseId: string;
+  lookupName: string;
   name: string;
   description: string;
   templateDescription: string;
@@ -1003,9 +1014,11 @@ export const updateTemplateRecordInSupabase = async (params: {
   const adminSession = readAdminSession();
   if (!adminSession) throw new Error("Please sign in with the seeded admin account first.");
 
+  const resolvedDatabaseId = await resolveTemplateDatabaseId(params.databaseId, params.lookupName);
+
   const { data, error } = await supabase.rpc("update_admin_template_document", {
     _session_token: adminSession.sessionToken,
-    _template_id: params.databaseId,
+    _template_id: resolvedDatabaseId,
     _name: params.name.trim(),
     _description: params.description.trim(),
     _template_description: params.templateDescription.trim(),
@@ -1019,14 +1032,16 @@ export const updateTemplateRecordInSupabase = async (params: {
   return mappedTemplate;
 };
 
-export const deleteTemplateRecordInSupabase = async (databaseId: string) => {
+export const deleteTemplateRecordInSupabase = async (databaseId: string, name?: string) => {
   if (!supabase) throw new Error("Supabase is not configured.");
   const adminSession = readAdminSession();
   if (!adminSession) throw new Error("Please sign in with the seeded admin account first.");
 
+  const resolvedDatabaseId = await resolveTemplateDatabaseId(databaseId, name);
+
   const { error } = await supabase.rpc("deactivate_admin_template_document", {
     _session_token: adminSession.sessionToken,
-    _template_id: databaseId,
+    _template_id: resolvedDatabaseId,
   });
 
   if (error) throw new Error(error.message);

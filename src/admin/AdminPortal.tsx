@@ -298,6 +298,7 @@ export default function AdminPortal({ section }: { section: string }) {
     try {
       const updatedTemplate = await updateTemplateRecordInSupabase({
         databaseId: template.databaseId,
+        lookupName: template.name,
         name: templateNameDraft,
         description: templateDescriptionDraft,
         templateDescription: templateDescriptionDraft || `Template for ${templateNameDraft.trim()}.`,
@@ -332,7 +333,7 @@ export default function AdminPortal({ section }: { section: string }) {
     if (!template) return;
 
     try {
-      await deleteTemplateRecordInSupabase(template.databaseId);
+      await deleteTemplateRecordInSupabase(template.databaseId, template.name);
       removeTemplate(template.id);
       const remoteSnapshot = await loadLydoConnectSupabaseState();
       if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
