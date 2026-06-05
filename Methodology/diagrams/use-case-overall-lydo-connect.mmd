@@ -4,51 +4,58 @@ flowchart LR
     AD[LYDO Admin]
 
     subgraph SYS[LYDO Connect System]
-      UC1((Sign up / sign in))
-      UC2((Sign out))
-      UC3((Accept policy))
-      UC4((Manage organization profile))
-      UC5((Submit documents))
-      UC6((Manage budget requests))
-      UC7((Submit liquidation report))
-      UC8((View news release preview))
-      UC9((View public transparency posts))
-      UC10((View notifications))
-      UC11((Review organization records))
-      UC12((Manage news releases))
-      UC13((Manage transparency posts))
-      UC14((Manage required document types))
-      UC15((Review notifications and activity logs))
+      UC1((Sign up))
+      UC2((Sign in))
+      UC3((Authenticate user))
+      UC4((Login error))
+      UC5((Policy agreement))
+      UC6((Sign out))
+      UC7((Manage organization profile))
+      UC8((Submit documents))
+      UC9((Validate uploaded file))
+      UC10((Manage budget requests))
+      UC11((Budget submission error))
+      UC12((Submit liquidation report))
+      UC13((View news release preview))
+      UC14((View public transparency posts))
+      UC15((View notifications))
+      UC16((Review organization records))
+      UC17((Manage news releases))
+      UC18((Manage transparency posts))
+      UC19((Manage required document types))
+      UC20((Review notifications and activity logs))
     end
 
     PV --> UC1
-    PV --> UC8
-    PV --> UC9
+    PV --> UC2
+    PV --> UC13
+    PV --> UC14
 
     OU --> UC1
     OU --> UC2
-    OU --> UC3
-    OU --> UC4
-    OU --> UC5
     OU --> UC6
     OU --> UC7
     OU --> UC8
-    OU --> UC9
     OU --> UC10
+    OU --> UC12
+    OU --> UC13
+    OU --> UC14
+    OU --> UC15
 
-    AD --> UC11
-    AD --> UC12
-    AD --> UC13
-    AD --> UC14
-    AD --> UC15
+    AD --> UC16
+    AD --> UC17
+    AD --> UC18
+    AD --> UC19
+    AD --> UC20
 
-    UC6 --> UC7
-    UC11 --> UC12
-    UC11 --> UC13
-    UC11 --> UC14
-    UC11 --> UC15
+    UC2 -.->|<<include>>| UC3
+    UC2 -.->|<<include>>| UC5
+    UC2 -.->|<<extend>>| UC4
+    UC8 -.->|<<include>>| UC9
+    UC8 -.->|<<extend>>| UC11
+    UC12 -.->|<<extend>>| UC10
 
     classDef actor fill:#e0f2fe,stroke:#0f172a,stroke-width:1px,color:#0f172a;
     classDef usecase fill:#ffffff,stroke:#0f172a,stroke-width:1px,color:#0f172a;
     class PV,OU,AD actor;
-    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15 usecase;
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18,UC19,UC20 usecase;
