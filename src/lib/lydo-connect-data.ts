@@ -85,6 +85,23 @@ export type MajorClassification = (typeof majorClassificationOptions)[number];
 
 export const subClassificationOptions = ["community-based", "school-based", "faith-based", "consortium/federation"] as const;
 export type SubClassification = (typeof subClassificationOptions)[number];
+export const subClassificationLabelMap: Record<SubClassification, string> = {
+  "community-based": "Community-based",
+  "school-based": "School-based",
+  "faith-based": "Faith-based",
+  "consortium/federation": "Consortium/Federation",
+};
+
+export const formatSubClassificationLabel = (value: string) =>
+  (value in subClassificationLabelMap ? subClassificationLabelMap[value as SubClassification] : value)
+    .split("/")
+    .map((part) =>
+      part
+        .split("-")
+        .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+        .join("-"),
+    )
+    .join("/");
 
 export const advocacyOptions = [
   "education",

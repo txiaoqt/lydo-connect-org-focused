@@ -27,6 +27,7 @@ import {
   type LiquidationReport,
   type LiquidationReportFile,
   statusLabelMap,
+  formatSubClassificationLabel,
   subClassificationOptions,
   type OrganizationProfile,
   userNavigationGroups,
@@ -1231,7 +1232,7 @@ export default function UserPortal({ section }: { section: string }) {
                         <option value="">Select sub classification</option>
                         {subClassificationOptions.map((option) => (
                           <option key={option} value={option}>
-                            {option}
+                            {formatSubClassificationLabel(option)}
                           </option>
                         ))}
                       </select>
@@ -1332,7 +1333,7 @@ export default function UserPortal({ section }: { section: string }) {
                           </div>
                         ) : null}
                         <p><span className="text-muted-foreground">Major:</span> {currentProfile.majorClassification || "N/A"}</p>
-                        <p><span className="text-muted-foreground">Sub:</span> {currentProfile.subClassification || "N/A"}</p>
+                        <p><span className="text-muted-foreground">Sub:</span> {formatSubClassificationLabel(currentProfile.subClassification) || "N/A"}</p>
                         <p><span className="text-muted-foreground">Representative:</span> {currentProfile.representativeName || "N/A"}</p>
                         <p><span className="text-muted-foreground">Adviser:</span> {currentProfile.adviserName || "N/A"}</p>
                         <p><span className="text-muted-foreground">Address:</span> {currentProfile.address || "N/A"}</p>
