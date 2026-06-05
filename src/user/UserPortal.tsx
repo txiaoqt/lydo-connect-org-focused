@@ -26,6 +26,7 @@ import {
   majorClassificationOptions,
   type LiquidationReport,
   type LiquidationReportFile,
+  type SubmissionFile,
   statusLabelMap,
   formatSubClassificationLabel,
   subClassificationOptions,
@@ -198,6 +199,18 @@ export default function UserPortal({ section }: { section: string }) {
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
   const [profileRequiredModalOpen, setProfileRequiredModalOpen] = useState(false);
+  const [attachedDocumentEditorOpen, setAttachedDocumentEditorOpen] = useState(false);
+  const [attachedDocumentEditor, setAttachedDocumentEditor] = useState<{
+    file: SubmissionFile;
+    documentTypeName: string;
+  } | null>(null);
+  const [attachedDocumentPreviewUrl, setAttachedDocumentPreviewUrl] = useState("");
+  const [attachedDocumentPreviewTitle, setAttachedDocumentPreviewTitle] = useState("");
+  const [attachedDocumentPreviewEmptyMessage, setAttachedDocumentPreviewEmptyMessage] = useState("");
+  const [attachedDocumentPreviewCanInline, setAttachedDocumentPreviewCanInline] = useState(false);
+  const [attachedDocumentReplacementFile, setAttachedDocumentReplacementFile] = useState<File | null>(null);
+  const [attachedDocumentMarkedForRemoval, setAttachedDocumentMarkedForRemoval] = useState(false);
+  const [savingAttachedDocument, setSavingAttachedDocument] = useState(false);
   const [pendingDocumentRemoval, setPendingDocumentRemoval] = useState<{
     fileId: string;
     fileName: string;
@@ -219,6 +232,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [ocrAuditTrail, setOcrAuditTrail] = useState<DocumentOcrAuditEntry[]>([]);
   const [selectedOcrFieldId, setSelectedOcrFieldId] = useState<string | null>(null);
   const [activeOcrPage, setActiveOcrPage] = useState(1);
+  const attachedDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingDocumentScan, setPendingDocumentScan] = useState<{
     documentTypeId: string;
     documentTypeName: string;
@@ -432,6 +446,66 @@ export default function UserPortal({ section }: { section: string }) {
     }
   };
 
+  const openAttachedDocumentEditor = async (file: SubmissionFile, documentTypeName: string) => {
+    setAttachedDocumentEditor({ file, documentTypeName });
+    setAttachedDocumentEditorOpen(true);
+    setAttachedDocumentReplacementFile(null);
+    setAttachedDocumentMarkedForRemoval(false);
+    setAttachedDocumentPreviewUrl("");
+    setAttachedDocumentPreviewTitle(file.fileName || documentTypeName);
+    setAttachedDocumentPreviewEmptyMessage("Loading preview...");
+    setAttachedDocumentPreviewCanInline(false);
+
+    if (!file.fileUrl.trim() || file.fileUrl.startsWith("#")) {
+      setAttachedDocumentPreviewEmptyMessage("No uploaded file is available.");
+      return;
+    }
+
+    try {
+      const resolvedUrl = await resolveSupabaseFileUrl(file.fileUrl);
+      if (!resolvedUrl) {
+        throw new Error("No file is available yet.");
+      }
+
+      setAttachedDocumentPreviewUrl(resolvedUrl);
+      setAttachedDocumentPreviewEmptyMessage("");
+      setAttachedDocumentPreviewCanInline(canInlinePreviewFile(file.fileName) || canInlinePreviewFile(resolvedUrl));
+    } catch (error) {
+      setAttachedDocumentPreviewUrl("");
+      setAttachedDocumentPreviewCanInline(false);
+      setAttachedDocumentPreviewEmptyMessage(
+        error instanceof Error ? error.message : "The uploaded file preview could not be opened right now.",
+      );
+    }
+  };
+
+  const closeAttachedDocumentEditor = () => {
+    setAttachedDocumentEditorOpen(false);
+    setAttachedDocumentEditor(null);
+    setAttachedDocumentPreviewUrl("");
+    setAttachedDocumentPreviewTitle("");
+    setAttachedDocumentPreviewEmptyMessage("");
+    setAttachedDocumentPreviewCanInline(false);
+    setAttachedDocumentReplacementFile(null);
+    setAttachedDocumentMarkedForRemoval(false);
+    setSavingAttachedDocument(false);
+    if (attachedDocumentInputRef.current) {
+      attachedDocumentInputRef.current.value = "";
+    }
+  };
+
+  const removeDocumentById = async (fileId: string, documentTypeName: string) => {
+    await removeOrganizationDocumentFromSupabase(fileId);
+    const remoteSnapshot = await loadLydoConnectSupabaseState();
+    if (remoteSnapshot) {
+      mergeRemoteState(remoteSnapshot);
+    }
+    toast({
+      title: "Document removed",
+      description: `${documentTypeName} was removed successfully.`,
+    });
+  };
+
   const notifyAdmin = (params: {
     title: string;
     message: string;
@@ -562,15 +636,7 @@ export default function UserPortal({ section }: { section: string }) {
 
     setRemovingDocumentId(pendingDocumentRemoval.fileId);
     try {
-      await removeOrganizationDocumentFromSupabase(pendingDocumentRemoval.fileId);
-      const remoteSnapshot = await loadLydoConnectSupabaseState();
-      if (remoteSnapshot) {
-        mergeRemoteState(remoteSnapshot);
-      }
-      toast({
-        title: "Document removed",
-        description: `${pendingDocumentRemoval.documentTypeName} was removed successfully.`,
-      });
+      await removeDocumentById(pendingDocumentRemoval.fileId, pendingDocumentRemoval.documentTypeName);
       setPendingDocumentRemoval(null);
     } catch (error) {
       toast({
@@ -580,6 +646,46 @@ export default function UserPortal({ section }: { section: string }) {
       });
     } finally {
       setRemovingDocumentId(null);
+    }
+  };
+
+  const saveAttachedDocumentChanges = async () => {
+    if (!attachedDocumentEditor) return;
+
+    if (attachedDocumentMarkedForRemoval) {
+      setSavingAttachedDocument(true);
+      try {
+        await removeDocumentById(attachedDocumentEditor.file.id, attachedDocumentEditor.documentTypeName);
+        closeAttachedDocumentEditor();
+      } catch (error) {
+        toast({
+          title: "Remove failed",
+          description: error instanceof Error ? error.message : "The uploaded document could not be removed right now.",
+          variant: "destructive",
+        });
+      } finally {
+        setSavingAttachedDocument(false);
+      }
+      return;
+    }
+
+    if (!attachedDocumentReplacementFile) {
+      closeAttachedDocumentEditor();
+      return;
+    }
+
+    setSavingAttachedDocument(true);
+    try {
+      await handleDocumentUpload(attachedDocumentEditor.documentTypeName, attachedDocumentReplacementFile);
+      closeAttachedDocumentEditor();
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "The uploaded document could not be updated right now.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingAttachedDocument(false);
     }
   };
 
@@ -1482,58 +1588,18 @@ export default function UserPortal({ section }: { section: string }) {
                                   variant="outline"
                                   size="sm"
                                   className="w-full sm:w-auto"
-                                  onClick={() => void openPreview(file.fileUrl, file.fileName)}
+                                  onClick={() => void openAttachedDocumentEditor(file, documentType.name)}
                                 >
                                   <Eye className="mr-2 h-4 w-4" />
-                                  Review Uploaded File
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => void openFile(file.fileUrl, file.fileName)}
-                                >
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Download Uploaded File
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full sm:w-auto"
-                                  onClick={() =>
-                                    setPendingDocumentRemoval({
-                                      fileId: file.id,
-                                      fileName: file.fileName,
-                                      documentTypeName: documentType.name,
-                                    })
-                                  }
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Remove Uploaded Document
+                                  View Attached
                                 </Button>
                               </div>
                             </div>
                           ) : null}
                         </div>
                         {file ? (
-                          <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Submission status</span>
-                              <span className="text-right">{formatStatusLabel(file.adminStatus || file.validationStatus || "draft")}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Latest review note</span>
-                              <span className="text-right">{file.adminRemarks || "Awaiting admin review."}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Template</span>
-                              <span className="break-all text-right">{template?.templateFileName || "Not uploaded yet"}</span>
-                            </div>
-                            <div className="rounded-lg border border-border/70 bg-background/80 p-3 text-xs text-muted-foreground">
-                              The uploaded file is stored here for admin review.
-                            </div>
+                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
+                            Uploaded {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : "recently"}.
                           </div>
                         ) : (
                           <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
@@ -2749,6 +2815,158 @@ export default function UserPortal({ section }: { section: string }) {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={attachedDocumentEditorOpen}
+        onOpenChange={(open) => {
+          if (!open && !savingAttachedDocument) {
+            closeAttachedDocumentEditor();
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{attachedDocumentPreviewTitle || "Attached File"}</DialogTitle>
+            <DialogDescription>Review the uploaded file, change it if needed, or remove it before saving.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
+            <div className="min-w-0 rounded-xl border border-border/70 bg-muted/20 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Attached file preview</p>
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {attachedDocumentEditor?.file.fileName || "Uploaded file"}
+                  </p>
+                </div>
+                {attachedDocumentEditor ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void openFile(attachedDocumentEditor.file.fileUrl, attachedDocumentEditor.file.fileName)}
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Open File
+                  </Button>
+                ) : null}
+              </div>
+              <div className="h-[min(60vh,34rem)] overflow-hidden rounded-lg border border-border/70 bg-background">
+                {attachedDocumentPreviewUrl && attachedDocumentPreviewCanInline ? (
+                  <iframe
+                    src={attachedDocumentPreviewUrl}
+                    title={attachedDocumentPreviewTitle || "Attached file preview"}
+                    className="h-full w-full"
+                  />
+                ) : attachedDocumentPreviewUrl ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                    <div className="space-y-2">
+                      <p className="text-base font-medium text-foreground">Preview not available in the browser</p>
+                      <p className="max-w-md text-sm text-muted-foreground">
+                        This file type cannot be displayed inline. You can still open the file in a new tab from this modal.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                    <p className="text-sm font-medium text-foreground">No preview available</p>
+                    <p className="max-w-md text-sm text-muted-foreground">
+                      {attachedDocumentPreviewEmptyMessage || "The uploaded file could not be previewed."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-4 rounded-xl border border-border/70 bg-card p-4 sm:p-5">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">Actions</p>
+                <p className="text-sm text-muted-foreground">
+                  Choose a replacement file or remove the current upload, then save your changes.
+                </p>
+              </div>
+              <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3 text-sm">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Current file</p>
+                <p className="break-all font-medium text-foreground">{attachedDocumentEditor?.file.fileName || "No file selected"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {attachedDocumentEditor?.file.uploadedAt
+                    ? `Uploaded ${new Date(attachedDocumentEditor.file.uploadedAt).toLocaleString()}`
+                    : "Uploaded recently"}
+                </p>
+              </div>
+              <input
+                ref={attachedDocumentInputRef}
+                type="file"
+                accept={
+                  attachedDocumentEditor
+                    ? getDocumentUploadAcceptValue(attachedDocumentEditor.file.documentTypeId)
+                    : ".pdf,application/pdf"
+                }
+                className="hidden"
+                onChange={(event) => {
+                  const nextFile = event.target.files?.[0] ?? null;
+                  setAttachedDocumentReplacementFile(nextFile);
+                  setAttachedDocumentMarkedForRemoval(false);
+                }}
+              />
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => attachedDocumentInputRef.current?.click()}
+                  disabled={Boolean(savingAttachedDocument)}
+                >
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Change File
+                </Button>
+                {attachedDocumentReplacementFile ? (
+                  <p className="text-xs text-muted-foreground">
+                    Replacement selected: <span className="font-medium text-foreground">{attachedDocumentReplacementFile.name}</span>
+                  </p>
+                ) : null}
+              </div>
+              <Button
+                type="button"
+                variant={attachedDocumentMarkedForRemoval ? "secondary" : "destructive"}
+                className="w-full justify-start"
+                onClick={() => {
+                  setAttachedDocumentMarkedForRemoval((current) => !current);
+                  setAttachedDocumentReplacementFile(null);
+                  if (attachedDocumentInputRef.current) {
+                    attachedDocumentInputRef.current.value = "";
+                  }
+                }}
+                disabled={Boolean(savingAttachedDocument)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {attachedDocumentMarkedForRemoval ? "Undo Remove" : "Remove Uploaded Document"}
+              </Button>
+              {attachedDocumentMarkedForRemoval ? (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  This file will be removed when you save changes.
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+                <Button
+                  type="button"
+                  className="w-full sm:flex-1"
+                  onClick={() => void saveAttachedDocumentChanges()}
+                  disabled={Boolean(savingAttachedDocument)}
+                >
+                  {savingAttachedDocument ? "Saving..." : "Save Changes"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:flex-1"
+                  onClick={closeAttachedDocumentEditor}
+                  disabled={Boolean(savingAttachedDocument)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog
