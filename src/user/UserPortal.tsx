@@ -46,11 +46,15 @@ import {
 } from "@/lib/lydo-connect-supabase";
 import {
   buildStructuredOcrData,
+  getDocumentSchemaForSlot,
   scanPdfForOcr,
   type DocumentOcrAuditEntry,
   type DocumentOcrField,
   type DocumentOcrFieldSection,
   type DocumentOcrScanResult,
+  type DocumentOcrTable,
+  summarizeEditableOcrData,
+  titleCaseStatus,
   validateOcrFieldValue,
   normalizeOcrFieldValue,
 } from "@/lib/document-ocr";
@@ -64,16 +68,15 @@ const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const philippineContactNumberPattern = /^09\d{9}$/;
 const normalizePhilippineContactNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 11);
 const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
-const ocrFieldSections: DocumentOcrFieldSection[] = [
-  "Personal Information",
-  "Contact Information",
-  "Address Information",
-  "Employment Information",
-  "Government Identifiers",
-  "Financial Information",
-  "Organization Information",
-  "Other Information",
-];
+const getDocumentUploadAcceptValue = (documentTypeId: string) =>
+  documentTypeId === "yorp-members"
+    ? ".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+    : ".pdf,application/pdf";
+const getDocumentPrimaryFileTypeLabel = (documentTypeId: string) => (documentTypeId === "yorp-members" ? "PDF or XLSX" : "PDF");
+const getDocumentUploadHelpText = (documentTypeId: string) =>
+  documentTypeId === "yorp-members"
+    ? "Upload a PDF or XLSX file. XLSX files are parsed directly, while PDFs run through OCR review."
+    : "Upload a PDF to run the OCR scanner and review it before submission.";
 const formatVerifiedDateLabel = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -187,6 +190,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [previewCanInline, setPreviewCanInline] = useState(false);
   const [ocrPreviewUrl, setOcrPreviewUrl] = useState("");
   const [editableOcrFields, setEditableOcrFields] = useState<DocumentOcrField[]>([]);
+  const [editableOcrTables, setEditableOcrTables] = useState<DocumentOcrTable[]>([]);
   const [ocrAuditTrail, setOcrAuditTrail] = useState<DocumentOcrAuditEntry[]>([]);
   const [selectedOcrFieldId, setSelectedOcrFieldId] = useState<string | null>(null);
   const [activeOcrPage, setActiveOcrPage] = useState(1);
@@ -253,13 +257,33 @@ export default function UserPortal({ section }: { section: string }) {
   const docFiles = state.documentSubmissionFiles.filter(
     (file) => file.submissionId === submissionId && validDocumentTypeIds.has(file.documentTypeId),
   );
+  const ocrSchema = pendingDocumentScan ? getDocumentSchemaForSlot(pendingDocumentScan.documentTypeName) : null;
   const selectedEditableOcrField = editableOcrFields.find((field) => field.id === selectedOcrFieldId) ?? null;
   const activeOcrPageResult = pendingDocumentScan?.result?.pages.find((page) => page.pageNumber === activeOcrPage) ?? pendingDocumentScan?.result?.pages[0] ?? null;
+  const ocrFieldSections = ocrSchema?.sections ?? Array.from(new Set(editableOcrFields.map((field) => field.section)));
   const groupedEditableOcrFields = ocrFieldSections.map((section) => ({
     section,
     fields: editableOcrFields.filter((field) => field.section === section),
-  })).filter((entry) => entry.fields.length > 0 || entry.section === "Other Information");
-  const editableOcrFieldErrorCount = editableOcrFields.reduce((count, field) => count + field.validationErrors.length, 0);
+    tables: editableOcrTables.filter((table) => table.section === section),
+  })).filter((entry) => entry.fields.length > 0 || entry.tables.length > 0);
+  const editableOcrFieldErrorCount =
+    editableOcrFields.reduce((count, field) => count + field.validationErrors.length, 0) +
+    editableOcrTables.reduce(
+      (count, table) =>
+        count +
+        table.validationWarnings.length +
+        table.rows.reduce(
+          (rowCount, row) => rowCount + Object.values(row.cells).reduce((cellCount, cell) => cellCount + cell.validationErrors.length, 0),
+          0,
+        ),
+      0,
+    );
+  const editableOcrSummary = summarizeEditableOcrData(editableOcrFields, editableOcrTables);
+  const canSubmitEditableOcr =
+    !pendingDocumentScan?.result?.issues.some((issue) => issue.severity === "error") &&
+    editableOcrSummary.missingRequiredFieldsCount === 0 &&
+    editableOcrFieldErrorCount === 0 &&
+    editableOcrTables.every((table) => table.rows.length >= table.minimumRows);
   const budgetRequests = useMemo(
     () =>
       state.budgetRequests
@@ -395,6 +419,7 @@ export default function UserPortal({ section }: { section: string }) {
     setSubmissionSuccessOpen(false);
     setOcrPreviewUrl("");
     setEditableOcrFields([]);
+    setEditableOcrTables([]);
     setOcrAuditTrail([]);
     setSelectedOcrFieldId(null);
     setActiveOcrPage(1);
@@ -413,11 +438,15 @@ export default function UserPortal({ section }: { section: string }) {
     const localDocumentType = templateDocuments.find((documentType) => documentType.name === documentTypeName);
     if (!localDocumentType) return;
 
+    const isMembersList = localDocumentType.id === "yorp-members";
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
+    const isSpreadsheet = /\.(xlsx|xls)$/i.test(file.name);
+    if (!isPdf && !(isMembersList && isSpreadsheet)) {
       toast({
         title: "Unsupported file type",
-        description: "Please upload a PDF file for document submission.",
+        description: isMembersList
+          ? "Please upload a PDF or XLSX file for the members list document slot."
+          : "Please upload a PDF file for document submission.",
         variant: "destructive",
       });
       return;
@@ -427,7 +456,7 @@ export default function UserPortal({ section }: { section: string }) {
     const previewObjectUrl = URL.createObjectURL(file);
 
     try {
-      const result = await scanPdfForOcr(file);
+      const result = await scanPdfForOcr(file, documentTypeName);
       setPendingDocumentScan({
         documentTypeId: localDocumentType.id,
         documentTypeName,
@@ -435,6 +464,7 @@ export default function UserPortal({ section }: { section: string }) {
         result,
       });
       setEditableOcrFields(result.extractedFields);
+      setEditableOcrTables(result.tables);
       setOcrAuditTrail(result.auditTrail);
       setSelectedOcrFieldId(result.extractedFields[0]?.id ?? null);
       setActiveOcrPage(1);
@@ -457,10 +487,10 @@ export default function UserPortal({ section }: { section: string }) {
   const submitScannedDocument = async () => {
     if (!pendingDocumentScan || !user) return;
     if (!ensureCompletedOrganizationProfile()) return;
-    if (pendingDocumentScan.result && !pendingDocumentScan.result.canSubmit) {
+    if (!canSubmitEditableOcr) {
       toast({
-        title: "Reupload required",
-        description: "The OCR scan did not meet the approval threshold. Please upload a cleaner PDF.",
+        title: "Review required",
+        description: "Please complete the missing or invalid extracted values before submitting this document.",
         variant: "destructive",
       });
       return;
@@ -486,12 +516,18 @@ export default function UserPortal({ section }: { section: string }) {
           : "Awaiting admin review.",
         ocrMetadata: {
           documentType: pendingDocumentScan.result?.documentType ?? pendingDocumentScan.documentTypeName,
+          schemaId: pendingDocumentScan.result?.schemaId ?? null,
+          templateId: pendingDocumentScan.result?.templateId ?? null,
+          extractionMode: pendingDocumentScan.result?.extractionMode ?? null,
           documentTypeConfidence: pendingDocumentScan.result?.documentTypeConfidence ?? 0,
           pageConfidenceScore: pendingDocumentScan.result?.pageConfidenceScore ?? 0,
-          structuredData: buildStructuredOcrData(editableOcrFields),
+          structuredData: buildStructuredOcrData(editableOcrFields, editableOcrTables),
           verifiedFields: editableOcrFields,
+          verifiedTables: editableOcrTables,
           auditTrail: ocrAuditTrail,
           duplicates: pendingDocumentScan.result?.duplicates ?? [],
+          flags: pendingDocumentScan.result?.flags ?? [],
+          summary: summarizeEditableOcrData(editableOcrFields, editableOcrTables),
           pages: pendingDocumentScan.result?.pages ?? [],
           issues: pendingDocumentScan.result?.issues ?? [],
         },
@@ -515,7 +551,7 @@ export default function UserPortal({ section }: { section: string }) {
       setSubmissionSuccessOpen(true);
       toast({
         title: "Document submitted",
-        description: "The OCR-checked PDF has been submitted for admin approval.",
+        description: "The reviewed document has been submitted for admin approval.",
       });
     } catch (error) {
       toast({
@@ -563,7 +599,21 @@ export default function UserPortal({ section }: { section: string }) {
           ...patch,
         };
         nextField.normalizedValue = normalizeOcrFieldValue(nextField);
-        nextField.validationErrors = validateOcrFieldValue(nextField);
+        nextField.validationErrors = validateOcrFieldValue(nextField, {
+          required: nextField.required,
+          expectedValues: nextField.expectedValues,
+        });
+        nextField.status = nextField.normalizedValue
+          ? patch.value !== undefined && patch.value !== field.value
+            ? "manually_corrected"
+            : nextField.confidence >= 90
+              ? "auto_detected"
+              : nextField.confidence >= 70
+                ? "needs_review"
+                : "low_confidence"
+          : nextField.required
+            ? "missing"
+            : "not_applicable";
         return nextField;
       }),
     );
@@ -596,8 +646,12 @@ export default function UserPortal({ section }: { section: string }) {
       boundingBox: null,
       section,
       fieldType: "text",
+      rawValue: "",
       validationErrors: ["Value is required."],
       duplicateKeys: [],
+      status: "missing",
+      required: false,
+      isCustom: true,
     };
     setEditableOcrFields((current) => [...current, newField]);
     setSelectedOcrFieldId(newField.id);
@@ -612,6 +666,7 @@ export default function UserPortal({ section }: { section: string }) {
   };
 
   const deleteEditableOcrField = (field: DocumentOcrField) => {
+    if (!field.isCustom) return;
     setEditableOcrFields((current) => current.filter((entry) => entry.id !== field.id));
     if (selectedOcrFieldId === field.id) {
       setSelectedOcrFieldId(null);
@@ -624,6 +679,98 @@ export default function UserPortal({ section }: { section: string }) {
       nextValue: "",
       note: "Removed during human verification.",
     });
+  };
+
+  const updateEditableOcrTableCell = (tableId: string, rowId: string, columnKey: string, value: string) => {
+    setEditableOcrTables((current) =>
+      current.map((table) => {
+        if (table.id !== tableId) return table;
+        return {
+          ...table,
+          rows: table.rows.map((row) => {
+            if (row.id !== rowId) return row;
+            const cell = row.cells[columnKey];
+            if (!cell) return row;
+            const nextCell = {
+              ...cell,
+              value,
+              rawValue: value,
+              normalizedValue: normalizeOcrFieldValue({ fieldType: cell.fieldType, value, label: cell.label, key: cell.key }),
+            };
+            nextCell.validationErrors = validateOcrFieldValue(nextCell, { required: nextCell.required });
+            nextCell.status = nextCell.normalizedValue
+              ? "manually_corrected"
+              : nextCell.required
+                ? "missing"
+                : "not_applicable";
+            const nextRow = {
+              ...row,
+              cells: {
+                ...row.cells,
+                [columnKey]: nextCell,
+              },
+            };
+            nextRow.status = Object.values(nextRow.cells).some((entry) => entry.required && !entry.normalizedValue)
+              ? "missing"
+              : Object.values(nextRow.cells).some((entry) => entry.validationErrors.length)
+                ? "needs_review"
+                : "manually_corrected";
+            return nextRow;
+          }),
+        };
+      }),
+    );
+  };
+
+  const addEditableOcrTableRow = (tableId: string) => {
+    setEditableOcrTables((current) =>
+      current.map((table) => {
+        if (table.id !== tableId) return table;
+        const nextRow = {
+          id: createOcrEntityId("ocr-row"),
+          rowNumber: table.rows.length + 1,
+          status: "missing" as const,
+          cells: Object.fromEntries(
+            table.columns.map((column) => [
+              column.key,
+              {
+                id: createOcrEntityId("ocr-cell"),
+                key: column.key,
+                label: column.label,
+                value: "",
+                rawValue: "",
+                normalizedValue: "",
+                confidence: 0,
+                confidenceBand: "red" as const,
+                fieldType: column.fieldType,
+                status: column.required ? "missing" : "not_applicable",
+                required: column.required ?? false,
+                validationErrors: column.required ? ["Value is required."] : [],
+                sourcePage: activeOcrPage,
+              },
+            ]),
+          ),
+        };
+        return {
+          ...table,
+          rows: [...table.rows, nextRow],
+        };
+      }),
+    );
+  };
+
+  const deleteEditableOcrTableRow = (tableId: string, rowId: string) => {
+    setEditableOcrTables((current) =>
+      current.map((table) => {
+        if (table.id !== tableId) return table;
+        return {
+          ...table,
+          rows: table.rows
+            .filter((row) => row.id !== rowId)
+            .map((row, index) => ({ ...row, rowNumber: index + 1 })),
+        };
+      }),
+    );
   };
 
   const handleProfileFieldChange = <K extends keyof OrganizationProfile>(field: K, value: OrganizationProfile[K]) => {
@@ -1207,11 +1354,22 @@ export default function UserPortal({ section }: { section: string }) {
           <div className="space-y-6">
             <PortalSection
               title="Document Submission"
-              description="Upload a PDF, review the OCR preview, and submit only after you confirm the extracted details."
+              description="Upload each required file, review the extracted details, and submit only after the required fields are checked."
             >
               <div className="grid gap-4">
                 {templateDocuments.map((documentType) => {
                   const file = docFiles.find((entry) => entry.documentTypeId === documentType.id);
+                  const fileOcrMetadata = (file?.ocrMetadata ?? null) as Record<string, unknown> | null;
+                  const fileOcrSummary = (fileOcrMetadata?.summary ?? null) as
+                    | {
+                        extractedFieldsCount?: number;
+                        requiredFieldsCount?: number;
+                        completedRequiredFieldsCount?: number;
+                        missingRequiredFieldsCount?: number;
+                        tableRowCount?: number;
+                      }
+                    | null;
+                  const latestIssues = Array.isArray(fileOcrMetadata?.issues) ? fileOcrMetadata.issues : [];
                   const template = templatesById[documentType.id];
                   const fileBadgeStatus =
                     file?.adminStatus && file.adminStatus !== "draft"
@@ -1234,7 +1392,7 @@ export default function UserPortal({ section }: { section: string }) {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">{documentType.description}</p>
-                          <p className="text-xs text-muted-foreground">Primary file type: PDF</p>
+                          <p className="text-xs text-muted-foreground">Primary file type: {getDocumentPrimaryFileTypeLabel(documentType.id)}</p>
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             {hasUploadedTemplateFile(template?.templateFileUrl, template?.templateFileName) ? (
                               <>
@@ -1284,7 +1442,7 @@ export default function UserPortal({ section }: { section: string }) {
                             >
                               <input
                                 type="file"
-                                accept=".pdf,application/pdf"
+                                accept={getDocumentUploadAcceptValue(documentType.id)}
                                 className="sr-only"
                                 onChange={(event) => {
                                   void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);
@@ -1365,21 +1523,58 @@ export default function UserPortal({ section }: { section: string }) {
                               <span className="text-right">{file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Extracted fields</span>
+                              <span className="text-right">{fileOcrSummary?.extractedFieldsCount ?? "n/a"}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Required fields completed</span>
+                              <span className="text-right">
+                                {fileOcrSummary
+                                  ? `${fileOcrSummary.completedRequiredFieldsCount ?? 0}/${fileOcrSummary.requiredFieldsCount ?? 0}`
+                                  : "n/a"}
+                              </span>
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                              <span className="text-muted-foreground">Missing required fields</span>
+                              <span className="text-right">{fileOcrSummary?.missingRequiredFieldsCount ?? "n/a"}</span>
+                            </div>
+                            {typeof fileOcrSummary?.tableRowCount === "number" ? (
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                                <span className="text-muted-foreground">Detected rows</span>
+                                <span className="text-right">{fileOcrSummary.tableRowCount}</span>
+                              </div>
+                            ) : null}
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                               <span className="text-muted-foreground">Submission state</span>
                               <span className="text-right">{formatStatusLabel(file.adminStatus || submission?.status || "draft")}</span>
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Admin remarks</span>
+                              <span className="text-muted-foreground">Latest review note</span>
                               <span className="text-right">{file.adminRemarks || "Awaiting admin review."}</span>
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                               <span className="text-muted-foreground">Template</span>
                               <span className="break-all text-right">{template?.templateFileName || "Not uploaded yet"}</span>
                             </div>
+                            {latestIssues.length ? (
+                              <div className="rounded-lg border border-border/70 bg-background/80 p-3 text-xs text-muted-foreground">
+                                <p className="font-medium text-foreground">Scanner warnings</p>
+                                <p className="mt-1">
+                                  {latestIssues
+                                    .map((issue) =>
+                                      typeof issue === "object" && issue && "title" in issue
+                                        ? String((issue as { title?: string }).title || "")
+                                        : "",
+                                    )
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                </p>
+                              </div>
+                            ) : null}
                           </div>
                         ) : (
                           <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                            No submitted file yet. Upload a PDF to run the OCR scanner and review it before submission.
+                            {getDocumentUploadHelpText(documentType.id)}
                           </div>
                         )}
                       </CardContent>
@@ -1391,7 +1586,7 @@ export default function UserPortal({ section }: { section: string }) {
 
             <PortalSection
               title="Submission Flow"
-              description="After OCR scans the file, a preview modal will show the extracted text, flags, and confidence. You must confirm before the PDF is submitted to LYDO."
+              description="After the file is scanned or parsed, a review modal will show the extracted values, flags, and confidence. You must confirm before the document is submitted to LYDO."
             >
               <div className="grid gap-4 md:grid-cols-2">
                 <Card className="bg-muted/20">
@@ -1399,7 +1594,7 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardTitle className="text-sm font-medium text-muted-foreground">What happens next</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 text-sm text-muted-foreground">
-                    Upload a PDF to inspect the OCR preview, confirm the extracted details, and send the file for admin review.
+                    Upload the required file, inspect the extracted values, confirm the reviewed details, and send the document for admin review.
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/20">
@@ -2008,7 +2203,7 @@ export default function UserPortal({ section }: { section: string }) {
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document Type</p>
                       <p className="mt-2 text-sm font-medium">{pendingDocumentScan.result.documentType}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Inferred at {pendingDocumentScan.result.documentTypeConfidence}% from {pendingDocumentScan.file.name}
+                        Slot-matched at {pendingDocumentScan.result.documentTypeConfidence}% from {pendingDocumentScan.file.name}
                       </p>
                     </CardContent>
                   </Card>
@@ -2016,24 +2211,33 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardContent className="p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Confidence</p>
                       <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.confidence}%</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Only 90% and above can be submitted.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Low page confidence creates a warning, not an automatic rejection.</p>
                     </CardContent>
                   </Card>
                   <Card className="bg-muted/20">
                     <CardContent className="p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Pages scanned</p>
-                      <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.pageCount}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Required Fields</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {editableOcrSummary.completedRequiredFieldsCount}/{editableOcrSummary.requiredFieldsCount}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {pendingDocumentScan.result.canSubmit ? "Ready for confirmation." : "Reupload is required."}
+                        {editableOcrSummary.missingRequiredFieldsCount
+                          ? `${editableOcrSummary.missingRequiredFieldsCount} still need review.`
+                          : "All required fields are currently filled."}
                       </p>
                     </CardContent>
                   </Card>
                   <Card className="bg-muted/20">
                     <CardContent className="p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Fields detected</p>
-                      <p className="mt-2 text-2xl font-semibold">{editableOcrFields.length}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Extracted Values</p>
+                      <p className="mt-2 text-2xl font-semibold">
+                        {editableOcrSummary.extractedFieldsCount}
+                        {editableOcrSummary.tableRowCount ? ` + ${editableOcrSummary.tableRowCount} rows` : ""}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {editableOcrFields.length ? "Structured values were found automatically and can be corrected below." : "No structured fields were detected yet."}
+                        {editableOcrFields.length || editableOcrTables.length
+                          ? "Expected schema fields are ready for review below."
+                          : "No structured values were detected yet."}
                       </p>
                     </CardContent>
                   </Card>
@@ -2088,7 +2292,7 @@ export default function UserPortal({ section }: { section: string }) {
                                 );
                               })}
                           </div>
-                        ) : ocrPreviewUrl ? (
+                        ) : ocrPreviewUrl && canInlinePreviewFile(pendingDocumentScan.file.name) ? (
                           <iframe
                             src={ocrPreviewUrl}
                             title={pendingDocumentScan.documentTypeName}
@@ -2096,7 +2300,12 @@ export default function UserPortal({ section }: { section: string }) {
                           />
                         ) : (
                           <div className="grid h-[28rem] place-items-center p-6 text-center text-sm text-muted-foreground sm:h-[36rem] lg:h-[42rem]">
-                            Preview unavailable.
+                            <div className="space-y-3">
+                              <p className="font-medium text-foreground">Browser preview is not available for this file type.</p>
+                              <p>
+                                {pendingDocumentScan.file.name} can still be reviewed through the extracted form sections below.
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2141,7 +2350,10 @@ export default function UserPortal({ section }: { section: string }) {
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
                                     <p className="text-sm font-semibold text-foreground">{group.section}</p>
-                                    <p className="text-xs text-muted-foreground">{group.fields.length} field(s)</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {group.fields.length} field(s)
+                                      {group.tables.length ? ` • ${group.tables.length} table(s)` : ""}
+                                    </p>
                                   </div>
                                   <Button type="button" size="sm" variant="outline" onClick={() => addEditableOcrField(group.section)}>
                                     Add Field
@@ -2167,66 +2379,128 @@ export default function UserPortal({ section }: { section: string }) {
                                               id={`ocr-field-label-${field.id}`}
                                               name={`ocr_field_label_${field.id}`}
                                               value={field.label}
+                                              disabled={!field.isCustom}
                                               onClick={(event) => event.stopPropagation()}
                                               onChange={(event) => updateEditableOcrField(field.id, { label: event.target.value })}
                                               onBlur={(event) =>
-                                                recordOcrAudit({
-                                                  action: "edited",
-                                                  fieldId: field.id,
-                                                  fieldLabel: field.label,
-                                                  previousValue: field.label,
-                                                  nextValue: event.target.value,
-                                                  note: "Field label updated.",
-                                                })
+                                                field.isCustom
+                                                  ? recordOcrAudit({
+                                                      action: "edited",
+                                                      fieldId: field.id,
+                                                      fieldLabel: field.label,
+                                                      previousValue: field.label,
+                                                      nextValue: event.target.value,
+                                                      note: "Field label updated.",
+                                                    })
+                                                  : undefined
                                               }
                                               className="flex-1"
                                             />
-                                            <span
-                                              className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
-                                                field.confidenceBand === "green"
-                                                  ? "bg-emerald-100 text-emerald-700"
-                                                  : field.confidenceBand === "yellow"
-                                                    ? "bg-amber-100 text-amber-700"
-                                                    : "bg-rose-100 text-rose-700"
-                                              }`}
-                                            >
-                                              {field.confidence}%
-                                            </span>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <span
+                                                className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                                                  field.confidenceBand === "green"
+                                                    ? "bg-emerald-100 text-emerald-700"
+                                                    : field.confidenceBand === "yellow"
+                                                      ? "bg-amber-100 text-amber-700"
+                                                      : "bg-rose-100 text-rose-700"
+                                                }`}
+                                              >
+                                                {field.confidence}%
+                                              </span>
+                                              <span className="rounded-full border border-border/70 bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground">
+                                                {titleCaseStatus(field.status)}
+                                              </span>
+                                            </div>
                                           </div>
-                                          <Textarea
-                                            id={`ocr-field-value-${field.id}`}
-                                            name={`ocr_field_value_${field.id}`}
-                                            value={field.value}
-                                            onClick={(event) => event.stopPropagation()}
-                                            onChange={(event) => updateEditableOcrField(field.id, { value: event.target.value })}
-                                            onBlur={(event) =>
-                                              recordOcrAudit({
-                                                action: "edited",
-                                                fieldId: field.id,
-                                                fieldLabel: field.label,
-                                                previousValue: field.value,
-                                                nextValue: event.target.value,
-                                                note: "Field value corrected manually.",
-                                              })
-                                            }
-                                            className="min-h-20"
-                                          />
+                                          {field.fieldType === "boolean" ? (
+                                            <label
+                                              className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-3"
+                                              onClick={(event) => event.stopPropagation()}
+                                            >
+                                              <input
+                                                id={`ocr-field-value-${field.id}`}
+                                                name={`ocr_field_value_${field.id}`}
+                                                type="checkbox"
+                                                checked={field.normalizedValue === "true"}
+                                                onChange={(event) => updateEditableOcrField(field.id, { value: event.target.checked ? "true" : "" })}
+                                              />
+                                              <span className="text-sm text-foreground">{field.label}</span>
+                                            </label>
+                                          ) : field.fieldType === "multiselect" && field.expectedValues?.length ? (
+                                            <div className="space-y-2" onClick={(event) => event.stopPropagation()}>
+                                              <div className="flex flex-wrap gap-2">
+                                                {field.expectedValues.map((option) => {
+                                                  const currentValues = field.normalizedValue
+                                                    .split(",")
+                                                    .map((item) => item.trim())
+                                                    .filter(Boolean);
+                                                  const checked = currentValues.some((item) => item.toLowerCase() === option.toLowerCase());
+                                                  return (
+                                                    <label key={option} className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2 text-xs text-foreground">
+                                                      <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={(event) => {
+                                                          const nextValues = event.target.checked
+                                                            ? [...currentValues, option]
+                                                            : currentValues.filter((item) => item.toLowerCase() !== option.toLowerCase());
+                                                          updateEditableOcrField(field.id, { value: nextValues.join(", ") });
+                                                        }}
+                                                      />
+                                                      {option}
+                                                    </label>
+                                                  );
+                                                })}
+                                              </div>
+                                              <Input
+                                                id={`ocr-field-value-${field.id}`}
+                                                name={`ocr_field_value_${field.id}`}
+                                                value={field.value}
+                                                onChange={(event) => updateEditableOcrField(field.id, { value: event.target.value })}
+                                              />
+                                            </div>
+                                          ) : field.fieldType === "textarea" ? (
+                                            <Textarea
+                                              id={`ocr-field-value-${field.id}`}
+                                              name={`ocr_field_value_${field.id}`}
+                                              value={field.value}
+                                              onClick={(event) => event.stopPropagation()}
+                                              onChange={(event) => updateEditableOcrField(field.id, { value: event.target.value })}
+                                              className="min-h-24"
+                                            />
+                                          ) : (
+                                            <Input
+                                              id={`ocr-field-value-${field.id}`}
+                                              name={`ocr_field_value_${field.id}`}
+                                              value={field.value}
+                                              onClick={(event) => event.stopPropagation()}
+                                              onChange={(event) => updateEditableOcrField(field.id, { value: event.target.value })}
+                                            />
+                                          )}
                                           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
                                             <span>Page {field.pageNumber}</span>
                                             <span className="break-words">Normalized: {normalizeOcrFieldValue(field) || "N/A"}</span>
-                                            <Button
-                                              type="button"
-                                              size="sm"
-                                              variant="ghost"
-                                              className="text-destructive hover:text-destructive"
-                                              onClick={(event) => {
-                                                event.stopPropagation();
-                                                deleteEditableOcrField(field);
-                                              }}
-                                            >
-                                              Delete
-                                            </Button>
+                                            {field.isCustom ? (
+                                              <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-destructive hover:text-destructive"
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  deleteEditableOcrField(field);
+                                                }}
+                                              >
+                                                Delete
+                                              </Button>
+                                            ) : null}
                                           </div>
+                                          {field.helpText ? (
+                                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                                              {field.helpText}
+                                            </div>
+                                          ) : null}
                                           {field.validationErrors.length ? (
                                             <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                                               {field.validationErrors.join(" ")}
@@ -2236,17 +2510,85 @@ export default function UserPortal({ section }: { section: string }) {
                                       </button>
                                     ))}
                                   </div>
-                                ) : (
-                                  <div className="rounded-xl border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
-                                    No extracted fields in this section yet. Add one manually if needed.
+                                ) : null}
+                                {group.tables.length ? (
+                                  <div className="space-y-4">
+                                    {group.tables.map((table) => (
+                                      <div key={table.id} className="rounded-2xl border border-border/70 bg-background p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                          <div>
+                                            <p className="text-sm font-semibold text-foreground">{table.label}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {table.rows.length} row(s) detected
+                                              {table.minimumRows ? ` • minimum ${table.minimumRows}` : ""}
+                                            </p>
+                                          </div>
+                                          <Button type="button" size="sm" variant="outline" onClick={() => addEditableOcrTableRow(table.id)}>
+                                            Add Row
+                                          </Button>
+                                        </div>
+                                        {table.rows.length ? (
+                                          <div className="mt-4 space-y-3 overflow-x-auto">
+                                            {table.rows.map((row) => (
+                                              <div key={row.id} className="min-w-[52rem] rounded-xl border border-border/70 p-3">
+                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                                  <p className="text-sm font-medium text-foreground">Row {row.rowNumber}</p>
+                                                  <Button type="button" size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteEditableOcrTableRow(table.id, row.id)}>
+                                                    Delete Row
+                                                  </Button>
+                                                </div>
+                                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                                  {table.columns.map((column) => {
+                                                    const cell = row.cells[column.key];
+                                                    return (
+                                                      <div key={column.key} className="space-y-2">
+                                                        <Label htmlFor={`ocr-table-${table.id}-${row.id}-${column.key}`}>{column.label}</Label>
+                                                        <Input
+                                                          id={`ocr-table-${table.id}-${row.id}-${column.key}`}
+                                                          name={`ocr_table_${table.id}_${row.id}_${column.key}`}
+                                                          value={cell?.value ?? ""}
+                                                          onChange={(event) => updateEditableOcrTableCell(table.id, row.id, column.key, event.target.value)}
+                                                        />
+                                                        {cell?.validationErrors.length ? (
+                                                          <p className="text-xs text-rose-700">{cell.validationErrors.join(" ")}</p>
+                                                        ) : null}
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <div className="mt-4 rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                                            No rows were detected yet. Add rows manually if needed.
+                                          </div>
+                                        )}
+                                        {table.validationWarnings.length ? (
+                                          <div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-800">
+                                            {table.validationWarnings.join(" ")}
+                                          </div>
+                                        ) : null}
+                                        {table.duplicateWarnings.length ? (
+                                          <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-800">
+                                            {table.duplicateWarnings.join(" ")}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    ))}
                                   </div>
-                                )}
+                                ) : null}
+                                {!group.fields.length && !group.tables.length ? (
+                                  <div className="rounded-xl border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
+                                    No extracted values in this section yet. Add a field manually if needed.
+                                  </div>
+                                ) : null}
                               </div>
                             ))}
                           </div>
                         ) : (
                           <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
-                            No structured fields were detected automatically yet. You can still review the raw OCR text and add missing fields manually.
+                            No structured values were detected automatically yet. You can still review the raw text and add missing fields manually.
                           </div>
                         )}
                       </CardContent>
@@ -2291,8 +2633,16 @@ export default function UserPortal({ section }: { section: string }) {
                               : "All editable fields currently pass validation."}
                           </p>
                         </div>
+                        <div className="rounded-xl border border-border/70 bg-background p-3 text-sm">
+                          <p className="font-medium text-foreground">Submission readiness</p>
+                          <p className="mt-1 text-muted-foreground">
+                            {canSubmitEditableOcr
+                              ? "All required values are present or corrected. This file is ready for submission."
+                              : "Some required values or table rows still need attention before submission."}
+                          </p>
+                        </div>
                         <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-                          If anything looks wrong, close this preview and reupload a cleaner PDF. The file will not be submitted until you confirm it.
+                          If anything looks wrong, you can correct the values here, add missing fields manually, or reupload a clearer file.
                         </div>
                       </CardContent>
                     </Card>
@@ -2305,7 +2655,7 @@ export default function UserPortal({ section }: { section: string }) {
                         <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
                           Verified JSON preview:
                           <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed">
-                            {JSON.stringify(buildStructuredOcrData(editableOcrFields), null, 2)}
+                            {JSON.stringify(buildStructuredOcrData(editableOcrFields, editableOcrTables), null, 2)}
                           </pre>
                         </div>
                         <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
@@ -2336,7 +2686,7 @@ export default function UserPortal({ section }: { section: string }) {
                   <Button
                     type="button"
                     className="w-full sm:w-auto"
-                    disabled={!pendingDocumentScan.result.canSubmit || editableOcrFieldErrorCount > 0 || submittingDocumentId === pendingDocumentScan.documentTypeId}
+                    disabled={!canSubmitEditableOcr || submittingDocumentId === pendingDocumentScan.documentTypeId}
                     onClick={() => setConfirmSubmitOpen(true)}
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />

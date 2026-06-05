@@ -457,9 +457,7 @@ export default function AdminPortal({ section }: { section: string }) {
         await updateDocumentSubmissionFileReviewInSupabase({
           fileId: pendingAdminConfirmation.fileId,
           status,
-          adminRemarks: pendingAdminConfirmation.currentAdminRemarks
-            ? `${pendingAdminConfirmation.currentAdminRemarks} ${adminRemarks}`.trim()
-            : adminRemarks,
+          adminRemarks,
         });
         await refreshAdminState();
 
@@ -1147,6 +1145,20 @@ export default function AdminPortal({ section }: { section: string }) {
                       const previewUrl = file ? documentPreviewUrls[file.id] ?? "" : "";
                       const isExpanded = file ? expandedDocumentFileIds.includes(file.id) : false;
                       const isOcrExpanded = file ? expandedOcrFileIds.includes(file.id) : false;
+                      const fileOcrMetadata = (file?.ocrMetadata ?? null) as Record<string, unknown> | null;
+                      const fileOcrSummary = (fileOcrMetadata?.summary ?? null) as
+                        | {
+                            extractedFieldsCount?: number;
+                            requiredFieldsCount?: number;
+                            completedRequiredFieldsCount?: number;
+                            missingRequiredFieldsCount?: number;
+                            tableRowCount?: number;
+                          }
+                        | null;
+                      const fileOcrIssues = Array.isArray(fileOcrMetadata?.issues)
+                        ? fileOcrMetadata.issues.filter((issue) => typeof issue === "object" && issue && "title" in issue)
+                        : [];
+                      const structuredDataPreview = fileOcrMetadata?.structuredData;
                       const fileReviewBadgeStatus =
                         file?.adminStatus === "approved_green" || file?.adminStatus === "needs_revision" || file?.adminStatus === "rejected_red"
                           ? file.adminStatus
@@ -1230,8 +1242,27 @@ export default function AdminPortal({ section }: { section: string }) {
                                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                                           <p>OCR status: {file.ocrStatus ?? "pending"}</p>
                                           <p>OCR confidence: {file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</p>
+                                          <p>Extracted fields: {fileOcrSummary?.extractedFieldsCount ?? "n/a"}</p>
+                                          <p>
+                                            Required fields: {fileOcrSummary
+                                              ? `${fileOcrSummary.completedRequiredFieldsCount ?? 0}/${fileOcrSummary.requiredFieldsCount ?? 0}`
+                                              : "n/a"}
+                                          </p>
+                                          <p>Missing required: {fileOcrSummary?.missingRequiredFieldsCount ?? "n/a"}</p>
+                                          <p>Detected rows: {typeof fileOcrSummary?.tableRowCount === "number" ? fileOcrSummary.tableRowCount : "n/a"}</p>
                                         </div>
-                                        <p className="mt-3 break-words">Admin remarks: {file.adminRemarks || "None"}</p>
+                                        <p className="mt-3 break-words">Latest review note: {file.adminRemarks || "None"}</p>
+                                        <p className="mt-2 break-words text-xs text-muted-foreground">
+                                          Template ID: {typeof fileOcrMetadata?.templateId === "string" ? fileOcrMetadata.templateId : "N/A"}
+                                        </p>
+                                        {fileOcrIssues.length ? (
+                                          <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-800">
+                                            {fileOcrIssues
+                                              .map((issue) => String((issue as { title?: string }).title || ""))
+                                              .filter(Boolean)
+                                              .join(", ")}
+                                          </div>
+                                        ) : null}
                                         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                                           <Button
                                             size="sm"
@@ -1295,6 +1326,11 @@ export default function AdminPortal({ section }: { section: string }) {
                                       {isOcrExpanded ? (
                                         <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
                                           <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">OCR Extracted Text</p>
+                                          {structuredDataPreview ? (
+                                            <pre className="mt-3 max-h-48 overflow-auto rounded-md bg-background p-3 text-xs text-muted-foreground">
+                                              {JSON.stringify(structuredDataPreview, null, 2)}
+                                            </pre>
+                                          ) : null}
                                           <div className="mt-3 max-h-[24rem] overflow-y-auto rounded-md bg-background p-3 text-sm text-muted-foreground">
                                             {file.ocrText || "No OCR text available yet."}
                                           </div>
