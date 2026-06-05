@@ -217,6 +217,13 @@ export default function AdminPortal({ section }: { section: string }) {
   const [budgetPreviewEmptyMessage, setBudgetPreviewEmptyMessage] = useState("");
   const [budgetPreviewCanInline, setBudgetPreviewCanInline] = useState(false);
   const [budgetPreviewLoading, setBudgetPreviewLoading] = useState(false);
+  const [selectedLiquidationReportId, setSelectedLiquidationReportId] = useState<string | null>(null);
+  const [selectedLiquidationFileId, setSelectedLiquidationFileId] = useState<string | null>(null);
+  const [liquidationPreviewUrl, setLiquidationPreviewUrl] = useState("");
+  const [liquidationPreviewTitle, setLiquidationPreviewTitle] = useState("");
+  const [liquidationPreviewEmptyMessage, setLiquidationPreviewEmptyMessage] = useState("");
+  const [liquidationPreviewCanInline, setLiquidationPreviewCanInline] = useState(false);
+  const [liquidationPreviewLoading, setLiquidationPreviewLoading] = useState(false);
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
   const documentPreviewSourceRef = useRef<Record<string, string>>({});
 
@@ -268,6 +275,31 @@ export default function AdminPortal({ section }: { section: string }) {
   const selectedBudgetOrganization = useMemo(
     () => state.organizationProfiles.find((org) => org.id === selectedBudgetRequest?.organizationId) ?? null,
     [selectedBudgetRequest?.organizationId, state.organizationProfiles],
+  );
+  const selectedLiquidationReport = useMemo(
+    () => state.liquidationReports.find((item) => item.id === selectedLiquidationReportId) ?? null,
+    [selectedLiquidationReportId, state.liquidationReports],
+  );
+  const selectedLiquidationReportFiles = useMemo(
+    () =>
+      selectedLiquidationReport
+        ? [...state.liquidationReportFiles]
+            .filter((file) => file.liquidationReportId === selectedLiquidationReport.id)
+            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+        : [],
+    [selectedLiquidationReport, state.liquidationReportFiles],
+  );
+  const selectedLiquidationReportFile = useMemo(
+    () => selectedLiquidationReportFiles.find((file) => file.id === selectedLiquidationFileId) ?? selectedLiquidationReportFiles[0] ?? null,
+    [selectedLiquidationReportFiles, selectedLiquidationFileId],
+  );
+  const selectedLiquidationBudgetRequest = useMemo(
+    () => state.budgetRequests.find((item) => item.id === selectedLiquidationReport?.budgetRequestId) ?? null,
+    [selectedLiquidationReport?.budgetRequestId, state.budgetRequests],
+  );
+  const selectedLiquidationOrganization = useMemo(
+    () => state.organizationProfiles.find((org) => org.id === selectedLiquidationReport?.organizationId) ?? null,
+    [selectedLiquidationReport?.organizationId, state.organizationProfiles],
   );
   const validDocumentTypeIds = useMemo(
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
@@ -395,6 +427,61 @@ export default function AdminPortal({ section }: { section: string }) {
       isActive = false;
     };
   }, [selectedBudgetRequest?.id, selectedBudgetRequest?.activityTitle, selectedBudgetRequestFile?.id, selectedBudgetRequestFile?.fileUrl]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!selectedLiquidationReportFile) {
+      setLiquidationPreviewUrl("");
+      setLiquidationPreviewEmptyMessage(selectedLiquidationReport ? "No liquidation file was uploaded." : "");
+      setLiquidationPreviewCanInline(false);
+      setLiquidationPreviewLoading(false);
+      return;
+    }
+
+    const previewTitle =
+      selectedLiquidationReportFile.fileName || selectedLiquidationBudgetRequest?.activityTitle || "Liquidation File";
+    setLiquidationPreviewTitle(previewTitle);
+
+    if (!selectedLiquidationReportFile.fileUrl.trim()) {
+      setLiquidationPreviewUrl("");
+      setLiquidationPreviewEmptyMessage("No liquidation file was uploaded.");
+      setLiquidationPreviewCanInline(false);
+      setLiquidationPreviewLoading(false);
+      return;
+    }
+
+    setLiquidationPreviewLoading(true);
+    setLiquidationPreviewEmptyMessage("");
+
+    void (async () => {
+      try {
+        const resolvedUrl = await resolveSupabaseFileUrl(selectedLiquidationReportFile.fileUrl);
+        if (!isActive) return;
+        const finalUrl = resolvedUrl ?? "";
+        setLiquidationPreviewUrl(finalUrl);
+        setLiquidationPreviewCanInline(canInlinePreviewFile(previewTitle) || canInlinePreviewFile(finalUrl));
+      } catch (error) {
+        if (!isActive) return;
+        setLiquidationPreviewUrl("");
+        setLiquidationPreviewCanInline(false);
+        setLiquidationPreviewEmptyMessage(
+          error instanceof Error ? error.message : "The liquidation file preview could not be loaded right now.",
+        );
+      } finally {
+        if (isActive) setLiquidationPreviewLoading(false);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    selectedLiquidationBudgetRequest?.activityTitle,
+    selectedLiquidationReport?.id,
+    selectedLiquidationReportFile?.id,
+    selectedLiquidationReportFile?.fileUrl,
+  ]);
 
   const refreshAdminState = async () => {
     const remoteSnapshot = (await loadAdminPortalSupabaseState()) ?? (await loadLydoConnectSupabaseState());
@@ -1022,6 +1109,25 @@ export default function AdminPortal({ section }: { section: string }) {
     setBudgetPreviewEmptyMessage("");
     setBudgetPreviewCanInline(false);
     setBudgetPreviewLoading(false);
+  };
+
+  const openLiquidationDetails = (reportId: string) => {
+    const reportFiles = [...state.liquidationReportFiles]
+      .filter((file) => file.liquidationReportId === reportId)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+
+    setSelectedLiquidationReportId(reportId);
+    setSelectedLiquidationFileId(reportFiles[0]?.id ?? null);
+  };
+
+  const closeLiquidationDetails = () => {
+    setSelectedLiquidationReportId(null);
+    setSelectedLiquidationFileId(null);
+    setLiquidationPreviewUrl("");
+    setLiquidationPreviewTitle("");
+    setLiquidationPreviewEmptyMessage("");
+    setLiquidationPreviewCanInline(false);
+    setLiquidationPreviewLoading(false);
   };
 
   const performBudgetRequestStatusUpdate = async (
@@ -2049,6 +2155,280 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </DialogContent>
             </Dialog>
+            <Dialog open={selectedLiquidationReport !== null} onOpenChange={(open) => { if (!open) closeLiquidationDetails(); }}>
+              <DialogContent className="h-[100dvh] w-[calc(100vw-1rem)] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-[92dvh] sm:w-[min(96vw,96rem)] sm:max-w-none sm:rounded-2xl sm:border">
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
+                    <DialogHeader className="text-left sm:text-left">
+                      <DialogTitle className="text-xl leading-tight sm:text-2xl">
+                        {selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation Details"}
+                      </DialogTitle>
+                      <DialogDescription className="max-w-2xl text-sm sm:text-base">
+                        Review the liquidation record, attached files, and linked budget request before updating its status.
+                      </DialogDescription>
+                    </DialogHeader>
+                  </div>
+
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                    {selectedLiquidationReport ? (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              {renderRegistrationDetailCard({
+                                title: "Organization Name",
+                                value: selectedLiquidationOrganization?.organizationName ?? "N/A",
+                                className: "sm:col-span-2",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Organization Email",
+                                value: selectedLiquidationOrganization?.organizationEmail ?? "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Contact Number",
+                                value: selectedLiquidationOrganization?.contactNumber ?? "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Barangay",
+                                value: selectedLiquidationOrganization?.barangay ?? "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "District",
+                                value: selectedLiquidationOrganization?.district || "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Submitted By",
+                                value: selectedLiquidationReport.submittedBy,
+                                wrap: true,
+                                className: "sm:col-span-2",
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Liquidation Details</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              {renderRegistrationDetailCard({
+                                title: "Linked Budget Request",
+                                value: selectedLiquidationBudgetRequest?.activityTitle ?? "N/A",
+                                wrap: true,
+                                className: "sm:col-span-2",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Go Signal",
+                                value: selectedLiquidationReport.goSignalAt || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Deadline",
+                                value: selectedLiquidationReport.deadlineAt || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Hard Copy Submitted",
+                                value: selectedLiquidationReport.hardCopySubmittedAt || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Completed At",
+                                value: selectedLiquidationReport.completedAt || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Remarks",
+                                value: selectedLiquidationReport.remarks || "None",
+                                wrap: true,
+                                className: "sm:col-span-2",
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Attached Files</p>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                  {selectedLiquidationReportFiles.length
+                                    ? `${selectedLiquidationReportFiles.length} file${selectedLiquidationReportFiles.length === 1 ? "" : "s"} uploaded.`
+                                    : "No attached files were uploaded for this liquidation report."}
+                                </p>
+                              </div>
+                              <div className="self-start">
+                                <PortalStatusBadge status={selectedLiquidationReport.status} />
+                              </div>
+                            </div>
+
+                            {selectedLiquidationReportFiles.length ? (
+                              <div className="mt-4 space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedLiquidationReportFiles.map((file) => (
+                                    <Button
+                                      key={file.id}
+                                      type="button"
+                                      size="sm"
+                                      variant={selectedLiquidationReportFile?.id === file.id ? "default" : "outline"}
+                                      className="max-w-full"
+                                      onClick={() => setSelectedLiquidationFileId(file.id)}
+                                    >
+                                      <span className="max-w-[12rem] truncate">{file.fileName}</span>
+                                    </Button>
+                                  ))}
+                                </div>
+
+                                <div className="rounded-xl border border-border/70 bg-background p-3">
+                                  {liquidationPreviewLoading ? (
+                                    <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
+                                  ) : liquidationPreviewUrl && liquidationPreviewCanInline ? (
+                                    isImagePreviewFile(liquidationPreviewTitle) || isImagePreviewFile(liquidationPreviewUrl) ? (
+                                      <div className="flex max-h-[24rem] min-h-[16rem] items-center justify-center overflow-hidden rounded-md bg-background sm:max-h-[32rem]">
+                                        <img
+                                          src={liquidationPreviewUrl}
+                                          alt={liquidationPreviewTitle || "Liquidation file preview"}
+                                          className="max-h-[24rem] w-full object-contain sm:max-h-[32rem]"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <iframe
+                                        title={liquidationPreviewTitle || "Liquidation Preview"}
+                                        src={liquidationPreviewUrl}
+                                        className="h-[24rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
+                                        loading="eager"
+                                      />
+                                    )
+                                  ) : liquidationPreviewUrl ? (
+                                    <div className="space-y-3 p-3 text-sm text-muted-foreground">
+                                      <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
+                                      <Button type="button" variant="outline" onClick={() => window.open(liquidationPreviewUrl, "_blank", "noopener,noreferrer")}>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Open File
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="grid min-h-[16rem] place-items-center rounded-md border border-dashed border-border/70 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                                      {liquidationPreviewEmptyMessage || "No liquidation file was uploaded."}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-4 rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-sm text-muted-foreground">
+                                No attached liquidation files were submitted.
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              Current status: <span className="font-medium text-foreground">{selectedLiquidationReport.status}</span>
+                            </p>
+                            <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  void (async () => {
+                                    try {
+                                      await updateLiquidationReportInSupabase(selectedLiquidationReport.id, {
+                                        status: "approved_for_ftf_green",
+                                        goSignalAt: new Date().toISOString(),
+                                      });
+                                      await refreshAdminState();
+                                      await appendAuditLog(
+                                        "Approved liquidation report",
+                                        "liquidation_report",
+                                        selectedLiquidationReport.id,
+                                        "Marked liquidation report as approved for face-to-face green.",
+                                        selectedLiquidationReport.organizationId,
+                                      );
+                                    } catch (error) {
+                                      toast({
+                                        title: "Unable to update liquidation",
+                                        description:
+                                          error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  })()
+                                }
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  void (async () => {
+                                    try {
+                                      await updateLiquidationReportInSupabase(selectedLiquidationReport.id, { status: "needs_revision" });
+                                      await refreshAdminState();
+                                      await appendAuditLog(
+                                        "Liquidation needs revision",
+                                        "liquidation_report",
+                                        selectedLiquidationReport.id,
+                                        "Marked liquidation report as needing revision.",
+                                        selectedLiquidationReport.organizationId,
+                                      );
+                                    } catch (error) {
+                                      toast({
+                                        title: "Unable to update liquidation",
+                                        description:
+                                          error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  })()
+                                }
+                              >
+                                Needs Revision
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  void (async () => {
+                                    try {
+                                      await updateLiquidationReportInSupabase(selectedLiquidationReport.id, { status: "overdue" });
+                                      await refreshAdminState();
+                                      await appendAuditLog(
+                                        "Marked liquidation overdue",
+                                        "liquidation_report",
+                                        selectedLiquidationReport.id,
+                                        "Marked liquidation report as overdue.",
+                                        selectedLiquidationReport.organizationId,
+                                      );
+                                    } catch (error) {
+                                      toast({
+                                        title: "Unable to update liquidation",
+                                        description:
+                                          error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  })()
+                                }
+                              >
+                                Mark Overdue
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="border-t border-border/70 px-4 py-4 sm:px-6">
+                    <DialogFooter>
+                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeLiquidationDetails}>
+                        Close
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </>
         );
       case "liquidation-monitoring":
@@ -2057,91 +2437,126 @@ export default function AdminPortal({ section }: { section: string }) {
             <div className="grid gap-4">
               {state.liquidationReports.length ? (
                 state.liquidationReports.map((record) => (
-                <Card key={record.id} className="border-border/70">
-                  <CardContent className="grid gap-4 p-4 md:grid-cols-[1.5fr_1fr]">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{state.budgetRequests.find((item) => item.id === record.budgetRequestId)?.activityTitle ?? "Liquidation item"}</p>
-                          <p className="text-sm text-muted-foreground">Go signal: {record.goSignalAt || "Pending"}</p>
+                  <Card key={record.id} className="border-border/70">
+                    <CardContent className="grid gap-4 p-4 md:grid-cols-[1.6fr_0.9fr]">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium">
+                              {state.budgetRequests.find((item) => item.id === record.budgetRequestId)?.activityTitle ?? "Liquidation item"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">Go signal: {record.goSignalAt || "Pending"}</p>
+                          </div>
+                          <PortalStatusBadge status={record.status} />
                         </div>
-                        <PortalStatusBadge status={record.status} />
+                        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                          <p>Organization: {state.organizationProfiles.find((item) => item.id === record.organizationId)?.organizationName ?? "Unknown organization"}</p>
+                          <p>Attached files: {state.liquidationReportFiles.filter((file) => file.liquidationReportId === record.id).length}</p>
+                          <p>Deadline: {record.deadlineAt || "Pending"}</p>
+                          <p>Hard copy submitted: {record.hardCopySubmittedAt || "Pending"}</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Remarks: {record.remarks || "None"}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">Deadline: {record.deadlineAt || "Pending"}</p>
-                    </div>
-                    <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
-                      <p>Remarks: {record.remarks || "None"}</p>
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void (async () => {
-                              try {
-                                await updateLiquidationReportInSupabase(record.id, {
-                                  status: "approved_for_ftf_green",
-                                  goSignalAt: new Date().toISOString(),
-                                });
-                                await refreshAdminState();
-                                await appendAuditLog("Approved liquidation report", "liquidation_report", record.id, "Marked liquidation report as approved for face-to-face green.", record.organizationId);
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update liquidation",
-                                  description: error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
-                          }
-                        >
-                          Approve
+                      <div className="flex flex-col items-stretch gap-2">
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openLiquidationDetails(record.id)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void (async () => {
-                              try {
-                                await updateLiquidationReportInSupabase(record.id, { status: "needs_revision" });
-                                await refreshAdminState();
-                                await appendAuditLog("Liquidation needs revision", "liquidation_report", record.id, "Marked liquidation report as needing revision.", record.organizationId);
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update liquidation",
-                                  description: error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
-                          }
-                        >
-                          Needs Revision
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            void (async () => {
-                              try {
-                                await updateLiquidationReportInSupabase(record.id, { status: "overdue" });
-                                await refreshAdminState();
-                                await appendAuditLog("Marked liquidation overdue", "liquidation_report", record.id, "Marked liquidation report as overdue.", record.organizationId);
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update liquidation",
-                                  description: error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
-                          }
-                        >
-                          Mark Overdue
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            onClick={() =>
+                              void (async () => {
+                                try {
+                                  await updateLiquidationReportInSupabase(record.id, {
+                                    status: "approved_for_ftf_green",
+                                    goSignalAt: new Date().toISOString(),
+                                  });
+                                  await refreshAdminState();
+                                  await appendAuditLog(
+                                    "Approved liquidation report",
+                                    "liquidation_report",
+                                    record.id,
+                                    "Marked liquidation report as approved for face-to-face green.",
+                                    record.organizationId,
+                                  );
+                                } catch (error) {
+                                  toast({
+                                    title: "Unable to update liquidation",
+                                    description:
+                                      error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              })()
+                            }
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            onClick={() =>
+                              void (async () => {
+                                try {
+                                  await updateLiquidationReportInSupabase(record.id, { status: "needs_revision" });
+                                  await refreshAdminState();
+                                  await appendAuditLog(
+                                    "Liquidation needs revision",
+                                    "liquidation_report",
+                                    record.id,
+                                    "Marked liquidation report as needing revision.",
+                                    record.organizationId,
+                                  );
+                                } catch (error) {
+                                  toast({
+                                    title: "Unable to update liquidation",
+                                    description:
+                                      error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              })()
+                            }
+                          >
+                            Needs Revision
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            onClick={() =>
+                              void (async () => {
+                                try {
+                                  await updateLiquidationReportInSupabase(record.id, { status: "overdue" });
+                                  await refreshAdminState();
+                                  await appendAuditLog(
+                                    "Marked liquidation overdue",
+                                    "liquidation_report",
+                                    record.id,
+                                    "Marked liquidation report as overdue.",
+                                    record.organizationId,
+                                  );
+                                } catch (error) {
+                                  toast({
+                                    title: "Unable to update liquidation",
+                                    description:
+                                      error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
+                                    variant: "destructive",
+                                  });
+                                }
+                              })()
+                            }
+                          >
+                            Mark Overdue
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
                 ))
               ) : (
                 <PortalEmptyState title="No liquidation records yet" description="Approved budgets create liquidation records automatically." />
