@@ -107,7 +107,7 @@ const renderRegistrationDetailCard = (params: {
   wrap?: boolean;
   linkHref?: string;
 }) => (
-  <div className={`rounded-xl border border-border/70 bg-card p-4 shadow-sm ${params.className ?? ""}`.trim()}>
+  <div className={`min-w-0 rounded-xl border border-border/70 bg-card p-4 shadow-sm ${params.className ?? ""}`.trim()}>
     <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{params.title}</p>
     {params.linkHref && params.value !== "N/A" ? (
       <a
@@ -1802,225 +1802,249 @@ export default function AdminPortal({ section }: { section: string }) {
             </PortalSection>
 
             <Dialog open={selectedBudgetRequest !== null} onOpenChange={(open) => { if (!open) closeBudgetRequestDetails(); }}>
-              <DialogContent className="max-w-5xl">
-                <DialogHeader>
-                  <DialogTitle>{selectedBudgetRequest?.activityTitle ?? "Budget Request Details"}</DialogTitle>
-                  <DialogDescription>Review organization details and attached files before updating the request status.</DialogDescription>
-                </DialogHeader>
-
-                {selectedBudgetRequest ? (
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-                    <div className="space-y-4">
-                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
-                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                          {renderRegistrationDetailCard({
-                            title: "Organization Name",
-                            value: selectedBudgetOrganization?.organizationName ?? "N/A",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Organization Email",
-                            value: selectedBudgetOrganization?.organizationEmail ?? "N/A",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Contact Number",
-                            value: selectedBudgetOrganization?.contactNumber ?? "N/A",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Barangay",
-                            value: selectedBudgetOrganization?.barangay ?? "N/A",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "District",
-                            value: selectedBudgetOrganization?.district || "N/A",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Submitted By",
-                            value: selectedBudgetRequest.submittedBy,
-                            wrap: true,
-                            className: "md:col-span-2",
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
-                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Request Details</p>
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                          {renderRegistrationDetailCard({ title: "Requested Amount", value: `PHP ${selectedBudgetRequest.requestedAmount.toLocaleString()}` })}
-                          {renderRegistrationDetailCard({
-                            title: "Approved Amount",
-                            value: `PHP ${selectedBudgetRequest.approvedAmount.toLocaleString()}`,
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Released Amount",
-                            value: `PHP ${selectedBudgetRequest.releasedAmount.toLocaleString()}`,
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Activity Date",
-                            value: selectedBudgetRequest.activityDate || "N/A",
-                          })}
-                          {renderRegistrationDetailCard({ title: "Venue", value: selectedBudgetRequest.venue, wrap: true, className: "md:col-span-2" })}
-                          {renderRegistrationDetailCard({
-                            title: "Purpose Category",
-                            value: selectedBudgetRequest.purposeCategory || "N/A",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Go Signal",
-                            value: selectedBudgetRequest.goSignalAt || "Pending",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Hard Copy Submitted",
-                            value: selectedBudgetRequest.hardCopySubmittedAt || "Pending",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Release Date",
-                            value: selectedBudgetRequest.releaseDate || "Pending",
-                          })}
-                          {renderRegistrationDetailCard({
-                            title: "Remarks",
-                            value: selectedBudgetRequest.remarks || "None",
-                            wrap: true,
-                            className: "md:col-span-2",
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Attached Files</p>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                              {selectedBudgetRequestFiles.length
-                                ? `${selectedBudgetRequestFiles.length} file${selectedBudgetRequestFiles.length === 1 ? "" : "s"} uploaded.`
-                                : "No attached files were uploaded for this request."}
-                            </p>
-                          </div>
-                          <PortalStatusBadge status={selectedBudgetRequest.status} />
-                        </div>
-
-                        {selectedBudgetRequestFiles.length ? (
-                          <div className="mt-4 space-y-3">
-                            <div className="flex flex-wrap gap-2">
-                              {selectedBudgetRequestFiles.map((file) => (
-                                <Button
-                                  key={file.id}
-                                  type="button"
-                                  size="sm"
-                                  variant={selectedBudgetRequestFile?.id === file.id ? "default" : "outline"}
-                                  onClick={() => setSelectedBudgetFileId(file.id)}
-                                >
-                                  {file.fileName}
-                                </Button>
-                              ))}
-                            </div>
-
-                            <div className="rounded-xl border border-border/70 bg-background p-3">
-                              {budgetPreviewLoading ? (
-                                <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
-                              ) : budgetPreviewUrl && budgetPreviewCanInline ? (
-                                <iframe
-                                  title={budgetPreviewTitle || "Budget Request Preview"}
-                                  src={budgetPreviewUrl}
-                                  className="h-[30rem] w-full rounded-md border-0 bg-background"
-                                />
-                              ) : budgetPreviewUrl ? (
-                                <div className="space-y-3 p-3 text-sm text-muted-foreground">
-                                  <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
-                                  <Button type="button" variant="outline" onClick={() => window.open(budgetPreviewUrl, "_blank", "noopener,noreferrer")}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    Open File
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="grid min-h-[18rem] place-items-center rounded-md border border-dashed border-border/70 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
-                                  {budgetPreviewEmptyMessage || "No budget request file was uploaded."}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="mt-4 rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-sm text-muted-foreground">
-                            No attached budget request files were submitted.
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
-                        <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Current status: <span className="font-medium text-foreground">{selectedBudgetRequest.status}</span>
-                        </p>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              void performBudgetRequestStatusUpdate(
-                                {
-                                  id: selectedBudgetRequest.id,
-                                  organizationId: selectedBudgetRequest.organizationId,
-                                  organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
-                                  submittedBy: selectedBudgetRequest.submittedBy,
-                                  activityTitle: selectedBudgetRequest.activityTitle,
-                                  requestedAmount: selectedBudgetRequest.requestedAmount,
-                                },
-                                "approve",
-                              )
-                            }
-                          >
-                            Mark Green
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              void performBudgetRequestStatusUpdate(
-                                {
-                                  id: selectedBudgetRequest.id,
-                                  organizationId: selectedBudgetRequest.organizationId,
-                                  organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
-                                  submittedBy: selectedBudgetRequest.submittedBy,
-                                  activityTitle: selectedBudgetRequest.activityTitle,
-                                  requestedAmount: selectedBudgetRequest.requestedAmount,
-                                },
-                                "needs_revision",
-                              )
-                            }
-                          >
-                            Needs Revision
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              void performBudgetRequestStatusUpdate(
-                                {
-                                  id: selectedBudgetRequest.id,
-                                  organizationId: selectedBudgetRequest.organizationId,
-                                  organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
-                                  submittedBy: selectedBudgetRequest.submittedBy,
-                                  activityTitle: selectedBudgetRequest.activityTitle,
-                                  requestedAmount: selectedBudgetRequest.requestedAmount,
-                                },
-                                "reject",
-                              )
-                            }
-                          >
-                            Reject
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+              <DialogContent className="h-[100dvh] w-[calc(100vw-1rem)] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-[92dvh] sm:w-[min(96vw,96rem)] sm:max-w-none sm:rounded-2xl sm:border">
+                <div className="flex h-full flex-col">
+                  <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
+                    <DialogHeader className="text-left sm:text-left">
+                      <DialogTitle className="text-xl leading-tight sm:text-2xl">
+                        {selectedBudgetRequest?.activityTitle ?? "Budget Request Details"}
+                      </DialogTitle>
+                      <DialogDescription className="max-w-2xl text-sm sm:text-base">
+                        Review organization details and attached files before updating the request status.
+                      </DialogDescription>
+                    </DialogHeader>
                   </div>
-                ) : null}
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={closeBudgetRequestDetails}>
-                    Close
-                  </Button>
-                </DialogFooter>
+                  <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                    {selectedBudgetRequest ? (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              {renderRegistrationDetailCard({
+                                title: "Organization Name",
+                                value: selectedBudgetOrganization?.organizationName ?? "N/A",
+                                className: "sm:col-span-2",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Organization Email",
+                                value: selectedBudgetOrganization?.organizationEmail ?? "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Contact Number",
+                                value: selectedBudgetOrganization?.contactNumber ?? "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Barangay",
+                                value: selectedBudgetOrganization?.barangay ?? "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "District",
+                                value: selectedBudgetOrganization?.district || "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Submitted By",
+                                value: selectedBudgetRequest.submittedBy,
+                                wrap: true,
+                                className: "sm:col-span-2",
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Request Details</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              {renderRegistrationDetailCard({ title: "Requested Amount", value: `PHP ${selectedBudgetRequest.requestedAmount.toLocaleString()}` })}
+                              {renderRegistrationDetailCard({
+                                title: "Approved Amount",
+                                value: `PHP ${selectedBudgetRequest.approvedAmount.toLocaleString()}`,
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Released Amount",
+                                value: `PHP ${selectedBudgetRequest.releasedAmount.toLocaleString()}`,
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Activity Date",
+                                value: selectedBudgetRequest.activityDate || "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Venue",
+                                value: selectedBudgetRequest.venue,
+                                wrap: true,
+                                className: "sm:col-span-2",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Purpose Category",
+                                value: selectedBudgetRequest.purposeCategory || "N/A",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Go Signal",
+                                value: selectedBudgetRequest.goSignalAt || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Hard Copy Submitted",
+                                value: selectedBudgetRequest.hardCopySubmittedAt || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Release Date",
+                                value: selectedBudgetRequest.releaseDate || "Pending",
+                              })}
+                              {renderRegistrationDetailCard({
+                                title: "Remarks",
+                                value: selectedBudgetRequest.remarks || "None",
+                                wrap: true,
+                                className: "sm:col-span-2",
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Attached Files</p>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                  {selectedBudgetRequestFiles.length
+                                    ? `${selectedBudgetRequestFiles.length} file${selectedBudgetRequestFiles.length === 1 ? "" : "s"} uploaded.`
+                                    : "No attached files were uploaded for this request."}
+                                </p>
+                              </div>
+                              <div className="self-start">
+                                <PortalStatusBadge status={selectedBudgetRequest.status} />
+                              </div>
+                            </div>
+
+                            {selectedBudgetRequestFiles.length ? (
+                              <div className="mt-4 space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedBudgetRequestFiles.map((file) => (
+                                    <Button
+                                      key={file.id}
+                                      type="button"
+                                      size="sm"
+                                      variant={selectedBudgetRequestFile?.id === file.id ? "default" : "outline"}
+                                      className="max-w-full"
+                                      onClick={() => setSelectedBudgetFileId(file.id)}
+                                    >
+                                      <span className="max-w-[12rem] truncate">{file.fileName}</span>
+                                    </Button>
+                                  ))}
+                                </div>
+
+                                <div className="rounded-xl border border-border/70 bg-background p-3">
+                                  {budgetPreviewLoading ? (
+                                    <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
+                                  ) : budgetPreviewUrl && budgetPreviewCanInline ? (
+                                    <iframe
+                                      title={budgetPreviewTitle || "Budget Request Preview"}
+                                      src={budgetPreviewUrl}
+                                      className="h-[22rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
+                                    />
+                                  ) : budgetPreviewUrl ? (
+                                    <div className="space-y-3 p-3 text-sm text-muted-foreground">
+                                      <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
+                                      <Button type="button" variant="outline" onClick={() => window.open(budgetPreviewUrl, "_blank", "noopener,noreferrer")}>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Open File
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="grid min-h-[16rem] place-items-center rounded-md border border-dashed border-border/70 bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                                      {budgetPreviewEmptyMessage || "No budget request file was uploaded."}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-4 rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-sm text-muted-foreground">
+                                No attached budget request files were submitted.
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              Current status: <span className="font-medium text-foreground">{selectedBudgetRequest.status}</span>
+                            </p>
+                            <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  void performBudgetRequestStatusUpdate(
+                                    {
+                                      id: selectedBudgetRequest.id,
+                                      organizationId: selectedBudgetRequest.organizationId,
+                                      organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                      submittedBy: selectedBudgetRequest.submittedBy,
+                                      activityTitle: selectedBudgetRequest.activityTitle,
+                                      requestedAmount: selectedBudgetRequest.requestedAmount,
+                                    },
+                                    "approve",
+                                  )
+                                }
+                              >
+                                Mark Green
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  void performBudgetRequestStatusUpdate(
+                                    {
+                                      id: selectedBudgetRequest.id,
+                                      organizationId: selectedBudgetRequest.organizationId,
+                                      organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                      submittedBy: selectedBudgetRequest.submittedBy,
+                                      activityTitle: selectedBudgetRequest.activityTitle,
+                                      requestedAmount: selectedBudgetRequest.requestedAmount,
+                                    },
+                                    "needs_revision",
+                                  )
+                                }
+                              >
+                                Needs Revision
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  void performBudgetRequestStatusUpdate(
+                                    {
+                                      id: selectedBudgetRequest.id,
+                                      organizationId: selectedBudgetRequest.organizationId,
+                                      organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                      submittedBy: selectedBudgetRequest.submittedBy,
+                                      activityTitle: selectedBudgetRequest.activityTitle,
+                                      requestedAmount: selectedBudgetRequest.requestedAmount,
+                                    },
+                                    "reject",
+                                  )
+                                }
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="border-t border-border/70 px-4 py-4 sm:px-6">
+                    <DialogFooter>
+                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeBudgetRequestDetails}>
+                        Close
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
           </>

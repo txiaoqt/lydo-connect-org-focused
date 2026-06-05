@@ -1269,6 +1269,7 @@ begin
 end;
 $$;
 
+drop function if exists public.update_admin_organization_profile_review(text, uuid, public.profile_status, timestamptz);
 create or replace function public.update_admin_organization_profile_review(
   _session_token text,
   _organization_profile_id uuid,
@@ -1281,6 +1282,7 @@ returns table (
   organization_name text,
   organization_email citext,
   contact_number text,
+  district text,
   barangay text,
   major_classification text,
   sub_classification text,

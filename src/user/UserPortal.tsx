@@ -1591,25 +1591,12 @@ export default function UserPortal({ section }: { section: string }) {
                               </Button>
                             </label>
                           </div>
-                          {file ? (
-                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
-                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Uploaded file</p>
-                              <p className="mt-2 break-words text-sm font-medium text-foreground">{file.fileName}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Uploaded {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : "recently"}
-                              </p>
-                            </div>
-                          ) : null}
                         </div>
-                        {file ? (
-                          <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-                            Uploaded {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : "recently"}.
-                          </div>
-                        ) : (
+                        {!file ? (
                           <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
                             {getDocumentUploadHelpText(documentType.id)}
                           </div>
-                        )}
+                        ) : null}
                       </CardContent>
                     </Card>
                   );
