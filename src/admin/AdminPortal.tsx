@@ -244,8 +244,10 @@ export default function AdminPortal({ section }: { section: string }) {
     const filesWithUploads = state.documentSubmissionFiles.filter((file) => file.fileUrl.trim());
 
     if (!filesWithUploads.length) {
-      setDocumentPreviewUrls({});
       documentPreviewSourceRef.current = {};
+      if (Object.keys(documentPreviewUrls).length > 0) {
+        setDocumentPreviewUrls({});
+      }
       return;
     }
 
