@@ -203,6 +203,7 @@ const syncLiquidationReportForBudget = (
 
 const normalizeOrganizationProfile = (profile: OrganizationProfile): OrganizationProfile => ({
   ...profile,
+  district: profile.district ?? "",
   majorClassification: profile.majorClassification ?? "",
   subClassification: profile.subClassification ?? "",
   advocacies: profile.advocacies ?? [],

@@ -66,7 +66,6 @@ const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.r
 const formatCurrency = (value: number) => `PHP ${value.toLocaleString()}`;
 const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const philippineContactNumberPattern = /^09\d{9}$/;
-const normalizePhilippineContactNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 11);
 const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
 const getDocumentUploadAcceptValue = (documentTypeId: string) =>
   documentTypeId === "yorp-members"
@@ -100,6 +99,7 @@ const getOrganizationProfileCompletionCount = (profile?: OrganizationProfile | n
     profile?.organizationName?.trim(),
     profile?.organizationEmail?.trim(),
     profile?.contactNumber?.trim(),
+    profile?.district?.trim(),
     profile?.barangay?.trim(),
     profile?.majorClassification?.trim(),
     profile?.subClassification?.trim(),
@@ -109,15 +109,19 @@ const getOrganizationProfileCompletionCount = (profile?: OrganizationProfile | n
     profile?.address?.trim(),
   ].filter(Boolean).length;
 const isOrganizationProfileComplete = (profile?: OrganizationProfile | null) =>
-  getOrganizationProfileCompletionCount(profile) === 10;
+  getOrganizationProfileCompletionCount(profile) === 11;
 
-const createBlankOrganizationProfile = (userId: string): OrganizationProfile => ({
+const createBlankOrganizationProfile = (
+  userId: string,
+  defaults?: Partial<Pick<OrganizationProfile, "organizationName" | "organizationEmail" | "contactNumber" | "district" | "barangay">>,
+): OrganizationProfile => ({
   id: `draft-${userId || "organization"}`,
   userId,
-  organizationName: "",
-  organizationEmail: "",
-  contactNumber: "",
-  barangay: "",
+  organizationName: defaults?.organizationName ?? "",
+  organizationEmail: defaults?.organizationEmail ?? "",
+  contactNumber: defaults?.contactNumber ?? "",
+  district: defaults?.district ?? "",
+  barangay: defaults?.barangay ?? "",
   majorClassification: "",
   subClassification: "",
   advocacies: [],
@@ -131,6 +135,26 @@ const createBlankOrganizationProfile = (userId: string): OrganizationProfile => 
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
+
+const createOrganizationProfileDraft = (
+  userId: string,
+  profile: OrganizationProfile | null,
+  defaults?: Partial<Pick<OrganizationProfile, "organizationName" | "organizationEmail" | "contactNumber" | "district" | "barangay">>,
+) => {
+  const blank = createBlankOrganizationProfile(userId, defaults);
+  if (!profile) return blank;
+
+  return {
+    ...blank,
+    ...profile,
+    organizationName: profile.organizationName.trim() || blank.organizationName,
+    organizationEmail: profile.organizationEmail.trim() || blank.organizationEmail,
+    contactNumber: profile.contactNumber.trim() || blank.contactNumber,
+    district: profile.district.trim() || blank.district,
+    barangay: profile.barangay.trim() || blank.barangay,
+    advocacies: [...profile.advocacies],
+  };
+};
 
 const createBlankBudgetRequest = (organizationId: string, submittedBy: string): BudgetRequest => ({
   id: `budget-${organizationId || "draft"}-${Date.now()}`,
@@ -202,16 +226,26 @@ export default function UserPortal({ section }: { section: string }) {
   } | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
   const [profileDraft, setProfileDraft] = useState<OrganizationProfile>(
-    currentProfile ? { ...currentProfile, advocacies: [...currentProfile.advocacies] } : createBlankOrganizationProfile(user?.id ?? ""),
+    createOrganizationProfileDraft(currentProfile?.userId ?? user?.id ?? "", currentProfile, {
+      organizationName: user?.displayName ?? "",
+      organizationEmail: user?.email ?? "",
+      contactNumber: user?.profileHints?.contactNumber ?? "",
+      district: user?.profileHints?.district ?? "",
+      barangay: user?.profileHints?.barangay ?? "",
+    }),
   );
 
   useEffect(() => {
     setProfileDraft(
-      currentProfile
-        ? { ...currentProfile, advocacies: [...currentProfile.advocacies] }
-        : createBlankOrganizationProfile(user?.id ?? ""),
+      createOrganizationProfileDraft(currentProfile?.userId ?? user?.id ?? "", currentProfile, {
+        organizationName: user?.displayName ?? "",
+        organizationEmail: user?.email ?? "",
+        contactNumber: user?.profileHints?.contactNumber ?? "",
+        district: user?.profileHints?.district ?? "",
+        barangay: user?.profileHints?.barangay ?? "",
+      }),
     );
-  }, [currentProfile, user?.id]);
+  }, [currentProfile, user?.displayName, user?.email, user?.id, user?.profileHints?.barangay, user?.profileHints?.contactNumber, user?.profileHints?.district]);
 
   useEffect(() => {
     if (!user) return;
@@ -235,7 +269,13 @@ export default function UserPortal({ section }: { section: string }) {
     setOcrPreviewUrl(URL.createObjectURL(pendingDocumentScan.file));
   }, [ocrPreviewOpen, ocrPreviewUrl, pendingDocumentScan]);
 
-  const profile = currentProfile ?? createBlankOrganizationProfile(user?.id ?? "");
+  const profile = createOrganizationProfileDraft(currentProfile?.userId ?? user?.id ?? "", currentProfile, {
+    organizationName: user?.displayName ?? "",
+    organizationEmail: user?.email ?? "",
+    contactNumber: user?.profileHints?.contactNumber ?? "",
+    district: user?.profileHints?.district ?? "",
+    barangay: user?.profileHints?.barangay ?? "",
+  });
   const submission = state.documentSubmissions[0] ?? null;
   const userNotifications = useMemo(
     () => state.notifications.filter((notification) => notification.userId === user?.id),
@@ -325,9 +365,9 @@ export default function UserPortal({ section }: { section: string }) {
     [templateDocuments],
   );
   const completedDocs = docFiles.filter((file) => file.validationStatus === "correct").length;
-  const profilePercent = getReadiness(getOrganizationProfileCompletionCount(currentProfile), 10);
-  const profileDraftPercent = getReadiness(getOrganizationProfileCompletionCount(profileDraft), 10);
-  const profileComplete = isOrganizationProfileComplete(currentProfile);
+  const profilePercent = getReadiness(getOrganizationProfileCompletionCount(profile), 11);
+  const profileDraftPercent = getReadiness(getOrganizationProfileCompletionCount(profileDraft), 11);
+  const profileComplete = isOrganizationProfileComplete(profile);
   const documentsPercent = getReadiness(completedDocs, templateDocuments.length);
   const budgetPercent = latestBudget ? getReadiness(approvedBudgetStatuses.has(latestBudget.status) ? 1 : 0, 1) : 0;
   const liquidationPercent = latestLiquidation ? getReadiness(latestLiquidation.status === "completed_liquidated" ? 1 : 0, 1) : 0;
@@ -750,6 +790,7 @@ export default function UserPortal({ section }: { section: string }) {
       organizationName: profileDraft.organizationName.trim(),
       organizationEmail: profileDraft.organizationEmail.trim(),
       contactNumber: profileDraft.contactNumber.trim(),
+      district: profileDraft.district.trim(),
       barangay: profileDraft.barangay.trim(),
       majorClassification: profileDraft.majorClassification,
       subClassification: profileDraft.subClassification,
@@ -769,6 +810,7 @@ export default function UserPortal({ section }: { section: string }) {
       !trimmedProfile.organizationName ||
       !trimmedProfile.organizationEmail ||
       !trimmedProfile.contactNumber ||
+      !trimmedProfile.district ||
       !trimmedProfile.barangay ||
       !trimmedProfile.majorClassification ||
       !trimmedProfile.subClassification ||
@@ -776,7 +818,8 @@ export default function UserPortal({ section }: { section: string }) {
     ) {
       toast({
         title: "Complete the profile",
-        description: "Please fill in the required organization details, classifications, and at least one advocacy.",
+        description:
+          "Please fill in the required organization details, district, barangay, classifications, and at least one advocacy.",
         variant: "destructive",
       });
       return;
@@ -1108,7 +1151,7 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <PortalSection
             title="Organization Profile Setup"
-            description="Edit the organization profile linked to your account. Save changes to update the admin dashboard review record."
+            description="Review the organization profile linked to your account. Core registration details are pulled from signup and locked in."
             action={<PortalStatusBadge status={profileDraft.profileStatus} />}
           >
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1118,36 +1161,44 @@ export default function UserPortal({ section }: { section: string }) {
                     <FieldGroup label="Organization Name" required>
                       <input
                         value={profileDraft.organizationName}
-                        onChange={(event) => handleProfileFieldChange("organizationName", event.target.value)}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
-                        placeholder="Enter organization name"
+                        placeholder="Organization name"
+                        readOnly
                       />
                     </FieldGroup>
                     <FieldGroup label="Organization Email" required>
                       <input
                         type="email"
                         value={profileDraft.organizationEmail}
-                        onChange={(event) => handleProfileFieldChange("organizationEmail", event.target.value)}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
-                        placeholder="Enter organization email"
+                        placeholder="Organization email"
+                        readOnly
                       />
                     </FieldGroup>
                     <FieldGroup label="Contact Number" required>
                       <input
                         value={profileDraft.contactNumber}
-                        onChange={(event) => handleProfileFieldChange("contactNumber", normalizePhilippineContactNumberInput(event.target.value))}
                         inputMode="numeric"
                         maxLength={11}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
                         placeholder="09XXXXXXXXX"
+                        readOnly
+                      />
+                    </FieldGroup>
+                    <FieldGroup label="District" required>
+                      <input
+                        value={profileDraft.district}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
+                        placeholder="District"
+                        readOnly
                       />
                     </FieldGroup>
                     <FieldGroup label="Barangay" required>
                       <input
                         value={profileDraft.barangay}
-                        onChange={(event) => handleProfileFieldChange("barangay", event.target.value)}
                         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
-                        placeholder="Enter barangay"
+                        placeholder="Barangay"
+                        readOnly
                       />
                     </FieldGroup>
                   </div>

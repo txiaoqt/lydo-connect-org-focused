@@ -41,6 +41,7 @@ type OrganizationProfileRow = {
   organization_name: string;
   organization_email: string;
   contact_number: string;
+  district: string;
   barangay: string;
   major_classification: string | null;
   sub_classification: string | null;
@@ -272,6 +273,7 @@ const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfil
   organizationName: row.organization_name,
   organizationEmail: row.organization_email,
   contactNumber: row.contact_number,
+  district: row.district,
   barangay: row.barangay,
   majorClassification: (row.major_classification ?? "") as OrganizationProfile["majorClassification"],
   subClassification: (row.sub_classification ?? "") as OrganizationProfile["subClassification"],
@@ -696,6 +698,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
     organization_name: profile.organizationName.trim(),
     organization_email: profile.organizationEmail.trim(),
     contact_number: profile.contactNumber.trim(),
+    district: profile.district.trim(),
     barangay: profile.barangay.trim(),
     major_classification: profile.majorClassification || null,
     sub_classification: profile.subClassification || null,
@@ -712,7 +715,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
   const { data, error } = await supabase
     .from("organization_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("id,user_id,organization_name,organization_email,contact_number,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,verified_at,internal_notes,created_at,updated_at")
+    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,verified_at,internal_notes,created_at,updated_at")
     .single();
 
   if (error || !data) {

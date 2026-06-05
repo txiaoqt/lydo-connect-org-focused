@@ -24,15 +24,55 @@ type BarangayOption = {
   name: string;
 };
 
+type PasigDistrict = "District I" | "District II";
+
+const pasigDistrictBarangays: Record<PasigDistrict, BarangayOption[]> = {
+  "District I": [
+    { id: "barangay-bagong-ilog", name: "Bagong Ilog" },
+    { id: "barangay-bagong-katipunan", name: "Bagong Katipunan" },
+    { id: "barangay-bambang", name: "Bambang" },
+    { id: "barangay-buting", name: "Buting" },
+    { id: "barangay-caniogan", name: "Caniogan" },
+    { id: "barangay-kalawaan", name: "Kalawaan" },
+    { id: "barangay-kapasigan", name: "Kapasigan" },
+    { id: "barangay-kapitolyo", name: "Kapitolyo" },
+    { id: "barangay-malinao", name: "Malinao" },
+    { id: "barangay-oranbo", name: "Oranbo" },
+    { id: "barangay-palatiw", name: "Palatiw" },
+    { id: "barangay-pineda", name: "Pineda" },
+    { id: "barangay-sagad", name: "Sagad" },
+    { id: "barangay-san-antonio", name: "San Antonio" },
+    { id: "barangay-san-joaquin", name: "San Joaquin" },
+    { id: "barangay-san-jose", name: "San Jose" },
+    { id: "barangay-san-nicolas", name: "San Nicolas" },
+    { id: "barangay-sta-cruz", name: "Sta. Cruz" },
+    { id: "barangay-sta-rosa", name: "Sta. Rosa" },
+    { id: "barangay-sto-tomas", name: "Sto. Tomas" },
+    { id: "barangay-sumilang", name: "Sumilang" },
+    { id: "barangay-ugong", name: "Ugong" },
+  ],
+  "District II": [
+    { id: "barangay-dela-paz", name: "Dela Paz" },
+    { id: "barangay-manggahan", name: "Manggahan" },
+    { id: "barangay-maybunga", name: "Maybunga" },
+    { id: "barangay-pinagbuhatan", name: "Pinagbuhatan" },
+    { id: "barangay-rosario", name: "Rosario" },
+    { id: "barangay-san-miguel", name: "San Miguel" },
+    { id: "barangay-sta-lucia", name: "Sta. Lucia" },
+    { id: "barangay-santolan", name: "Santolan" },
+  ],
+};
+
+const pasigDistrictOptions: PasigDistrict[] = ["District I", "District II"];
+
 const SignUp = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [district, setDistrict] = useState<PasigDistrict | "">("");
   const [barangayId, setBarangayId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [barangays, setBarangays] = useState<BarangayOption[]>([]);
-  const [barangaysLoading, setBarangaysLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [agreedToPolicies, setAgreedToPolicies] = useState(false);
@@ -44,13 +84,16 @@ const SignUp = () => {
   const isGmailEmail = /^[a-z0-9._%+-]+@gmail\.com$/i.test(email.trim());
   const normalizedContactNumber = contactNumber.trim();
   const isContactNumberValid = /^09\d{9}$/.test(normalizedContactNumber);
-  const selectedBarangayName = barangays.find((item) => item.id === barangayId)?.name ?? "N/A";
+  const districtBarangays = district ? pasigDistrictBarangays[district] : [];
+  const selectedBarangayName = districtBarangays.find((item) => item.id === barangayId)?.name ?? "N/A";
+  const selectedDistrictName = district || "N/A";
   const canSubmit = Boolean(
     useSupabaseAuth &&
       name.trim() &&
       email.trim() &&
       isGmailEmail &&
       isContactNumberValid &&
+      district &&
       barangayId &&
       password &&
       confirmPassword &&
@@ -58,42 +101,16 @@ const SignUp = () => {
   );
 
   useEffect(() => {
-    let mounted = true;
+    if (!district) {
+      setBarangayId("");
+      return;
+    }
 
-    const loadBarangays = async () => {
-      if (!supabase) {
-        if (!mounted) return;
-        setBarangays([]);
-        setBarangaysLoading(false);
-        return;
-      }
-
-      setBarangaysLoading(true);
-      const { data, error } = await supabase
-        .from("barangays")
-        .select("id,name")
-        .order("name", { ascending: true });
-
-      if (!mounted) return;
-      if (error) {
-        setBarangays([]);
-        setBarangaysLoading(false);
-        return;
-      }
-
-      const options = (data ?? []).map((row) => ({ id: row.id as string, name: row.name as string }));
-      setBarangays(options);
-      setBarangaysLoading(false);
-      if (!barangayId && options.length > 0) {
-        setBarangayId(options[0].id);
-      }
-    };
-
-    void loadBarangays();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    const nextOptions = pasigDistrictBarangays[district];
+    if (!nextOptions.some((item) => item.id === barangayId)) {
+      setBarangayId(nextOptions[0]?.id ?? "");
+    }
+  }, [barangayId, district]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,9 +147,11 @@ const SignUp = () => {
     const result = await signUp({
       email: email.trim().toLowerCase(),
       password,
-      fullName: name,
+      organizationName: name.trim(),
       contactNumber: normalizedContactNumber,
+      district,
       barangayId,
+      barangayName: selectedBarangayName,
     });
     setIsCreating(false);
     if (result.error) {
@@ -152,7 +171,8 @@ const SignUp = () => {
     setName("");
     setEmail("");
     setContactNumber("");
-    setBarangayId(barangays[0]?.id ?? "");
+    setDistrict("");
+    setBarangayId("");
     setPassword("");
     setConfirmPassword("");
     navigate("/signin");
@@ -177,8 +197,8 @@ const SignUp = () => {
           className="rounded-2xl border border-border bg-card p-6 sm:p-7 space-y-5 card-shadow"
         >
           <div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">Create account</h1>
-            <p className="text-sm text-muted-foreground mt-1">Only user accounts can be created here.</p>
+            <h1 className="text-2xl font-heading font-bold text-foreground">Create organization account</h1>
+            <p className="text-sm text-muted-foreground mt-1">Only organization accounts can be created here.</p>
           </div>
 
           {!useSupabaseAuth && (
@@ -188,10 +208,10 @@ const SignUp = () => {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-foreground">Full Name</Label>
+            <Label htmlFor="name" className="text-foreground">Organization Name</Label>
             <Input
               id="name"
-              placeholder="Juan Dela Cruz"
+              placeholder="TADZ Organization"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
@@ -227,31 +247,46 @@ const SignUp = () => {
               <p className="text-xs text-destructive">Contact number must be 11 digits and start with 09.</p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="barangayId" className="text-foreground">Barangay</Label>
-            <select
-              id="barangayId"
-              value={barangayId}
-              onChange={(e) => setBarangayId(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              disabled={barangaysLoading || barangays.length === 0}
-              required
-            >
-              {barangays.length === 0 ? (
-                <option value="">
-                  {barangaysLoading ? "Loading barangays..." : "No barangays available"}
-                </option>
-              ) : (
-                barangays.map((barangay) => (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="district" className="text-foreground">District</Label>
+              <select
+                id="district"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value as PasigDistrict | "")}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                required
+              >
+                <option value="">Select district</option>
+                {pasigDistrictOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="barangayId" className="text-foreground">Barangay</Label>
+              <select
+                id="barangayId"
+                value={barangayId}
+                onChange={(e) => setBarangayId(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                disabled={!district || districtBarangays.length === 0}
+                required
+              >
+                <option value="">{district ? "Select barangay" : "Choose a district first"}</option>
+                {districtBarangays.map((barangay) => (
                   <option key={barangay.id} value={barangay.id}>
                     {barangay.name}
                   </option>
-                ))
+                ))}
+              </select>
+              {!district && <p className="text-xs text-muted-foreground">Choose a district to see its barangays.</p>}
+              {district && districtBarangays.length === 0 && (
+                <p className="text-xs text-warning">No barangays available for this district.</p>
               )}
-            </select>
-            {barangays.length === 0 && !barangaysLoading && (
-              <p className="text-xs text-warning">Barangay list is empty. Seed the supported barangays first.</p>
-            )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="password" className="text-foreground">Password</Label>
@@ -285,18 +320,19 @@ const SignUp = () => {
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             disabled={!canSubmit}
           >
-            Create User Account
+            Create Organization Account
           </Button>
         </form>
 
         <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are all details correct?</AlertDialogTitle>
+              <AlertDialogTitle>Are all organization details correct?</AlertDialogTitle>
             <AlertDialogDescription>
-              Please review before creating your account.
-              <span className="block mt-2 text-foreground">Name: {name.trim() || "N/A"}</span>
+              Please review before creating your organization account.
+              <span className="block mt-2 text-foreground">Organization Name: {name.trim() || "N/A"}</span>
               <span className="block text-foreground">Email: {email.trim() || "N/A"}</span>
+              <span className="block text-foreground">District: {selectedDistrictName}</span>
               <span className="block text-foreground">Barangay: {selectedBarangayName}</span>
               <span className="mt-3 flex items-start gap-2">
                 <Checkbox

@@ -10,6 +10,11 @@ export type AuthUser = {
   id: string;
   email: string;
   displayName: string;
+  profileHints?: {
+    contactNumber?: string;
+    district?: string;
+    barangay?: string;
+  };
 };
 
 type SignInParams =
@@ -27,9 +32,11 @@ type SignInParams =
 type SignUpParams = {
   email: string;
   password: string;
-  fullName?: string;
+  organizationName?: string;
   contactNumber?: string;
+  district?: string;
   barangayId?: string;
+  barangayName?: string;
 };
 
 type AuthContextValue = {
@@ -138,6 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const authUser = session.user;
       const defaultDisplayName =
+        (authUser.user_metadata?.organization_name as string | undefined) ??
         (authUser.user_metadata?.display_name as string | undefined) ??
         (authUser.user_metadata?.full_name as string | undefined) ??
         authUser.email?.split("@")[0] ??
@@ -173,6 +181,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           (profileResp.data?.display_name as string | undefined) ??
           (profileResp.data?.full_name as string | undefined) ??
           defaultDisplayName,
+        profileHints: {
+          contactNumber: (authUser.user_metadata?.contact_number as string | undefined) ?? "",
+          district: (authUser.user_metadata?.district as string | undefined) ?? "",
+          barangay: (authUser.user_metadata?.barangay_name as string | undefined) ?? "",
+        },
       };
 
       setIsAuthenticated(true);
@@ -288,7 +301,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return {};
   };
 
-  const signUp = async ({ email, password, fullName, contactNumber, barangayId }: SignUpParams) => {
+  const signUp = async ({ email, password, organizationName, contactNumber, district, barangayId, barangayName }: SignUpParams) => {
     if (!supabase) {
       return {
         error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
@@ -301,10 +314,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       options: {
         emailRedirectTo: getAuthCallbackUrl(),
         data: {
-          full_name: fullName ?? "",
-          display_name: fullName ?? "",
+          full_name: organizationName ?? "",
+          display_name: organizationName ?? "",
+          organization_name: organizationName ?? "",
           contact_number: contactNumber ?? "",
+          district: district ?? "",
           barangay_id: barangayId ?? "",
+          barangay_name: barangayName ?? "",
           municipality: "Prototype Municipality",
         },
       },

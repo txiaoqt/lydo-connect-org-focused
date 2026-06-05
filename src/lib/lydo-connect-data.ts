@@ -248,6 +248,7 @@ export type OrganizationProfile = {
   organizationName: string;
   organizationEmail: string;
   contactNumber: string;
+  district: string;
   barangay: string;
   majorClassification: MajorClassification | "";
   subClassification: SubClassification | "";

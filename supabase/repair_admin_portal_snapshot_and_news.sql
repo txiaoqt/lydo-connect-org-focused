@@ -515,6 +515,7 @@ begin
     organization_profiles.organization_name,
     organization_profiles.organization_email,
     organization_profiles.contact_number,
+    organization_profiles.district,
     organization_profiles.barangay,
     organization_profiles.major_classification,
     organization_profiles.sub_classification,
