@@ -17,15 +17,18 @@ import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
-import { adminNavigationGroups } from "@/lib/lydo-connect-data";
+import { adminNavigationGroups, type NewsRelease } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
+  createNewsReleaseInSupabase,
   createTemplateRecordInSupabase,
+  deleteNewsReleaseInSupabase,
   updateBudgetRequestInSupabase,
   deleteTemplateRecordInSupabase,
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
   updateLiquidationReportInSupabase,
+  updateNewsReleaseInSupabase,
   updateTemplateRecordInSupabase,
   uploadTemplateDocumentToSupabase,
 } from "@/lib/lydo-connect-supabase";
@@ -64,7 +67,7 @@ const renderAdvocacyChips = (advocacies: string[]) =>
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createNotification, createActivityLog } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createNotification, createActivityLog } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -77,6 +80,14 @@ export default function AdminPortal({ section }: { section: string }) {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
+  const [newsModalMode, setNewsModalMode] = useState<"create" | "edit" | null>(null);
+  const [editingNewsReleaseId, setEditingNewsReleaseId] = useState<string | null>(null);
+  const [newsTitleDraft, setNewsTitleDraft] = useState("");
+  const [newsDescriptionDraft, setNewsDescriptionDraft] = useState("");
+  const [newsFacebookPostUrlDraft, setNewsFacebookPostUrlDraft] = useState("");
+  const [newsDatePostedDraft, setNewsDatePostedDraft] = useState("");
+  const [newsVisibilityDraft, setNewsVisibilityDraft] = useState<NewsRelease["visibilityStatus"]>("draft");
+  const [savingNewsRelease, setSavingNewsRelease] = useState(false);
 
   const profile = state.organizationProfiles[0];
   const unread = state.notifications.filter((item) => !item.isRead).length;
@@ -86,6 +97,15 @@ export default function AdminPortal({ section }: { section: string }) {
         .filter((template) => template.templateActive && template.isActive)
         .sort((left, right) => left.sortOrder - right.sortOrder),
     [state.templates],
+  );
+  const newsReleases = useMemo(
+    () =>
+      [...state.newsReleases].sort((left, right) => {
+        const dateDelta = new Date(right.datePosted).getTime() - new Date(left.datePosted).getTime();
+        if (dateDelta !== 0) return dateDelta;
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      }),
+    [state.newsReleases],
   );
   const validDocumentTypeIds = useMemo(
     () => new Set(templateDocuments.map((documentType) => documentType.id)),
@@ -116,6 +136,16 @@ export default function AdminPortal({ section }: { section: string }) {
     setTemplateFileDraft(null);
   };
 
+  const resetNewsReleaseForm = () => {
+    setNewsModalMode(null);
+    setEditingNewsReleaseId(null);
+    setNewsTitleDraft("");
+    setNewsDescriptionDraft("");
+    setNewsFacebookPostUrlDraft("");
+    setNewsDatePostedDraft("");
+    setNewsVisibilityDraft("draft");
+  };
+
   const startEditingTemplate = (templateId: string) => {
     const template = templateDocuments.find((entry) => entry.id === templateId);
     if (!template) return;
@@ -124,6 +154,18 @@ export default function AdminPortal({ section }: { section: string }) {
     setTemplateNameDraft(template.name);
     setTemplateDescriptionDraft(template.description);
     setTemplateFileDraft(null);
+  };
+
+  const startEditingNewsRelease = (newsReleaseId: string) => {
+    const newsRelease = newsReleases.find((entry) => entry.id === newsReleaseId);
+    if (!newsRelease) return;
+    setNewsModalMode("edit");
+    setEditingNewsReleaseId(newsReleaseId);
+    setNewsTitleDraft(newsRelease.title);
+    setNewsDescriptionDraft(newsRelease.description);
+    setNewsFacebookPostUrlDraft(newsRelease.facebookPostUrl);
+    setNewsDatePostedDraft(newsRelease.datePosted);
+    setNewsVisibilityDraft(newsRelease.visibilityStatus);
   };
 
   const handleCreateTemplate = async () => {
@@ -165,6 +207,82 @@ export default function AdminPortal({ section }: { section: string }) {
       });
     } finally {
       setSavingTemplate(false);
+    }
+  };
+
+  const handleSaveNewsRelease = async () => {
+    if (!newsTitleDraft.trim()) {
+      toast({ title: "News title required", description: "Please enter a news release title.", variant: "destructive" });
+      return;
+    }
+    if (!newsDescriptionDraft.trim()) {
+      toast({ title: "Description required", description: "Please enter a news release description.", variant: "destructive" });
+      return;
+    }
+    if (!newsFacebookPostUrlDraft.trim()) {
+      toast({ title: "Facebook URL required", description: "Please enter the source post URL.", variant: "destructive" });
+      return;
+    }
+    if (!newsDatePostedDraft) {
+      toast({ title: "Date required", description: "Please select the posting date.", variant: "destructive" });
+      return;
+    }
+
+    setSavingNewsRelease(true);
+    try {
+      if (newsModalMode === "edit" && editingNewsReleaseId) {
+        const updatedNewsRelease = await updateNewsReleaseInSupabase(editingNewsReleaseId, {
+          title: newsTitleDraft,
+          description: newsDescriptionDraft,
+          facebookPostUrl: newsFacebookPostUrlDraft,
+          datePosted: newsDatePostedDraft,
+          visibilityStatus: newsVisibilityDraft,
+        });
+        updateNewsRelease(editingNewsReleaseId, updatedNewsRelease);
+        toast({ title: "News release updated", description: `${updatedNewsRelease.title} was updated successfully.` });
+      } else {
+        const createdNewsRelease = await createNewsReleaseInSupabase({
+          title: newsTitleDraft,
+          description: newsDescriptionDraft,
+          facebookPostUrl: newsFacebookPostUrlDraft,
+          datePosted: newsDatePostedDraft,
+          visibilityStatus: newsVisibilityDraft,
+        });
+        createNewsRelease(createdNewsRelease);
+        toast({ title: "News release created", description: `${createdNewsRelease.title} was added successfully.` });
+      }
+      resetNewsReleaseForm();
+    } catch (error) {
+      toast({
+        title: newsModalMode === "edit" ? "Update failed" : "Create failed",
+        description: error instanceof Error ? error.message : "The news release could not be saved.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNewsRelease(false);
+    }
+  };
+
+  const handleDeleteNewsRelease = async (newsReleaseId: string) => {
+    const newsRelease = newsReleases.find((entry) => entry.id === newsReleaseId);
+    if (!newsRelease) return;
+
+    const confirmed = window.confirm(`Delete "${newsRelease.title}"? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await deleteNewsReleaseInSupabase(newsReleaseId);
+      removeNewsRelease(newsReleaseId);
+      if (editingNewsReleaseId === newsReleaseId) {
+        resetNewsReleaseForm();
+      }
+      toast({ title: "News release deleted", description: `${newsRelease.title} was removed successfully.` });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "The news release could not be deleted.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -834,29 +952,173 @@ export default function AdminPortal({ section }: { section: string }) {
         );
       case "news-releases":
         return (
-          <PortalSection title="News Releases" description="Admin-created news and Facebook post links.">
-            <div className="grid gap-4 md:grid-cols-2">
-              {state.newsReleases.map((news) => (
-                <Card key={news.id} className="border-border/70">
-                  <CardContent className="space-y-3 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{news.title}</p>
-                      <PortalStatusBadge status={news.visibilityStatus} />
+          <>
+            <PortalSection
+              title="News Releases"
+              description="Admin-created news and Facebook post links."
+              action={
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setNewsModalMode("create");
+                    setEditingNewsReleaseId(null);
+                    setNewsTitleDraft("");
+                    setNewsDescriptionDraft("");
+                    setNewsFacebookPostUrlDraft("");
+                    setNewsDatePostedDraft(new Date().toISOString().slice(0, 10));
+                    setNewsVisibilityDraft("draft");
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add News Release
+                </Button>
+              }
+            >
+              {newsReleases.length ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {newsReleases.map((news) => (
+                  <Card key={news.id} className="border-border/70">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium">{news.title}</p>
+                        <PortalStatusBadge status={news.visibilityStatus} />
+                      </div>
+                      <p className="text-sm text-muted-foreground">{news.description}</p>
+                      <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground">Posted {news.datePosted}</p>
+                        <p className="mt-1 break-all">{news.facebookPostUrl}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/admin/news-releases/${news.id}`)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                const updatedNewsRelease = await updateNewsReleaseInSupabase(news.id, {
+                                  visibilityStatus: "published",
+                                });
+                                updateNewsRelease(news.id, updatedNewsRelease);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update news release",
+                                  description: error instanceof Error ? error.message : "The news release could not be updated.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
+                          Publish
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void (async () => {
+                              try {
+                                const updatedNewsRelease = await updateNewsReleaseInSupabase(news.id, {
+                                  visibilityStatus: "hidden",
+                                });
+                                updateNewsRelease(news.id, updatedNewsRelease);
+                              } catch (error) {
+                                toast({
+                                  title: "Unable to update news release",
+                                  description: error instanceof Error ? error.message : "The news release could not be updated.",
+                                  variant: "destructive",
+                                });
+                              }
+                            })()
+                          }
+                        >
+                          Hide
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => startEditingNewsRelease(news.id)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => void handleDeleteNewsRelease(news.id)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  ))}
+                </div>
+              ) : (
+                <PortalEmptyState
+                  title="No news releases yet"
+                  description="Create the first news release so both admin and users can preview the source post."
+                />
+              )}
+            </PortalSection>
+            <Dialog open={newsModalMode === "create" || newsModalMode === "edit"} onOpenChange={(open) => (!open ? resetNewsReleaseForm() : undefined)}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{newsModalMode === "edit" ? "Edit News Release" : "Add News Release"}</DialogTitle>
+                  <DialogDescription>
+                    {newsModalMode === "edit"
+                      ? "Update the public news release details and source post link."
+                      : "Create a news release record that can be previewed on the public and admin sides."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Title</label>
+                    <Input value={newsTitleDraft} onChange={(event) => setNewsTitleDraft(event.target.value)} placeholder="Enter news release title" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      value={newsDescriptionDraft}
+                      onChange={(event) => setNewsDescriptionDraft(event.target.value)}
+                      placeholder="Write the summary shown in the preview page."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Facebook Post URL</label>
+                    <Input
+                      value={newsFacebookPostUrlDraft}
+                      onChange={(event) => setNewsFacebookPostUrlDraft(event.target.value)}
+                      placeholder="https://facebook.com/..."
+                    />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Date Posted</label>
+                      <Input type="date" value={newsDatePostedDraft} onChange={(event) => setNewsDatePostedDraft(event.target.value)} />
                     </div>
-                    <p className="text-sm text-muted-foreground">{news.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => updateNewsRelease(news.id, { visibilityStatus: "published" })}>
-                        Publish
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateNewsRelease(news.id, { visibilityStatus: "hidden" })}>
-                        Hide
-                      </Button>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Visibility</label>
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={newsVisibilityDraft}
+                        onChange={(event) => setNewsVisibilityDraft(event.target.value as NewsRelease["visibilityStatus"])}
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="hidden">Hidden</option>
+                      </select>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </PortalSection>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={resetNewsReleaseForm}>
+                    Cancel
+                  </Button>
+                  <Button type="button" onClick={() => void handleSaveNewsRelease()} disabled={savingNewsRelease}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {savingNewsRelease ? "Saving..." : newsModalMode === "edit" ? "Save Changes" : "Create News Release"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
         );
       case "public-transparency-posts":
         return (
@@ -1126,11 +1388,15 @@ export default function AdminPortal({ section }: { section: string }) {
     }
   }, [
     createActivityLog,
+    createNewsRelease,
     createTemplate,
     createNotification,
+    deleteNewsReleaseInSupabase,
     editingTemplateId,
     handleCreateTemplate,
     handleDeleteTemplate,
+    handleDeleteNewsRelease,
+    handleSaveNewsRelease,
     mergeRemoteState,
     markNotificationRead,
     navigate,
@@ -1141,6 +1407,13 @@ export default function AdminPortal({ section }: { section: string }) {
     previewModalOpen,
     previewTitle,
     previewUrl,
+    newsDatePostedDraft,
+    newsDescriptionDraft,
+    newsFacebookPostUrlDraft,
+    newsModalMode,
+    newsReleases,
+    newsTitleDraft,
+    newsVisibilityDraft,
     section,
     selectedRegistrationId,
     state.activityLogs,
@@ -1148,7 +1421,6 @@ export default function AdminPortal({ section }: { section: string }) {
     state.complianceRemarks,
     state.documentSubmissionFiles,
     state.liquidationReports,
-    state.newsReleases,
     state.notifications,
     state.organizationProfiles,
     state.templates,
@@ -1159,12 +1431,17 @@ export default function AdminPortal({ section }: { section: string }) {
     templateFileDraft,
     templateNameDraft,
     templateModalMode,
+    removeNewsRelease,
     updateComplianceRemark,
     updateDocumentSubmission,
     updateNewsRelease,
     updateOrganizationProfile,
     updateTemplate,
     updateTransparencyPost,
+    updateNewsReleaseInSupabase,
+    resetNewsReleaseForm,
+    savingNewsRelease,
+    startEditingNewsRelease,
     validDocumentTypeIds,
     savingTemplate,
     uploadingTemplateId,

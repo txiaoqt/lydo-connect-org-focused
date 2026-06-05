@@ -1,39 +1,50 @@
 import { useMemo } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import SourcePostEmbed from "@/components/SourcePostEmbed";
 
 export default function NewsReleaseRecord() {
   const { newsReleaseId = "" } = useParams<{ newsReleaseId?: string }>();
   const navigate = useNavigate();
-  const { isInitialized, isAuthenticated, role } = useAuth();
+  const { pathname } = useLocation();
   const { state } = useLydoConnect();
+  const isAdminPreview = pathname.startsWith("/admin");
 
   const newsRelease = useMemo(
     () => state.newsReleases.find((item) => item.id === newsReleaseId) ?? null,
     [newsReleaseId, state.newsReleases],
   );
 
-  if (!isInitialized) {
+  if (!newsRelease) {
     return (
-      <div className="min-h-screen bg-background grid place-items-center text-sm text-muted-foreground">
-        Loading news release...
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-16">
+          <section className="container py-16">
+            <Card className="border-border/70 shadow-sm">
+              <CardContent className="p-6 text-center">
+                <h1 className="text-2xl font-bold text-foreground">News release not found</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  The news release you are trying to preview is unavailable.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => navigate(isAdminPreview ? "/admin/news-releases" : "/news-releases")}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to News Releases
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        </main>
+        <Footer />
       </div>
     );
-  }
-
-  if (!isAuthenticated || role === "admin") {
-    return <Navigate to="/news-releases" replace />;
-  }
-
-  if (!newsRelease) {
-    return <Navigate to="/news-releases" replace />;
   }
 
   return (
@@ -121,7 +132,7 @@ export default function NewsReleaseRecord() {
               </Card>
 
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={() => navigate("/news-releases")}>
+                <Button type="button" variant="outline" onClick={() => navigate(isAdminPreview ? "/admin/news-releases" : "/news-releases")}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to News Releases
                 </Button>

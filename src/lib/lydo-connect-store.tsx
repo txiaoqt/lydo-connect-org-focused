@@ -74,7 +74,9 @@ type LydoConnectContextValue = {
   createLiquidationReportFile: (file: LiquidationReportFile) => void;
   updateLiquidationReportFile: (id: string, patch: UpdatePatch<LiquidationReportFile>) => void;
   deleteLiquidationReportFile: (id: string) => void;
+  createNewsRelease: (newsRelease: NewsRelease) => void;
   updateNewsRelease: (id: string, patch: UpdatePatch<NewsRelease>) => void;
+  removeNewsRelease: (id: string) => void;
   updateTransparencyPost: (id: string, patch: UpdatePatch<TransparencyPost>) => void;
   updateComplianceRemark: (id: string, patch: UpdatePatch<ComplianceRemark>) => void;
   updateNotification: (id: string, patch: UpdatePatch<NotificationRecord>) => void;
@@ -410,10 +412,20 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
           ...current,
           liquidationReportFiles: removeById(current.liquidationReportFiles, id),
         })),
+      createNewsRelease: (newsRelease) =>
+        setState((current) => ({
+          ...current,
+          newsReleases: [newsRelease, ...current.newsReleases],
+        })),
       updateNewsRelease: (id, patch) =>
         setState((current) => ({
           ...current,
           newsReleases: applyPatch(current.newsReleases, id, patch),
+        })),
+      removeNewsRelease: (id) =>
+        setState((current) => ({
+          ...current,
+          newsReleases: removeById(current.newsReleases, id),
         })),
       updateTransparencyPost: (id, patch) =>
         setState((current) => ({

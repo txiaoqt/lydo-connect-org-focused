@@ -167,6 +167,7 @@ const App = () => (
                       <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
                       <Route path="/admin/remarks-consequences" element={<RequireAdmin><AdminPortal section="remarks-consequences" /></RequireAdmin>} />
                       <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
+                      <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
                       <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
                       <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
                       <Route path="/admin/notifications-activity" element={<RequireAdmin><AdminPortal section="notifications-activity" /></RequireAdmin>} />
@@ -185,6 +186,7 @@ const App = () => (
                           <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
                           <Route path="/admin/remarks-consequences" element={<RequireAdmin><AdminPortal section="remarks-consequences" /></RequireAdmin>} />
                           <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
+                          <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
                           <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
                           <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
                           <Route path="/admin/notifications-activity" element={<RequireAdmin><AdminPortal section="notifications-activity" /></RequireAdmin>} />
@@ -210,7 +212,7 @@ const App = () => (
                       <Route path="/budget-request" element={<RequireUser><UserPortal section="budget-request" /></RequireUser>} />
                       <Route path="/liquidation-reporting" element={<RequireUser><UserPortal section="liquidation-reporting" /></RequireUser>} />
                       <Route path="/news-releases" element={<RequireUser><UserPortal section="news-releases" /></RequireUser>} />
-                      <Route path="/news-releases/:newsReleaseId" element={<RequireUser><NewsReleaseRecord /></RequireUser>} />
+                      <Route path="/news-releases/:newsReleaseId" element={<NewsReleaseRecord />} />
                       <Route path="/public-transparency" element={<RequireUser><UserPortal section="public-transparency" /></RequireUser>} />
                       <Route path="/compliance-status" element={<RequireUser><UserPortal section="compliance-status" /></RequireUser>} />
                       <Route path="/notifications" element={<RequireUser><UserPortal section="notifications" /></RequireUser>} />

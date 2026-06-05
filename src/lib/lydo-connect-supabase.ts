@@ -5,6 +5,7 @@ import type {
   LiquidationReportFile,
   LydoSeedState,
   OrganizationProfile,
+  NewsRelease,
   SubmissionFile,
   TemplateRecord,
 } from "./lydo-connect-data";
@@ -143,6 +144,18 @@ type LiquidationReportFileRow = {
   file_size: number | string;
   uploaded_at: string | null;
   created_at: string;
+};
+
+type NewsReleaseRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  facebook_post_url: string;
+  date_posted: string;
+  visibility_status: NewsRelease["visibilityStatus"];
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 const localDocumentTypeByName = new Map(requiredDocumentTypes.map((documentType) => [documentType.name, documentType]));
@@ -305,6 +318,18 @@ const mapLiquidationReportFile = (row: LiquidationReportFileRow): LiquidationRep
   createdAt: row.created_at,
 });
 
+const mapNewsRelease = (row: NewsReleaseRow): NewsRelease => ({
+  id: row.id,
+  title: row.title,
+  description: row.description ?? "",
+  facebookPostUrl: row.facebook_post_url,
+  datePosted: formatDateOnly(row.date_posted),
+  visibilityStatus: row.visibility_status,
+  createdBy: row.created_by ?? "",
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
 const fetchOrganizationProfile = async (userId: string) => {
   const { data, error } = await supabase!
     .from("organization_profiles")
@@ -374,6 +399,17 @@ const fetchLiquidationReportFiles = async (liquidationReportIds: string[]) => {
   return (data as LiquidationReportFileRow[] | null) ?? [];
 };
 
+const fetchNewsReleases = async () => {
+  const { data, error } = await supabase!
+    .from("news_releases")
+    .select("*")
+    .order("date_posted", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as NewsReleaseRow[] | null) ?? [];
+};
+
 export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedState> | null> => {
   if (!supabase) return null;
 
@@ -423,6 +459,7 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
 
   remoteState.budgetRequestFiles = budgetFileRows.map(mapBudgetRequestFile);
   remoteState.liquidationReportFiles = liquidationFileRows.map(mapLiquidationReportFile);
+  remoteState.newsReleases = (await fetchNewsReleases()).map(mapNewsRelease);
 
   if (!latestSubmission) {
     return remoteState;
@@ -629,6 +666,13 @@ const getAuthenticatedOrganizationContext = async () => {
   return { session, organizationProfile };
 };
 
+const getAuthenticatedAdminSession = () => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const adminSession = readAdminSession();
+  if (!adminSession) throw new Error("Please sign in with the seeded admin account first.");
+  return adminSession;
+};
+
 const uploadFileToStorage = async (bucket: string, pathPrefix: string, file: File) => {
   const safeFileName = sanitizeFileName(file.name);
   const objectPath = `${pathPrefix}/${Date.now()}-${safeFileName}`;
@@ -800,6 +844,65 @@ export const createLiquidationReportFileInSupabase = async (params: {
 
   if (error || !data) throw new Error(error?.message ?? "Failed to save the liquidation file.");
   return mapLiquidationReportFile(data as LiquidationReportFileRow);
+};
+
+export const createNewsReleaseInSupabase = async (params: {
+  title: string;
+  description: string;
+  facebookPostUrl: string;
+  datePosted: string;
+  visibilityStatus: NewsRelease["visibilityStatus"];
+}) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("create_admin_news_release", {
+    _session_token: adminSession.sessionToken,
+    _title: params.title.trim(),
+    _description: params.description.trim(),
+    _facebook_post_url: params.facebookPostUrl.trim(),
+    _date_posted: params.datePosted,
+    _visibility_status: params.visibilityStatus,
+  });
+
+  const createdRow = Array.isArray(data) ? data[0] : null;
+  if (error || !createdRow) throw new Error(error?.message ?? "Failed to create the news release.");
+  return mapNewsRelease(createdRow as NewsReleaseRow);
+};
+
+export const updateNewsReleaseInSupabase = async (
+  newsReleaseId: string,
+  patch: Partial<Pick<NewsRelease, "title" | "description" | "facebookPostUrl" | "datePosted" | "visibilityStatus">>,
+) => {
+  const adminSession = getAuthenticatedAdminSession();
+
+  const payload: Record<string, unknown> = {};
+  if (patch.title !== undefined) payload.title = patch.title.trim();
+  if (patch.description !== undefined) payload.description = patch.description.trim();
+  if (patch.facebookPostUrl !== undefined) payload.facebook_post_url = patch.facebookPostUrl.trim();
+  if (patch.datePosted !== undefined) payload.date_posted = patch.datePosted;
+  if (patch.visibilityStatus !== undefined) payload.visibility_status = patch.visibilityStatus;
+
+  const { data, error } = await supabase!.rpc("update_admin_news_release", {
+    _session_token: adminSession.sessionToken,
+    _news_release_id: newsReleaseId,
+    _title: payload.title ?? null,
+    _description: payload.description ?? null,
+    _facebook_post_url: payload.facebook_post_url ?? null,
+    _date_posted: payload.date_posted ?? null,
+    _visibility_status: payload.visibility_status ?? null,
+  });
+
+  const updatedRow = Array.isArray(data) ? data[0] : null;
+  if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the news release.");
+  return mapNewsRelease(updatedRow as NewsReleaseRow);
+};
+
+export const deleteNewsReleaseInSupabase = async (newsReleaseId: string) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { error } = await supabase!.rpc("delete_admin_news_release", {
+    _session_token: adminSession.sessionToken,
+    _news_release_id: newsReleaseId,
+  });
+  if (error) throw new Error(error.message);
 };
 
 export const updateLiquidationReportInSupabase = async (
