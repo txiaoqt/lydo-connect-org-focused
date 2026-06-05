@@ -1393,6 +1393,20 @@ export default function AdminPortal({ section }: { section: string }) {
                                   <CardTitle className="text-base">{documentType.name}</CardTitle>
                                 </div>
                                 <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
+                                {file ? (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <PortalStatusBadge status={file.adminStatus ?? "submitted"} />
+                                    <span className="text-xs text-muted-foreground">
+                                      {file.adminStatus === "approved_green"
+                                        ? "Approved"
+                                        : file.adminStatus === "needs_revision"
+                                          ? "Needs revision"
+                                          : file.adminStatus === "rejected_red"
+                                            ? "Rejected"
+                                            : "Pending review"}
+                                    </span>
+                                  </div>
+                                ) : null}
                               </div>
                               <div className="flex flex-col gap-2 sm:flex-row">
                                 <Button
@@ -1431,14 +1445,14 @@ export default function AdminPortal({ section }: { section: string }) {
                                     </div>
                                     <div className="space-y-4">
                                       <div className="rounded-xl border border-border/70 bg-background p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                          <div>
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                          <div className="min-w-0">
                                             <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Admin Comment</p>
                                             <p className="mt-1 text-sm text-muted-foreground">
                                               Add a note only when the submission needs revision or is rejected.
                                             </p>
                                           </div>
-                                          <span className="rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
+                                          <span className="inline-flex w-fit max-w-full items-center rounded-lg border border-border/70 bg-muted/40 px-3 py-1.5 text-xs leading-tight text-muted-foreground sm:ml-auto sm:text-right">
                                             Comment required for revision or rejection
                                           </span>
                                         </div>
