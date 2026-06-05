@@ -838,7 +838,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
         ocr_status: "completed",
         ocr_confidence: params.ocrConfidence,
         validation_status: params.validationStatus,
-        admin_status: "under_review",
+        admin_status: "under_admin_review",
         admin_remarks: params.adminRemarks?.trim() || "Awaiting admin review.",
         uploaded_at: submittedAt,
         reviewed_at: null,
