@@ -1,4 +1,5 @@
 export const ADMIN_SESSION_STORAGE_KEY = "lydo_admin_session_v1";
+export const ADMIN_SESSION_CHANGE_EVENT = "lydo-admin-session-change";
 
 export type SeededAdminUser = {
   id: string;
@@ -45,8 +46,10 @@ export const writeAdminSession = (user: SeededAdminUser | null) => {
   if (typeof window === "undefined") return;
   if (!user) {
     window.localStorage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    window.dispatchEvent(new Event(ADMIN_SESSION_CHANGE_EVENT));
     return;
   }
 
   window.localStorage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(user));
+  window.dispatchEvent(new Event(ADMIN_SESSION_CHANGE_EVENT));
 };

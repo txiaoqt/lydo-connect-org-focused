@@ -85,7 +85,7 @@ const renderAdvocacyChips = (advocacies: string[]) =>
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createActivityLog } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead, createActivityLog } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -107,7 +107,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [newsVisibilityDraft, setNewsVisibilityDraft] = useState<NewsRelease["visibilityStatus"]>("draft");
   const [savingNewsRelease, setSavingNewsRelease] = useState(false);
 
-  const profile = state.organizationProfiles[0];
+  const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
   const unread = adminNotifications.filter((item) => !item.isRead).length;
   const templateDocuments = useMemo(
@@ -696,71 +696,89 @@ export default function AdminPortal({ section }: { section: string }) {
           <PortalSection
             title="Registrations"
             description="Click a registered organization to view profile details and submitted documents."
-            action={<PortalStatusBadge status={profile.profileStatus} />}
+            action={state.organizationProfiles.length ? <PortalStatusBadge status="pending_review" /> : null}
           >
-            <div className="grid gap-4 md:grid-cols-2">
-              {state.organizationProfiles.map((org) => {
-                const orgSubmission = state.documentSubmissions.find((item) => item.organizationId === org.id);
-                const submittedCount = orgSubmission
-                  ? state.documentSubmissionFiles.filter(
-                      (file) => file.submissionId === orgSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
-                    ).length
-                  : 0;
-                return (
-                  <button
-                    key={org.id}
-                    type="button"
-                    onClick={() => setSelectedRegistrationId(org.id)}
-                    className="rounded-md border border-border/70 bg-card p-0 text-left transition-colors hover:bg-muted/30"
-                  >
-                    <Card className="border-0 shadow-none">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <CardTitle className="text-base">{org.organizationName}</CardTitle>
-                          <PortalStatusBadge status={orgSubmission?.status ?? org.profileStatus} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm text-muted-foreground">
-                        <p>{org.organizationEmail}</p>
-                        <p>{org.contactNumber}</p>
-                        <p>{org.barangay}</p>
-                        <p>{org.majorClassification || "N/A"}</p>
-                        <p>{org.subClassification || "N/A"}</p>
-                        <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
-                          <div className="mt-2">{renderAdvocacyChips(org.advocacies)}</div>
-                        </div>
-                        <p className="pt-2 font-medium text-foreground">
-                          Documents submitted: {submittedCount}/{templateDocuments.length}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </button>
-                );
-              })}
-            </div>
+            {state.organizationProfiles.length ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {state.organizationProfiles.map((org) => {
+                  const orgSubmission = state.documentSubmissions.find((item) => item.organizationId === org.id);
+                  const submittedCount = orgSubmission
+                    ? state.documentSubmissionFiles.filter(
+                        (file) => file.submissionId === orgSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
+                      ).length
+                    : 0;
+                  return (
+                    <button
+                      key={org.id}
+                      type="button"
+                      onClick={() => setSelectedRegistrationId(org.id)}
+                      className="rounded-md border border-border/70 bg-card p-0 text-left transition-colors hover:bg-muted/30"
+                    >
+                      <Card className="border-0 shadow-none">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <CardTitle className="text-base">{org.organizationName}</CardTitle>
+                            <PortalStatusBadge status={orgSubmission?.status ?? org.profileStatus} />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm text-muted-foreground">
+                          <p>{org.organizationEmail}</p>
+                          <p>{org.contactNumber}</p>
+                          <p>{org.barangay}</p>
+                          <p>{org.majorClassification || "N/A"}</p>
+                          <p>{org.subClassification || "N/A"}</p>
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
+                            <div className="mt-2">{renderAdvocacyChips(org.advocacies)}</div>
+                          </div>
+                          <p className="pt-2 font-medium text-foreground">
+                            Documents submitted: {submittedCount}/{templateDocuments.length}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <PortalEmptyState
+                title="No registrations yet"
+                description="Organization profiles will appear here after users complete and save them from the user portal."
+              />
+            )}
           </PortalSection>
         );
       }
       case "users":
         return (
           <PortalSection title="Users" description="Linked accounts and access levels.">
-            <Card className="border-border/70">
-              <CardContent className="p-0">
-                <div className="grid gap-3 p-4 md:grid-cols-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Name / Email</p>
-                    <p className="mt-1 font-medium">{profile.organizationName}</p>
-                    <p className="text-sm text-muted-foreground">{profile.organizationEmail}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Role</p>
-                    <p className="mt-1 font-medium">Organization User</p>
-                    <p className="text-sm text-muted-foreground">Linked organization account</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {state.organizationProfiles.length ? (
+              <div className="space-y-3">
+                {state.organizationProfiles.map((organization) => (
+                  <Card key={organization.id} className="border-border/70">
+                    <CardContent className="p-0">
+                      <div className="grid gap-3 p-4 md:grid-cols-2">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Name / Email</p>
+                          <p className="mt-1 font-medium">{organization.organizationName}</p>
+                          <p className="text-sm text-muted-foreground">{organization.organizationEmail}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Role</p>
+                          <p className="mt-1 font-medium">Organization User</p>
+                          <p className="text-sm text-muted-foreground">Linked organization account</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <PortalEmptyState
+                title="No users yet"
+                description="Linked organization accounts will appear here after users register and save their organization profiles."
+              />
+            )}
           </PortalSection>
         );
       case "budget-utilization":
@@ -800,8 +818,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                 if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
                                 createNotification({
                                   id: `notif-${Date.now()}`,
-                                  userId: profile.userId,
-                                  organizationId: profile.id,
+                                  userId: request.submittedBy,
+                                  organizationId: request.organizationId,
                                   title: "Budget go signal issued",
                                   message: "Your soft copy requirements have been pre-checked. You may now submit the hard copies face-to-face.",
                                   type: "budget_go_signal",
@@ -1445,6 +1463,7 @@ export default function AdminPortal({ section }: { section: string }) {
     }
   }, [
     createActivityLog,
+    createNotification,
     createNewsRelease,
     createTemplate,
     deleteNewsReleaseInSupabase,

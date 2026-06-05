@@ -1,5 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
+  ADMIN_SESSION_CHANGE_EVENT,
+  readAdminSession,
+} from "./admin-auth";
+import {
   type ActivityLog,
   type BudgetRequest,
   type BudgetRequestFile,
@@ -18,16 +22,19 @@ import {
   legacyRemovedTemplateNames,
   seedState,
 } from "./lydo-connect-data";
-import { loadLydoConnectSupabaseState } from "./lydo-connect-supabase";
+import { loadAdminPortalSupabaseState, loadLydoConnectSupabaseState } from "./lydo-connect-supabase";
 import { supabase } from "./supabase";
 
 const STORAGE_KEY = "lydo-connect-state-v1";
 const legacySeedIds = new Set([
+  "org-lydo-001",
   "docsub-001",
   "budget-001",
   "budget-file-001",
   "liq-001",
   "liq-file-001",
+  "news-001",
+  "transparency-001",
   "remark-001",
   "notif-001",
   "log-001",
@@ -100,9 +107,9 @@ const readState = (): LydoConnectState => {
     return {
       ...seedState,
       ...parsed,
-      organizationProfiles: ((parsed.organizationProfiles ?? seedState.organizationProfiles) as OrganizationProfile[]).map(
-        normalizeOrganizationProfile,
-      ),
+      organizationProfiles: ((parsed.organizationProfiles ?? seedState.organizationProfiles) as OrganizationProfile[])
+        .filter((item) => !legacySeedIds.has(item.id))
+        .map(normalizeOrganizationProfile),
       documentSubmissions: ((parsed.documentSubmissions ?? seedState.documentSubmissions) as DocumentSubmission[]).filter(
         (item) => !legacySeedIds.has(item.id),
       ),
@@ -121,8 +128,12 @@ const readState = (): LydoConnectState => {
       liquidationReportFiles: ((parsed.liquidationReportFiles ?? seedState.liquidationReportFiles) as LiquidationReportFile[]).filter(
         (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.liquidationReportId),
       ),
-      newsReleases: parsed.newsReleases ?? seedState.newsReleases,
-      transparencyPosts: parsed.transparencyPosts ?? seedState.transparencyPosts,
+      newsReleases: ((parsed.newsReleases ?? seedState.newsReleases) as NewsRelease[]).filter(
+        (item) => !legacySeedIds.has(item.id),
+      ),
+      transparencyPosts: ((parsed.transparencyPosts ?? seedState.transparencyPosts) as TransparencyPost[]).filter(
+        (item) => !legacySeedIds.has(item.id),
+      ),
       complianceRemarks: ((parsed.complianceRemarks ?? seedState.complianceRemarks) as ComplianceRemark[]).filter(
         (item) => !legacySeedIds.has(item.id) && !legacySeedIds.has(item.relatedId),
       ),
@@ -212,7 +223,9 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
 
     const syncState = async () => {
       try {
-        const snapshot = await loadLydoConnectSupabaseState();
+        const snapshot =
+          (await loadLydoConnectSupabaseState()) ??
+          (readAdminSession() ? await loadAdminPortalSupabaseState() : null);
         if (!active || !snapshot) return;
         setState((current) => ({
           ...current,
@@ -228,10 +241,15 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       void syncState();
     });
+    const handleAdminSessionChange = () => {
+      void syncState();
+    };
+    window.addEventListener(ADMIN_SESSION_CHANGE_EVENT, handleAdminSessionChange);
 
     return () => {
       active = false;
       authListener.subscription.unsubscribe();
+      window.removeEventListener(ADMIN_SESSION_CHANGE_EVENT, handleAdminSessionChange);
     };
   }, []);
 

@@ -1,13 +1,17 @@
 import type {
+  ActivityLog,
   BudgetRequest,
   BudgetRequestFile,
+  ComplianceRemark,
   LiquidationReport,
   LiquidationReportFile,
   LydoSeedState,
   OrganizationProfile,
   NewsRelease,
+  NotificationRecord,
   SubmissionFile,
   TemplateRecord,
+  TransparencyPost,
 } from "./lydo-connect-data";
 import { createTemplateLocalId, legacyRemovedTemplateNames, requiredDocumentTypes } from "./lydo-connect-data";
 import { readAdminSession } from "./admin-auth";
@@ -158,6 +162,75 @@ type NewsReleaseRow = {
   updated_at: string;
 };
 
+type TransparencyPostRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  attachment_url: string | null;
+  visibility_status: TransparencyPost["visibilityStatus"];
+  post_date: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ComplianceRemarkRow = {
+  id: string;
+  organization_id: string;
+  related_type: string;
+  related_id: string;
+  remark_type: string | null;
+  consequence_type: string | null;
+  message: string;
+  status: string;
+  created_by: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type NotificationRow = {
+  id: string;
+  user_id: string;
+  organization_id: string | null;
+  title: string;
+  message: string;
+  type: string;
+  related_type: string;
+  related_id: string;
+  is_read: boolean;
+  created_at: string;
+};
+
+type ActivityLogRow = {
+  id: string;
+  actor_user_id: string | null;
+  organization_id: string | null;
+  action: string;
+  related_type: string;
+  related_id: string;
+  description: string;
+  created_at: string;
+};
+
+type AdminPortalSnapshot = {
+  organization_profiles?: OrganizationProfileRow[];
+  document_submissions?: DocumentSubmissionRow[];
+  document_submission_files?: DocumentSubmissionFileRow[];
+  budget_requests?: BudgetRequestRow[];
+  budget_request_files?: BudgetRequestFileRow[];
+  liquidation_reports?: LiquidationReportRow[];
+  liquidation_report_files?: LiquidationReportFileRow[];
+  news_releases?: NewsReleaseRow[];
+  transparency_posts?: TransparencyPostRow[];
+  compliance_remarks?: ComplianceRemarkRow[];
+  notifications?: NotificationRow[];
+  activity_logs?: ActivityLogRow[];
+  templates?: RequiredDocumentTypeRow[];
+};
+
 const localDocumentTypeByName = new Map(requiredDocumentTypes.map((documentType) => [documentType.name, documentType]));
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -282,6 +355,20 @@ const mapBudgetRequest = (row: BudgetRequestRow): BudgetRequest => ({
   updatedAt: row.updated_at,
 });
 
+const mapDocumentSubmission = (row: DocumentSubmissionRow) => ({
+  id: row.id,
+  organizationId: row.organization_id,
+  submittedBy: row.submitted_by,
+  status: row.status,
+  userConfirmed: row.user_confirmed,
+  submittedAt: row.submitted_at ?? "",
+  reviewedBy: row.reviewed_by ?? "",
+  reviewedAt: row.reviewed_at ?? "",
+  overallRemarks: row.overall_remarks ?? "",
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
 const mapBudgetRequestFile = (row: BudgetRequestFileRow): BudgetRequestFile => ({
   id: row.id,
   budgetRequestId: row.budget_request_id,
@@ -329,6 +416,59 @@ const mapNewsRelease = (row: NewsReleaseRow): NewsRelease => ({
   createdBy: row.created_by ?? "",
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+});
+
+const mapTransparencyPost = (row: TransparencyPostRow): TransparencyPost => ({
+  id: row.id,
+  title: row.title,
+  description: row.description ?? "",
+  category: row.category ?? "",
+  attachmentUrl: row.attachment_url ?? "",
+  visibilityStatus: row.visibility_status,
+  postDate: formatDateOnly(row.post_date),
+  createdBy: row.created_by ?? "",
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapComplianceRemark = (row: ComplianceRemarkRow): ComplianceRemark => ({
+  id: row.id,
+  organizationId: row.organization_id,
+  relatedType: row.related_type,
+  relatedId: row.related_id,
+  remarkType: row.remark_type ?? "",
+  consequenceType: row.consequence_type ?? "",
+  message: row.message,
+  status: row.status,
+  createdBy: row.created_by ?? "",
+  resolvedBy: row.resolved_by ?? "",
+  resolvedAt: row.resolved_at ?? "",
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const mapNotification = (row: NotificationRow): NotificationRecord => ({
+  id: row.id,
+  userId: row.user_id,
+  organizationId: row.organization_id ?? "",
+  title: row.title,
+  message: row.message,
+  type: row.type,
+  relatedType: row.related_type,
+  relatedId: row.related_id,
+  isRead: row.is_read,
+  createdAt: row.created_at,
+});
+
+const mapActivityLog = (row: ActivityLogRow): ActivityLog => ({
+  id: row.id,
+  actorUserId: row.actor_user_id ?? "",
+  organizationId: row.organization_id ?? "",
+  action: row.action,
+  relatedType: row.related_type,
+  relatedId: row.related_id,
+  description: row.description,
+  createdAt: row.created_at,
 });
 
 const fetchOrganizationProfile = async (userId: string) => {
@@ -466,21 +606,7 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
     return remoteState;
   }
 
-  remoteState.documentSubmissions = [
-    {
-      id: latestSubmission.id,
-      organizationId: latestSubmission.organization_id,
-      submittedBy: latestSubmission.submitted_by,
-      status: latestSubmission.status,
-      userConfirmed: latestSubmission.user_confirmed,
-      submittedAt: latestSubmission.submitted_at ?? "",
-      reviewedBy: latestSubmission.reviewed_by ?? "",
-      reviewedAt: latestSubmission.reviewed_at ?? "",
-      overallRemarks: latestSubmission.overall_remarks ?? "",
-      createdAt: latestSubmission.created_at,
-      updatedAt: latestSubmission.updated_at,
-    },
-  ];
+  remoteState.documentSubmissions = [mapDocumentSubmission(latestSubmission)];
 
   const { data: fileRows, error: filesError } = await supabase!
     .from("document_submission_files")
@@ -492,6 +618,43 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
   remoteState.documentSubmissionFiles = ((fileRows as DocumentSubmissionFileRow[] | null) ?? [])
     .map(mapDocumentFile)
     .filter((file): file is SubmissionFile => Boolean(file));
+
+  return remoteState;
+};
+
+export const loadAdminPortalSupabaseState = async (): Promise<Partial<LydoSeedState> | null> => {
+  if (!supabase) return null;
+
+  const adminSession = readAdminSession();
+  if (!adminSession?.sessionToken) return null;
+
+  const { data, error } = await supabase.rpc("get_admin_portal_snapshot", {
+    _session_token: adminSession.sessionToken,
+  });
+
+  if (error) throw new Error(error.message);
+  if (!data || typeof data !== "object") return null;
+
+  const snapshot = data as AdminPortalSnapshot;
+  const remoteState: Partial<LydoSeedState> = {
+    organizationProfiles: (snapshot.organization_profiles ?? []).map(mapOrganizationProfile),
+    documentSubmissions: (snapshot.document_submissions ?? []).map(mapDocumentSubmission),
+    documentSubmissionFiles: (snapshot.document_submission_files ?? [])
+      .map(mapDocumentFile)
+      .filter((file): file is SubmissionFile => Boolean(file)),
+    budgetRequests: (snapshot.budget_requests ?? []).map(mapBudgetRequest),
+    budgetRequestFiles: (snapshot.budget_request_files ?? []).map(mapBudgetRequestFile),
+    liquidationReports: (snapshot.liquidation_reports ?? []).map(mapLiquidationReport),
+    liquidationReportFiles: (snapshot.liquidation_report_files ?? []).map(mapLiquidationReportFile),
+    newsReleases: (snapshot.news_releases ?? []).map(mapNewsRelease),
+    transparencyPosts: (snapshot.transparency_posts ?? []).map(mapTransparencyPost),
+    complianceRemarks: (snapshot.compliance_remarks ?? []).map(mapComplianceRemark),
+    notifications: (snapshot.notifications ?? []).map(mapNotification),
+    activityLogs: (snapshot.activity_logs ?? []).map(mapActivityLog),
+    templates: (snapshot.templates ?? [])
+      .map(mapTemplate)
+      .filter((template): template is TemplateRecord => Boolean(template) && !legacyRemovedTemplateNames.has(template.name)),
+  };
 
   return remoteState;
 };
