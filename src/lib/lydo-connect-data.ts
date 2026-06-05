@@ -516,7 +516,7 @@ export const statusLabelMap: Record<string, string> = {
   under_admin_review: "Under Admin Review",
   needs_revision: "Needs Revision",
   approved_green: "Approved",
-  rejected_red: "Rejected / Red",
+  rejected_red: "Rejected",
   under_review: "Under Review",
   approved_for_ftf_green: "Approved for FTF Submission",
   hard_copy_submitted: "Hard Copy Submitted",
