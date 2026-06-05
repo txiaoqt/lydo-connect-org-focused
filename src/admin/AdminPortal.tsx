@@ -253,6 +253,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [liquidationPreviewEmptyMessage, setLiquidationPreviewEmptyMessage] = useState("");
   const [liquidationPreviewCanInline, setLiquidationPreviewCanInline] = useState(false);
   const [liquidationPreviewLoading, setLiquidationPreviewLoading] = useState(false);
+  const [liquidationPreviewExpanded, setLiquidationPreviewExpanded] = useState(false);
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
   const documentPreviewSourceRef = useRef<Record<string, string>>({});
 
@@ -1331,6 +1332,7 @@ export default function AdminPortal({ section }: { section: string }) {
 
     setSelectedLiquidationReportId(reportId);
     setSelectedLiquidationFileId(reportFiles[0]?.id ?? null);
+    setLiquidationPreviewExpanded(typeof window !== "undefined" ? window.matchMedia("(min-width: 640px)").matches : false);
   };
 
   const closeLiquidationDetails = () => {
@@ -1341,6 +1343,7 @@ export default function AdminPortal({ section }: { section: string }) {
     setLiquidationPreviewEmptyMessage("");
     setLiquidationPreviewCanInline(false);
     setLiquidationPreviewLoading(false);
+    setLiquidationPreviewExpanded(false);
   };
 
   const performBudgetRequestStatusUpdate = async (
@@ -2456,80 +2459,6 @@ export default function AdminPortal({ section }: { section: string }) {
 
                         <div className="space-y-3">
                           <div className="rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="min-w-0">
-                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Attached Files</p>
-                                <p className="mt-1.5 text-sm text-muted-foreground">
-                                  {selectedLiquidationReportFiles.length
-                                    ? `${selectedLiquidationReportFiles.length} file${selectedLiquidationReportFiles.length === 1 ? "" : "s"} uploaded.`
-                                    : "No attached files were uploaded for this liquidation report."}
-                                </p>
-                              </div>
-                              <div className="self-start">
-                                <PortalStatusBadge status={selectedLiquidationReport.status} />
-                              </div>
-                            </div>
-
-                            {selectedLiquidationReportFiles.length ? (
-                              <div className="mt-3 space-y-3">
-                                <div className="flex flex-wrap gap-2">
-                                  {selectedLiquidationReportFiles.map((file) => (
-                                    <Button
-                                      key={file.id}
-                                      type="button"
-                                      size="sm"
-                                      variant={selectedLiquidationReportFile?.id === file.id ? "default" : "outline"}
-                                      className="max-w-full"
-                                      onClick={() => setSelectedLiquidationFileId(file.id)}
-                                    >
-                                      <span className="max-w-[12rem] truncate">{file.fileName}</span>
-                                    </Button>
-                                  ))}
-                                </div>
-
-                                <div className="rounded-xl border border-border/70 bg-background p-2.5">
-                                  {liquidationPreviewLoading ? (
-                                    <p className="p-2 text-sm text-muted-foreground">Loading preview...</p>
-                                  ) : liquidationPreviewUrl && liquidationPreviewCanInline ? (
-                                    isImagePreviewFile(liquidationPreviewTitle) || isImagePreviewFile(liquidationPreviewUrl) ? (
-                                      <div className="flex max-h-[18rem] min-h-[12rem] items-center justify-center overflow-hidden rounded-md bg-background sm:max-h-[32rem]">
-                                        <img
-                                          src={liquidationPreviewUrl}
-                                          alt={liquidationPreviewTitle || "Liquidation file preview"}
-                                          className="max-h-[18rem] w-full object-contain sm:max-h-[32rem]"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <iframe
-                                        title={liquidationPreviewTitle || "Liquidation Preview"}
-                                        src={liquidationPreviewUrl}
-                                        className="h-[18rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
-                                        loading="eager"
-                                      />
-                                    )
-                                  ) : liquidationPreviewUrl ? (
-                                    <div className="space-y-3 p-2.5 text-sm text-muted-foreground">
-                                      <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
-                                      <Button type="button" variant="outline" onClick={() => window.open(liquidationPreviewUrl, "_blank", "noopener,noreferrer")}>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Open File
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="grid min-h-[12rem] place-items-center rounded-md border border-dashed border-border/70 bg-muted/10 p-4 text-center text-sm text-muted-foreground">
-                                      {liquidationPreviewEmptyMessage || "No liquidation file was uploaded."}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="mt-3 rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                                No attached liquidation files were submitted.
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
                             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
                             <p className="mt-1.5 text-sm text-muted-foreground">
                               Current status: <span className="font-medium text-foreground">{selectedLiquidationReport.status}</span>
@@ -2626,6 +2555,99 @@ export default function AdminPortal({ section }: { section: string }) {
                                 Mark Overdue
                               </Button>
                             </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Attached Files</p>
+                                <p className="mt-1.5 text-sm text-muted-foreground">
+                                  {selectedLiquidationReportFiles.length
+                                    ? `${selectedLiquidationReportFiles.length} file${selectedLiquidationReportFiles.length === 1 ? "" : "s"} uploaded.`
+                                    : "No attached files were uploaded for this liquidation report."}
+                                </p>
+                              </div>
+                              <div className="self-start">
+                                <PortalStatusBadge status={selectedLiquidationReport.status} />
+                              </div>
+                            </div>
+
+                            {selectedLiquidationReportFiles.length ? (
+                              <div className="mt-3 space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedLiquidationReportFiles.map((file) => (
+                                    <Button
+                                      key={file.id}
+                                      type="button"
+                                      size="sm"
+                                      variant={selectedLiquidationReportFile?.id === file.id ? "default" : "outline"}
+                                      className="max-w-full"
+                                      onClick={() => setSelectedLiquidationFileId(file.id)}
+                                    >
+                                      <span className="max-w-[12rem] truncate">{file.fileName}</span>
+                                    </Button>
+                                  ))}
+                                </div>
+
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full justify-between"
+                                  onClick={() => setLiquidationPreviewExpanded((value) => !value)}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <Eye className="h-4 w-4" />
+                                    {liquidationPreviewExpanded ? "Hide Preview" : "Show Preview"}
+                                  </span>
+                                  {liquidationPreviewExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                </Button>
+
+                                {liquidationPreviewExpanded ? (
+                                  <div className="rounded-xl border border-border/70 bg-background p-2.5">
+                                    {liquidationPreviewLoading ? (
+                                      <p className="p-2 text-sm text-muted-foreground">Loading preview...</p>
+                                    ) : liquidationPreviewUrl && liquidationPreviewCanInline ? (
+                                      isImagePreviewFile(liquidationPreviewTitle) || isImagePreviewFile(liquidationPreviewUrl) ? (
+                                        <div className="flex max-h-[18rem] min-h-[12rem] items-center justify-center overflow-hidden rounded-md bg-background sm:max-h-[32rem]">
+                                          <img
+                                            src={liquidationPreviewUrl}
+                                            alt={liquidationPreviewTitle || "Liquidation file preview"}
+                                            className="max-h-[18rem] w-full object-contain sm:max-h-[32rem]"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <iframe
+                                          title={liquidationPreviewTitle || "Liquidation Preview"}
+                                          src={liquidationPreviewUrl}
+                                          className="h-[18rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
+                                          loading="eager"
+                                        />
+                                      )
+                                    ) : liquidationPreviewUrl ? (
+                                      <div className="space-y-3 p-2.5 text-sm text-muted-foreground">
+                                        <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
+                                        <Button type="button" variant="outline" onClick={() => window.open(liquidationPreviewUrl, "_blank", "noopener,noreferrer")}>
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          Open File
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="grid min-h-[12rem] place-items-center rounded-md border border-dashed border-border/70 bg-muted/10 p-4 text-center text-sm text-muted-foreground">
+                                        {liquidationPreviewEmptyMessage || "No liquidation file was uploaded."}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
+                                    Preview hidden on mobile. Open it to review the uploaded file before acting.
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="mt-3 rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
+                                No attached liquidation files were submitted.
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
