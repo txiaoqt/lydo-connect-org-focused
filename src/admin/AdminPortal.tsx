@@ -4,6 +4,16 @@ import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, D
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,7 +56,6 @@ const routeMap: Record<string, string> = {
   users: "/admin/users",
   "budget-utilization": "/admin/budget-utilization",
   "liquidation-monitoring": "/admin/liquidation-monitoring",
-  "remarks-consequences": "/admin/remarks-consequences",
   "news-releases": "/admin/news-releases",
   "public-transparency-posts": "/admin/public-transparency-posts",
   templates: "/admin/templates",
@@ -146,6 +155,18 @@ type PendingAdminConfirmation =
       userId: string;
     };
 
+type PendingDeleteConfirmation =
+  | {
+      kind: "news_release";
+      id: string;
+      title: string;
+    }
+  | {
+      kind: "transparency_post";
+      id: string;
+      title: string;
+    };
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -182,12 +203,13 @@ export default function AdminPortal({ section }: { section: string }) {
   const [transparencyVisibilityDraft, setTransparencyVisibilityDraft] = useState<TransparencyPost["visibilityStatus"]>("draft");
   const [savingTransparencyPost, setSavingTransparencyPost] = useState(false);
   const [pendingAdminConfirmation, setPendingAdminConfirmation] = useState<PendingAdminConfirmation | null>(null);
+  const [pendingDeleteConfirmation, setPendingDeleteConfirmation] = useState<PendingDeleteConfirmation | null>(null);
   const [approvalAcknowledged, setApprovalAcknowledged] = useState(false);
   const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
   const [expandedDocumentFileIds, setExpandedDocumentFileIds] = useState<string[]>([]);
-  const [expandedOcrFileIds, setExpandedOcrFileIds] = useState<string[]>([]);
+  const [documentReviewRemarksByFileId, setDocumentReviewRemarksByFileId] = useState<Record<string, string>>({});
   const [selectedBudgetRequestId, setSelectedBudgetRequestId] = useState<string | null>(null);
   const [selectedBudgetFileId, setSelectedBudgetFileId] = useState<string | null>(null);
   const [budgetPreviewUrl, setBudgetPreviewUrl] = useState("");
@@ -348,7 +370,6 @@ export default function AdminPortal({ section }: { section: string }) {
     }
 
     setBudgetPreviewLoading(true);
-    setBudgetPreviewUrl("");
     setBudgetPreviewEmptyMessage("");
 
     void (async () => {
@@ -373,7 +394,7 @@ export default function AdminPortal({ section }: { section: string }) {
     return () => {
       isActive = false;
     };
-  }, [selectedBudgetRequest, selectedBudgetRequestFile]);
+  }, [selectedBudgetRequest?.id, selectedBudgetRequest?.activityTitle, selectedBudgetRequestFile?.id, selectedBudgetRequestFile?.fileUrl]);
 
   const refreshAdminState = async () => {
     const remoteSnapshot = (await loadAdminPortalSupabaseState()) ?? (await loadLydoConnectSupabaseState());
@@ -448,20 +469,25 @@ export default function AdminPortal({ section }: { section: string }) {
     );
   };
 
-  const toggleOcrPreview = (fileId: string) => {
-    setExpandedOcrFileIds((current) =>
-      current.includes(fileId)
-        ? current.filter((id) => id !== fileId)
-        : [...current, fileId],
-    );
-  };
-
   const toggleDocumentCard = (fileId: string) => {
     setExpandedDocumentFileIds((current) =>
       current.includes(fileId)
         ? current.filter((id) => id !== fileId)
         : [...current, fileId],
     );
+  };
+
+  const getDocumentReviewCommentDraft = (file: { id: string; adminStatus?: string | null; adminRemarks?: string | null }) => {
+    const storedDraft = documentReviewRemarksByFileId[file.id];
+    if (typeof storedDraft === "string") {
+      return storedDraft;
+    }
+
+    if (file.adminStatus === "needs_revision" || file.adminStatus === "rejected_red") {
+      return file.adminRemarks?.trim() || "";
+    }
+
+    return "";
   };
 
   const getAdminConfirmationCopy = () => {
@@ -528,17 +554,23 @@ export default function AdminPortal({ section }: { section: string }) {
             : pendingAdminConfirmation.action === "needs_revision"
               ? "needs_revision"
               : "rejected_red";
-        const adminRemarks =
-          pendingAdminConfirmation.action === "approve"
-            ? "Approved by admin."
-            : pendingAdminConfirmation.action === "needs_revision"
-              ? "Revision requested by admin."
-              : "Rejected by admin.";
+        const adminRemarks = (
+          documentReviewRemarksByFileId[pendingAdminConfirmation.fileId] ?? pendingAdminConfirmation.currentAdminRemarks
+        ).trim();
+
+        if (pendingAdminConfirmation.action !== "approve" && !adminRemarks) {
+          toast({
+            title: "Comment required",
+            description: "Please add a short comment before requesting a revision or rejection.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         await updateDocumentSubmissionFileReviewInSupabase({
           fileId: pendingAdminConfirmation.fileId,
           status,
-          adminRemarks,
+          adminRemarks: pendingAdminConfirmation.action === "approve" ? undefined : adminRemarks,
         });
         await refreshAdminState();
 
@@ -797,23 +829,54 @@ export default function AdminPortal({ section }: { section: string }) {
   const handleDeleteNewsRelease = async (newsReleaseId: string) => {
     const newsRelease = newsReleases.find((entry) => entry.id === newsReleaseId);
     if (!newsRelease) return;
+    setPendingDeleteConfirmation({ kind: "news_release", id: newsReleaseId, title: newsRelease.title });
+  };
 
-    const confirmed = window.confirm(`Delete "${newsRelease.title}"? This action cannot be undone.`);
-    if (!confirmed) return;
+  const handleDeleteTransparencyPost = async (postId: string) => {
+    const post = transparencyPosts.find((entry) => entry.id === postId);
+    if (!post) return;
+    setPendingDeleteConfirmation({ kind: "transparency_post", id: postId, title: post.title });
+  };
+
+  const confirmDeleteRecord = async () => {
+    const pending = pendingDeleteConfirmation;
+    if (!pending) return;
+
+    setPendingDeleteConfirmation(null);
 
     try {
-      await deleteNewsReleaseInSupabase(newsReleaseId);
-      removeNewsRelease(newsReleaseId);
-      await appendAuditLog("Deleted news release", "news_release", newsRelease.id, `Deleted news release "${newsRelease.title}".`);
-      await refreshAdminState();
-      if (editingNewsReleaseId === newsReleaseId) {
-        resetNewsReleaseForm();
+      if (pending.kind === "news_release") {
+        const newsRelease = newsReleases.find((entry) => entry.id === pending.id);
+        if (!newsRelease) return;
+        await deleteNewsReleaseInSupabase(pending.id);
+        removeNewsRelease(pending.id);
+        await appendAuditLog("Deleted news release", "news_release", newsRelease.id, `Deleted news release "${newsRelease.title}".`);
+        await refreshAdminState();
+        if (editingNewsReleaseId === pending.id) {
+          resetNewsReleaseForm();
+        }
+        toast({ title: "News release deleted", description: `${newsRelease.title} was removed successfully.` });
+        return;
       }
-      toast({ title: "News release deleted", description: `${newsRelease.title} was removed successfully.` });
+
+      const post = transparencyPosts.find((entry) => entry.id === pending.id);
+      if (!post) return;
+      await deleteTransparencyPostInSupabase(pending.id);
+      await appendAuditLog("Deleted transparency post", "transparency_post", post.id, `Deleted transparency post "${post.title}".`);
+      await refreshAdminState();
+      if (editingTransparencyPostId === pending.id) {
+        resetTransparencyForm();
+      }
+      toast({ title: "Transparency post deleted", description: `${post.title} was removed successfully.` });
     } catch (error) {
       toast({
         title: "Delete failed",
-        description: error instanceof Error ? error.message : "The news release could not be deleted.",
+        description:
+          error instanceof Error
+            ? error.message
+            : pending.kind === "news_release"
+              ? "The news release could not be deleted."
+              : "The transparency post could not be deleted.",
         variant: "destructive",
       });
     }
@@ -1122,29 +1185,6 @@ export default function AdminPortal({ section }: { section: string }) {
     }
   };
 
-  const handleDeleteTransparencyPost = async (postId: string) => {
-    const post = transparencyPosts.find((entry) => entry.id === postId);
-    if (!post) return;
-    const confirmed = window.confirm(`Delete "${post.title}"? This action cannot be undone.`);
-    if (!confirmed) return;
-
-    try {
-      await deleteTransparencyPostInSupabase(postId);
-      await appendAuditLog("Deleted transparency post", "transparency_post", post.id, `Deleted transparency post "${post.title}".`);
-      await refreshAdminState();
-      if (editingTransparencyPostId === postId) {
-        resetTransparencyForm();
-      }
-      toast({ title: "Transparency post deleted", description: `${post.title} was removed successfully.` });
-    } catch (error) {
-      toast({
-        title: "Delete failed",
-        description: error instanceof Error ? error.message : "The transparency post could not be deleted.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const activeContent = useMemo(() => {
     switch (section) {
       case "overview":
@@ -1343,25 +1383,6 @@ export default function AdminPortal({ section }: { section: string }) {
                       const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
                       const previewUrl = file ? documentPreviewUrls[file.id] ?? "" : "";
                       const isExpanded = file ? expandedDocumentFileIds.includes(file.id) : false;
-                      const isOcrExpanded = file ? expandedOcrFileIds.includes(file.id) : false;
-                      const fileOcrMetadata = (file?.ocrMetadata ?? null) as Record<string, unknown> | null;
-                      const fileOcrSummary = (fileOcrMetadata?.summary ?? null) as
-                        | {
-                            extractedFieldsCount?: number;
-                            requiredFieldsCount?: number;
-                            completedRequiredFieldsCount?: number;
-                            missingRequiredFieldsCount?: number;
-                            tableRowCount?: number;
-                          }
-                        | null;
-                      const fileOcrIssues = Array.isArray(fileOcrMetadata?.issues)
-                        ? fileOcrMetadata.issues.filter((issue) => typeof issue === "object" && issue && "title" in issue)
-                        : [];
-                      const structuredDataPreview = fileOcrMetadata?.structuredData;
-                      const fileReviewBadgeStatus =
-                        file?.adminStatus === "approved_green" || file?.adminStatus === "needs_revision" || file?.adminStatus === "rejected_red"
-                          ? file.adminStatus
-                          : null;
                       return (
                         <Card key={documentType.id} className="border-border/70">
                           <CardHeader className="pb-3">
@@ -1370,14 +1391,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                 <div className="flex flex-wrap items-center gap-2">
                                   <FileText className="h-4 w-4 text-muted-foreground" />
                                   <CardTitle className="text-base">{documentType.name}</CardTitle>
-                                  {fileReviewBadgeStatus ? <PortalStatusBadge status={fileReviewBadgeStatus} /> : null}
                                 </div>
                                 <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                  <span>Status: {file?.adminStatus ?? file?.validationStatus ?? "pending"}</span>
-                                  <span>Review state: {file?.adminStatus ?? file?.validationStatus ?? "n/a"}</span>
-                                  <span>Updated: {file?.updatedAt ? new Date(file.updatedAt).toLocaleString() : "N/A"}</span>
-                                </div>
                               </div>
                               <div className="flex flex-col gap-2 sm:flex-row">
                                 <Button
@@ -1413,55 +1428,33 @@ export default function AdminPortal({ section }: { section: string }) {
                                           </div>
                                         )}
                                       </div>
-                                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          className="w-full sm:w-auto"
-                                          onClick={() => void openPreview(file.fileUrl, file.fileName)}
-                                        >
-                                          <Eye className="mr-2 h-4 w-4" />
-                                          Open Uploaded File
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          className="w-full sm:w-auto"
-                                          onClick={() => toggleOcrPreview(file.id)}
-                                        >
-                                          {isOcrExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-                                          {isOcrExpanded ? "Hide details" : "View details"}
-                                        </Button>
-                                      </div>
                                     </div>
                                     <div className="space-y-4">
-                                      <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
-                                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                                          <p>Submission status: {file.adminStatus ?? file.validationStatus ?? "pending"}</p>
-                                          <p>Review note: {file.adminRemarks || "Awaiting admin review."}</p>
-                                          <p>Extracted fields: {fileOcrSummary?.extractedFieldsCount ?? "n/a"}</p>
-                                          <p>
-                                            Required fields: {fileOcrSummary
-                                              ? `${fileOcrSummary.completedRequiredFieldsCount ?? 0}/${fileOcrSummary.requiredFieldsCount ?? 0}`
-                                              : "n/a"}
-                                          </p>
-                                          <p>Missing required: {fileOcrSummary?.missingRequiredFieldsCount ?? "n/a"}</p>
-                                          <p>Detected rows: {typeof fileOcrSummary?.tableRowCount === "number" ? fileOcrSummary.tableRowCount : "n/a"}</p>
-                                        </div>
-                                        <p className="mt-3 break-words">Latest review note: {file.adminRemarks || "None"}</p>
-                                        <p className="mt-2 break-words text-xs text-muted-foreground">
-                                          Template ID: {typeof fileOcrMetadata?.templateId === "string" ? fileOcrMetadata.templateId : "N/A"}
-                                        </p>
-                                        {fileOcrIssues.length ? (
-                                          <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-800">
-                                            {fileOcrIssues
-                                              .map((issue) => String((issue as { title?: string }).title || ""))
-                                              .filter(Boolean)
-                                              .join(", ")}
+                                      <div className="rounded-xl border border-border/70 bg-background p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div>
+                                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Admin Comment</p>
+                                            <p className="mt-1 text-sm text-muted-foreground">
+                                              Add a note only when the submission needs revision or is rejected.
+                                            </p>
                                           </div>
-                                        ) : null}
+                                          <span className="rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
+                                            Comment required for revision or rejection
+                                          </span>
+                                        </div>
+                                        <Textarea
+                                          id={`document-admin-comment-${file.id}`}
+                                          name={`documentAdminComment-${file.id}`}
+                                          value={getDocumentReviewCommentDraft(file)}
+                                          onChange={(event) =>
+                                            setDocumentReviewRemarksByFileId((current) => ({
+                                              ...current,
+                                              [file.id]: event.target.value,
+                                            }))
+                                          }
+                                          placeholder="Explain what should be changed, or why the file was rejected."
+                                          className="mt-3 min-h-32"
+                                        />
                                         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                                           <Button
                                             size="sm"
@@ -1476,7 +1469,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                                 organizationId: selectedOrg.id,
                                                 organizationName: selectedOrg.organizationName,
                                                 fileName: file.fileName,
-                                                currentAdminRemarks: file.adminRemarks || "",
+                                                currentAdminRemarks: getDocumentReviewCommentDraft(file),
                                               })
                                             }
                                           >
@@ -1495,7 +1488,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                                 organizationId: selectedOrg.id,
                                                 organizationName: selectedOrg.organizationName,
                                                 fileName: file.fileName,
-                                                currentAdminRemarks: file.adminRemarks || "",
+                                                currentAdminRemarks: getDocumentReviewCommentDraft(file),
                                               })
                                             }
                                           >
@@ -1514,7 +1507,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                                 organizationId: selectedOrg.id,
                                                 organizationName: selectedOrg.organizationName,
                                                 fileName: file.fileName,
-                                                currentAdminRemarks: file.adminRemarks || "",
+                                                currentAdminRemarks: getDocumentReviewCommentDraft(file),
                                               })
                                             }
                                           >
@@ -1522,23 +1515,6 @@ export default function AdminPortal({ section }: { section: string }) {
                                           </Button>
                                         </div>
                                       </div>
-                                      {isOcrExpanded ? (
-                                        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Uploaded File Preview</p>
-                                          {structuredDataPreview ? (
-                                            <pre className="mt-3 max-h-48 overflow-auto rounded-md bg-background p-3 text-xs text-muted-foreground">
-                                              {JSON.stringify(structuredDataPreview, null, 2)}
-                                            </pre>
-                                          ) : null}
-                                          <div className="mt-3 max-h-[24rem] overflow-y-auto rounded-md bg-background p-3 text-sm text-muted-foreground">
-                                            The uploaded file is previewed above.
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                                          File details are hidden. Open the details panel to review the uploaded file beside the preview.
-                                        </div>
-                                      )}
                                     </div>
                                   </div>
                                 </>
@@ -1804,7 +1780,7 @@ export default function AdminPortal({ section }: { section: string }) {
 
             <Dialog open={selectedBudgetRequest !== null} onOpenChange={(open) => { if (!open) closeBudgetRequestDetails(); }}>
               <DialogContent className="h-[100dvh] w-[calc(100vw-1rem)] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-[92dvh] sm:w-[min(96vw,96rem)] sm:max-w-none sm:rounded-2xl sm:border">
-                <div className="flex h-full flex-col">
+                <div className="flex h-full min-h-0 flex-col">
                   <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
                     <DialogHeader className="text-left sm:text-left">
                       <DialogTitle className="text-xl leading-tight sm:text-2xl">
@@ -1816,7 +1792,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     </DialogHeader>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                  <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
                     {selectedBudgetRequest ? (
                       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
                         <div className="space-y-4">
@@ -1951,6 +1927,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                         title={budgetPreviewTitle || "Budget Request Preview"}
                                         src={budgetPreviewUrl}
                                         className="h-[24rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
+                                        loading="eager"
                                       />
                                     )
                                   ) : budgetPreviewUrl ? (
@@ -2158,39 +2135,6 @@ export default function AdminPortal({ section }: { section: string }) {
             </div>
           </PortalSection>
         );
-      case "remarks-consequences":
-        return (
-          <PortalSection title="Remarks and Consequences" description="Resolve compliance remarks and internal consequences.">
-            <div className="space-y-3">
-              {state.complianceRemarks.map((remark) => (
-                <Card key={remark.id} className="border-border/70">
-                  <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{remark.message}</p>
-                        <PortalStatusBadge status={remark.status === "open" ? "needs_revision" : "verified"} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">Consequence: {remark.consequenceType}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        updateComplianceRemark(remark.id, {
-                          status: "resolved",
-                          resolvedAt: new Date().toISOString(),
-                          resolvedBy: adminId,
-                        })
-                      }
-                    >
-                      Resolve
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </PortalSection>
-        );
       case "news-releases":
         return (
           <>
@@ -2314,20 +2258,24 @@ export default function AdminPortal({ section }: { section: string }) {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Title</label>
-                    <Input value={newsTitleDraft} onChange={(event) => setNewsTitleDraft(event.target.value)} placeholder="Enter news release title" />
+                    <label htmlFor="news-release-title" className="text-sm font-medium">Title</label>
+                    <Input id="news-release-title" name="newsReleaseTitle" value={newsTitleDraft} onChange={(event) => setNewsTitleDraft(event.target.value)} placeholder="Enter news release title" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
+                    <label htmlFor="news-release-description" className="text-sm font-medium">Description</label>
                     <Textarea
+                      id="news-release-description"
+                      name="newsReleaseDescription"
                       value={newsDescriptionDraft}
                       onChange={(event) => setNewsDescriptionDraft(event.target.value)}
                       placeholder="Write the summary shown in the preview page."
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Facebook Post URL</label>
+                    <label htmlFor="news-release-facebook-url" className="text-sm font-medium">Facebook Post URL</label>
                     <Input
+                      id="news-release-facebook-url"
+                      name="newsReleaseFacebookPostUrl"
                       value={newsFacebookPostUrlDraft}
                       onChange={(event) => setNewsFacebookPostUrlDraft(event.target.value)}
                       placeholder="https://facebook.com/..."
@@ -2335,12 +2283,20 @@ export default function AdminPortal({ section }: { section: string }) {
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Date Posted</label>
-                      <Input type="date" value={newsDatePostedDraft} onChange={(event) => setNewsDatePostedDraft(event.target.value)} />
+                      <label htmlFor="news-release-date-posted" className="text-sm font-medium">Date Posted</label>
+                      <Input
+                        id="news-release-date-posted"
+                        name="newsReleaseDatePosted"
+                        type="date"
+                        value={newsDatePostedDraft}
+                        onChange={(event) => setNewsDatePostedDraft(event.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Visibility</label>
+                      <label htmlFor="news-release-visibility" className="text-sm font-medium">Visibility</label>
                       <select
+                        id="news-release-visibility"
+                        name="newsReleaseVisibility"
                         className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={newsVisibilityDraft}
                         onChange={(event) => setNewsVisibilityDraft(event.target.value as NewsRelease["visibilityStatus"])}
@@ -2486,29 +2442,61 @@ export default function AdminPortal({ section }: { section: string }) {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Title</label>
-                    <Input value={transparencyTitleDraft} onChange={(event) => setTransparencyTitleDraft(event.target.value)} placeholder="Enter transparency post title" />
+                    <label htmlFor="transparency-post-title" className="text-sm font-medium">Title</label>
+                    <Input
+                      id="transparency-post-title"
+                      name="transparencyPostTitle"
+                      value={transparencyTitleDraft}
+                      onChange={(event) => setTransparencyTitleDraft(event.target.value)}
+                      placeholder="Enter transparency post title"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Textarea value={transparencyDescriptionDraft} onChange={(event) => setTransparencyDescriptionDraft(event.target.value)} placeholder="Write the transparency summary shown to users." />
+                    <label htmlFor="transparency-post-description" className="text-sm font-medium">Description</label>
+                    <Textarea
+                      id="transparency-post-description"
+                      name="transparencyPostDescription"
+                      value={transparencyDescriptionDraft}
+                      onChange={(event) => setTransparencyDescriptionDraft(event.target.value)}
+                      placeholder="Write the transparency summary shown to users."
+                    />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Category</label>
-                    <Input value={transparencyCategoryDraft} onChange={(event) => setTransparencyCategoryDraft(event.target.value)} placeholder="Approved registrations" />
+                    <label htmlFor="transparency-post-category" className="text-sm font-medium">Category</label>
+                    <Input
+                      id="transparency-post-category"
+                      name="transparencyPostCategory"
+                      value={transparencyCategoryDraft}
+                      onChange={(event) => setTransparencyCategoryDraft(event.target.value)}
+                      placeholder="Approved registrations"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Attachment URL</label>
-                    <Input value={transparencyAttachmentUrlDraft} onChange={(event) => setTransparencyAttachmentUrlDraft(event.target.value)} placeholder="https://example.com/file.pdf" />
+                    <label htmlFor="transparency-post-attachment-url" className="text-sm font-medium">Attachment URL</label>
+                    <Input
+                      id="transparency-post-attachment-url"
+                      name="transparencyPostAttachmentUrl"
+                      value={transparencyAttachmentUrlDraft}
+                      onChange={(event) => setTransparencyAttachmentUrlDraft(event.target.value)}
+                      placeholder="https://example.com/file.pdf"
+                    />
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Post Date</label>
-                      <Input type="date" value={transparencyPostDateDraft} onChange={(event) => setTransparencyPostDateDraft(event.target.value)} />
+                      <label htmlFor="transparency-post-date" className="text-sm font-medium">Post Date</label>
+                      <Input
+                        id="transparency-post-date"
+                        name="transparencyPostDate"
+                        type="date"
+                        value={transparencyPostDateDraft}
+                        onChange={(event) => setTransparencyPostDateDraft(event.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Visibility</label>
+                      <label htmlFor="transparency-post-visibility" className="text-sm font-medium">Visibility</label>
                       <select
+                        id="transparency-post-visibility"
+                        name="transparencyPostVisibility"
                         className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={transparencyVisibilityDraft}
                         onChange={(event) => setTransparencyVisibilityDraft(event.target.value as TransparencyPost["visibilityStatus"])}
@@ -2625,22 +2613,32 @@ export default function AdminPortal({ section }: { section: string }) {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Document Name</label>
-                    <Input value={templateNameDraft} onChange={(event) => setTemplateNameDraft(event.target.value)} placeholder="Enter document name" />
+                    <label htmlFor="template-document-name" className="text-sm font-medium">Document Name</label>
+                    <Input
+                      id="template-document-name"
+                      name="templateDocumentName"
+                      value={templateNameDraft}
+                      onChange={(event) => setTemplateNameDraft(event.target.value)}
+                      placeholder="Enter document name"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Document Description</label>
+                    <label htmlFor="template-document-description" className="text-sm font-medium">Document Description</label>
                     <Textarea
+                      id="template-document-description"
+                      name="templateDocumentDescription"
                       value={templateDescriptionDraft}
                       onChange={(event) => setTemplateDescriptionDraft(event.target.value)}
                       placeholder="Explain what the organization should upload for this document."
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">
+                    <label htmlFor="template-document-file" className="text-sm font-medium">
                       {templateModalMode === "edit" ? "Replace Template File" : "Upload Template File"}
                     </label>
                     <Input
+                      id="template-document-file"
+                      name="templateDocumentFile"
                       type="file"
                       accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                       onChange={(event) => setTemplateFileDraft(event.target.files?.[0] ?? null)}
@@ -2905,8 +2903,10 @@ export default function AdminPortal({ section }: { section: string }) {
             <DialogTitle>{adminConfirmationCopy.title}</DialogTitle>
             <DialogDescription>{adminConfirmationCopy.description}</DialogDescription>
           </DialogHeader>
-          <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
+          <label htmlFor="admin-confirmation-checkbox" className="flex items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
             <input
+              id="admin-confirmation-checkbox"
+              name="adminConfirmationAcknowledged"
               type="checkbox"
               checked={approvalAcknowledged}
               onChange={(event) => setApprovalAcknowledged(event.target.checked)}
@@ -2929,6 +2929,34 @@ export default function AdminPortal({ section }: { section: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={Boolean(pendingDeleteConfirmation)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteConfirmation(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDeleteConfirmation?.kind === "news_release" ? "Delete News Release" : "Delete Transparency Post"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteConfirmation
+                ? `Delete "${pendingDeleteConfirmation.title}"? This action cannot be undone.`
+                : "This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processingAdminConfirmation}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void confirmDeleteRecord()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

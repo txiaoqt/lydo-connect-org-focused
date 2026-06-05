@@ -165,7 +165,6 @@ const App = () => (
                       <Route path="/admin/document-validation" element={<Navigate to="/admin/registrations" replace />} />
                       <Route path="/admin/budget-utilization" element={<RequireAdmin><AdminPortal section="budget-utilization" /></RequireAdmin>} />
                       <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
-                      <Route path="/admin/remarks-consequences" element={<RequireAdmin><AdminPortal section="remarks-consequences" /></RequireAdmin>} />
                       <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
                       <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
                       <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
@@ -186,7 +185,6 @@ const App = () => (
                           <Route path="/admin/document-validation" element={<Navigate to="/admin/registrations" replace />} />
                           <Route path="/admin/budget-utilization" element={<RequireAdmin><AdminPortal section="budget-utilization" /></RequireAdmin>} />
                           <Route path="/admin/liquidation-monitoring" element={<RequireAdmin><AdminPortal section="liquidation-monitoring" /></RequireAdmin>} />
-                          <Route path="/admin/remarks-consequences" element={<RequireAdmin><AdminPortal section="remarks-consequences" /></RequireAdmin>} />
                           <Route path="/admin/news-releases" element={<RequireAdmin><AdminPortal section="news-releases" /></RequireAdmin>} />
                           <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
                           <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />

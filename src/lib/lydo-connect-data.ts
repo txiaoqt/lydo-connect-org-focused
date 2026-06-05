@@ -238,7 +238,6 @@ export const adminNavigationGroups: PortalNavGroup[] = [
     items: [
       { id: "budget-utilization", label: "Budget Utilization", icon: ClipboardList },
       { id: "liquidation-monitoring", label: "Liquidation Monitoring", icon: CalendarDays },
-      { id: "remarks-consequences", label: "Remarks and Consequences", icon: ShieldCheck },
     ],
   },
   {

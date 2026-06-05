@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, MessageCircle, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -197,6 +207,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [savingProfile, setSavingProfile] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [ocrPreviewOpen, setOcrPreviewOpen] = useState(false);
+  const [documentReviewNote, setDocumentReviewNote] = useState<{ title: string; note: string; status: "needs_revision" | "rejected_red" } | null>(null);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
   const [profileRequiredModalOpen, setProfileRequiredModalOpen] = useState(false);
@@ -220,6 +231,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [removingDocumentId, setRemovingDocumentId] = useState<string | null>(null);
   const [savingBudgetRequest, setSavingBudgetRequest] = useState(false);
   const [budgetFileDraft, setBudgetFileDraft] = useState<File | null>(null);
+  const [pendingBudgetDelete, setPendingBudgetDelete] = useState<BudgetRequest | null>(null);
   const [budgetForm, setBudgetForm] = useState<BudgetRequest>(() =>
     createBlankBudgetRequest(user?.id ?? "", user?.id ?? ""),
   );
@@ -1121,29 +1133,35 @@ export default function UserPortal({ section }: { section: string }) {
   };
 
   const handleDeleteBudgetRequest = (request: BudgetRequest) => {
-    if (!window.confirm(`Delete budget request "${request.activityTitle}"?`)) return;
-    void (async () => {
-      try {
-        await deleteBudgetRequestInSupabase(request.id);
-        const remoteSnapshot = await loadLydoConnectSupabaseState();
-        if (remoteSnapshot) {
-          mergeRemoteState(remoteSnapshot);
-        }
-        if (budgetForm.id === request.id) {
-          resetBudgetForm();
-        }
-        toast({
-          title: "Budget request deleted",
-          description: "The request and its attached files were removed.",
-        });
-      } catch (error) {
-        toast({
-          title: "Delete failed",
-          description: error instanceof Error ? error.message : "The budget request could not be deleted right now.",
-          variant: "destructive",
-        });
+    setPendingBudgetDelete(request);
+  };
+
+  const confirmDeleteBudgetRequest = async () => {
+    const request = pendingBudgetDelete;
+    if (!request) return;
+
+    setPendingBudgetDelete(null);
+
+    try {
+      await deleteBudgetRequestInSupabase(request.id);
+      const remoteSnapshot = await loadLydoConnectSupabaseState();
+      if (remoteSnapshot) {
+        mergeRemoteState(remoteSnapshot);
       }
-    })();
+      if (budgetForm.id === request.id) {
+        resetBudgetForm();
+      }
+      toast({
+        title: "Budget request deleted",
+        description: "The request and its attached files were removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "The budget request could not be deleted right now.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleLiquidationFileUpload = async (report: LiquidationReport, fileList: FileList | null) => {
@@ -1523,6 +1541,7 @@ export default function UserPortal({ section }: { section: string }) {
                           ? "ready_for_review"
                           : "needs_revision"
                         : null;
+                  const hasAdminReviewNote = file?.adminStatus === "needs_revision" || file?.adminStatus === "rejected_red";
                   return (
                     <Card key={documentType.id} className="border-border/70">
                       <CardContent className="grid gap-4 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] md:items-start">
@@ -1530,7 +1549,27 @@ export default function UserPortal({ section }: { section: string }) {
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <p className="min-w-0 break-words font-medium leading-snug">{documentType.name}</p>
                             {fileBadgeStatus ? (
-                              <PortalStatusBadge status={fileBadgeStatus} />
+                              <div className="flex flex-wrap items-center gap-2">
+                                <PortalStatusBadge status={fileBadgeStatus} />
+                                {hasAdminReviewNote ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2 text-xs text-primary hover:text-primary"
+                                    onClick={() =>
+                                      setDocumentReviewNote({
+                                        title: documentType.name,
+                                        note: file?.adminRemarks?.trim() || "No comment was provided.",
+                                        status: fileBadgeStatus,
+                                      })
+                                    }
+                                  >
+                                    <MessageCircle className="mr-1.5 h-4 w-4" />
+                                    Comment
+                                  </Button>
+                                ) : null}
+                              </div>
                             ) : file ? null : (
                               <span className="text-xs text-muted-foreground">No file uploaded yet</span>
                             )}
@@ -2254,6 +2293,29 @@ export default function UserPortal({ section }: { section: string }) {
               </div>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(documentReviewNote)}
+        onOpenChange={(open) => {
+          if (!open) setDocumentReviewNote(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{documentReviewNote?.title || "Admin Comment"}</DialogTitle>
+            <DialogDescription>
+              {documentReviewNote?.status === "needs_revision" ? "The admin requested changes for this submission." : "The admin rejected this submission."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-foreground">
+            {documentReviewNote?.note || "No comment was provided."}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setDocumentReviewNote(null)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog
@@ -3072,6 +3134,33 @@ export default function UserPortal({ section }: { section: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={Boolean(pendingBudgetDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPendingBudgetDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Budget Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingBudgetDelete
+                ? `Delete budget request "${pendingBudgetDelete.activityTitle}"? This action cannot be undone.`
+                : "This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={savingBudgetRequest}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void confirmDeleteBudgetRequest()}
+              disabled={savingBudgetRequest || !pendingBudgetDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
