@@ -275,7 +275,7 @@ export type SubmissionFile = {
   ocrStatus: "pending" | "processing" | "completed" | "failed";
   ocrConfidence: number;
   validationStatus: "correct" | "needs_reupload" | "missing" | "mismatch";
-  adminStatus: "draft" | "under_review" | "green" | "needs_revision" | "red";
+  adminStatus: DocumentSubmissionStatus;
   adminRemarks: string;
   uploadedAt: string;
   reviewedAt: string;

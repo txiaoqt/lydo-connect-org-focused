@@ -31,7 +31,7 @@ import {
   loadAdminPortalSupabaseState,
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
-  updateDocumentSubmissionReviewInSupabase,
+  updateDocumentSubmissionFileReviewInSupabase,
   updateTransparencyPostInSupabase,
   updateLiquidationReportInSupabase,
   updateNewsReleaseInSupabase,
@@ -128,6 +128,7 @@ type PendingAdminConfirmation =
   | {
       kind: "document";
       action: "approve" | "needs_revision" | "reject";
+      fileId: string;
       submissionId: string;
       organizationId: string;
       organizationName: string;
@@ -401,19 +402,12 @@ export default function AdminPortal({ section }: { section: string }) {
     setProcessingAdminConfirmation(true);
     try {
       if (pendingAdminConfirmation.kind === "document") {
-        const reviewTimestamp = new Date().toISOString();
         const status =
           pendingAdminConfirmation.action === "approve"
             ? "approved_green"
             : pendingAdminConfirmation.action === "needs_revision"
               ? "needs_revision"
               : "rejected_red";
-        const overallRemarks =
-          pendingAdminConfirmation.action === "approve"
-            ? "Admin approved the submitted document."
-            : pendingAdminConfirmation.action === "needs_revision"
-              ? "Admin requested document revisions."
-              : "Admin rejected the submitted document.";
         const adminRemarks =
           pendingAdminConfirmation.action === "approve"
             ? "Approved by admin."
@@ -421,10 +415,9 @@ export default function AdminPortal({ section }: { section: string }) {
               ? "Revision requested by admin."
               : "Rejected by admin.";
 
-        await updateDocumentSubmissionReviewInSupabase({
-          submissionId: pendingAdminConfirmation.submissionId,
+        await updateDocumentSubmissionFileReviewInSupabase({
+          fileId: pendingAdminConfirmation.fileId,
           status,
-          overallRemarks,
           adminRemarks: pendingAdminConfirmation.currentAdminRemarks
             ? `${pendingAdminConfirmation.currentAdminRemarks} ${adminRemarks}`.trim()
             : adminRemarks,
@@ -434,9 +427,9 @@ export default function AdminPortal({ section }: { section: string }) {
         if (pendingAdminConfirmation.action === "approve") {
           await appendAuditLog(
             "Approved document submission",
-            "document_submission",
-            pendingAdminConfirmation.submissionId,
-            "Document submission approved from the registration detail view.",
+            "document_submission_file",
+            pendingAdminConfirmation.fileId,
+            `Approved ${pendingAdminConfirmation.fileName} from the registration detail view.`,
             pendingAdminConfirmation.organizationId,
           );
           toast({
@@ -446,9 +439,9 @@ export default function AdminPortal({ section }: { section: string }) {
         } else if (pendingAdminConfirmation.action === "needs_revision") {
           await appendAuditLog(
             "Document revision requested",
-            "document_submission",
-            pendingAdminConfirmation.submissionId,
-            "Document submission marked for revision from the registration detail view.",
+            "document_submission_file",
+            pendingAdminConfirmation.fileId,
+            `Requested revisions for ${pendingAdminConfirmation.fileName} from the registration detail view.`,
             pendingAdminConfirmation.organizationId,
           );
           toast({
@@ -458,9 +451,9 @@ export default function AdminPortal({ section }: { section: string }) {
         } else {
           await appendAuditLog(
             "Rejected document submission",
-            "document_submission",
-            pendingAdminConfirmation.submissionId,
-            "Document submission rejected from the registration detail view.",
+            "document_submission_file",
+            pendingAdminConfirmation.fileId,
+            `Rejected ${pendingAdminConfirmation.fileName} from the registration detail view.`,
             pendingAdminConfirmation.organizationId,
           );
           toast({
@@ -977,7 +970,7 @@ export default function AdminPortal({ section }: { section: string }) {
               <PortalSection
                 title={selectedOrg.organizationName}
                 description="Registration details and submitted documents for validation."
-                action={<PortalStatusBadge status={selectedSubmission?.status ?? selectedOrg.profileStatus} />}
+                action={<PortalStatusBadge status={selectedOrg.profileStatus} />}
               >
                 <div className="mb-6 rounded-2xl border border-border/70 bg-muted/20 p-4 sm:p-5">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -990,6 +983,10 @@ export default function AdminPortal({ section }: { section: string }) {
                         <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
                           <CheckCircle2 className="h-4 w-4" />
                           VERIFIED ON {formatVerifiedDateLabel(selectedOrg.verifiedAt)}
+                        </div>
+                      ) : selectedOrg.profileStatus === "needs_update" ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
+                          Needs update
                         </div>
                       ) : (
                         <div className="rounded-xl border border-dashed border-border/80 bg-background px-4 py-2 text-sm text-muted-foreground">
@@ -1092,7 +1089,6 @@ export default function AdminPortal({ section }: { section: string }) {
               <PortalSection
                 title="Submitted Documents"
                 description={`${selectedFiles.length}/${templateDocuments.length} files submitted from the organization user side.`}
-                action={selectedSubmission ? <PortalStatusBadge status={selectedSubmission.status} /> : null}
               >
                 {selectedSubmission ? (
                   <div className="space-y-3">
@@ -1100,6 +1096,10 @@ export default function AdminPortal({ section }: { section: string }) {
                       const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
                       const previewUrl = file ? documentPreviewUrls[file.id] ?? "" : "";
                       const isOcrExpanded = file ? expandedOcrFileIds.includes(file.id) : false;
+                      const fileReviewBadgeStatus =
+                        file?.adminStatus === "approved_green" || file?.adminStatus === "needs_revision" || file?.adminStatus === "rejected_red"
+                          ? file.adminStatus
+                          : null;
                       return (
                         <Card key={documentType.id} className="border-border/70">
                           <CardContent className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
@@ -1107,7 +1107,7 @@ export default function AdminPortal({ section }: { section: string }) {
                               <div className="flex flex-wrap items-center gap-2">
                                 <FileText className="h-4 w-4 text-muted-foreground" />
                                 <p className="font-medium">{documentType.name}</p>
-                                <PortalStatusBadge status={file ? file.validationStatus === "correct" ? "ready_for_review" : "needs_revision" : "not_started"} />
+                                {fileReviewBadgeStatus ? <PortalStatusBadge status={fileReviewBadgeStatus} /> : null}
                               </div>
                               <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
                               {file ? (
@@ -1178,6 +1178,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     openAdminConfirmation({
                                       kind: "document",
                                       action: "approve",
+                                      fileId: file.id,
                                       submissionId: selectedSubmission.id,
                                       organizationId: selectedOrg.id,
                                       organizationName: selectedOrg.organizationName,
@@ -1197,6 +1198,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     openAdminConfirmation({
                                       kind: "document",
                                       action: "needs_revision",
+                                      fileId: file.id,
                                       submissionId: selectedSubmission.id,
                                       organizationId: selectedOrg.id,
                                       organizationName: selectedOrg.organizationName,
@@ -1216,6 +1218,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     openAdminConfirmation({
                                       kind: "document",
                                       action: "reject",
+                                      fileId: file.id,
                                       submissionId: selectedSubmission.id,
                                       organizationId: selectedOrg.id,
                                       organizationName: selectedOrg.organizationName,
@@ -1272,7 +1275,7 @@ export default function AdminPortal({ section }: { section: string }) {
                             </p>
                           </div>
                           <div className="flex flex-col gap-2 sm:items-end">
-                            <PortalStatusBadge status={orgSubmission?.status ?? org.profileStatus} />
+                            <PortalStatusBadge status={org.profileStatus} />
                             <div className="flex flex-col gap-2 sm:flex-row">
                               <Button
                                 type="button"
