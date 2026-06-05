@@ -1,4 +1,4 @@
-const CACHE_NAME = "lydo-connect-v4";
+const CACHE_NAME = "lydo-connect-v5";
 const APP_SHELL = [
   "/",
   "/admin",
@@ -39,6 +39,11 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith("/assets/")) {
+    event.respondWith(fetch(event.request));
     return;
   }
 
