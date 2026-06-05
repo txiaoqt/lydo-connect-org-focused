@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Download, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -185,8 +185,10 @@ export default function AdminPortal({ section }: { section: string }) {
   const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
+  const [expandedDocumentFileIds, setExpandedDocumentFileIds] = useState<string[]>([]);
   const [expandedOcrFileIds, setExpandedOcrFileIds] = useState<string[]>([]);
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
+  const documentPreviewSourceRef = useRef<Record<string, string>>({});
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -243,29 +245,54 @@ export default function AdminPortal({ section }: { section: string }) {
 
     if (!filesWithUploads.length) {
       setDocumentPreviewUrls({});
+      documentPreviewSourceRef.current = {};
       return;
     }
 
     void (async () => {
+      const nextUrls: Record<string, string> = {};
+      const nextSources: Record<string, string> = {};
+      const filesToResolve = filesWithUploads.filter((file) => {
+        const existingSource = documentPreviewSourceRef.current[file.id];
+        if (existingSource === file.fileUrl && documentPreviewUrls[file.id]) {
+          nextUrls[file.id] = documentPreviewUrls[file.id];
+          nextSources[file.id] = existingSource;
+          return false;
+        }
+        return true;
+      });
+
       const resolvedEntries = await Promise.all(
-        filesWithUploads.map(async (file) => {
+        filesToResolve.map(async (file) => {
           try {
             const resolvedUrl = await resolveSupabaseFileUrl(file.fileUrl);
-            return [file.id, resolvedUrl ?? ""] as const;
+            return [file.id, file.fileUrl, resolvedUrl ?? ""] as const;
           } catch {
-            return [file.id, ""] as const;
+            return [file.id, file.fileUrl, ""] as const;
           }
         }),
       );
 
       if (!isActive) return;
-      setDocumentPreviewUrls(Object.fromEntries(resolvedEntries));
+      for (const [fileId, sourceUrl, resolvedUrl] of resolvedEntries) {
+        nextUrls[fileId] = resolvedUrl;
+        nextSources[fileId] = sourceUrl;
+      }
+      const hasChanged =
+        Object.keys(nextUrls).length !== Object.keys(documentPreviewUrls).length ||
+        Object.entries(nextUrls).some(([fileId, resolvedUrl]) => documentPreviewUrls[fileId] !== resolvedUrl);
+      if (!hasChanged) {
+        documentPreviewSourceRef.current = nextSources;
+        return;
+      }
+      documentPreviewSourceRef.current = nextSources;
+      setDocumentPreviewUrls(nextUrls);
     })();
 
     return () => {
       isActive = false;
     };
-  }, [state.documentSubmissionFiles]);
+  }, [documentPreviewUrls, state.documentSubmissionFiles]);
 
   const refreshAdminState = async () => {
     const remoteSnapshot = (await loadAdminPortalSupabaseState()) ?? (await loadLydoConnectSupabaseState());
@@ -342,6 +369,14 @@ export default function AdminPortal({ section }: { section: string }) {
 
   const toggleOcrPreview = (fileId: string) => {
     setExpandedOcrFileIds((current) =>
+      current.includes(fileId)
+        ? current.filter((id) => id !== fileId)
+        : [...current, fileId],
+    );
+  };
+
+  const toggleDocumentCard = (fileId: string) => {
+    setExpandedDocumentFileIds((current) =>
       current.includes(fileId)
         ? current.filter((id) => id !== fileId)
         : [...current, fileId],
@@ -1110,6 +1145,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     {templateDocuments.map((documentType) => {
                       const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
                       const previewUrl = file ? documentPreviewUrls[file.id] ?? "" : "";
+                      const isExpanded = file ? expandedDocumentFileIds.includes(file.id) : false;
                       const isOcrExpanded = file ? expandedOcrFileIds.includes(file.id) : false;
                       const fileReviewBadgeStatus =
                         file?.adminStatus === "approved_green" || file?.adminStatus === "needs_revision" || file?.adminStatus === "rejected_red"
@@ -1117,136 +1153,167 @@ export default function AdminPortal({ section }: { section: string }) {
                           : null;
                       return (
                         <Card key={documentType.id} className="border-border/70">
-                          <CardContent className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <p className="font-medium">{documentType.name}</p>
-                                {fileReviewBadgeStatus ? <PortalStatusBadge status={fileReviewBadgeStatus} /> : null}
+                          <CardHeader className="pb-3">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <FileText className="h-4 w-4 text-muted-foreground" />
+                                  <CardTitle className="text-base">{documentType.name}</CardTitle>
+                                  {fileReviewBadgeStatus ? <PortalStatusBadge status={fileReviewBadgeStatus} /> : null}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                  <span>OCR: {file?.ocrStatus ?? "pending"}</span>
+                                  <span>Confidence: {file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
+                                  <span>Updated: {file?.updatedAt ? new Date(file.updatedAt).toLocaleString() : "N/A"}</span>
+                                </div>
                               </div>
-                              <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
+                              <div className="flex flex-col gap-2 sm:flex-row">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full sm:w-auto"
+                                  disabled={!file}
+                                  onClick={() => file && toggleDocumentCard(file.id)}
+                                >
+                                  {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
+                                  {isExpanded ? "Hide details" : "Show details"}
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          {isExpanded ? (
+                            <CardContent className="space-y-4 border-t border-border/70 pt-4">
                               {file ? (
-                                <div className="space-y-3">
-                                  <div className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
-                                    {previewUrl ? (
-                                      <iframe
-                                        src={previewUrl}
-                                        title={file.fileName}
-                                        className="h-[24rem] w-full sm:h-[28rem] xl:h-[32rem]"
-                                      />
-                                    ) : (
-                                      <div className="grid h-[24rem] place-items-center p-6 text-center text-sm text-muted-foreground sm:h-[28rem] xl:h-[32rem]">
-                                        Preview unavailable. Use the buttons below to open the uploaded file.
+                                <>
+                                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
+                                    <div className="space-y-3">
+                                      <div className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
+                                        {previewUrl ? (
+                                          <iframe
+                                            src={previewUrl}
+                                            title={file.fileName}
+                                            className="h-[24rem] w-full sm:h-[28rem] xl:h-[32rem]"
+                                          />
+                                        ) : (
+                                          <div className="grid h-[24rem] place-items-center p-6 text-center text-sm text-muted-foreground sm:h-[28rem] xl:h-[32rem]">
+                                            Preview unavailable. Use the buttons below to open the uploaded file.
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
-                                  </div>
-                                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="w-full sm:w-auto"
-                                      onClick={() => void openPreview(file.fileUrl, file.fileName)}
-                                    >
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      Open Uploaded File
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="w-full sm:w-auto"
-                                      onClick={() => toggleOcrPreview(file.id)}
-                                    >
-                                      {isOcrExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-                                      {isOcrExpanded ? "Hide OCR Scan" : "Open OCR Scan"}
-                                    </Button>
-                                  </div>
-                                  {isOcrExpanded ? (
-                                    <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
-                                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">OCR Extracted Text</p>
-                                      <div className="mt-3 max-h-80 overflow-y-auto rounded-md bg-background p-3 text-sm text-muted-foreground">
-                                        {file.ocrText || "No OCR text available yet."}
+                                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          className="w-full sm:w-auto"
+                                          onClick={() => void openPreview(file.fileUrl, file.fileName)}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          Open Uploaded File
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          className="w-full sm:w-auto"
+                                          onClick={() => toggleOcrPreview(file.id)}
+                                        >
+                                          {isOcrExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
+                                          {isOcrExpanded ? "Hide OCR Scan" : "Open OCR Scan"}
+                                        </Button>
                                       </div>
                                     </div>
-                                  ) : null}
-                                </div>
+                                    <div className="space-y-4">
+                                      <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
+                                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                          <p>OCR status: {file.ocrStatus ?? "pending"}</p>
+                                          <p>OCR confidence: {file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</p>
+                                        </div>
+                                        <p className="mt-3 break-words">Admin remarks: {file.adminRemarks || "None"}</p>
+                                        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full sm:w-auto"
+                                            onClick={() =>
+                                              openAdminConfirmation({
+                                                kind: "document",
+                                                action: "approve",
+                                                fileId: file.id,
+                                                submissionId: selectedSubmission.id,
+                                                organizationId: selectedOrg.id,
+                                                organizationName: selectedOrg.organizationName,
+                                                fileName: file.fileName,
+                                                currentAdminRemarks: file.adminRemarks || "",
+                                              })
+                                            }
+                                          >
+                                            Approve
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full sm:w-auto"
+                                            onClick={() =>
+                                              openAdminConfirmation({
+                                                kind: "document",
+                                                action: "needs_revision",
+                                                fileId: file.id,
+                                                submissionId: selectedSubmission.id,
+                                                organizationId: selectedOrg.id,
+                                                organizationName: selectedOrg.organizationName,
+                                                fileName: file.fileName,
+                                                currentAdminRemarks: file.adminRemarks || "",
+                                              })
+                                            }
+                                          >
+                                            Needs Revision
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full sm:w-auto"
+                                            onClick={() =>
+                                              openAdminConfirmation({
+                                                kind: "document",
+                                                action: "reject",
+                                                fileId: file.id,
+                                                submissionId: selectedSubmission.id,
+                                                organizationId: selectedOrg.id,
+                                                organizationName: selectedOrg.organizationName,
+                                                fileName: file.fileName,
+                                                currentAdminRemarks: file.adminRemarks || "",
+                                              })
+                                            }
+                                          >
+                                            Reject
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      {isOcrExpanded ? (
+                                        <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">OCR Extracted Text</p>
+                                          <div className="mt-3 max-h-[24rem] overflow-y-auto rounded-md bg-background p-3 text-sm text-muted-foreground">
+                                            {file.ocrText || "No OCR text available yet."}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
+                                          OCR scan details are hidden. Open the OCR scan to review the extracted result beside the uploaded file preview.
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </>
                               ) : (
-                                <div className="grid min-h-[18rem] place-items-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                                <div className="grid min-h-[12rem] place-items-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
                                   No uploaded file submitted yet for this requirement.
                                 </div>
                               )}
-                            </div>
-                            <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
-                              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                                <p>OCR status: {file?.ocrStatus ?? "pending"}</p>
-                                <p>OCR confidence: {file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</p>
-                              </div>
-                              <p className="break-words">Admin remarks: {file?.adminRemarks || "None"}</p>
-                              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full sm:w-auto"
-                                  disabled={!file}
-                                  onClick={() =>
-                                    openAdminConfirmation({
-                                      kind: "document",
-                                      action: "approve",
-                                      fileId: file.id,
-                                      submissionId: selectedSubmission.id,
-                                      organizationId: selectedOrg.id,
-                                      organizationName: selectedOrg.organizationName,
-                                      fileName: file?.fileName ?? documentType.name,
-                                      currentAdminRemarks: file?.adminRemarks || "",
-                                    })
-                                  }
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full sm:w-auto"
-                                  disabled={!file}
-                                  onClick={() =>
-                                    openAdminConfirmation({
-                                      kind: "document",
-                                      action: "needs_revision",
-                                      fileId: file.id,
-                                      submissionId: selectedSubmission.id,
-                                      organizationId: selectedOrg.id,
-                                      organizationName: selectedOrg.organizationName,
-                                      fileName: file?.fileName ?? documentType.name,
-                                      currentAdminRemarks: file?.adminRemarks || "",
-                                    })
-                                  }
-                                >
-                                  Needs Revision
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full sm:w-auto"
-                                  disabled={!file}
-                                  onClick={() =>
-                                    openAdminConfirmation({
-                                      kind: "document",
-                                      action: "reject",
-                                      fileId: file.id,
-                                      submissionId: selectedSubmission.id,
-                                      organizationId: selectedOrg.id,
-                                      organizationName: selectedOrg.organizationName,
-                                      fileName: file?.fileName ?? documentType.name,
-                                      currentAdminRemarks: file?.adminRemarks || "",
-                                    })
-                                  }
-                                >
-                                  Reject
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
+                            </CardContent>
+                          ) : null}
                         </Card>
                       );
                     })}

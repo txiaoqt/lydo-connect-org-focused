@@ -2164,6 +2164,8 @@ export default function UserPortal({ section }: { section: string }) {
                                         <div className="grid gap-3">
                                           <div className="flex flex-wrap items-start justify-between gap-3">
                                             <Input
+                                              id={`ocr-field-label-${field.id}`}
+                                              name={`ocr_field_label_${field.id}`}
                                               value={field.label}
                                               onClick={(event) => event.stopPropagation()}
                                               onChange={(event) => updateEditableOcrField(field.id, { label: event.target.value })}
@@ -2192,6 +2194,8 @@ export default function UserPortal({ section }: { section: string }) {
                                             </span>
                                           </div>
                                           <Textarea
+                                            id={`ocr-field-value-${field.id}`}
+                                            name={`ocr_field_value_${field.id}`}
                                             value={field.value}
                                             onClick={(event) => event.stopPropagation()}
                                             onChange={(event) => updateEditableOcrField(field.id, { value: event.target.value })}
