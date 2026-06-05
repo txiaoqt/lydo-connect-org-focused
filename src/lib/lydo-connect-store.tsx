@@ -237,6 +237,9 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
     };
 
     void syncState();
+    const syncInterval = window.setInterval(() => {
+      void syncState();
+    }, 5000);
 
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       void syncState();
@@ -244,12 +247,18 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
     const handleAdminSessionChange = () => {
       void syncState();
     };
+    const handleWindowFocus = () => {
+      void syncState();
+    };
     window.addEventListener(ADMIN_SESSION_CHANGE_EVENT, handleAdminSessionChange);
+    window.addEventListener("focus", handleWindowFocus);
 
     return () => {
       active = false;
+      window.clearInterval(syncInterval);
       authListener.subscription.unsubscribe();
       window.removeEventListener(ADMIN_SESSION_CHANGE_EVENT, handleAdminSessionChange);
+      window.removeEventListener("focus", handleWindowFocus);
     };
   }, []);
 

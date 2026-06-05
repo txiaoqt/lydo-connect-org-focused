@@ -551,6 +551,17 @@ const fetchNewsReleases = async () => {
   return (data as NewsReleaseRow[] | null) ?? [];
 };
 
+const fetchTransparencyPosts = async () => {
+  const { data, error } = await supabase!
+    .from("transparency_posts")
+    .select("*")
+    .order("post_date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as TransparencyPostRow[] | null) ?? [];
+};
+
 export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedState> | null> => {
   if (!supabase) return null;
 
@@ -571,15 +582,25 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
   const mappedTemplates = ((templateRows as RequiredDocumentTypeRow[] | null) ?? [])
     .map(mapTemplate)
     .filter((template): template is TemplateRecord => Boolean(template) && !legacyRemovedTemplateNames.has(template.name));
+  const [newsReleaseRows, transparencyPostRows] = await Promise.all([
+    fetchNewsReleases(),
+    fetchTransparencyPosts(),
+  ]);
 
   const organizationProfile = await fetchOrganizationProfile(session.user.id);
+  const sharedState: Partial<LydoSeedState> = {
+    templates: mappedTemplates,
+    newsReleases: newsReleaseRows.map(mapNewsRelease),
+    transparencyPosts: transparencyPostRows.map(mapTransparencyPost),
+  };
+
   if (!organizationProfile) {
-    return mappedTemplates.length ? { templates: mappedTemplates } : null;
+    return sharedState;
   }
 
   const remoteState: Partial<LydoSeedState> = {
     organizationProfiles: [mapOrganizationProfile(organizationProfile)],
-    templates: mappedTemplates,
+    ...sharedState,
   };
 
   const [latestSubmission, budgetRows, liquidationRows] = await Promise.all([
@@ -600,8 +621,6 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
 
   remoteState.budgetRequestFiles = budgetFileRows.map(mapBudgetRequestFile);
   remoteState.liquidationReportFiles = liquidationFileRows.map(mapLiquidationReportFile);
-  remoteState.newsReleases = (await fetchNewsReleases()).map(mapNewsRelease);
-
   if (!latestSubmission) {
     return remoteState;
   }
