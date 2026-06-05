@@ -55,6 +55,8 @@ const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
   "budget_released",
   "completed",
 ]);
+const ADMIN_RECIPIENT_ID = "admin-demo";
+const createNotificationId = () => `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const createBlankOrganizationProfile = (userId: string): OrganizationProfile => ({
   id: `draft-${userId || "organization"}`,
@@ -106,6 +108,7 @@ export default function UserPortal({ section }: { section: string }) {
     upsertOrganizationProfile,
     updateDocumentFile,
     updateDocumentSubmission,
+    createNotification,
     markNotificationRead,
   } = useLydoConnect();
   const [scanningDocumentId, setScanningDocumentId] = useState<string | null>(null);
@@ -317,6 +320,27 @@ export default function UserPortal({ section }: { section: string }) {
     }
   };
 
+  const notifyAdmin = (params: {
+    title: string;
+    message: string;
+    relatedType: string;
+    relatedId: string;
+    organizationId?: string;
+  }) => {
+    createNotification({
+      id: createNotificationId(),
+      userId: ADMIN_RECIPIENT_ID,
+      organizationId: params.organizationId ?? currentProfile?.id ?? "",
+      title: params.title,
+      message: params.message,
+      type: "user_update",
+      relatedType: params.relatedType,
+      relatedId: params.relatedId,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
   const resetDocumentScan = () => {
     setPendingDocumentScan(null);
     setConfirmSubmitOpen(false);
@@ -401,6 +425,13 @@ export default function UserPortal({ section }: { section: string }) {
       if (remoteSnapshot) {
         mergeRemoteState(remoteSnapshot);
       }
+      notifyAdmin({
+        title: "New document submission",
+        message: `${pendingDocumentScan.documentTypeName} was submitted by ${profile.organizationName || "an organization"}.`,
+        relatedType: "document_submission",
+        relatedId: submissionResult.submissionId,
+        organizationId: profile.id,
+      });
 
       setConfirmSubmitOpen(false);
       setOcrPreviewOpen(false);
@@ -481,6 +512,13 @@ export default function UserPortal({ section }: { section: string }) {
       const savedProfile = await upsertOrganizationProfileInSupabase(trimmedProfile);
       upsertOrganizationProfile(savedProfile);
       setProfileDraft(savedProfile);
+      notifyAdmin({
+        title: "Organization profile updated",
+        message: `${savedProfile.organizationName} updated its profile and sent it for admin review.`,
+        relatedType: "organization_profile",
+        relatedId: savedProfile.id,
+        organizationId: savedProfile.id,
+      });
 
       toast({
         title: "Profile saved",

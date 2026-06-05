@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ArrowLeft, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Bell, ArrowLeft, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,7 +17,7 @@ import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } 
 import { PortalShell } from "@/components/portal/PortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
-import { adminNavigationGroups, type NewsRelease } from "@/lib/lydo-connect-data";
+import { adminNavigationGroups as baseAdminNavigationGroups, type NewsRelease } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
   createNewsReleaseInSupabase,
@@ -43,10 +43,28 @@ const routeMap: Record<string, string> = {
   "news-releases": "/admin/news-releases",
   "public-transparency-posts": "/admin/public-transparency-posts",
   templates: "/admin/templates",
-  "notifications-activity": "/admin/notifications-activity",
+  notifications: "/admin/notifications",
+  "activity-logs": "/admin/activity-logs",
 };
 
 const adminId = "admin-demo";
+const splitNotificationsGroup = baseAdminNavigationGroups.map((group) =>
+  group.items.some((item) => item.id === "notifications-activity")
+    ? {
+        ...group,
+        items: group.items.flatMap((item) =>
+          item.id === "notifications-activity"
+            ? [
+                { id: "notifications", label: "Notifications", icon: Bell },
+                { id: "activity-logs", label: "Activity Logs", icon: ClipboardList },
+              ]
+            : [item],
+        ),
+      }
+    : group,
+);
+
+const createLogId = () => `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const renderAdvocacyChips = (advocacies: string[]) =>
   advocacies.length ? (
@@ -67,7 +85,7 @@ const renderAdvocacyChips = (advocacies: string[]) =>
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createNotification, createActivityLog } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, updateOrganizationProfile, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, markNotificationRead, createActivityLog } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -90,7 +108,8 @@ export default function AdminPortal({ section }: { section: string }) {
   const [savingNewsRelease, setSavingNewsRelease] = useState(false);
 
   const profile = state.organizationProfiles[0];
-  const unread = state.notifications.filter((item) => !item.isRead).length;
+  const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
+  const unread = adminNotifications.filter((item) => !item.isRead).length;
   const templateDocuments = useMemo(
     () =>
       [...state.templates]
@@ -127,6 +146,25 @@ export default function AdminPortal({ section }: { section: string }) {
     }),
     [state],
   );
+
+  const appendAuditLog = (
+    action: string,
+    relatedType: string,
+    relatedId: string,
+    description: string,
+    organizationId = profile?.id ?? "",
+  ) => {
+    createActivityLog({
+      id: createLogId(),
+      actorUserId: adminId,
+      organizationId,
+      action,
+      relatedType,
+      relatedId,
+      description,
+      createdAt: new Date().toISOString(),
+    });
+  };
 
   const resetTemplateForm = () => {
     setTemplateModalMode(null);
@@ -197,6 +235,7 @@ export default function AdminPortal({ section }: { section: string }) {
       }
       const remoteSnapshot = await loadLydoConnectSupabaseState();
       if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+      appendAuditLog("Created template", "template", newTemplate.databaseId, `Created template "${newTemplate.name}" and uploaded a new file.`);
       resetTemplateForm();
       toast({ title: "Template created", description: `${newTemplate.name} was added successfully.` });
     } catch (error) {
@@ -315,6 +354,7 @@ export default function AdminPortal({ section }: { section: string }) {
       }
       const remoteSnapshot = await loadLydoConnectSupabaseState();
       if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+      appendAuditLog("Updated template", "template", template.databaseId, `Updated template "${template.name}" to "${updatedTemplate.name}".`);
       resetTemplateForm();
       toast({ title: "Template updated", description: `${updatedTemplate.name} was updated successfully.` });
     } catch (error) {
@@ -337,6 +377,7 @@ export default function AdminPortal({ section }: { section: string }) {
       removeTemplate(template.id);
       const remoteSnapshot = await loadLydoConnectSupabaseState();
       if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
+      appendAuditLog("Deleted template", "template", template.databaseId, `Deleted template "${template.name}" from the active list.`);
       if (editingTemplateId === template.id || templateModalMode === "delete") {
         resetTemplateForm();
       }
@@ -482,10 +523,24 @@ export default function AdminPortal({ section }: { section: string }) {
                     Back to registrations
                   </Button>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => updateOrganizationProfile(selectedOrg.id, { profileStatus: "verified" })}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        updateOrganizationProfile(selectedOrg.id, { profileStatus: "verified" });
+                        appendAuditLog("Verified organization", "organization_profile", selectedOrg.id, `Marked ${selectedOrg.organizationName} as verified.`);
+                      }}
+                    >
                       Mark Verified
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => updateOrganizationProfile(selectedOrg.id, { profileStatus: "needs_update" })}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        updateOrganizationProfile(selectedOrg.id, { profileStatus: "needs_update" });
+                        appendAuditLog("Marked needs update", "organization_profile", selectedOrg.id, `Marked ${selectedOrg.organizationName} for an update.`);
+                      }}
+                    >
                       Needs Update
                     </Button>
                   </div>
@@ -1341,38 +1396,39 @@ export default function AdminPortal({ section }: { section: string }) {
             </Dialog>
           </PortalSection>
         );
-      case "notifications-activity":
+      case "notifications":
         return (
-          <div className="space-y-6">
-            <PortalSection title="Notifications" description="Admin and user notifications in one place." action={<BadgePanel count={unread} />}>
-              <div className="space-y-3">
-                {state.notifications.map((notification) => (
-                  <button
-                    key={notification.id}
-                    type="button"
-                    className="w-full rounded-xl border border-border/70 bg-background p-4 text-left text-sm transition-colors hover:bg-muted/40"
-                    onClick={() => markNotificationRead(notification.id)}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{notification.title}</p>
-                      <PortalStatusBadge status={notification.isRead ? "verified" : "pending_review"} />
-                    </div>
-                    <p className="mt-1 text-muted-foreground">{notification.message}</p>
-                  </button>
-                ))}
-              </div>
-            </PortalSection>
-            <PortalSection title="Activity Logs" description="Audit-friendly event trail.">
-              <div className="space-y-3">
-                {state.activityLogs.map((activity) => (
-                  <div key={activity.id} className="rounded-xl border border-border/70 bg-background p-4 text-sm">
-                    <p className="font-medium">{activity.action}</p>
-                    <p className="mt-1 text-muted-foreground">{activity.description}</p>
+          <PortalSection title="Notifications" description="User-side changes that need admin attention." action={<BadgePanel count={unread} />}>
+            <div className="space-y-3">
+              {adminNotifications.map((notification) => (
+                <button
+                  key={notification.id}
+                  type="button"
+                  className="w-full rounded-xl border border-border/70 bg-background p-4 text-left text-sm transition-colors hover:bg-muted/40"
+                  onClick={() => markNotificationRead(notification.id)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{notification.title}</p>
+                    <PortalStatusBadge status={notification.isRead ? "verified" : "pending_review"} />
                   </div>
-                ))}
-              </div>
-            </PortalSection>
-          </div>
+                  <p className="mt-1 text-muted-foreground">{notification.message}</p>
+                </button>
+              ))}
+            </div>
+          </PortalSection>
+        );
+      case "activity-logs":
+        return (
+          <PortalSection title="Activity Logs" description="Audit trail of admin-side edits and review actions.">
+            <div className="space-y-3">
+              {state.activityLogs.map((activity) => (
+                <div key={activity.id} className="rounded-xl border border-border/70 bg-background p-4 text-sm">
+                  <p className="font-medium">{activity.action}</p>
+                  <p className="mt-1 text-muted-foreground">{activity.description}</p>
+                </div>
+              ))}
+            </div>
+          </PortalSection>
         );
       default:
         return (
@@ -1452,7 +1508,7 @@ export default function AdminPortal({ section }: { section: string }) {
     <PortalShell
       title="Admin Portal"
       subtitle="LYDO / PCYDO Admin"
-      groups={adminNavigationGroups}
+      groups={splitNotificationsGroup}
       activeId={section}
       onNavigate={(id) => navigate(routeMap[id] ?? routeMap.overview)}
       onSignOut={() => void signOut()}

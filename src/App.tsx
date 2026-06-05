@@ -170,7 +170,9 @@ const App = () => (
                       <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
                       <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
                       <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
-                      <Route path="/admin/notifications-activity" element={<RequireAdmin><AdminPortal section="notifications-activity" /></RequireAdmin>} />
+                      <Route path="/admin/notifications" element={<RequireAdmin><AdminPortal section="notifications" /></RequireAdmin>} />
+                      <Route path="/admin/activity-logs" element={<RequireAdmin><AdminPortal section="activity-logs" /></RequireAdmin>} />
+                      <Route path="/admin/notifications-activity" element={<Navigate to="/admin/notifications" replace />} />
                       <Route path="/" element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
                       <Route path="*" element={<Navigate to={ADMIN_SIGNIN_PATH} replace />} />
                     </>
@@ -189,7 +191,9 @@ const App = () => (
                           <Route path="/admin/news-releases/:newsReleaseId" element={<RequireAdmin><NewsReleaseRecord /></RequireAdmin>} />
                           <Route path="/admin/public-transparency-posts" element={<RequireAdmin><AdminPortal section="public-transparency-posts" /></RequireAdmin>} />
                           <Route path="/admin/templates" element={<RequireAdmin><AdminPortal section="templates" /></RequireAdmin>} />
-                          <Route path="/admin/notifications-activity" element={<RequireAdmin><AdminPortal section="notifications-activity" /></RequireAdmin>} />
+                          <Route path="/admin/notifications" element={<RequireAdmin><AdminPortal section="notifications" /></RequireAdmin>} />
+                          <Route path="/admin/activity-logs" element={<RequireAdmin><AdminPortal section="activity-logs" /></RequireAdmin>} />
+                          <Route path="/admin/notifications-activity" element={<Navigate to="/admin/notifications" replace />} />
                         </>
                       ) : (
                         <Route path="/admin/*" element={<Navigate to="/" replace />} />
