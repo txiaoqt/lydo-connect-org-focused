@@ -53,6 +53,7 @@ const formatCurrency = (value: number) => `PHP ${value.toLocaleString()}`;
 const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const philippineContactNumberPattern = /^09\d{9}$/;
 const normalizePhilippineContactNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 11);
+const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
 const formatVerifiedDateLabel = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -156,6 +157,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [previewUrl, setPreviewUrl] = useState("");
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
+  const [previewCanInline, setPreviewCanInline] = useState(false);
   const [ocrPreviewUrl, setOcrPreviewUrl] = useState("");
   const [pendingDocumentScan, setPendingDocumentScan] = useState<{
     documentTypeId: string;
@@ -302,6 +304,7 @@ export default function UserPortal({ section }: { section: string }) {
       setPreviewUrl("");
       setPreviewTitle(title);
       setPreviewEmptyMessage("No file uploaded yet.");
+      setPreviewCanInline(false);
       setPreviewModalOpen(true);
       return;
     }
@@ -315,6 +318,7 @@ export default function UserPortal({ section }: { section: string }) {
       setPreviewUrl(resolvedUrl);
       setPreviewTitle(title);
       setPreviewEmptyMessage("");
+      setPreviewCanInline(canInlinePreviewFile(title) || canInlinePreviewFile(resolvedUrl));
       setPreviewModalOpen(true);
     } catch (error) {
       toast({
@@ -1713,6 +1717,7 @@ export default function UserPortal({ section }: { section: string }) {
             setPreviewUrl("");
             setPreviewTitle("");
             setPreviewEmptyMessage("");
+            setPreviewCanInline(false);
           }
         }}
       >
@@ -1730,12 +1735,31 @@ export default function UserPortal({ section }: { section: string }) {
             </div>
             <div className="flex-1 overflow-hidden p-4 sm:p-6">
               <div className="h-[calc(100dvh-11rem)] overflow-hidden rounded-md border border-border/70 bg-muted/20 sm:h-[70vh]">
-                {previewUrl ? (
+                {previewUrl && previewCanInline ? (
                   <iframe
                     src={previewUrl}
                     title={previewTitle || "Template preview"}
                     className="h-full w-full"
                   />
+                ) : previewUrl ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                    <div className="space-y-2">
+                      <p className="text-base font-medium text-foreground">Preview not available in the browser</p>
+                      <p className="max-w-md text-sm text-muted-foreground">
+                        This template file type cannot be shown inside the portal preview. Open or download the file to view it in Excel, Word, or another compatible app.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button type="button" variant="outline" onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Open File
+                      </Button>
+                      <Button type="button" onClick={() => void openFile(previewUrl, previewTitle || "template-file")}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download File
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid h-full place-items-center p-6 text-center text-sm text-muted-foreground">
                     {previewEmptyMessage || "No file uploaded yet."}
