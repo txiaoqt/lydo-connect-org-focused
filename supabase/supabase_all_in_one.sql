@@ -2256,6 +2256,10 @@ for all using (
   and (public.current_user_is_admin() or owner = auth.uid())
 );
 
+drop policy if exists organization_documents_read_portal on storage.objects;
+create policy organization_documents_read_portal on storage.objects
+for select using (bucket_id = 'organization-documents');
+
 drop policy if exists budget_request_files_manage_own on storage.objects;
 create policy budget_request_files_manage_own on storage.objects
 for all using (
@@ -2266,6 +2270,10 @@ for all using (
   and (public.current_user_is_admin() or owner = auth.uid())
 );
 
+drop policy if exists budget_request_files_read_portal on storage.objects;
+create policy budget_request_files_read_portal on storage.objects
+for select using (bucket_id = 'budget-request-files');
+
 drop policy if exists liquidation_report_files_manage_own on storage.objects;
 create policy liquidation_report_files_manage_own on storage.objects
 for all using (
@@ -2275,6 +2283,10 @@ for all using (
   bucket_id = 'liquidation-report-files'
   and (public.current_user_is_admin() or owner = auth.uid())
 );
+
+drop policy if exists liquidation_report_files_read_portal on storage.objects;
+create policy liquidation_report_files_read_portal on storage.objects
+for select using (bucket_id = 'liquidation-report-files');
 
 drop policy if exists template_files_admin_manage on storage.objects;
 create policy template_files_admin_manage on storage.objects

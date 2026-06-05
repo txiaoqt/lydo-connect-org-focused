@@ -827,6 +827,14 @@ export const submitOrganizationDocumentToSupabase = async (params: {
   }
 
   const submission = await ensureDocumentSubmission(organizationProfile.id, session.user.id);
+  const { data: existingRows, error: existingRowsError } = await supabase!
+    .from("document_submission_files")
+    .select("id,file_url")
+    .eq("submission_id", submission.id)
+    .eq("document_type_id", documentTypeRow.id);
+
+  if (existingRowsError) throw new Error(existingRowsError.message);
+
   const safeFileName = sanitizeFileName(params.file.name);
   const objectPath = `${organizationProfile.id}/${documentTypeRow.id}/${Date.now()}-${safeFileName}`;
 
@@ -870,6 +878,13 @@ export const submitOrganizationDocumentToSupabase = async (params: {
 
   if (error || !data) throw new Error(error?.message ?? "Failed to save the uploaded document.");
 
+  const existingFiles = ((existingRows as Array<{ id: string; file_url: string }> | null) ?? []).filter(
+    (entry) => entry.file_url && entry.file_url !== storageUri,
+  );
+  if (existingFiles.length) {
+    await removeStorageObjects(existingFiles.map((entry) => entry.file_url));
+  }
+
   await supabase
     .from("document_submissions")
     .update({
@@ -887,6 +902,69 @@ export const submitOrganizationDocumentToSupabase = async (params: {
     submissionId: submission.id,
     file: mappedFile,
   };
+};
+
+export const removeOrganizationDocumentFromSupabase = async (fileId: string) => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  await getAuthenticatedOrganizationContext();
+
+  const { data: existingRow, error: existingError } = await supabase!
+    .from("document_submission_files")
+    .select("id,submission_id,file_url")
+    .eq("id", fileId)
+    .single();
+
+  if (existingError || !existingRow) throw new Error(existingError?.message ?? "The uploaded document could not be found.");
+
+  const submissionId = existingRow.submission_id as string;
+  const fileUrl = existingRow.file_url as string;
+
+  const { error: deleteError } = await supabase!.from("document_submission_files").delete().eq("id", fileId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (fileUrl) {
+    await removeStorageObjects([fileUrl]);
+  }
+
+  const { data: remainingRows, error: remainingError } = await supabase!
+    .from("document_submission_files")
+    .select("admin_status")
+    .eq("submission_id", submissionId);
+
+  if (remainingError) throw new Error(remainingError.message);
+
+  const remainingStatuses = ((remainingRows as Array<{ admin_status: SubmissionFile["adminStatus"] }> | null) ?? []).map(
+    (row) => row.admin_status,
+  );
+
+  const nextStatus: DocumentSubmission["status"] =
+    !remainingStatuses.length
+      ? "draft"
+      : remainingStatuses.includes("rejected_red")
+        ? "rejected_red"
+        : remainingStatuses.includes("needs_revision")
+          ? "needs_revision"
+          : remainingStatuses.every((status) => status === "approved_green")
+            ? "approved_green"
+            : "under_admin_review";
+
+  const submissionUpdatePayload: Record<string, unknown> = {
+    status: nextStatus,
+    user_confirmed: remainingStatuses.length > 0,
+    overall_remarks: remainingStatuses.length ? null : "",
+    updated_at: new Date().toISOString(),
+  };
+  if (!remainingStatuses.length) {
+    submissionUpdatePayload.reviewed_at = null;
+  }
+
+  const { error: submissionUpdateError } = await supabase!
+    .from("document_submissions")
+    .update(submissionUpdatePayload)
+    .eq("id", submissionId);
+
+  if (submissionUpdateError) throw new Error(submissionUpdateError.message);
 };
 
 const getAuthenticatedOrganizationContext = async () => {

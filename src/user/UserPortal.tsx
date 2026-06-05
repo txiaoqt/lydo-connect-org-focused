@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ import {
   createLiquidationReportFileInSupabase,
   resolveSupabaseFileUrl,
   upsertOrganizationProfileInSupabase,
+  removeOrganizationDocumentFromSupabase,
   submitOrganizationDocumentToSupabase,
 } from "@/lib/lydo-connect-supabase";
 import { scanPdfForOcr, type DocumentOcrIssue, type DocumentOcrScanResult } from "@/lib/document-ocr";
@@ -149,6 +150,12 @@ export default function UserPortal({ section }: { section: string }) {
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
   const [profileRequiredModalOpen, setProfileRequiredModalOpen] = useState(false);
+  const [pendingDocumentRemoval, setPendingDocumentRemoval] = useState<{
+    fileId: string;
+    fileName: string;
+    documentTypeName: string;
+  } | null>(null);
+  const [removingDocumentId, setRemovingDocumentId] = useState<string | null>(null);
   const [savingBudgetRequest, setSavingBudgetRequest] = useState(false);
   const [budgetFileDraft, setBudgetFileDraft] = useState<File | null>(null);
   const [budgetForm, setBudgetForm] = useState<BudgetRequest>(() =>
@@ -468,6 +475,32 @@ export default function UserPortal({ section }: { section: string }) {
       });
     } finally {
       setSubmittingDocumentId(null);
+    }
+  };
+
+  const confirmRemoveDocument = async () => {
+    if (!pendingDocumentRemoval) return;
+
+    setRemovingDocumentId(pendingDocumentRemoval.fileId);
+    try {
+      await removeOrganizationDocumentFromSupabase(pendingDocumentRemoval.fileId);
+      const remoteSnapshot = await loadLydoConnectSupabaseState();
+      if (remoteSnapshot) {
+        mergeRemoteState(remoteSnapshot);
+      }
+      toast({
+        title: "Document removed",
+        description: `${pendingDocumentRemoval.documentTypeName} and its OCR data were removed successfully.`,
+      });
+      setPendingDocumentRemoval(null);
+    } catch (error) {
+      toast({
+        title: "Remove failed",
+        description: error instanceof Error ? error.message : "The uploaded document could not be removed right now.",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingDocumentId(null);
     }
   };
 
@@ -1053,21 +1086,28 @@ export default function UserPortal({ section }: { section: string }) {
             <PortalSection
               title="Document Submission"
               description="Upload a PDF, review the OCR preview, and submit only after you confirm the extracted details."
-              action={submission ? <PortalStatusBadge status={submission.status} /> : null}
             >
               <div className="grid gap-4">
                 {templateDocuments.map((documentType) => {
                   const file = docFiles.find((entry) => entry.documentTypeId === documentType.id);
                   const template = templatesById[documentType.id];
+                  const fileBadgeStatus =
+                    file?.adminStatus && file.adminStatus !== "draft"
+                      ? file.adminStatus
+                      : file
+                        ? file.validationStatus === "correct"
+                          ? "ready_for_review"
+                          : "needs_revision"
+                        : null;
                   return (
                     <Card key={documentType.id} className="border-border/70">
                       <CardContent className="grid gap-4 p-4 sm:p-5 md:grid-cols-[1.7fr_1fr]">
                         <div className="space-y-2">
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <p className="font-medium leading-snug">{documentType.name}</p>
-                            {file ? (
-                              <PortalStatusBadge status={file.validationStatus === "correct" ? "ready_for_review" : "needs_revision"} />
-                            ) : (
+                            {fileBadgeStatus ? (
+                              <PortalStatusBadge status={fileBadgeStatus} />
+                            ) : file ? null : (
                               <span className="text-xs text-muted-foreground">No file uploaded yet</span>
                             )}
                           </div>
@@ -1172,6 +1212,22 @@ export default function UserPortal({ section }: { section: string }) {
                                   <Download className="mr-2 h-4 w-4" />
                                   Download Uploaded File
                                 </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full sm:w-auto"
+                                  onClick={() =>
+                                    setPendingDocumentRemoval({
+                                      fileId: file.id,
+                                      fileName: file.fileName,
+                                      documentTypeName: documentType.name,
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Remove Uploaded Document
+                                </Button>
                               </div>
                             </div>
                           ) : null}
@@ -1221,7 +1277,7 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardTitle className="text-sm font-medium text-muted-foreground">What happens next</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 text-sm text-muted-foreground">
-                    Upload a PDF to inspect the OCR preview before submission, or upload an XLS/XLSX file to send the spreadsheet directly for review.
+                    Upload a PDF to inspect the OCR preview, confirm the extracted details, and send the file for admin review.
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/20">
@@ -2045,6 +2101,52 @@ export default function UserPortal({ section }: { section: string }) {
               }}
             >
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(pendingDocumentRemoval)}
+        onOpenChange={(open) => {
+          if (!open && !removingDocumentId) {
+            setPendingDocumentRemoval(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Uploaded Document</DialogTitle>
+            <DialogDescription>Are you sure you want to remove this document?</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            {pendingDocumentRemoval
+              ? `${pendingDocumentRemoval.documentTypeName} and its OCR-scanned record will be removed from your submission.`
+              : "The selected document will be removed."}
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={Boolean(removingDocumentId)}
+              onClick={() => setPendingDocumentRemoval(null)}
+            >
+              No
+            </Button>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              disabled={Boolean(removingDocumentId)}
+              onClick={() => void confirmRemoveDocument()}
+            >
+              {removingDocumentId ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Yes, remove"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -286,6 +286,18 @@ begin
 end;
 $$;
 
+drop policy if exists organization_documents_read_portal on storage.objects;
+create policy organization_documents_read_portal on storage.objects
+for select using (bucket_id = 'organization-documents');
+
+drop policy if exists budget_request_files_read_portal on storage.objects;
+create policy budget_request_files_read_portal on storage.objects
+for select using (bucket_id = 'budget-request-files');
+
+drop policy if exists liquidation_report_files_read_portal on storage.objects;
+create policy liquidation_report_files_read_portal on storage.objects
+for select using (bucket_id = 'liquidation-report-files');
+
 create or replace function public.update_admin_transparency_post(
   _session_token text,
   _post_id uuid,
