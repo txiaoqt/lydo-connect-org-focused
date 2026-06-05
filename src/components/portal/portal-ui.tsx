@@ -19,10 +19,10 @@ export const PortalMetricCard = ({
   helper?: string;
 }) => (
   <Card className="border-border/70 bg-card/90">
-    <CardContent className="p-4">
+    <CardContent className="p-3 sm:p-4">
       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{label}</p>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-      {helper ? <p className="mt-1 text-sm text-muted-foreground">{helper}</p> : null}
+      <div className="mt-2 text-xl font-semibold sm:text-2xl">{value}</div>
+      {helper ? <p className="mt-1 text-sm leading-snug text-muted-foreground">{helper}</p> : null}
     </CardContent>
   </Card>
 );
@@ -39,19 +39,19 @@ export const PortalSection = ({
   action?: React.ReactNode;
 }) => (
   <Card className="border-border/70 bg-card/90 shadow-sm">
-  <CardHeader
-    className={cn(
-      "gap-2 sm:gap-4",
-      action ? "flex flex-col sm:flex-row sm:items-start sm:justify-between" : "block",
-    )}
-  >
+    <CardHeader
+      className={cn(
+        "gap-2 px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4 sm:gap-4",
+        action ? "flex flex-col sm:flex-row sm:items-start sm:justify-between" : "block",
+      )}
+    >
       <div className="min-w-0">
         <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
-        {description ? <CardDescription className="mt-1">{description}</CardDescription> : null}
+        {description ? <CardDescription className="mt-1 text-sm">{description}</CardDescription> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
-  </CardHeader>
-  <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">{children}</CardContent>
+    </CardHeader>
+    <CardContent className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">{children}</CardContent>
   </Card>
 );
 
@@ -64,7 +64,7 @@ export const PortalEmptyState = ({
   description: string;
   action?: React.ReactNode;
 }) => (
-  <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-6 text-center">
+  <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4 text-center sm:p-6">
     <p className="font-medium">{title}</p>
     <p className="mt-2 text-sm text-muted-foreground">{description}</p>
     {action ? <div className="mt-4">{action}</div> : null}

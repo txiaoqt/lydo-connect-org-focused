@@ -654,7 +654,7 @@ export default function UserPortal({ section }: { section: string }) {
       case "dashboard":
         return (
           <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-4">
               <PortalMetricCard label="Profile" value={`${profilePercent}%`} helper={formatStatusLabel(profile.profileStatus)} />
               <PortalMetricCard label="Documents" value={`${documentsPercent}%`} helper={`${completedDocs}/${templateDocuments.length} checked`} />
               <PortalMetricCard label="Budget" value={`${budgetPercent}%`} helper={formatStatusLabel(latestBudget?.status ?? "draft")} />
@@ -678,7 +678,7 @@ export default function UserPortal({ section }: { section: string }) {
                   ["compliance-status", "View Compliance"],
                   ["news-releases", "View News"],
                 ].map(([id, label]) => (
-                  <Button key={id} type="button" variant="outline" className="justify-between" onClick={() => navigate(userRouteMap[id])}>
+                  <Button key={id} type="button" variant="outline" className="w-full justify-between" onClick={() => navigate(userRouteMap[id])}>
                     <span>{label}</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>

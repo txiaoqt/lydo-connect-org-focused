@@ -51,22 +51,22 @@ export default function NewsReleaseRecord() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="pt-16">
-        <section className="hero-gradient py-8 sm:py-10 md:py-14">
-          <div className="container">
-            <div className="max-w-4xl space-y-3 sm:space-y-4">
-              <p className="text-[11px] sm:text-sm font-medium text-secondary-foreground/75">Official Source Post</p>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-secondary-foreground leading-tight">
+        <section className="hero-gradient overflow-hidden">
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 md:py-14">
+            <div className="max-w-4xl space-y-3 rounded-2xl border border-secondary-foreground/15 bg-secondary-foreground/10 p-4 shadow-sm backdrop-blur-sm sm:space-y-4 sm:p-6 md:p-8">
+              <p className="text-[11px] font-medium text-secondary-foreground/75 sm:text-sm">Official Source Post</p>
+              <h1 className="text-2xl font-bold leading-tight text-secondary-foreground sm:text-3xl md:text-4xl">
                 {newsRelease.title}
               </h1>
-              <p className="max-w-3xl text-sm sm:text-base leading-relaxed text-secondary-foreground/80">
+              <p className="max-w-3xl text-sm leading-relaxed text-secondary-foreground/80 sm:text-base">
                 {newsRelease.description}
               </p>
               <div className="flex flex-wrap gap-2 pt-1">
-                <span className="rounded-full bg-secondary-foreground/95 px-2.5 py-1 text-[11px] font-semibold text-primary sm:px-3 sm:text-xs">
+                <span className="inline-flex items-center rounded-full bg-secondary-foreground/95 px-2.5 py-1 text-[11px] font-semibold text-primary sm:px-3 sm:text-xs">
                   <CalendarDays className="mr-1 inline-block h-3.5 w-3.5" />
                   {newsRelease.datePosted}
                 </span>
-                <span className="rounded-full border border-secondary-foreground/25 bg-secondary-foreground/20 px-2.5 py-1 text-[11px] font-semibold capitalize text-secondary-foreground sm:px-3 sm:text-xs">
+                <span className="inline-flex items-center rounded-full border border-secondary-foreground/25 bg-secondary-foreground/20 px-2.5 py-1 text-[11px] font-semibold capitalize text-secondary-foreground sm:px-3 sm:text-xs">
                   {newsRelease.visibilityStatus}
                 </span>
               </div>
@@ -74,19 +74,19 @@ export default function NewsReleaseRecord() {
           </div>
         </section>
 
-        <section className="container py-5 sm:py-6 md:py-10">
-          <div className="grid gap-4 lg:gap-6 xl:grid-cols-[1.35fr_0.75fr] items-start">
-            <div className="space-y-4">
+        <section className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 md:py-10">
+          <div className="grid items-start gap-4 xl:grid-cols-[1.35fr_0.75fr] xl:gap-6">
+            <div className="min-w-0 space-y-4">
               <Card className="border-border/70 shadow-sm">
                 <CardContent className="p-4 sm:p-5 md:p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">Open Source Post</p>
                       <p className="text-sm text-muted-foreground">
                         This is the Facebook preview for the selected news release.
                       </p>
                     </div>
-                    <Button type="button" variant="outline" asChild>
+                    <Button type="button" variant="outline" className="w-full sm:w-auto" asChild>
                       <a href={newsRelease.facebookPostUrl} target="_blank" rel="noreferrer">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         Open Source Post
@@ -99,6 +99,7 @@ export default function NewsReleaseRecord() {
                       sourcePostUrl={newsRelease.facebookPostUrl}
                       title={newsRelease.title}
                       instanceKey={newsRelease.id}
+                      className="w-full"
                     />
                   </div>
                 </CardContent>
@@ -131,12 +132,17 @@ export default function NewsReleaseRecord() {
                 </CardContent>
               </Card>
 
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={() => navigate(isAdminPreview ? "/admin/news-releases" : "/news-releases")}>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => navigate(isAdminPreview ? "/admin/news-releases" : "/news-releases")}
+                >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to News Releases
                 </Button>
-                <Button type="button" variant="ghost" asChild>
+                <Button type="button" variant="ghost" className="w-full sm:w-auto" asChild>
                   <Link to="/dashboard">Go to Dashboard</Link>
                 </Button>
               </div>
