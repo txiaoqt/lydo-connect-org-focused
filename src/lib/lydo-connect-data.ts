@@ -277,6 +277,7 @@ export type SubmissionFile = {
   validationStatus: "correct" | "needs_reupload" | "missing" | "mismatch";
   adminStatus: DocumentSubmissionStatus;
   adminRemarks: string;
+  ocrMetadata?: Record<string, unknown> | null;
   uploadedAt: string;
   reviewedAt: string;
   createdAt: string;

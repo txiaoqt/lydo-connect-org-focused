@@ -44,7 +44,16 @@ import {
   removeOrganizationDocumentFromSupabase,
   submitOrganizationDocumentToSupabase,
 } from "@/lib/lydo-connect-supabase";
-import { scanPdfForOcr, type DocumentOcrIssue, type DocumentOcrScanResult } from "@/lib/document-ocr";
+import {
+  buildStructuredOcrData,
+  scanPdfForOcr,
+  type DocumentOcrAuditEntry,
+  type DocumentOcrField,
+  type DocumentOcrFieldSection,
+  type DocumentOcrScanResult,
+  validateOcrFieldValue,
+  normalizeOcrFieldValue,
+} from "@/lib/document-ocr";
 
 const getReadiness = (filled: number, total: number) => (total === 0 ? 0 : Math.round((filled / total) * 100));
 const hasUploadedTemplateFile = (fileUrl?: string, fileName?: string) =>
@@ -55,6 +64,16 @@ const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const philippineContactNumberPattern = /^09\d{9}$/;
 const normalizePhilippineContactNumberInput = (value: string) => value.replace(/\D/g, "").slice(0, 11);
 const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
+const ocrFieldSections: DocumentOcrFieldSection[] = [
+  "Personal Information",
+  "Contact Information",
+  "Address Information",
+  "Employment Information",
+  "Government Identifiers",
+  "Financial Information",
+  "Organization Information",
+  "Other Information",
+];
 const formatVerifiedDateLabel = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -72,6 +91,7 @@ const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
 ]);
 const ADMIN_RECIPIENT_ID = "admin-demo";
 const createNotificationId = () => `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const createOcrEntityId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const getOrganizationProfileCompletionCount = (profile?: OrganizationProfile | null) =>
   [
     profile?.organizationName?.trim(),
@@ -166,6 +186,10 @@ export default function UserPortal({ section }: { section: string }) {
   const [previewEmptyMessage, setPreviewEmptyMessage] = useState("");
   const [previewCanInline, setPreviewCanInline] = useState(false);
   const [ocrPreviewUrl, setOcrPreviewUrl] = useState("");
+  const [editableOcrFields, setEditableOcrFields] = useState<DocumentOcrField[]>([]);
+  const [ocrAuditTrail, setOcrAuditTrail] = useState<DocumentOcrAuditEntry[]>([]);
+  const [selectedOcrFieldId, setSelectedOcrFieldId] = useState<string | null>(null);
+  const [activeOcrPage, setActiveOcrPage] = useState(1);
   const [pendingDocumentScan, setPendingDocumentScan] = useState<{
     documentTypeId: string;
     documentTypeName: string;
@@ -229,6 +253,13 @@ export default function UserPortal({ section }: { section: string }) {
   const docFiles = state.documentSubmissionFiles.filter(
     (file) => file.submissionId === submissionId && validDocumentTypeIds.has(file.documentTypeId),
   );
+  const selectedEditableOcrField = editableOcrFields.find((field) => field.id === selectedOcrFieldId) ?? null;
+  const activeOcrPageResult = pendingDocumentScan?.result?.pages.find((page) => page.pageNumber === activeOcrPage) ?? pendingDocumentScan?.result?.pages[0] ?? null;
+  const groupedEditableOcrFields = ocrFieldSections.map((section) => ({
+    section,
+    fields: editableOcrFields.filter((field) => field.section === section),
+  })).filter((entry) => entry.fields.length > 0 || entry.section === "Other Information");
+  const editableOcrFieldErrorCount = editableOcrFields.reduce((count, field) => count + field.validationErrors.length, 0);
   const budgetRequests = useMemo(
     () =>
       state.budgetRequests
@@ -363,6 +394,10 @@ export default function UserPortal({ section }: { section: string }) {
     setOcrPreviewOpen(false);
     setSubmissionSuccessOpen(false);
     setOcrPreviewUrl("");
+    setEditableOcrFields([]);
+    setOcrAuditTrail([]);
+    setSelectedOcrFieldId(null);
+    setActiveOcrPage(1);
   };
 
   const ensureCompletedOrganizationProfile = () => {
@@ -399,6 +434,10 @@ export default function UserPortal({ section }: { section: string }) {
         file,
         result,
       });
+      setEditableOcrFields(result.extractedFields);
+      setOcrAuditTrail(result.auditTrail);
+      setSelectedOcrFieldId(result.extractedFields[0]?.id ?? null);
+      setActiveOcrPage(1);
       setOcrPreviewUrl(previewObjectUrl);
       setOcrPreviewOpen(true);
       setConfirmSubmitOpen(false);
@@ -445,6 +484,17 @@ export default function UserPortal({ section }: { section: string }) {
         adminRemarks: warningNotes
           ? `OCR review notes: ${warningNotes}`
           : "Awaiting admin review.",
+        ocrMetadata: {
+          documentType: pendingDocumentScan.result?.documentType ?? pendingDocumentScan.documentTypeName,
+          documentTypeConfidence: pendingDocumentScan.result?.documentTypeConfidence ?? 0,
+          pageConfidenceScore: pendingDocumentScan.result?.pageConfidenceScore ?? 0,
+          structuredData: buildStructuredOcrData(editableOcrFields),
+          verifiedFields: editableOcrFields,
+          auditTrail: ocrAuditTrail,
+          duplicates: pendingDocumentScan.result?.duplicates ?? [],
+          pages: pendingDocumentScan.result?.pages ?? [],
+          issues: pendingDocumentScan.result?.issues ?? [],
+        },
       });
 
       updateDocumentFile(submissionResult.file.id, submissionResult.file);
@@ -502,6 +552,78 @@ export default function UserPortal({ section }: { section: string }) {
     } finally {
       setRemovingDocumentId(null);
     }
+  };
+
+  const updateEditableOcrField = (fieldId: string, patch: Partial<DocumentOcrField>) => {
+    setEditableOcrFields((current) =>
+      current.map((field) => {
+        if (field.id !== fieldId) return field;
+        const nextField = {
+          ...field,
+          ...patch,
+        };
+        nextField.normalizedValue = normalizeOcrFieldValue(nextField);
+        nextField.validationErrors = validateOcrFieldValue(nextField);
+        return nextField;
+      }),
+    );
+  };
+
+  const recordOcrAudit = (entry: Omit<DocumentOcrAuditEntry, "id" | "timestamp">) => {
+    setOcrAuditTrail((current) => [
+      ...current,
+      {
+        ...entry,
+        id: createOcrEntityId("ocr-audit"),
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+  };
+
+  const addEditableOcrField = (section: DocumentOcrFieldSection) => {
+    const newField: DocumentOcrField = {
+      id: createOcrEntityId("ocr-field"),
+      key: `custom_${Date.now()}`,
+      label: "New Field",
+      value: "",
+      normalizedValue: "",
+      confidence: 0,
+      confidenceBand: "red",
+      source: "Manual entry",
+      sourceSnippet: "Added manually by the user.",
+      sourcePage: activeOcrPage,
+      pageNumber: activeOcrPage,
+      boundingBox: null,
+      section,
+      fieldType: "text",
+      validationErrors: ["Value is required."],
+      duplicateKeys: [],
+    };
+    setEditableOcrFields((current) => [...current, newField]);
+    setSelectedOcrFieldId(newField.id);
+    recordOcrAudit({
+      action: "added",
+      fieldId: newField.id,
+      fieldLabel: newField.label,
+      previousValue: "",
+      nextValue: "",
+      note: `Added a new field under ${section}.`,
+    });
+  };
+
+  const deleteEditableOcrField = (field: DocumentOcrField) => {
+    setEditableOcrFields((current) => current.filter((entry) => entry.id !== field.id));
+    if (selectedOcrFieldId === field.id) {
+      setSelectedOcrFieldId(null);
+    }
+    recordOcrAudit({
+      action: "deleted",
+      fieldId: field.id,
+      fieldLabel: field.label,
+      previousValue: field.value,
+      nextValue: "",
+      note: "Removed during human verification.",
+    });
   };
 
   const handleProfileFieldChange = <K extends keyof OrganizationProfile>(field: K, value: OrganizationProfile[K]) => {
@@ -1883,9 +2005,11 @@ export default function UserPortal({ section }: { section: string }) {
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <Card className="bg-muted/20">
                     <CardContent className="p-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document</p>
-                      <p className="mt-2 text-sm font-medium">{pendingDocumentScan.documentTypeName}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{pendingDocumentScan.file.name}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document Type</p>
+                      <p className="mt-2 text-sm font-medium">{pendingDocumentScan.result.documentType}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Inferred at {pendingDocumentScan.result.documentTypeConfidence}% from {pendingDocumentScan.file.name}
+                      </p>
                     </CardContent>
                   </Card>
                   <Card className="bg-muted/20">
@@ -1907,9 +2031,9 @@ export default function UserPortal({ section }: { section: string }) {
                   <Card className="bg-muted/20">
                     <CardContent className="p-4">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Fields detected</p>
-                      <p className="mt-2 text-2xl font-semibold">{pendingDocumentScan.result.extractedFields.length}</p>
+                      <p className="mt-2 text-2xl font-semibold">{editableOcrFields.length}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {pendingDocumentScan.result.extractedFields.length ? "Structured values were found automatically." : "No structured fields were detected yet."}
+                        {editableOcrFields.length ? "Structured values were found automatically and can be corrected below." : "No structured fields were detected yet."}
                       </p>
                     </CardContent>
                   </Card>
@@ -1921,8 +2045,50 @@ export default function UserPortal({ section }: { section: string }) {
                       <CardTitle className="text-base">Document Preview</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {pendingDocumentScan.result.pages.map((page) => (
+                          <Button
+                            key={page.pageNumber}
+                            type="button"
+                            size="sm"
+                            variant={activeOcrPage === page.pageNumber ? "default" : "outline"}
+                            onClick={() => setActiveOcrPage(page.pageNumber)}
+                          >
+                            Page {page.pageNumber}
+                          </Button>
+                        ))}
+                      </div>
                       <div className="overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm">
-                        {ocrPreviewUrl ? (
+                        {activeOcrPageResult ? (
+                          <div className="relative h-[28rem] overflow-auto sm:h-[36rem] lg:h-[42rem]">
+                            <img
+                              src={activeOcrPageResult.previewDataUrl}
+                              alt={`Page ${activeOcrPageResult.pageNumber}`}
+                              className="block w-full"
+                            />
+                            {editableOcrFields
+                              .filter((field) => field.pageNumber === activeOcrPageResult.pageNumber && field.boundingBox)
+                              .map((field) => {
+                                const box = field.boundingBox!;
+                                const isSelected = field.id === selectedOcrFieldId;
+                                return (
+                                  <button
+                                    key={field.id}
+                                    type="button"
+                                    onClick={() => setSelectedOcrFieldId(field.id)}
+                                    className={`absolute border-2 ${isSelected ? "border-primary bg-primary/15" : "border-amber-400/80 bg-amber-300/10"}`}
+                                    style={{
+                                      left: `${(box.x / activeOcrPageResult.width) * 100}%`,
+                                      top: `${(box.y / activeOcrPageResult.height) * 100}%`,
+                                      width: `${(box.width / activeOcrPageResult.width) * 100}%`,
+                                      height: `${(box.height / activeOcrPageResult.height) * 100}%`,
+                                    }}
+                                    aria-label={`Highlight ${field.label}`}
+                                  />
+                                );
+                              })}
+                          </div>
+                        ) : ocrPreviewUrl ? (
                           <iframe
                             src={ocrPreviewUrl}
                             title={pendingDocumentScan.documentTypeName}
@@ -1934,8 +2100,30 @@ export default function UserPortal({ section }: { section: string }) {
                           </div>
                         )}
                       </div>
+                      {activeOcrPageResult ? (
+                        <div className="grid gap-3 rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground sm:grid-cols-2">
+                          <p>Page confidence: <span className="font-medium text-foreground">{activeOcrPageResult.confidence}%</span></p>
+                          <p>Tables detected: <span className="font-medium text-foreground">{activeOcrPageResult.tableCount}</span></p>
+                          <p>Checkboxes detected: <span className="font-medium text-foreground">{activeOcrPageResult.checkboxCount}</span></p>
+                          <p>Signatures detected: <span className="font-medium text-foreground">{activeOcrPageResult.signatureCount}</span></p>
+                        </div>
+                      ) : null}
+                      {selectedEditableOcrField ? (
+                        <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm">
+                          <p className="font-medium text-foreground">{selectedEditableOcrField.label}</p>
+                          <p className="mt-2 text-muted-foreground">Page {selectedEditableOcrField.pageNumber}</p>
+                          <p className="mt-1 break-words text-muted-foreground">
+                            OCR snippet: {selectedEditableOcrField.sourceSnippet || selectedEditableOcrField.source}
+                          </p>
+                          <p className="mt-1 text-muted-foreground">
+                            Bounding box: {selectedEditableOcrField.boundingBox
+                              ? `${Math.round(selectedEditableOcrField.boundingBox.x)}, ${Math.round(selectedEditableOcrField.boundingBox.y)}, ${Math.round(selectedEditableOcrField.boundingBox.width)}, ${Math.round(selectedEditableOcrField.boundingBox.height)}`
+                              : "No coordinates available"}
+                          </p>
+                        </div>
+                      ) : null}
                       <p className="text-xs text-muted-foreground">
-                        Tip: on mobile, scroll this dialog vertically and use the preview pane first before checking the extracted fields.
+                        Click a field below to highlight its original OCR location in the document preview.
                       </p>
                     </CardContent>
                   </Card>
@@ -1943,31 +2131,118 @@ export default function UserPortal({ section }: { section: string }) {
                   <div className="space-y-4">
                     <Card className="border-border/70">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Extracted Fields</CardTitle>
+                        <CardTitle className="text-base">Editable Extracted Fields</CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        {pendingDocumentScan.result.extractedFields.length ? (
-                          <div className="space-y-3">
-                            {pendingDocumentScan.result.extractedFields.map((field) => (
-                              <div key={field.key} className="rounded-2xl border border-border/70 bg-muted/20 p-4">
-                                <div className="flex items-start justify-between gap-3">
+                      <CardContent className="space-y-4">
+                        {groupedEditableOcrFields.length ? (
+                          <div className="space-y-4">
+                            {groupedEditableOcrFields.map((group) => (
+                              <div key={group.section} className="space-y-3 rounded-2xl border border-border/70 bg-muted/20 p-4">
+                                <div className="flex items-center justify-between gap-3">
                                   <div>
-                                    <p className="text-sm font-medium text-foreground">{field.label}</p>
-                                    <p className="mt-1 text-sm text-foreground/90 break-words">{field.value}</p>
+                                    <p className="text-sm font-semibold text-foreground">{group.section}</p>
+                                    <p className="text-xs text-muted-foreground">{group.fields.length} field(s)</p>
                                   </div>
-                                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
-                                    {field.confidence}%
-                                  </span>
+                                  <Button type="button" size="sm" variant="outline" onClick={() => addEditableOcrField(group.section)}>
+                                    Add Field
+                                  </Button>
                                 </div>
-                                <p className="mt-2 text-[11px] text-muted-foreground">
-                                  Auto-detected from: <span className="break-words">{field.source}</span>
-                                </p>
+                                {group.fields.length ? (
+                                  <div className="space-y-3">
+                                    {group.fields.map((field) => (
+                                      <button
+                                        key={field.id}
+                                        type="button"
+                                        className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                                          selectedOcrFieldId === field.id ? "border-primary bg-primary/5" : "border-border/70 bg-background hover:bg-muted/30"
+                                        }`}
+                                        onClick={() => {
+                                          setSelectedOcrFieldId(field.id);
+                                          setActiveOcrPage(field.pageNumber);
+                                        }}
+                                      >
+                                        <div className="grid gap-3">
+                                          <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <Input
+                                              value={field.label}
+                                              onClick={(event) => event.stopPropagation()}
+                                              onChange={(event) => updateEditableOcrField(field.id, { label: event.target.value })}
+                                              onBlur={(event) =>
+                                                recordOcrAudit({
+                                                  action: "edited",
+                                                  fieldId: field.id,
+                                                  fieldLabel: field.label,
+                                                  previousValue: field.label,
+                                                  nextValue: event.target.value,
+                                                  note: "Field label updated.",
+                                                })
+                                              }
+                                              className="flex-1"
+                                            />
+                                            <span
+                                              className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                                                field.confidenceBand === "green"
+                                                  ? "bg-emerald-100 text-emerald-700"
+                                                  : field.confidenceBand === "yellow"
+                                                    ? "bg-amber-100 text-amber-700"
+                                                    : "bg-rose-100 text-rose-700"
+                                              }`}
+                                            >
+                                              {field.confidence}%
+                                            </span>
+                                          </div>
+                                          <Textarea
+                                            value={field.value}
+                                            onClick={(event) => event.stopPropagation()}
+                                            onChange={(event) => updateEditableOcrField(field.id, { value: event.target.value })}
+                                            onBlur={(event) =>
+                                              recordOcrAudit({
+                                                action: "edited",
+                                                fieldId: field.id,
+                                                fieldLabel: field.label,
+                                                previousValue: field.value,
+                                                nextValue: event.target.value,
+                                                note: "Field value corrected manually.",
+                                              })
+                                            }
+                                            className="min-h-20"
+                                          />
+                                          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                                            <span>Page {field.pageNumber}</span>
+                                            <span className="break-words">Normalized: {normalizeOcrFieldValue(field) || "N/A"}</span>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              className="text-destructive hover:text-destructive"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                deleteEditableOcrField(field);
+                                              }}
+                                            >
+                                              Delete
+                                            </Button>
+                                          </div>
+                                          {field.validationErrors.length ? (
+                                            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                                              {field.validationErrors.join(" ")}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="rounded-xl border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
+                                    No extracted fields in this section yet. Add one manually if needed.
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
                         ) : (
                           <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
-                            No structured fields were detected automatically yet. The raw OCR text is still available below for review.
+                            No structured fields were detected automatically yet. You can still review the raw OCR text and add missing fields manually.
                           </div>
                         )}
                       </CardContent>
@@ -1999,6 +2274,19 @@ export default function UserPortal({ section }: { section: string }) {
                             No OCR issues were detected. The file is ready for your confirmation.
                           </div>
                         )}
+                        {pendingDocumentScan.result.duplicates.length ? (
+                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">
+                            Duplicate fields were detected and merged automatically. Review the editable sections before submission.
+                          </div>
+                        ) : null}
+                        <div className="rounded-xl border border-border/70 bg-background p-3 text-sm">
+                          <p className="font-medium text-foreground">Real-time validation</p>
+                          <p className="mt-1 text-muted-foreground">
+                            {editableOcrFieldErrorCount
+                              ? `${editableOcrFieldErrorCount} validation issue(s) still need correction.`
+                              : "All editable fields currently pass validation."}
+                          </p>
+                        </div>
                         <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
                           If anything looks wrong, close this preview and reupload a cleaner PDF. The file will not be submitted until you confirm it.
                         </div>
@@ -2007,9 +2295,28 @@ export default function UserPortal({ section }: { section: string }) {
 
                     <Card className="border-border/70">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Raw OCR Text</CardTitle>
+                        <CardTitle className="text-base">Raw OCR Text and Audit Trail</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="space-y-4">
+                        <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                          Verified JSON preview:
+                          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed">
+                            {JSON.stringify(buildStructuredOcrData(editableOcrFields), null, 2)}
+                          </pre>
+                        </div>
+                        <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                          Audit trail:
+                          <div className="mt-2 max-h-40 space-y-2 overflow-auto">
+                            {ocrAuditTrail.length ? ocrAuditTrail.map((entry) => (
+                              <div key={entry.id} className="rounded-lg border border-border/60 bg-background px-3 py-2">
+                                <p className="font-medium text-foreground">{entry.action.toUpperCase()} · {entry.fieldLabel}</p>
+                                <p>{entry.note || `${entry.previousValue} -> ${entry.nextValue}`}</p>
+                              </div>
+                            )) : (
+                              <p>No audit entries yet.</p>
+                            )}
+                          </div>
+                        </div>
                         <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-border/70 bg-muted/20 p-4 text-xs leading-relaxed sm:text-sm">
                           {pendingDocumentScan.result.text || "No readable text was extracted."}
                         </pre>
@@ -2025,7 +2332,7 @@ export default function UserPortal({ section }: { section: string }) {
                   <Button
                     type="button"
                     className="w-full sm:w-auto"
-                    disabled={!pendingDocumentScan.result.canSubmit || submittingDocumentId === pendingDocumentScan.documentTypeId}
+                    disabled={!pendingDocumentScan.result.canSubmit || editableOcrFieldErrorCount > 0 || submittingDocumentId === pendingDocumentScan.documentTypeId}
                     onClick={() => setConfirmSubmitOpen(true)}
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -2045,9 +2352,7 @@ export default function UserPortal({ section }: { section: string }) {
           </DialogHeader>
           <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
             {pendingDocumentScan
-              ? pendingDocumentScan.result
-                ? `${pendingDocumentScan.documentTypeName} will be submitted to LYDO and marked under review for admin approval.`
-                : `${pendingDocumentScan.documentTypeName} will be submitted as a spreadsheet and marked under review for admin approval.`
+              ? `${pendingDocumentScan.documentTypeName} will be submitted to LYDO with the verified OCR fields and audit trail for admin approval.`
               : "The selected file will be submitted for admin approval."}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">

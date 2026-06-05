@@ -4,6 +4,9 @@
 alter table if exists public.organization_profiles
   add column if not exists verified_at timestamptz;
 
+alter table if exists public.document_submission_files
+  add column if not exists ocr_metadata jsonb;
+
 create or replace function public.get_admin_portal_snapshot(_session_token text)
 returns jsonb
 language plpgsql
@@ -56,6 +59,7 @@ begin
             'validation_status', dsf.validation_status,
             'admin_status', dsf.admin_status,
             'admin_remarks', dsf.admin_remarks,
+            'ocr_metadata', dsf.ocr_metadata,
             'uploaded_at', dsf.uploaded_at,
             'reviewed_at', dsf.reviewed_at,
             'created_at', dsf.created_at,

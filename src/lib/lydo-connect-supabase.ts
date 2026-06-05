@@ -83,6 +83,7 @@ type DocumentSubmissionFileRow = {
   validation_status: SubmissionFile["validationStatus"];
   admin_status: SubmissionFile["adminStatus"];
   admin_remarks: string | null;
+  ocr_metadata?: Record<string, unknown> | null;
   uploaded_at: string | null;
   reviewed_at: string | null;
   created_at: string;
@@ -329,6 +330,7 @@ const mapDocumentFile = (row: DocumentSubmissionFileRow): SubmissionFile | null 
     validationStatus: row.validation_status,
     adminStatus: row.admin_status,
     adminRemarks: row.admin_remarks ?? "",
+    ocrMetadata: row.ocr_metadata ?? null,
     uploadedAt: row.uploaded_at ?? "",
     reviewedAt: row.reviewed_at ?? "",
     createdAt: row.created_at,
@@ -631,7 +633,7 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
 
   const { data: fileRows, error: filesError } = await supabase!
     .from("document_submission_files")
-    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
+    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,ocr_metadata,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
     .eq("submission_id", latestSubmission.id);
 
   if (filesError) throw new Error(filesError.message);
@@ -808,6 +810,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
   ocrConfidence: number;
   validationStatus: SubmissionFile["validationStatus"];
   adminRemarks?: string;
+  ocrMetadata?: Record<string, unknown> | null;
 }) => {
   if (!supabase) throw new Error("Supabase is not configured.");
 
@@ -866,6 +869,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
         validation_status: params.validationStatus,
         admin_status: "under_admin_review",
         admin_remarks: params.adminRemarks?.trim() || "Awaiting admin review.",
+        ocr_metadata: params.ocrMetadata ?? null,
         uploaded_at: submittedAt,
         reviewed_at: null,
       },
@@ -873,7 +877,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
         onConflict: "submission_id,document_type_id",
       },
     )
-    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
+    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,ocr_metadata,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
     .single();
 
   if (error || !data) throw new Error(error?.message ?? "Failed to save the uploaded document.");
