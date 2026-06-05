@@ -1447,7 +1447,6 @@ export default function AdminPortal({ section }: { section: string }) {
     createActivityLog,
     createNewsRelease,
     createTemplate,
-    createNotification,
     deleteNewsReleaseInSupabase,
     editingTemplateId,
     handleCreateTemplate,
