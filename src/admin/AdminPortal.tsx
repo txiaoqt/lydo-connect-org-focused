@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ArrowLeft, CheckCircle2, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { Bell, ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, ClipboardList, Eye, FileText, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -178,6 +178,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [pendingAdminConfirmation, setPendingAdminConfirmation] = useState<PendingAdminConfirmation | null>(null);
   const [approvalAcknowledged, setApprovalAcknowledged] = useState(false);
   const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
+  const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -283,6 +284,14 @@ export default function AdminPortal({ section }: { section: string }) {
     if (processingAdminConfirmation) return;
     setPendingAdminConfirmation(null);
     setApprovalAcknowledged(false);
+  };
+
+  const toggleRegistrationCard = (organizationId: string) => {
+    setExpandedRegistrationIds((current) =>
+      current.includes(organizationId)
+        ? current.filter((id) => id !== organizationId)
+        : [...current, organizationId],
+    );
   };
 
   const getAdminConfirmationCopy = () => {
@@ -1139,7 +1148,7 @@ export default function AdminPortal({ section }: { section: string }) {
         return (
           <PortalSection
             title="Registrations"
-            description="Click a registered organization to view profile details and submitted documents."
+            description="Use the dropdown to inspect card details, then open the full review page when needed."
             action={state.organizationProfiles.length ? <PortalStatusBadge status="pending_review" /> : null}
           >
             {state.organizationProfiles.length ? (
@@ -1151,40 +1160,88 @@ export default function AdminPortal({ section }: { section: string }) {
                         (file) => file.submissionId === orgSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
                       ).length
                     : 0;
+                  const isExpanded = expandedRegistrationIds.includes(org.id);
                   return (
-                    <button
-                      key={org.id}
-                      type="button"
-                      onClick={() => setSelectedRegistrationId(org.id)}
-                      className="rounded-md border border-border/70 bg-card p-0 text-left transition-colors hover:bg-muted/30"
-                    >
-                      <Card className="border-0 shadow-none">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between gap-3">
+                    <Card key={org.id} className="border-border/70 shadow-sm">
+                      <CardHeader className="pb-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="space-y-1">
                             <CardTitle className="text-base">{org.organizationName}</CardTitle>
-                            <PortalStatusBadge status={orgSubmission?.status ?? org.profileStatus} />
+                            <p className="text-sm text-muted-foreground">{org.organizationEmail}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Documents submitted: {submittedCount}/{templateDocuments.length}
+                            </p>
                           </div>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm text-muted-foreground">
-                          <p>{org.organizationEmail}</p>
-                          <p>{org.contactNumber}</p>
-                          <p>{org.barangay}</p>
-                          <p>{org.majorClassification || "N/A"}</p>
-                          <p>{org.subClassification || "N/A"}</p>
-                          <p>Representative: {org.representativeName || "N/A"}</p>
-                          <p>Adviser: {org.adviserName || "N/A"}</p>
-                          <p>Facebook: {org.facebookPageUrl || "N/A"}</p>
-                          <p>Date of Creation: {org.verifiedAt ? formatVerifiedDateLabel(org.verifiedAt) : "Pending verification"}</p>
+                          <div className="flex flex-col gap-2 sm:items-end">
+                            <PortalStatusBadge status={orgSubmission?.status ?? org.profileStatus} />
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() => toggleRegistrationCard(org.id)}
+                              >
+                                {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
+                                {isExpanded ? "Hide details" : "Show details"}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="w-full sm:w-auto"
+                                onClick={() => setSelectedRegistrationId(org.id)}
+                              >
+                                Review
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      {isExpanded ? (
+                        <CardContent className="space-y-4 border-t border-border/70 pt-4 text-sm text-muted-foreground">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Contact Number</p>
+                              <p className="mt-1 font-medium text-foreground">{org.contactNumber}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Barangay</p>
+                              <p className="mt-1 font-medium text-foreground">{org.barangay}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Major Classification</p>
+                              <p className="mt-1 font-medium text-foreground">{org.majorClassification || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Sub Classification</p>
+                              <p className="mt-1 font-medium text-foreground">{org.subClassification || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Representative</p>
+                              <p className="mt-1 font-medium text-foreground">{org.representativeName || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Adviser</p>
+                              <p className="mt-1 font-medium text-foreground">{org.adviserName || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:col-span-2">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Facebook</p>
+                              <p className="mt-1 break-all font-medium text-foreground">{org.facebookPageUrl || "N/A"}</p>
+                            </div>
+                            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 sm:col-span-2">
+                              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Date of Creation</p>
+                              <p className="mt-1 font-medium text-foreground">
+                                {org.verifiedAt ? formatVerifiedDateLabel(org.verifiedAt) : "Pending verification"}
+                              </p>
+                            </div>
+                          </div>
                           <div>
                             <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
                             <div className="mt-2">{renderAdvocacyChips(org.advocacies)}</div>
                           </div>
-                          <p className="pt-2 font-medium text-foreground">
-                            Documents submitted: {submittedCount}/{templateDocuments.length}
-                          </p>
                         </CardContent>
-                      </Card>
-                    </button>
+                      ) : null}
+                    </Card>
                   );
                 })}
               </div>
