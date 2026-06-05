@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "lydo-connect-v3";
+const CACHE_NAME = "lydo-connect-v4";
 const APP_SHELL = [
   "/",
   "/admin",
