@@ -368,31 +368,12 @@ export default function UserPortal({ section }: { section: string }) {
     if (!localDocumentType) return;
 
     const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    const isSpreadsheet =
-      file.name.toLowerCase().endsWith(".xls") ||
-      file.name.toLowerCase().endsWith(".xlsx") ||
-      file.type === "application/vnd.ms-excel" ||
-      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    if (!isPdf && !isSpreadsheet) {
+    if (!isPdf) {
       toast({
         title: "Unsupported file type",
-        description: "Please upload a PDF, XLS, or XLSX file for document submission.",
+        description: "Please upload a PDF file for document submission.",
         variant: "destructive",
       });
-      return;
-    }
-
-    if (isSpreadsheet) {
-      setPendingDocumentScan({
-        documentTypeId: localDocumentType.id,
-        documentTypeName,
-        file,
-        result: null,
-      });
-      setOcrPreviewUrl("");
-      setOcrPreviewOpen(false);
-      setConfirmSubmitOpen(true);
-      setSubmissionSuccessOpen(false);
       return;
     }
 
@@ -452,9 +433,7 @@ export default function UserPortal({ section }: { section: string }) {
         validationStatus: "correct",
         adminRemarks: warningNotes
           ? `OCR review notes: ${warningNotes}`
-          : pendingDocumentScan.result
-            ? "Awaiting admin review."
-            : "Spreadsheet uploaded and awaiting admin review.",
+          : "Awaiting admin review.",
       });
 
       updateDocumentFile(submissionResult.file.id, submissionResult.file);
@@ -475,9 +454,7 @@ export default function UserPortal({ section }: { section: string }) {
       setSubmissionSuccessOpen(true);
       toast({
         title: "Document submitted",
-        description: pendingDocumentScan.result
-          ? "The OCR-checked PDF has been submitted for admin approval."
-          : "The spreadsheet has been submitted for admin approval.",
+        description: "The OCR-checked PDF has been submitted for admin approval.",
       });
     } catch (error) {
       toast({
@@ -1091,7 +1068,7 @@ export default function UserPortal({ section }: { section: string }) {
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">{documentType.description}</p>
-                          <p className="text-xs text-muted-foreground">Primary file type: PDF or XLSX</p>
+                          <p className="text-xs text-muted-foreground">Primary file type: PDF</p>
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             {hasUploadedTemplateFile(template?.templateFileUrl, template?.templateFileName) ? (
                               <>
@@ -1141,7 +1118,7 @@ export default function UserPortal({ section }: { section: string }) {
                             >
                               <input
                                 type="file"
-                                accept=".pdf,.xls,.xlsx,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                accept=".pdf,application/pdf"
                                 className="sr-only"
                                 onChange={(event) => {
                                   void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);

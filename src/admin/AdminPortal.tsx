@@ -1945,13 +1945,13 @@ export default function AdminPortal({ section }: { section: string }) {
                     </label>
                     <Input
                       type="file"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                       onChange={(event) => setTemplateFileDraft(event.target.files?.[0] ?? null)}
                     />
                     <p className="text-xs text-muted-foreground">
                       {templateModalMode === "edit"
                         ? "Leave this empty if you only want to update the title or description."
-                        : "Upload the actual template file here so organization users can view and download it."}
+                        : "Upload a Word, PDF, XLS, or XLSX template file here so organization users can view and download it."}
                     </p>
                   </div>
                 </div>
