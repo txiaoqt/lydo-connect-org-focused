@@ -1567,10 +1567,26 @@ export default function UserPortal({ section }: { section: string }) {
                                 asChild
                                 disabled={scanningDocumentId === documentType.id || submittingDocumentId === documentType.id}
                                 className="w-full sm:w-auto"
+                                onClick={(event) => {
+                                  if (file) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    void openAttachedDocumentEditor(file, documentType.name);
+                                  }
+                                }}
                               >
                                 <span>
-                                  <FileUp className="mr-2 h-4 w-4" />
-                                  {scanningDocumentId === documentType.id ? "Preparing..." : "Upload Document"}
+                                  {file ? (
+                                    <>
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      View Attached
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FileUp className="mr-2 h-4 w-4" />
+                                      {scanningDocumentId === documentType.id ? "Preparing..." : "Upload Document"}
+                                    </>
+                                  )}
                                 </span>
                               </Button>
                             </label>
@@ -1582,18 +1598,6 @@ export default function UserPortal({ section }: { section: string }) {
                               <p className="mt-1 text-xs text-muted-foreground">
                                 Uploaded {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString() : "recently"}
                               </p>
-                              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full sm:w-auto"
-                                  onClick={() => void openAttachedDocumentEditor(file, documentType.name)}
-                                >
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Attached
-                                </Button>
-                              </div>
                             </div>
                           ) : null}
                         </div>
