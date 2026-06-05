@@ -743,6 +743,26 @@ export const updateOrganizationProfileReviewInSupabase = async (
   return mapOrganizationProfile(updatedRow as OrganizationProfileRow);
 };
 
+export const updateDocumentSubmissionReviewInSupabase = async (params: {
+  submissionId: string;
+  status: DocumentSubmission["status"];
+  overallRemarks?: string;
+  adminRemarks?: string;
+}) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("update_admin_document_submission_review", {
+    _session_token: adminSession.sessionToken,
+    _submission_id: params.submissionId,
+    _status: params.status,
+    _overall_remarks: params.overallRemarks?.trim() || null,
+    _admin_remarks: params.adminRemarks?.trim() || null,
+  });
+
+  const updatedRow = Array.isArray(data) ? data[0] : null;
+  if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the document submission review.");
+  return mapDocumentSubmission(updatedRow as DocumentSubmissionRow);
+};
+
 const ensureDocumentSubmission = async (organizationId: string, userId: string) => {
   const existingSubmission = await fetchLatestSubmission(organizationId);
   if (existingSubmission) return existingSubmission;

@@ -31,6 +31,7 @@ import {
   loadAdminPortalSupabaseState,
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
+  updateDocumentSubmissionReviewInSupabase,
   updateTransparencyPostInSupabase,
   updateLiquidationReportInSupabase,
   updateNewsReleaseInSupabase,
@@ -123,10 +124,28 @@ const renderRegistrationDetailCard = (params: {
   </div>
 );
 
+type PendingAdminConfirmation =
+  | {
+      kind: "document";
+      action: "approve" | "needs_revision" | "reject";
+      submissionId: string;
+      organizationId: string;
+      organizationName: string;
+      fileName: string;
+      currentAdminRemarks: string;
+    }
+  | {
+      kind: "profile";
+      action: "verify" | "needs_update";
+      organizationId: string;
+      organizationName: string;
+      userId: string;
+    };
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, updateDocumentSubmission, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -156,6 +175,9 @@ export default function AdminPortal({ section }: { section: string }) {
   const [transparencyPostDateDraft, setTransparencyPostDateDraft] = useState("");
   const [transparencyVisibilityDraft, setTransparencyVisibilityDraft] = useState<TransparencyPost["visibilityStatus"]>("draft");
   const [savingTransparencyPost, setSavingTransparencyPost] = useState(false);
+  const [pendingAdminConfirmation, setPendingAdminConfirmation] = useState<PendingAdminConfirmation | null>(null);
+  const [approvalAcknowledged, setApprovalAcknowledged] = useState(false);
+  const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -250,6 +272,194 @@ export default function AdminPortal({ section }: { section: string }) {
       isRead: false,
       createdAt: new Date().toISOString(),
     });
+  };
+
+  const openAdminConfirmation = (params: PendingAdminConfirmation) => {
+    setPendingAdminConfirmation(params);
+    setApprovalAcknowledged(false);
+  };
+
+  const closeAdminConfirmation = () => {
+    if (processingAdminConfirmation) return;
+    setPendingAdminConfirmation(null);
+    setApprovalAcknowledged(false);
+  };
+
+  const getAdminConfirmationCopy = () => {
+    if (!pendingAdminConfirmation) {
+      return {
+        title: "",
+        description: "",
+        checkboxLabel: "",
+        confirmLabel: "",
+      };
+    }
+
+    if (pendingAdminConfirmation.kind === "document") {
+      if (pendingAdminConfirmation.action === "approve") {
+        return {
+          title: "Confirm Document Approval",
+          description: `Click the checkbox to acknowledge this approval before marking ${pendingAdminConfirmation.fileName} as approved.`,
+          checkboxLabel: "I acknowledge this approval action.",
+          confirmLabel: "Approve Submission",
+        };
+      }
+      if (pendingAdminConfirmation.action === "needs_revision") {
+        return {
+          title: "Confirm Revision Request",
+          description: `Click the checkbox to acknowledge this revision request before returning ${pendingAdminConfirmation.fileName} to the organization user.`,
+          checkboxLabel: "I acknowledge this revision request.",
+          confirmLabel: "Request Revision",
+        };
+      }
+      return {
+        title: "Confirm Document Rejection",
+        description: `Click the checkbox to acknowledge this rejection before marking ${pendingAdminConfirmation.fileName} as rejected.`,
+        checkboxLabel: "I acknowledge this rejection action.",
+        confirmLabel: "Reject Submission",
+      };
+    }
+
+    if (pendingAdminConfirmation.action === "verify") {
+      return {
+        title: "Confirm Organization Verification",
+        description: `Click the checkbox to acknowledge this approval before verifying ${pendingAdminConfirmation.organizationName}.`,
+        checkboxLabel: "I acknowledge this verification action.",
+        confirmLabel: "Mark Verified",
+      };
+    }
+
+    return {
+      title: "Confirm Needs Update Status",
+      description: `Click the checkbox to acknowledge this update request before marking ${pendingAdminConfirmation.organizationName} as needing changes.`,
+      checkboxLabel: "I acknowledge this needs update action.",
+      confirmLabel: "Mark Needs Update",
+    };
+  };
+
+  const executeAdminConfirmation = async () => {
+    if (!pendingAdminConfirmation) return;
+
+    setProcessingAdminConfirmation(true);
+    try {
+      if (pendingAdminConfirmation.kind === "document") {
+        const reviewTimestamp = new Date().toISOString();
+        const status =
+          pendingAdminConfirmation.action === "approve"
+            ? "approved_green"
+            : pendingAdminConfirmation.action === "needs_revision"
+              ? "needs_revision"
+              : "rejected_red";
+        const overallRemarks =
+          pendingAdminConfirmation.action === "approve"
+            ? "Admin approved the submitted document."
+            : pendingAdminConfirmation.action === "needs_revision"
+              ? "Admin requested document revisions."
+              : "Admin rejected the submitted document.";
+        const adminRemarks =
+          pendingAdminConfirmation.action === "approve"
+            ? "Approved by admin."
+            : pendingAdminConfirmation.action === "needs_revision"
+              ? "Revision requested by admin."
+              : "Rejected by admin.";
+
+        await updateDocumentSubmissionReviewInSupabase({
+          submissionId: pendingAdminConfirmation.submissionId,
+          status,
+          overallRemarks,
+          adminRemarks: pendingAdminConfirmation.currentAdminRemarks
+            ? `${pendingAdminConfirmation.currentAdminRemarks} ${adminRemarks}`.trim()
+            : adminRemarks,
+        });
+        await refreshAdminState();
+
+        if (pendingAdminConfirmation.action === "approve") {
+          await appendAuditLog(
+            "Approved document submission",
+            "document_submission",
+            pendingAdminConfirmation.submissionId,
+            "Document submission approved from the registration detail view.",
+            pendingAdminConfirmation.organizationId,
+          );
+          toast({
+            title: "Submission approved",
+            description: `${pendingAdminConfirmation.organizationName}'s document submission is now approved.`,
+          });
+        } else if (pendingAdminConfirmation.action === "needs_revision") {
+          await appendAuditLog(
+            "Document revision requested",
+            "document_submission",
+            pendingAdminConfirmation.submissionId,
+            "Document submission marked for revision from the registration detail view.",
+            pendingAdminConfirmation.organizationId,
+          );
+          toast({
+            title: "Revision requested",
+            description: `${pendingAdminConfirmation.organizationName} was asked to revise the document submission.`,
+          });
+        } else {
+          await appendAuditLog(
+            "Rejected document submission",
+            "document_submission",
+            pendingAdminConfirmation.submissionId,
+            "Document submission rejected from the registration detail view.",
+            pendingAdminConfirmation.organizationId,
+          );
+          toast({
+            title: "Submission rejected",
+            description: `${pendingAdminConfirmation.organizationName}'s document submission is now rejected.`,
+          });
+        }
+      } else {
+        if (pendingAdminConfirmation.action === "verify") {
+          const verifiedAt = new Date().toISOString();
+          await updateOrganizationProfileReviewInSupabase(pendingAdminConfirmation.organizationId, {
+            profileStatus: "verified",
+            verifiedAt,
+          });
+          await refreshAdminState();
+          await appendAuditLog(
+            "Verified organization",
+            "organization_profile",
+            pendingAdminConfirmation.organizationId,
+            `Marked ${pendingAdminConfirmation.organizationName} as verified on ${formatVerifiedDateLabel(verifiedAt)}.`,
+            pendingAdminConfirmation.organizationId,
+          );
+          toast({
+            title: "Organization verified",
+            description: `${pendingAdminConfirmation.organizationName} is now marked as verified.`,
+          });
+        } else {
+          await updateOrganizationProfileReviewInSupabase(pendingAdminConfirmation.organizationId, {
+            profileStatus: "needs_update",
+            verifiedAt: "",
+          });
+          await refreshAdminState();
+          await appendAuditLog(
+            "Marked needs update",
+            "organization_profile",
+            pendingAdminConfirmation.organizationId,
+            `Marked ${pendingAdminConfirmation.organizationName} for an organization profile update.`,
+            pendingAdminConfirmation.organizationId,
+          );
+          toast({
+            title: "Organization marked for update",
+            description: `${pendingAdminConfirmation.organizationName} needs to update the submitted profile details.`,
+          });
+        }
+      }
+
+      setPendingAdminConfirmation(null);
+      setApprovalAcknowledged(false);
+    } catch (error) {
+      toast({
+        title: "Status update failed",
+        description: error instanceof Error ? error.message : "The review action could not be completed right now.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingAdminConfirmation(false);
+    }
   };
 
   const resetTemplateForm = () => {
@@ -735,42 +945,13 @@ export default function AdminPortal({ section }: { section: string }) {
                         variant="outline"
                         className="w-full sm:w-auto"
                         onClick={() =>
-                          void (async () => {
-                            try {
-                              const verifiedAt = new Date().toISOString();
-                              await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
-                                profileStatus: "verified",
-                                verifiedAt,
-                              });
-                              await refreshAdminState();
-                              await appendAuditLog(
-                                "Verified organization",
-                                "organization_profile",
-                                selectedOrg.id,
-                                `Marked ${selectedOrg.organizationName} as verified on ${formatVerifiedDateLabel(verifiedAt)}.`,
-                                selectedOrg.id,
-                              );
-                              notifyOrganizationUser({
-                                userId: selectedOrg.userId,
-                                organizationId: selectedOrg.id,
-                                title: "Registration verified",
-                                message: `The admin verified your organization registration on ${formatVerifiedDateLabel(verifiedAt)}.`,
-                                type: "registration_verified",
-                                relatedType: "organization_profile",
-                                relatedId: selectedOrg.id,
-                              });
-                              toast({
-                                title: "Organization verified",
-                                description: `${selectedOrg.organizationName} is now marked as verified.`,
-                              });
-                            } catch (error) {
-                              toast({
-                                title: "Unable to verify organization",
-                                description: error instanceof Error ? error.message : "The organization could not be verified right now.",
-                                variant: "destructive",
-                              });
-                            }
-                          })()
+                          openAdminConfirmation({
+                            kind: "profile",
+                            action: "verify",
+                            organizationId: selectedOrg.id,
+                            organizationName: selectedOrg.organizationName,
+                            userId: selectedOrg.userId,
+                          })
                         }
                       >
                         Mark Verified
@@ -780,41 +961,13 @@ export default function AdminPortal({ section }: { section: string }) {
                         variant="outline"
                         className="w-full sm:w-auto"
                         onClick={() =>
-                          void (async () => {
-                            try {
-                              await updateOrganizationProfileReviewInSupabase(selectedOrg.id, {
-                                profileStatus: "needs_update",
-                                verifiedAt: "",
-                              });
-                              await refreshAdminState();
-                              await appendAuditLog(
-                                "Marked needs update",
-                                "organization_profile",
-                                selectedOrg.id,
-                                `Marked ${selectedOrg.organizationName} for an organization profile update.`,
-                                selectedOrg.id,
-                              );
-                              notifyOrganizationUser({
-                                userId: selectedOrg.userId,
-                                organizationId: selectedOrg.id,
-                                title: "Registration needs update",
-                                message: "The admin reviewed your organization profile and requested updates before verification.",
-                                type: "registration_needs_update",
-                                relatedType: "organization_profile",
-                                relatedId: selectedOrg.id,
-                              });
-                              toast({
-                                title: "Organization marked for update",
-                                description: `${selectedOrg.organizationName} needs to update the submitted profile details.`,
-                              });
-                            } catch (error) {
-                              toast({
-                                title: "Unable to update review status",
-                                description: error instanceof Error ? error.message : "The review status could not be updated right now.",
-                                variant: "destructive",
-                              });
-                            }
-                          })()
+                          openAdminConfirmation({
+                            kind: "profile",
+                            action: "needs_update",
+                            organizationId: selectedOrg.id,
+                            organizationName: selectedOrg.organizationName,
+                            userId: selectedOrg.userId,
+                          })
                         }
                       >
                         Needs Update
@@ -889,7 +1042,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
                       return (
                         <Card key={documentType.id} className="border-border/70">
-                          <CardContent className="grid gap-4 p-4 lg:grid-cols-[1.5fr_1fr]">
+                          <CardContent className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)]">
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
                                 <FileText className="h-4 w-4 text-muted-foreground" />
@@ -897,97 +1050,71 @@ export default function AdminPortal({ section }: { section: string }) {
                                 <PortalStatusBadge status={file ? file.validationStatus === "correct" ? "ready_for_review" : "needs_revision" : "not_started"} />
                               </div>
                               <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
-                              <p className="rounded-md bg-muted/30 p-3 text-sm text-muted-foreground">
+                              <p className="max-h-80 overflow-y-auto rounded-md bg-muted/30 p-3 text-sm text-muted-foreground">
                                 {file?.ocrText || "No OCR text available yet."}
                               </p>
                             </div>
-                            <div className="space-y-2 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
-                              <p>OCR status: {file?.ocrStatus ?? "pending"}</p>
-                              <p>OCR confidence: {file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</p>
-                              <p>Admin remarks: {file?.adminRemarks || "None"}</p>
-                              <div className="flex flex-wrap gap-2 pt-2">
+                            <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
+                              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                <p>OCR status: {file?.ocrStatus ?? "pending"}</p>
+                                <p>OCR confidence: {file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</p>
+                              </div>
+                              <p className="break-words">Admin remarks: {file?.adminRemarks || "None"}</p>
+                              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:flex-wrap">
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="w-full sm:w-auto"
                                   disabled={!file}
-                                  onClick={() => {
-                                    updateDocumentSubmission(selectedSubmission.id, {
-                                      status: "approved_green",
-                                      reviewedAt: new Date().toISOString(),
-                                      reviewedBy: adminId,
-                                    });
-                                    createNotification({
-                                      id: `notif-${Date.now()}`,
-                                      userId: selectedOrg.userId,
+                                  onClick={() =>
+                                    openAdminConfirmation({
+                                      kind: "document",
+                                      action: "approve",
+                                      submissionId: selectedSubmission.id,
                                       organizationId: selectedOrg.id,
-                                      title: "Document submission approved",
-                                      message: "Your submitted documents have been approved and are ready for the next step.",
-                                      type: "document_approved",
-                                      relatedType: "document_submission",
-                                      relatedId: selectedSubmission.id,
-                                      isRead: false,
-                                      createdAt: new Date().toISOString(),
-                                    });
-                                    void appendAuditLog(
-                                      "Approved document submission",
-                                      "document_submission",
-                                      selectedSubmission.id,
-                                      "Document submission approved from the registration detail view.",
-                                      selectedOrg.id,
-                                    );
-                                  }}
+                                      organizationName: selectedOrg.organizationName,
+                                      fileName: file?.fileName ?? documentType.name,
+                                      currentAdminRemarks: file?.adminRemarks || "",
+                                    })
+                                  }
                                 >
                                   Approve
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="w-full sm:w-auto"
                                   disabled={!file}
-                                  onClick={() => {
-                                    updateDocumentSubmission(selectedSubmission.id, { status: "needs_revision" });
-                                    notifyOrganizationUser({
-                                      userId: selectedOrg.userId,
+                                  onClick={() =>
+                                    openAdminConfirmation({
+                                      kind: "document",
+                                      action: "needs_revision",
+                                      submissionId: selectedSubmission.id,
                                       organizationId: selectedOrg.id,
-                                      title: "Document revision requested",
-                                      message: "The admin reviewed your submitted documents and requested revisions before approval.",
-                                      type: "document_revision",
-                                      relatedType: "document_submission",
-                                      relatedId: selectedSubmission.id,
-                                    });
-                                  }}
+                                      organizationName: selectedOrg.organizationName,
+                                      fileName: file?.fileName ?? documentType.name,
+                                      currentAdminRemarks: file?.adminRemarks || "",
+                                    })
+                                  }
                                 >
                                   Needs Revision
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  className="w-full sm:w-auto"
                                   disabled={!file}
-                                  onClick={() => {
-                                    updateDocumentSubmission(selectedSubmission.id, {
-                                      status: "rejected_red",
-                                      reviewedAt: new Date().toISOString(),
-                                      reviewedBy: adminId,
-                                    });
-                                    createNotification({
-                                      id: `notif-${Date.now()}`,
-                                      userId: selectedOrg.userId,
+                                  onClick={() =>
+                                    openAdminConfirmation({
+                                      kind: "document",
+                                      action: "reject",
+                                      submissionId: selectedSubmission.id,
                                       organizationId: selectedOrg.id,
-                                      title: "Document submission rejected",
-                                      message: "Your submitted documents were rejected. Please upload a corrected PDF and submit again.",
-                                      type: "document_rejected",
-                                      relatedType: "document_submission",
-                                      relatedId: selectedSubmission.id,
-                                      isRead: false,
-                                      createdAt: new Date().toISOString(),
-                                    });
-                                    void appendAuditLog(
-                                      "Rejected document submission",
-                                      "document_submission",
-                                      selectedSubmission.id,
-                                      "Document submission rejected from the registration detail view.",
-                                      selectedOrg.id,
-                                    );
-                                  }}
+                                      organizationName: selectedOrg.organizationName,
+                                      fileName: file?.fileName ?? documentType.name,
+                                      currentAdminRemarks: file?.adminRemarks || "",
+                                    })
+                                  }
                                 >
                                   Reject
                                 </Button>
@@ -2008,9 +2135,9 @@ export default function AdminPortal({ section }: { section: string }) {
     transparencyPosts,
     transparencyTitleDraft,
     transparencyVisibilityDraft,
+    openAdminConfirmation,
     removeNewsRelease,
     updateComplianceRemark,
-    updateDocumentSubmission,
     updateNewsRelease,
     updateTemplate,
     updateTransparencyPost,
@@ -2026,17 +2153,51 @@ export default function AdminPortal({ section }: { section: string }) {
     uploadingTemplateId,
   ]);
 
+  const adminConfirmationCopy = getAdminConfirmationCopy();
+
   return (
-    <PortalShell
-      title="Admin Portal"
-      subtitle="LYDO / PCYDO Admin"
-      groups={splitNotificationsGroup}
-      activeId={section}
-      onNavigate={(id) => navigate(routeMap[id] ?? routeMap.overview)}
-      onSignOut={() => void signOut()}
-    >
-      {activeContent}
-    </PortalShell>
+    <>
+      <PortalShell
+        title="Admin Portal"
+        subtitle="LYDO / PCYDO Admin"
+        groups={splitNotificationsGroup}
+        activeId={section}
+        onNavigate={(id) => navigate(routeMap[id] ?? routeMap.overview)}
+        onSignOut={() => void signOut()}
+      >
+        {activeContent}
+      </PortalShell>
+      <Dialog open={Boolean(pendingAdminConfirmation)} onOpenChange={(open) => (!open ? closeAdminConfirmation() : undefined)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{adminConfirmationCopy.title}</DialogTitle>
+            <DialogDescription>{adminConfirmationCopy.description}</DialogDescription>
+          </DialogHeader>
+          <label className="flex items-start gap-3 rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
+            <input
+              type="checkbox"
+              checked={approvalAcknowledged}
+              onChange={(event) => setApprovalAcknowledged(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-border text-primary"
+            />
+            <span>{adminConfirmationCopy.checkboxLabel}</span>
+          </label>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeAdminConfirmation} disabled={processingAdminConfirmation}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={() => void executeAdminConfirmation()}
+              disabled={!approvalAcknowledged || processingAdminConfirmation}
+            >
+              {processingAdminConfirmation ? "Updating..." : adminConfirmationCopy.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

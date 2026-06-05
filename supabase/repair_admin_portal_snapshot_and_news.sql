@@ -514,3 +514,114 @@ begin
     organization_profiles.updated_at;
 end;
 $$;
+
+create or replace function public.update_admin_document_submission_review(
+  _session_token text,
+  _submission_id uuid,
+  _status public.document_submission_status,
+  _overall_remarks text default null,
+  _admin_remarks text default null
+)
+returns table (
+  id uuid,
+  organization_id uuid,
+  submitted_by uuid,
+  status public.document_submission_status,
+  user_confirmed boolean,
+  submitted_at timestamptz,
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  overall_remarks text,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+  _reviewed_at timestamptz := now();
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  update public.document_submission_files
+  set
+    admin_status = _status,
+    admin_remarks = coalesce(_admin_remarks, admin_remarks),
+    reviewed_at = _reviewed_at,
+    updated_at = _reviewed_at
+  where submission_id = _submission_id;
+
+  return query
+  update public.document_submissions
+  set
+    status = _status,
+    reviewed_by = null,
+    reviewed_at = _reviewed_at,
+    overall_remarks = coalesce(_overall_remarks, overall_remarks),
+    updated_at = _reviewed_at
+  where document_submissions.id = _submission_id
+  returning
+    document_submissions.id,
+    document_submissions.organization_id,
+    document_submissions.submitted_by,
+    document_submissions.status,
+    document_submissions.user_confirmed,
+    document_submissions.submitted_at,
+    document_submissions.reviewed_by,
+    document_submissions.reviewed_at,
+    document_submissions.overall_remarks,
+    document_submissions.created_at,
+    document_submissions.updated_at;
+end;
+$$;
+
+create or replace function public.notify_organization_profile_review_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.profile_status is not distinct from new.profile_status then
+    return new;
+  end if;
+
+  if new.profile_status = 'verified' then
+    insert into public.notifications (user_id, organization_id, title, message, type, related_type, related_id)
+    values (
+      new.user_id,
+      new.id,
+      'Registration verified',
+      'The admin verified your organization registration.',
+      'completed',
+      'organization_profile',
+      new.id
+    );
+  elsif new.profile_status = 'needs_update' then
+    insert into public.notifications (user_id, organization_id, title, message, type, related_type, related_id)
+    values (
+      new.user_id,
+      new.id,
+      'Registration needs update',
+      'The admin reviewed your organization profile and requested updates before verification.',
+      'document_revision',
+      'organization_profile',
+      new.id
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_organization_profile_review_notify on public.organization_profiles;
+create trigger trg_organization_profile_review_notify after update on public.organization_profiles for each row when (old.profile_status is distinct from new.profile_status) execute function public.notify_organization_profile_review_change();
