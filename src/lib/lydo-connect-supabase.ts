@@ -528,7 +528,15 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
     .select("id,user_id,organization_name,organization_email,contact_number,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,internal_notes,created_at,updated_at")
     .single();
 
-  if (error || !data) throw new Error(error?.message ?? "Failed to save organization profile.");
+  if (error || !data) {
+    if (error?.message?.includes("advocacies") && error.message.includes("organization_profiles")) {
+      throw new Error(
+        "The database schema is outdated. Run supabase/repair_organization_profiles_schema.sql in Supabase, then try saving the organization profile again.",
+      );
+    }
+
+    throw new Error(error?.message ?? "Failed to save organization profile.");
+  }
 
   return mapOrganizationProfile(data as OrganizationProfileRow);
 };
