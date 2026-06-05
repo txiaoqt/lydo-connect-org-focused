@@ -874,12 +874,24 @@ export default function UserPortal({ section }: { section: string }) {
       !nextBudgetRequest.activityDescription ||
       !nextBudgetRequest.activityDate ||
       !nextBudgetRequest.venue ||
-      !nextBudgetRequest.requestedAmount ||
-      !nextBudgetRequest.purposeCategory
+      nextBudgetRequest.requestedAmount <= 0 ||
+      !nextBudgetRequest.purposeCategory ||
+      !nextBudgetRequest.remarks.trim()
     ) {
       toast({
         title: "Complete the budget form",
-        description: "Activity title, description, proposed date, venue, requested amount, and purpose/category are required.",
+        description:
+          "Activity title, description, proposed date, venue, requested amount, purpose/category, and remarks are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const existingBudgetFile = budgetRequestFilesByBudgetId.get(nextBudgetRequest.id);
+    if (!budgetFileDraft && !existingBudgetFile) {
+      toast({
+        title: "Attach the required document",
+        description: "Please upload the detailed budget document before saving the request.",
         variant: "destructive",
       });
       return;
@@ -1530,48 +1542,62 @@ export default function UserPortal({ section }: { section: string }) {
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="budget-title">Activity Title</Label>
+                        <Label htmlFor="budget-title">
+                          Activity Title <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Input
                           id="budget-title"
                           value={budgetForm.activityTitle}
                           onChange={(event) => setBudgetForm((current) => ({ ...current, activityTitle: event.target.value }))}
                           placeholder="Youth leadership training"
+                          required
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="budget-description">Description</Label>
+                        <Label htmlFor="budget-description">
+                          Description <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Textarea
                           id="budget-description"
                           value={budgetForm.activityDescription}
                           onChange={(event) => setBudgetForm((current) => ({ ...current, activityDescription: event.target.value }))}
                           placeholder="Explain the activity, expected participants, and goals."
                           rows={4}
+                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="budget-date">Proposed Date</Label>
+                        <Label htmlFor="budget-date">
+                          Proposed Date <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Input
                           id="budget-date"
                           type="date"
                           value={budgetForm.activityDate}
                           onChange={(event) => setBudgetForm((current) => ({ ...current, activityDate: event.target.value }))}
+                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="budget-venue">Venue</Label>
+                        <Label htmlFor="budget-venue">
+                          Venue <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Input
                           id="budget-venue"
                           value={budgetForm.venue}
                           onChange={(event) => setBudgetForm((current) => ({ ...current, venue: event.target.value }))}
                           placeholder="LYDO Hall"
+                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="budget-amount">Requested Amount</Label>
+                        <Label htmlFor="budget-amount">
+                          Requested Amount <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Input
                           id="budget-amount"
                           type="number"
-                          min="0"
+                          min="0.01"
                           step="0.01"
                           value={budgetForm.requestedAmount || ""}
                           onChange={(event) =>
@@ -1584,34 +1610,43 @@ export default function UserPortal({ section }: { section: string }) {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="budget-category">Purpose and Category</Label>
+                        <Label htmlFor="budget-category">
+                          Purpose and Category <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Input
                           id="budget-category"
                           value={budgetForm.purposeCategory}
                           onChange={(event) => setBudgetForm((current) => ({ ...current, purposeCategory: event.target.value }))}
                           placeholder="Capacity building / training"
+                          required
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="budget-remarks">Remarks</Label>
+                        <Label htmlFor="budget-remarks">
+                          Remarks <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Textarea
                           id="budget-remarks"
                           value={budgetForm.remarks}
                           onChange={(event) => setBudgetForm((current) => ({ ...current, remarks: event.target.value }))}
-                          placeholder="Optional notes for the reviewer."
+                          placeholder="Notes for the reviewer."
                           rows={3}
+                          required
                         />
                       </div>
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="budget-file">Detailed Document</Label>
+                        <Label htmlFor="budget-file">
+                          Detailed Document <span className="ml-1 text-destructive">*</span>
+                        </Label>
                         <Input
                           id="budget-file"
                           type="file"
                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
                           onChange={(event) => setBudgetFileDraft(event.target.files?.[0] ?? null)}
+                          required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Upload the detailed budget document that contains the full breakdown and supporting details.
+                          Upload the required budget document that contains the full breakdown and supporting details.
                         </p>
                         {budgetFileDraft ? <p className="text-xs text-foreground">Selected file: {budgetFileDraft.name}</p> : null}
                         {!budgetFileDraft && budgetRequestFilesByBudgetId.get(budgetForm.id) ? (
@@ -1933,8 +1968,9 @@ export default function UserPortal({ section }: { section: string }) {
               <Button variant="outline" onClick={() => navigate(userRouteMap.dashboard)}>
                 Go to dashboard
               </Button>
-            }
-          />
+                          }
+                          required
+                        />
         );
     }
   }, [
