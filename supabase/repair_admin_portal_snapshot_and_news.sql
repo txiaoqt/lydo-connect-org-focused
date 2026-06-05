@@ -150,3 +150,62 @@ begin
   );
 end;
 $$;
+
+create or replace function public.update_admin_news_release(
+  _session_token text,
+  _news_release_id uuid,
+  _title text,
+  _description text,
+  _facebook_post_url text,
+  _date_posted date,
+  _visibility_status public.visibility_status
+)
+returns table (
+  id uuid,
+  title text,
+  description text,
+  facebook_post_url text,
+  date_posted date,
+  visibility_status public.visibility_status,
+  created_by uuid,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  update public.news_releases
+  set
+    title = coalesce(trim(_title), news_releases.title),
+    description = coalesce(_description, news_releases.description),
+    facebook_post_url = coalesce(trim(_facebook_post_url), news_releases.facebook_post_url),
+    date_posted = coalesce(_date_posted, news_releases.date_posted),
+    visibility_status = coalesce(_visibility_status, news_releases.visibility_status),
+    updated_at = now()
+  where news_releases.id = _news_release_id
+  returning
+    news_releases.id,
+    news_releases.title,
+    news_releases.description,
+    news_releases.facebook_post_url,
+    news_releases.date_posted,
+    news_releases.visibility_status,
+    news_releases.created_by,
+    news_releases.created_at,
+    news_releases.updated_at;
+end;
+$$;

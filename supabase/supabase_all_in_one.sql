@@ -990,11 +990,11 @@ begin
   return query
   update public.news_releases
   set
-    title = coalesce(trim(_title), title),
-    description = coalesce(_description, description),
-    facebook_post_url = coalesce(trim(_facebook_post_url), facebook_post_url),
-    date_posted = coalesce(_date_posted, date_posted),
-    visibility_status = coalesce(_visibility_status, visibility_status),
+    title = coalesce(trim(_title), news_releases.title),
+    description = coalesce(_description, news_releases.description),
+    facebook_post_url = coalesce(trim(_facebook_post_url), news_releases.facebook_post_url),
+    date_posted = coalesce(_date_posted, news_releases.date_posted),
+    visibility_status = coalesce(_visibility_status, news_releases.visibility_status),
     updated_at = now()
   where news_releases.id = _news_release_id
   returning
