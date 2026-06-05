@@ -1177,8 +1177,8 @@ export default function AdminPortal({ section }: { section: string }) {
                                 </div>
                                 <p className="text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                  <span>OCR: {file?.ocrStatus ?? "pending"}</span>
-                                  <span>Confidence: {file?.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
+                                  <span>Status: {file?.adminStatus ?? file?.validationStatus ?? "pending"}</span>
+                                  <span>Review state: {file?.adminStatus ?? file?.validationStatus ?? "n/a"}</span>
                                   <span>Updated: {file?.updatedAt ? new Date(file.updatedAt).toLocaleString() : "N/A"}</span>
                                 </div>
                               </div>
@@ -1235,15 +1235,15 @@ export default function AdminPortal({ section }: { section: string }) {
                                           onClick={() => toggleOcrPreview(file.id)}
                                         >
                                           {isOcrExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-                                          {isOcrExpanded ? "Hide OCR Scan" : "Open OCR Scan"}
+                                          {isOcrExpanded ? "Hide details" : "View details"}
                                         </Button>
                                       </div>
                                     </div>
                                     <div className="space-y-4">
                                       <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
                                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                                          <p>OCR status: {file.ocrStatus ?? "pending"}</p>
-                                          <p>OCR confidence: {file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</p>
+                                          <p>Submission status: {file.adminStatus ?? file.validationStatus ?? "pending"}</p>
+                                          <p>Review note: {file.adminRemarks || "Awaiting admin review."}</p>
                                           <p>Extracted fields: {fileOcrSummary?.extractedFieldsCount ?? "n/a"}</p>
                                           <p>
                                             Required fields: {fileOcrSummary
@@ -1327,19 +1327,19 @@ export default function AdminPortal({ section }: { section: string }) {
                                       </div>
                                       {isOcrExpanded ? (
                                         <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">OCR Extracted Text</p>
+                                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Uploaded File Preview</p>
                                           {structuredDataPreview ? (
                                             <pre className="mt-3 max-h-48 overflow-auto rounded-md bg-background p-3 text-xs text-muted-foreground">
                                               {JSON.stringify(structuredDataPreview, null, 2)}
                                             </pre>
                                           ) : null}
                                           <div className="mt-3 max-h-[24rem] overflow-y-auto rounded-md bg-background p-3 text-sm text-muted-foreground">
-                                            {file.ocrText || "No OCR text available yet."}
+                                            The uploaded file is previewed above.
                                           </div>
                                         </div>
                                       ) : (
                                         <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                                          OCR scan details are hidden. Open the OCR scan to review the extracted result beside the uploaded file preview.
+                                          File details are hidden. Open the details panel to review the uploaded file beside the preview.
                                         </div>
                                       )}
                                     </div>

@@ -75,8 +75,8 @@ const getDocumentUploadAcceptValue = (documentTypeId: string) =>
 const getDocumentPrimaryFileTypeLabel = (documentTypeId: string) => (documentTypeId === "yorp-members" ? "PDF or XLSX" : "PDF");
 const getDocumentUploadHelpText = (documentTypeId: string) =>
   documentTypeId === "yorp-members"
-    ? "Upload a PDF or XLSX file. XLSX files are parsed directly, while PDFs run through OCR review."
-    : "Upload a PDF to run the OCR scanner and review it before submission.";
+    ? "Upload a PDF or XLSX file."
+    : "Upload a PDF file for submission.";
 const formatVerifiedDateLabel = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -453,32 +453,16 @@ export default function UserPortal({ section }: { section: string }) {
     }
 
     setScanningDocumentId(localDocumentType.id);
-    const previewObjectUrl = URL.createObjectURL(file);
-
     try {
-      const result = await scanPdfForOcr(file, documentTypeName);
       setPendingDocumentScan({
         documentTypeId: localDocumentType.id,
         documentTypeName,
         file,
-        result,
+        result: null,
       });
-      setEditableOcrFields(result.extractedFields);
-      setEditableOcrTables(result.tables);
-      setOcrAuditTrail(result.auditTrail);
-      setSelectedOcrFieldId(result.extractedFields[0]?.id ?? null);
-      setActiveOcrPage(1);
-      setOcrPreviewUrl(previewObjectUrl);
-      setOcrPreviewOpen(true);
-      setConfirmSubmitOpen(false);
+      setConfirmSubmitOpen(true);
       setSubmissionSuccessOpen(false);
-    } catch (error) {
-      URL.revokeObjectURL(previewObjectUrl);
-      toast({
-        title: "OCR scan failed",
-        description: error instanceof Error ? error.message : "The PDF could not be scanned right now.",
-        variant: "destructive",
-      });
+      setOcrPreviewOpen(false);
     } finally {
       setScanningDocumentId(null);
     }
@@ -487,50 +471,18 @@ export default function UserPortal({ section }: { section: string }) {
   const submitScannedDocument = async () => {
     if (!pendingDocumentScan || !user) return;
     if (!ensureCompletedOrganizationProfile()) return;
-    if (!canSubmitEditableOcr) {
-      toast({
-        title: "Review required",
-        description: "Please complete the missing or invalid extracted values before submitting this document.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     setSubmittingDocumentId(pendingDocumentScan.documentTypeId);
 
     try {
-      const warningNotes =
-        pendingDocumentScan.result?.issues
-          .filter((issue) => issue.severity === "warning")
-          .map((issue) => issue.title)
-          .join("; ") ?? "";
-
       const submissionResult = await submitOrganizationDocumentToSupabase({
         documentTypeName: pendingDocumentScan.documentTypeName,
         file: pendingDocumentScan.file,
-        ocrText: pendingDocumentScan.result?.text ?? "",
-        ocrConfidence: pendingDocumentScan.result?.confidence ?? 0,
+        ocrText: "",
+        ocrConfidence: 0,
         validationStatus: "correct",
-        adminRemarks: warningNotes
-          ? `OCR review notes: ${warningNotes}`
-          : "Awaiting admin review.",
-        ocrMetadata: {
-          documentType: pendingDocumentScan.result?.documentType ?? pendingDocumentScan.documentTypeName,
-          schemaId: pendingDocumentScan.result?.schemaId ?? null,
-          templateId: pendingDocumentScan.result?.templateId ?? null,
-          extractionMode: pendingDocumentScan.result?.extractionMode ?? null,
-          documentTypeConfidence: pendingDocumentScan.result?.documentTypeConfidence ?? 0,
-          pageConfidenceScore: pendingDocumentScan.result?.pageConfidenceScore ?? 0,
-          structuredData: buildStructuredOcrData(editableOcrFields, editableOcrTables),
-          verifiedFields: editableOcrFields,
-          verifiedTables: editableOcrTables,
-          auditTrail: ocrAuditTrail,
-          duplicates: pendingDocumentScan.result?.duplicates ?? [],
-          flags: pendingDocumentScan.result?.flags ?? [],
-          summary: summarizeEditableOcrData(editableOcrFields, editableOcrTables),
-          pages: pendingDocumentScan.result?.pages ?? [],
-          issues: pendingDocumentScan.result?.issues ?? [],
-        },
+        adminRemarks: "Awaiting admin review.",
+        ocrMetadata: null,
       });
 
       updateDocumentFile(submissionResult.file.id, submissionResult.file);
@@ -551,7 +503,7 @@ export default function UserPortal({ section }: { section: string }) {
       setSubmissionSuccessOpen(true);
       toast({
         title: "Document submitted",
-        description: "The reviewed document has been submitted for admin approval.",
+        description: "Your document has been submitted for admin approval.",
       });
     } catch (error) {
       toast({
@@ -576,7 +528,7 @@ export default function UserPortal({ section }: { section: string }) {
       }
       toast({
         title: "Document removed",
-        description: `${pendingDocumentRemoval.documentTypeName} and its OCR data were removed successfully.`,
+        description: `${pendingDocumentRemoval.documentTypeName} was removed successfully.`,
       });
       setPendingDocumentRemoval(null);
     } catch (error) {
@@ -1359,17 +1311,6 @@ export default function UserPortal({ section }: { section: string }) {
               <div className="grid gap-4">
                 {templateDocuments.map((documentType) => {
                   const file = docFiles.find((entry) => entry.documentTypeId === documentType.id);
-                  const fileOcrMetadata = (file?.ocrMetadata ?? null) as Record<string, unknown> | null;
-                  const fileOcrSummary = (fileOcrMetadata?.summary ?? null) as
-                    | {
-                        extractedFieldsCount?: number;
-                        requiredFieldsCount?: number;
-                        completedRequiredFieldsCount?: number;
-                        missingRequiredFieldsCount?: number;
-                        tableRowCount?: number;
-                      }
-                    | null;
-                  const latestIssues = Array.isArray(fileOcrMetadata?.issues) ? fileOcrMetadata.issues : [];
                   const template = templatesById[documentType.id];
                   const fileBadgeStatus =
                     file?.adminStatus && file.adminStatus !== "draft"
@@ -1459,7 +1400,7 @@ export default function UserPortal({ section }: { section: string }) {
                               >
                                 <span>
                                   <FileUp className="mr-2 h-4 w-4" />
-                                  {scanningDocumentId === documentType.id ? "Scanning..." : "Upload Document"}
+                                  {scanningDocumentId === documentType.id ? "Preparing..." : "Upload Document"}
                                 </span>
                               </Button>
                             </label>
@@ -1515,38 +1456,8 @@ export default function UserPortal({ section }: { section: string }) {
                         {file ? (
                           <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm">
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">OCR status</span>
-                              <span className="text-right">{formatStatusLabel(file.ocrStatus)}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Confidence</span>
-                              <span className="text-right">{file.ocrConfidence ? `${file.ocrConfidence}%` : "n/a"}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Extracted fields</span>
-                              <span className="text-right">{fileOcrSummary?.extractedFieldsCount ?? "n/a"}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Required fields completed</span>
-                              <span className="text-right">
-                                {fileOcrSummary
-                                  ? `${fileOcrSummary.completedRequiredFieldsCount ?? 0}/${fileOcrSummary.requiredFieldsCount ?? 0}`
-                                  : "n/a"}
-                              </span>
-                            </div>
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Missing required fields</span>
-                              <span className="text-right">{fileOcrSummary?.missingRequiredFieldsCount ?? "n/a"}</span>
-                            </div>
-                            {typeof fileOcrSummary?.tableRowCount === "number" ? (
-                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                                <span className="text-muted-foreground">Detected rows</span>
-                                <span className="text-right">{fileOcrSummary.tableRowCount}</span>
-                              </div>
-                            ) : null}
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                              <span className="text-muted-foreground">Submission state</span>
-                              <span className="text-right">{formatStatusLabel(file.adminStatus || submission?.status || "draft")}</span>
+                              <span className="text-muted-foreground">Submission status</span>
+                              <span className="text-right">{formatStatusLabel(file.adminStatus || file.validationStatus || "draft")}</span>
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                               <span className="text-muted-foreground">Latest review note</span>
@@ -1556,21 +1467,9 @@ export default function UserPortal({ section }: { section: string }) {
                               <span className="text-muted-foreground">Template</span>
                               <span className="break-all text-right">{template?.templateFileName || "Not uploaded yet"}</span>
                             </div>
-                            {latestIssues.length ? (
-                              <div className="rounded-lg border border-border/70 bg-background/80 p-3 text-xs text-muted-foreground">
-                                <p className="font-medium text-foreground">Scanner warnings</p>
-                                <p className="mt-1">
-                                  {latestIssues
-                                    .map((issue) =>
-                                      typeof issue === "object" && issue && "title" in issue
-                                        ? String((issue as { title?: string }).title || "")
-                                        : "",
-                                    )
-                                    .filter(Boolean)
-                                    .join(", ")}
-                                </p>
-                              </div>
-                            ) : null}
+                            <div className="rounded-lg border border-border/70 bg-background/80 p-3 text-xs text-muted-foreground">
+                              The uploaded file is stored here for admin review.
+                            </div>
                           </div>
                         ) : (
                           <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
@@ -1586,7 +1485,7 @@ export default function UserPortal({ section }: { section: string }) {
 
             <PortalSection
               title="Submission Flow"
-              description="After the file is scanned or parsed, a review modal will show the extracted values, flags, and confidence. You must confirm before the document is submitted to LYDO."
+              description="After you upload a file, a confirmation modal will ask if you want to submit it. Choose Yes to send it to LYDO."
             >
               <div className="grid gap-4 md:grid-cols-2">
                 <Card className="bg-muted/20">
@@ -1594,7 +1493,7 @@ export default function UserPortal({ section }: { section: string }) {
                     <CardTitle className="text-sm font-medium text-muted-foreground">What happens next</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0 text-sm text-muted-foreground">
-                    Upload the required file, inspect the extracted values, confirm the reviewed details, and send the document for admin review.
+                    Upload the required file, confirm the submission, and send the document for admin review.
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/20">
@@ -2175,7 +2074,7 @@ export default function UserPortal({ section }: { section: string }) {
         </DialogContent>
       </Dialog>
       <Dialog
-        open={ocrPreviewOpen && Boolean(pendingDocumentScan?.result)}
+        open={false}
         onOpenChange={(open) => {
           setOcrPreviewOpen(open);
           if (!open) {
@@ -2706,7 +2605,7 @@ export default function UserPortal({ section }: { section: string }) {
           </DialogHeader>
           <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
             {pendingDocumentScan
-              ? `${pendingDocumentScan.documentTypeName} will be submitted to LYDO with the verified OCR fields and audit trail for admin approval.`
+              ? `Are you sure you want to submit ${pendingDocumentScan.documentTypeName}?`
               : "The selected file will be submitted for admin approval."}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
@@ -2779,7 +2678,7 @@ export default function UserPortal({ section }: { section: string }) {
           </DialogHeader>
           <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
             {pendingDocumentRemoval
-              ? `${pendingDocumentRemoval.documentTypeName} and its OCR-scanned record will be removed from your submission.`
+              ? `${pendingDocumentRemoval.documentTypeName} and its uploaded record will be removed from your submission.`
               : "The selected document will be removed."}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
