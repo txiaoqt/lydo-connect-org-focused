@@ -135,7 +135,7 @@ export const PortalShell = ({
 
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-[18rem] border-r border-border/80 bg-background shadow-2xl transition-transform duration-200 md:hidden",
+            "fixed inset-y-0 left-0 z-50 w-[min(18rem,85vw)] border-r border-border/80 bg-background shadow-2xl transition-transform duration-200 md:hidden",
             mobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
@@ -145,11 +145,11 @@ export const PortalShell = ({
         <main className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             <header className="sticky top-0 z-30 border-b border-border/80 bg-background/90 backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/70">{subtitle}</p>
-                  <h1 className="truncate text-lg font-semibold sm:text-xl">{title}</h1>
-                </div>
+            <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-6 lg:px-8">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/70">{subtitle}</p>
+                <h1 className="truncate text-lg font-semibold sm:text-xl">{title}</h1>
+              </div>
                 <Button
                   type="button"
                   variant="outline"

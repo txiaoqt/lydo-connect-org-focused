@@ -111,7 +111,7 @@ export const UserPortalShell = ({
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[20rem] overflow-y-auto">
+            <SheetContent side="left" className="w-[min(20rem,88vw)] overflow-y-auto">
               <SheetHeader className="pr-8">
                 <BrandLogo showText imgClassName="h-10 w-10" className="min-w-0" />
                 <SheetTitle>{title}</SheetTitle>
