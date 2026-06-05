@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ const formatCurrency = (value: number) => `PHP ${value.toLocaleString()}`;
 const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const philippineContactNumberPattern = /^09\d{9}$/;
 const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
+const isImagePreviewFile = (value: string) => /\.(png|jpe?g|gif|webp|svg)$/i.test(value);
 const getDocumentUploadAcceptValue = (documentTypeId: string) =>
   documentTypeId === "yorp-members"
     ? ".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
@@ -240,6 +241,29 @@ export default function UserPortal({ section }: { section: string }) {
     result: DocumentOcrScanResult | null;
   } | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
+  const handleBudgetFileDraftChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      setBudgetFileDraft(null);
+      return;
+    }
+
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      event.target.value = "";
+      setBudgetFileDraft(null);
+      toast({
+        title: "PDF only",
+        description: "Please upload a PDF file for the budget request document.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBudgetFileDraft(file);
+  };
+
   const [profileDraft, setProfileDraft] = useState<OrganizationProfile>(
     createOrganizationProfileDraft(currentProfile?.userId ?? user?.id ?? "", currentProfile, {
       organizationName: user?.displayName ?? "",
@@ -1047,6 +1071,15 @@ export default function UserPortal({ section }: { section: string }) {
       return;
     }
 
+    if (budgetFileDraft && budgetFileDraft.type !== "application/pdf" && !/\.pdf$/i.test(budgetFileDraft.name)) {
+      toast({
+        title: "PDF only",
+        description: "Please upload a PDF file for the budget request document.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSavingBudgetRequest(true);
     try {
       const isExisting = budgetRequests.some((request) => request.id === nextBudgetRequest.id);
@@ -1492,10 +1525,10 @@ export default function UserPortal({ section }: { section: string }) {
                         : null;
                   return (
                     <Card key={documentType.id} className="border-border/70">
-                      <CardContent className="grid gap-4 p-4 sm:p-5 md:grid-cols-[1.7fr_1fr]">
-                        <div className="space-y-2">
+                      <CardContent className="grid gap-4 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)] md:items-start">
+                        <div className="min-w-0 space-y-2">
                           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                            <p className="font-medium leading-snug">{documentType.name}</p>
+                            <p className="min-w-0 break-words font-medium leading-snug">{documentType.name}</p>
                             {fileBadgeStatus ? (
                               <PortalStatusBadge status={fileBadgeStatus} />
                             ) : file ? null : (
@@ -1504,7 +1537,15 @@ export default function UserPortal({ section }: { section: string }) {
                           </div>
                           <p className="text-sm text-muted-foreground">{documentType.description}</p>
                           <p className="text-xs text-muted-foreground">Primary file type: {getDocumentPrimaryFileTypeLabel(documentType.id)}</p>
-                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          {!file ? (
+                            <p className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
+                              {getDocumentUploadHelpText(documentType.id)}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="flex min-w-0 flex-col gap-3 md:items-end">
+                          <div className="flex flex-wrap gap-2 md:justify-end">
                             {hasUploadedTemplateFile(template?.templateFileUrl, template?.templateFileName) ? (
                               <>
                                 <Button
@@ -1514,8 +1555,8 @@ export default function UserPortal({ section }: { section: string }) {
                                   className="w-full sm:w-auto"
                                   onClick={() => void openPreview(template.templateFileUrl, template.templateFileName || documentType.name)}
                                 >
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View Template
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Template
                                 </Button>
                                 <Button
                                   type="button"
@@ -1529,8 +1570,8 @@ export default function UserPortal({ section }: { section: string }) {
                                     )
                                   }
                                 >
-                                    <Download className="mr-2 h-4 w-4" />
-                                    Download Template
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Download Template
                                 </Button>
                               </>
                             ) : (
@@ -1545,58 +1586,55 @@ export default function UserPortal({ section }: { section: string }) {
                                 View Template
                               </Button>
                             )}
-                            <label
+                          </div>
+
+                          <label
+                            className="w-full md:w-auto"
+                            onClick={(event) => {
+                              if (ensureCompletedOrganizationProfile()) return;
+                              event.preventDefault();
+                            }}
+                          >
+                            <input
+                              type="file"
+                              accept={getDocumentUploadAcceptValue(documentType.id)}
+                              className="sr-only"
+                              onChange={(event) => {
+                                void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);
+                                event.currentTarget.value = "";
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              asChild
+                              disabled={scanningDocumentId === documentType.id || submittingDocumentId === documentType.id}
+                              className="w-full sm:w-auto"
                               onClick={(event) => {
-                                if (ensureCompletedOrganizationProfile()) return;
-                                event.preventDefault();
+                                if (file) {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  void openAttachedDocumentEditor(file, documentType.name);
+                                }
                               }}
                             >
-                              <input
-                                type="file"
-                                accept={getDocumentUploadAcceptValue(documentType.id)}
-                                className="sr-only"
-                                onChange={(event) => {
-                                  void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);
-                                  event.currentTarget.value = "";
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                asChild
-                                disabled={scanningDocumentId === documentType.id || submittingDocumentId === documentType.id}
-                                className="w-full sm:w-auto"
-                                onClick={(event) => {
-                                  if (file) {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    void openAttachedDocumentEditor(file, documentType.name);
-                                  }
-                                }}
-                              >
-                                <span>
-                                  {file ? (
-                                    <>
-                                      <Eye className="mr-2 h-4 w-4" />
-                                      View Attached
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileUp className="mr-2 h-4 w-4" />
-                                      {scanningDocumentId === documentType.id ? "Preparing..." : "Upload Document"}
-                                    </>
-                                  )}
-                                </span>
-                              </Button>
-                            </label>
-                          </div>
+                              <span>
+                                {file ? (
+                                  <>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Attached
+                                  </>
+                                ) : (
+                                  <>
+                                    <FileUp className="mr-2 h-4 w-4" />
+                                    {scanningDocumentId === documentType.id ? "Preparing..." : "Upload Document"}
+                                  </>
+                                )}
+                              </span>
+                            </Button>
+                          </label>
                         </div>
-                        {!file ? (
-                          <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-4 text-sm text-muted-foreground">
-                            {getDocumentUploadHelpText(documentType.id)}
-                          </div>
-                        ) : null}
                       </CardContent>
                     </Card>
                   );
@@ -1750,12 +1788,12 @@ export default function UserPortal({ section }: { section: string }) {
                         <Input
                           id="budget-file"
                           type="file"
-                          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                          onChange={(event) => setBudgetFileDraft(event.target.files?.[0] ?? null)}
+                          accept=".pdf,application/pdf"
+                          onChange={handleBudgetFileDraftChange}
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Upload the required budget document that contains the full breakdown and supporting details.
+                          PDF only. Upload the required budget document that contains the full breakdown and supporting details.
                         </p>
                         {budgetFileDraft ? <p className="text-xs text-foreground">Selected file: {budgetFileDraft.name}</p> : null}
                         {!budgetFileDraft && budgetRequestFilesByBudgetId.get(budgetForm.id) ? (
@@ -2842,13 +2880,23 @@ export default function UserPortal({ section }: { section: string }) {
                   </Button>
                 ) : null}
               </div>
-              <div className="h-[min(60vh,34rem)] overflow-hidden rounded-lg border border-border/70 bg-background">
+              <div className="h-[min(60vh,34rem)] overflow-auto rounded-lg border border-border/70 bg-background">
                 {attachedDocumentPreviewUrl && attachedDocumentPreviewCanInline ? (
-                  <iframe
-                    src={attachedDocumentPreviewUrl}
-                    title={attachedDocumentPreviewTitle || "Attached file preview"}
-                    className="h-full w-full"
-                  />
+                  isImagePreviewFile(attachedDocumentPreviewTitle) || isImagePreviewFile(attachedDocumentEditor?.file.fileUrl ?? "") ? (
+                    <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+                      <img
+                        src={attachedDocumentPreviewUrl}
+                        alt={attachedDocumentPreviewTitle || "Attached file preview"}
+                        className="max-h-[calc(60vh-1.5rem)] w-full rounded-md object-contain sm:max-h-[calc(34rem-2rem)]"
+                      />
+                    </div>
+                  ) : (
+                    <iframe
+                      src={attachedDocumentPreviewUrl}
+                      title={attachedDocumentPreviewTitle || "Attached file preview"}
+                      className="h-[min(60vh,34rem)] w-full border-0"
+                    />
+                  )
                 ) : attachedDocumentPreviewUrl ? (
                   <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
                     <div className="space-y-2">

@@ -99,6 +99,7 @@ const formatVerifiedDateLabel = (value: string) => {
 };
 
 const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
+const isImagePreviewFile = (value: string) => /\.(png|jpe?g|gif|webp|svg)$/i.test(value);
 
 const renderRegistrationDetailCard = (params: {
   title: string;
@@ -1937,11 +1938,21 @@ export default function AdminPortal({ section }: { section: string }) {
                                   {budgetPreviewLoading ? (
                                     <p className="p-3 text-sm text-muted-foreground">Loading preview...</p>
                                   ) : budgetPreviewUrl && budgetPreviewCanInline ? (
-                                    <iframe
-                                      title={budgetPreviewTitle || "Budget Request Preview"}
-                                      src={budgetPreviewUrl}
-                                      className="h-[22rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
-                                    />
+                                    isImagePreviewFile(budgetPreviewTitle) || isImagePreviewFile(budgetPreviewUrl) ? (
+                                      <div className="flex max-h-[24rem] min-h-[16rem] items-center justify-center overflow-hidden rounded-md bg-background sm:max-h-[32rem]">
+                                        <img
+                                          src={budgetPreviewUrl}
+                                          alt={budgetPreviewTitle || "Budget request preview"}
+                                          className="max-h-[24rem] w-full object-contain sm:max-h-[32rem]"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <iframe
+                                        title={budgetPreviewTitle || "Budget Request Preview"}
+                                        src={budgetPreviewUrl}
+                                        className="h-[24rem] w-full rounded-md border-0 bg-background sm:h-[32rem]"
+                                      />
+                                    )
                                   ) : budgetPreviewUrl ? (
                                     <div className="space-y-3 p-3 text-sm text-muted-foreground">
                                       <p>This uploaded file cannot be shown inline. You can open it in a new tab if needed.</p>
