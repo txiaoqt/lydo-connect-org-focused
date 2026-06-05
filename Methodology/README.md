@@ -1,37 +1,44 @@
-﻿# Methodology Package for LYDO Connect
+# Methodology Package for LYDO Connect
 
-This folder rewrites Chapter 3 for **LYDO Connect: Youth Information, Engagement, and Transparency Management System** based on the actual repository, workflows, and database design of the current system. It is not copied from the VIG template. The current package reflects the updated public portal, admin portal, policy agreement gate, program/event registration monitoring, optional Google Forms/Sheets sync support, expanded organization references/projects, transparency modules, Youth Desk, and audit logs.
+This folder contains the Chapter 3 methodology draft for **LYDO Connect** based on the current application workflow in the repository.
 
-## Recommended Section Decisions
+## Current App Scope
 
-- Keep `3.1.1`, `3.1.2`, `3.1.3`, `3.2.1`, `3.2.2`, `3.2.4`, `3.2.5`, `3.3`, `3.3.1`, `3.3.2`, `3.4`, `3.5`, `3.6`, `3.7`, and `3.8`.
-- Treat `3.2.3 GUI Design` as optional. Add it only if your adviser wants wireframes, screenshots, or interface mockups.
-- Do not reuse the template's `Waterfall` discussion. A **hybrid DSR + RAD** approach fits this study better because the project is a design-and-development study with iterative prototyping.
-- Do not copy hypothesis-testing content from the template unless your adviser explicitly requires inferential comparison. For this kind of system study, weighted mean, standard deviation, expert validation, and usability evaluation are usually more appropriate.
-- Reframe the template's `3.8 Reliability Test Result Required for Ethics Clearance` into an **instrument validation and reliability plan**. Actual Cronbach's alpha results should only be inserted after pilot testing.
-- Treat the local registration tables as the source of record. External Google Forms/Sheets behavior is documented as sync and monitoring support, not as a replacement for the Supabase registration records.
-- Keep organization workflows read-centric for public users: "View Organization Info" and source inspection are current behavior, while organization join/enrollment is not part of the current public module.
+The app currently supports:
+- User sign-up, sign-in, sign-out, and policy agreement gating
+- Organization profile management
+- Document submission with file upload and preview
+- Budget request CRUD with attachment upload
+- Liquidation reporting that becomes available after budget approval
+- News releases with Facebook preview pages
+- Public transparency posts
+- Notifications
+- Admin review, monitoring, and content management
+- Template/document type management
 
-## Files
+## What Is Not Included
 
-- [3.0 Methodology](./3.0-Methodology.md)
-- [3.1.1 Requirement Analysis](./3.1.1-Requirement-Analysis.md)
-- [3.1.2 Use Case Diagram](./3.1.2-Use-Case-Diagram.md)
-- [3.1.3 Use Case Report](./3.1.3-Use-Case-Report.md)
-- [3.2.1 Activity Diagram](./3.2.1-Activity-Diagram.md)
-- [3.2.2 Class Diagram](./3.2.2-Class-Diagram.md)
-- [3.2.4 Database Schema](./3.2.4-Database-Schema.md)
-- [3.2.5 Data Dictionary](./3.2.5-Data-Dictionary.md)
-- [3.3 Development Methodology](./3.3-Development-Methodology.md)
-- [3.3.1 Process Model](./3.3.1-Process-Model.md)
-- [3.3.2 Development Tools](./3.3.2-Development-Tools.md)
-- [3.4 Test Methodology and Procedures](./3.4-Test-Methodology-and-Procedures.md)
-- [3.5 System Requirements](./3.5-System-Requirements.md)
-- [3.6 Quality Plans](./3.6-Quality-Plans.md)
-- [3.7 Evaluation Plan](./3.7-Evaluation-Plan.md)
-- [3.8 Instrument Reliability and Ethics Clearance Support](./3.8-Instrument-Reliability-and-Ethics-Clearance-Support.md)
+Legacy modules from earlier drafts are excluded from the current workflow scope.
 
-## Note for Manuscript Integration
+## Recommended Chapter 3 Files
 
-These files are drafted as clean source material. You can paste them into your manuscript and adjust wording, respondent counts, evaluator tasks, and school-specific formatting rules as needed.
+- `3.0-Methodology.md`
+- `3.1.1-Requirement-Analysis.md`
+- `3.1.2-Use-Case-Diagram.md`
+- `3.1.3-Use-Case-Report.md`
+- `3.2.1-Activity-Diagram.md`
+- `3.2.2-Class-Diagram.md`
+- `3.2.4-Database-Schema.md`
+- `3.2.5-Data-Dictionary.md`
+- `3.3-Development-Methodology.md`
+- `3.3.1-Process-Model.md`
+- `3.3.2-Development-Tools.md`
+- `3.4-Test-Methodology-and-Procedures.md`
+- `3.5-System-Requirements.md`
+- `3.6-Quality-Plans.md`
+- `3.7-Evaluation-Plan.md`
+- `3.8-Instrument-Reliability-and-Ethics-Clearance-Support.md`
 
+## Note
+
+The remaining files in this folder should be aligned to the same scope and should not describe modules that are not present in the current application workflow.
