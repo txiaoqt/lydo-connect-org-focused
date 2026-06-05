@@ -145,16 +145,28 @@ export const PortalShell = ({
         <main className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             <header className="sticky top-0 z-30 border-b border-border/80 bg-background/90 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-6 lg:px-8">
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/70">{subtitle}</p>
-                <h1 className="truncate text-lg font-semibold sm:text-xl">{title}</h1>
-              </div>
+              <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-6 lg:px-8">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="md:hidden shrink-0"
+                    onClick={() => setMobileOpen((value) => !value)}
+                    aria-label="Toggle navigation"
+                  >
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/70">{subtitle}</p>
+                    <h1 className="truncate text-lg font-semibold sm:text-xl">{title}</h1>
+                  </div>
+                </div>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="md:hidden"
+                  className="hidden md:inline-flex"
                   onClick={() => setMobileOpen((value) => !value)}
                 >
                   <Menu className="h-4 w-4" />
