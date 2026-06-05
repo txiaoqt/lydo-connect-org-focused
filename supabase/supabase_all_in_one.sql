@@ -1974,7 +1974,7 @@ begin
   end if;
 
   insert into public.activity_logs (actor_user_id, organization_id, action, related_type, related_id, description)
-  values (coalesce(auth.uid(), new.reviewed_by), new.organization_id, 'reviewed_budget_request', 'budget_request', new.id, coalesce(new.remarks, 'Budget request status changed.'));
+  values (coalesce(auth.uid(), new.submitted_by), new.organization_id, 'reviewed_budget_request', 'budget_request', new.id, coalesce(new.remarks, 'Budget request status changed.'));
 
   return new;
 end;

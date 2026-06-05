@@ -1976,7 +1976,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                   )
                                 }
                               >
-                                Mark Green
+                                Approve
                               </Button>
                               <Button
                                 size="sm"
@@ -2080,7 +2080,7 @@ export default function AdminPortal({ section }: { section: string }) {
                             })()
                           }
                         >
-                          Mark Green
+                          Approve
                         </Button>
                         <Button
                           size="sm"

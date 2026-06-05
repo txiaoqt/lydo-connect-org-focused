@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CheckCircle2, Download, Eye, FileUp, Loader2, MessageCircle, Sparkles, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Eye,
+  FileUp,
+  Loader2,
+  MessageCircle,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -231,6 +244,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [removingDocumentId, setRemovingDocumentId] = useState<string | null>(null);
   const [savingBudgetRequest, setSavingBudgetRequest] = useState(false);
   const [budgetFileDraft, setBudgetFileDraft] = useState<File | null>(null);
+  const [budgetFormMobileOpen, setBudgetFormMobileOpen] = useState(false);
   const [pendingBudgetDelete, setPendingBudgetDelete] = useState<BudgetRequest | null>(null);
   const [budgetForm, setBudgetForm] = useState<BudgetRequest>(() =>
     createBlankBudgetRequest(user?.id ?? "", user?.id ?? ""),
@@ -253,6 +267,13 @@ export default function UserPortal({ section }: { section: string }) {
     result: DocumentOcrScanResult | null;
   } | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
+
+  useEffect(() => {
+    if (section === "budget-request") {
+      setBudgetFormMobileOpen(false);
+    }
+  }, [section]);
+
   const handleBudgetFileDraftChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
 
@@ -1020,6 +1041,15 @@ export default function UserPortal({ section }: { section: string }) {
   };
 
   const startEditingBudgetRequest = (request: BudgetRequest) => {
+    if (approvedBudgetStatuses.has(request.status)) {
+      toast({
+        title: "Editing locked",
+        description: "Approved budget requests for FTF submission can no longer be edited.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setBudgetForm({ ...request });
     setBudgetFileDraft(null);
   };
@@ -1029,6 +1059,16 @@ export default function UserPortal({ section }: { section: string }) {
       toast({
         title: "Complete your organization profile first",
         description: "Budget requests need an organization profile before they can be saved.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const existingBudgetRequest = budgetRequests.find((request) => request.id === budgetForm.id) ?? null;
+    if (existingBudgetRequest && approvedBudgetStatuses.has(existingBudgetRequest.status)) {
+      toast({
+        title: "Editing locked",
+        description: "Approved budget requests for FTF submission can no longer be modified.",
         variant: "destructive",
       });
       return;
@@ -1133,12 +1173,31 @@ export default function UserPortal({ section }: { section: string }) {
   };
 
   const handleDeleteBudgetRequest = (request: BudgetRequest) => {
+    if (approvedBudgetStatuses.has(request.status)) {
+      toast({
+        title: "Deletion locked",
+        description: "Approved budget requests for FTF submission can no longer be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setPendingBudgetDelete(request);
   };
 
   const confirmDeleteBudgetRequest = async () => {
     const request = pendingBudgetDelete;
     if (!request) return;
+
+    if (approvedBudgetStatuses.has(request.status)) {
+      setPendingBudgetDelete(null);
+      toast({
+        title: "Deletion locked",
+        description: "Approved budget requests for FTF submission can no longer be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setPendingBudgetDelete(null);
 
@@ -1597,21 +1656,6 @@ export default function UserPortal({ section }: { section: string }) {
                                   <Eye className="mr-2 h-4 w-4" />
                                   View Template
                                 </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full sm:w-auto"
-                                  onClick={() =>
-                                    void openFile(
-                                      template.templateFileUrl,
-                                      template.templateFileName || `${documentType.id}.file`,
-                                    )
-                                  }
-                                >
-                                  <Download className="mr-2 h-4 w-4" />
-                                  Download Template
-                                </Button>
                               </>
                             ) : (
                               <Button
@@ -1720,12 +1764,33 @@ export default function UserPortal({ section }: { section: string }) {
             >
               <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
                 <Card className="border-border/70">
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {budgetRequests.some((request) => request.id === budgetForm.id) ? "Edit Budget Request" : "New Budget Request"}
-                    </CardTitle>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <CardTitle className="text-lg">
+                        {budgetRequests.some((request) => request.id === budgetForm.id) ? "Edit Budget Request" : "New Budget Request"}
+                      </CardTitle>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="md:hidden"
+                        onClick={() => setBudgetFormMobileOpen((current) => !current)}
+                      >
+                        {budgetFormMobileOpen ? (
+                          <>
+                            <ChevronUp className="mr-2 h-4 w-4" />
+                            Hide Fields
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="mr-2 h-4 w-4" />
+                            Show Fields
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className={`${budgetFormMobileOpen ? "block" : "hidden"} space-y-4 md:block`}>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="budget-title">
@@ -1903,35 +1968,22 @@ export default function UserPortal({ section }: { section: string }) {
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2">
-                              <Button type="button" size="sm" variant="outline" onClick={() => startEditingBudgetRequest(request)}>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => startEditingBudgetRequest(request)}
+                                disabled={savingBudgetRequest || approvedBudgetStatuses.has(request.status)}
+                              >
                                 Edit
                               </Button>
                               <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
-                                  void (async () => {
-                                    try {
-                                      await updateBudgetRequestInSupabase(request.id, { status: "submitted" });
-                                      const remoteSnapshot = await loadLydoConnectSupabaseState();
-                                      if (remoteSnapshot) {
-                                        mergeRemoteState(remoteSnapshot);
-                                      }
-                                    } catch (error) {
-                                      toast({
-                                        title: "Unable to update budget",
-                                        description: error instanceof Error ? error.message : "The budget request could not be submitted right now.",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  })()
-                                }
-                                disabled={savingBudgetRequest}
+                                onClick={() => handleDeleteBudgetRequest(request)}
+                                disabled={savingBudgetRequest || approvedBudgetStatuses.has(request.status)}
                               >
-                                Submit
-                              </Button>
-                              <Button type="button" size="sm" variant="outline" onClick={() => handleDeleteBudgetRequest(request)}>
                                 Delete
                               </Button>
                             </div>
@@ -2916,17 +2968,19 @@ export default function UserPortal({ section }: { section: string }) {
           }
         }}
       >
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{attachedDocumentPreviewTitle || "Attached File"}</DialogTitle>
-            <DialogDescription>Review the uploaded file, change it if needed, or remove it before saving.</DialogDescription>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-lg sm:text-xl">{attachedDocumentPreviewTitle || "Attached File"}</DialogTitle>
+            <DialogDescription className="text-sm">
+              Review the uploaded file, change it if needed, or remove it before saving.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)] lg:items-start">
             <div className="min-w-0 rounded-xl border border-border/70 bg-muted/20 p-3 sm:p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Attached file preview</p>
-                  <p className="truncate text-sm font-medium text-foreground">
+                  <p className="break-all text-sm font-medium text-foreground sm:truncate">
                     {attachedDocumentEditor?.file.fileName || "Uploaded file"}
                   </p>
                 </div>
@@ -2935,6 +2989,7 @@ export default function UserPortal({ section }: { section: string }) {
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     onClick={() => void openFile(attachedDocumentEditor.file.fileUrl, attachedDocumentEditor.file.fileName)}
                   >
                     <Eye className="mr-2 h-4 w-4" />
@@ -2942,25 +2997,25 @@ export default function UserPortal({ section }: { section: string }) {
                   </Button>
                 ) : null}
               </div>
-              <div className="h-[min(60vh,34rem)] overflow-auto rounded-lg border border-border/70 bg-background">
+              <div className="h-[min(52vh,28rem)] overflow-auto rounded-lg border border-border/70 bg-background sm:h-[min(60vh,34rem)]">
                 {attachedDocumentPreviewUrl && attachedDocumentPreviewCanInline ? (
                   isImagePreviewFile(attachedDocumentPreviewTitle) || isImagePreviewFile(attachedDocumentEditor?.file.fileUrl ?? "") ? (
-                    <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+                    <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
                       <img
                         src={attachedDocumentPreviewUrl}
                         alt={attachedDocumentPreviewTitle || "Attached file preview"}
-                        className="max-h-[calc(60vh-1.5rem)] w-full rounded-md object-contain sm:max-h-[calc(34rem-2rem)]"
+                        className="max-h-[calc(52vh-1.5rem)] w-full rounded-md object-contain sm:max-h-[calc(34rem-2rem)]"
                       />
                     </div>
                   ) : (
                     <iframe
                       src={attachedDocumentPreviewUrl}
                       title={attachedDocumentPreviewTitle || "Attached file preview"}
-                      className="h-[min(60vh,34rem)] w-full border-0"
+                      className="h-[min(52vh,28rem)] w-full border-0 sm:h-[min(60vh,34rem)]"
                     />
                   )
                 ) : attachedDocumentPreviewUrl ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                  <div className="flex h-full flex-col items-center justify-center gap-4 p-4 text-center sm:p-6">
                     <div className="space-y-2">
                       <p className="text-base font-medium text-foreground">Preview not available in the browser</p>
                       <p className="max-w-md text-sm text-muted-foreground">
@@ -2969,7 +3024,7 @@ export default function UserPortal({ section }: { section: string }) {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center sm:p-6">
                     <p className="text-sm font-medium text-foreground">No preview available</p>
                     <p className="max-w-md text-sm text-muted-foreground">
                       {attachedDocumentPreviewEmptyMessage || "The uploaded file could not be previewed."}
