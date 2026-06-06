@@ -673,7 +673,12 @@ export const loadAdminPortalSupabaseState = async (): Promise<Partial<LydoSeedSt
     _session_token: adminSession.sessionToken,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message?.includes("Admin account is not authorized")) {
+      return null;
+    }
+    throw new Error(error.message);
+  }
   if (!data || typeof data !== "object") return null;
 
   const snapshot = data as AdminPortalSnapshot;

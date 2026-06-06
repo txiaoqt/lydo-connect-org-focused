@@ -2431,7 +2431,7 @@ export default function AdminPortal({ section }: { section: string }) {
         const approvedDocumentCount = selectedFiles.filter((file) => file.adminStatus === "approved_green").length;
         const allRequiredDocumentsApproved = selectedFiles.length === templateDocuments.length && approvedDocumentCount === templateDocuments.length;
         const canVerifyWithoutDocuments =
-          Boolean(selectedOrg.isExistingOrganization) && Boolean(selectedOrg.organizationIdentifierNumber.trim());
+          Boolean(selectedOrg?.isExistingOrganization) && Boolean(selectedOrg?.organizationIdentifierNumber?.trim());
 
         if (selectedOrg) {
           return (
