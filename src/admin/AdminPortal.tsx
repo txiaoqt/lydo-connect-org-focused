@@ -4529,6 +4529,7 @@ export default function AdminPortal({ section }: { section: string }) {
   }, [
     createNotification,
     selectedBudgetRequestId,
+    selectedLiquidationReportSnapshot,
     selectedLiquidationReportId,
     liquidationDetailsOpen,
     selectedBudgetAllocation,
