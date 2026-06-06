@@ -26,6 +26,7 @@ Legacy modules from earlier drafts are excluded from the current workflow scope.
 - `3.1.1-Requirement-Analysis.md`
 - `3.1.2-Use-Case-Diagram.md`
 - `3.1.3-Use-Case-Report.md`
+- `data flow diagram.md`
 - `3.2.1-Activity-Diagram.md`
 - `3.2.2-Class-Diagram.md`
 - `3.2.4-Database-Schema.md`
@@ -37,6 +38,8 @@ Legacy modules from earlier drafts are excluded from the current workflow scope.
 - `3.5-System-Requirements.md`
 - `3.6-Quality-Plans.md`
 - `3.7-Evaluation-Plan.md`
+- `statistical treatment.md`
+- `TADZ_Assigned_Sections_Expanded.md`
 - `3.8-Instrument-Reliability-and-Ethics-Clearance-Support.md`
 
 ## Note

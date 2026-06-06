@@ -11,6 +11,19 @@ This section presents the descriptive statistics used to summarize evaluation re
 | Weighted mean | Determine the level of acceptability for each criterion |
 | Standard deviation | Measure the consistency of responses |
 
+## Likert Scale Basis
+
+The evaluation instrument uses a 5-point Likert scale so the responses can be summarized consistently across the criteria used in the study.
+
+## Computation Guide
+
+| Measure | Simple Guide |
+|---|---|
+| Frequency | Count each response choice |
+| Percentage | `(frequency / total responses) x 100` |
+| Weighted mean | `sum(frequency x weight) / total responses` |
+| Standard deviation | Measure how far responses spread from the mean |
+
 ## Interpretation Guide
 
 | Weighted Mean Range | Interpretation |
@@ -23,4 +36,4 @@ This section presents the descriptive statistics used to summarize evaluation re
 
 ## Scope
 
-The statistical treatment applies to the current app workflow only: authentication, organization profile, document submission, budget request CRUD, liquidation reporting, news releases, transparency posts, templates, notifications, and admin review.
+The statistical treatment applies to the current app workflow only: authentication, organization profile, document submission, budget request and barangay allocation monitoring, liquidation reporting, news releases, transparency posts, templates, notifications, and admin review.
