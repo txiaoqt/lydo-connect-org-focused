@@ -2123,33 +2123,6 @@ export default function UserPortal({ section }: { section: string }) {
             </div>
           </PortalSection>
         );
-      case "public-transparency":
-        return (
-          <PortalSection title="Public Transparency Posting" description="Simplified public transparency posts.">
-            <div className="grid gap-4 md:grid-cols-2">
-              {state.transparencyPosts.map((post) => (
-                <Card key={post.id} className="border-border/70">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <CardTitle className="text-base">{post.title}</CardTitle>
-                      <PortalStatusBadge status={post.visibilityStatus} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <p>{post.description}</p>
-                    <p>Category: {post.category}</p>
-                    <p>Date: {post.postDate}</p>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={post.attachmentUrl} target="_blank" rel="noreferrer">
-                        View Attachment
-                      </a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </PortalSection>
-        );
       case "compliance-status":
         return (
           <div className="space-y-6">
@@ -2193,8 +2166,15 @@ export default function UserPortal({ section }: { section: string }) {
                   onClick={() => markNotificationRead(notification.id)}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium">{notification.title}</p>
-                    <PortalStatusBadge status={notification.isRead ? "verified" : "pending_review"} />
+                    <div className="flex items-center gap-2">
+                      {!notification.isRead ? (
+                        <span
+                          aria-hidden="true"
+                          className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.14)]"
+                        />
+                      ) : null}
+                      <p className="font-medium">{notification.title}</p>
+                    </div>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{notification.message}</p>
                 </button>

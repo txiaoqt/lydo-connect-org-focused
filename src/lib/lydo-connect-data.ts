@@ -1,4 +1,4 @@
-import { BarChart3, Bell, CalendarDays, ClipboardList, FileCheck2, FileText, Megaphone, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { BarChart3, Bell, CalendarDays, ClipboardList, FileCheck2, FileText, Megaphone, Sparkles, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type ProfileStatus =
@@ -197,7 +197,6 @@ export const userNavigationGroups: PortalNavGroup[] = [
     label: "Updates",
     items: [
       { id: "news-releases", label: "News Releases", icon: Megaphone },
-      { id: "public-transparency", label: "Public Transparency Posting", icon: ShieldCheck },
       { id: "notifications", label: "Notifications", icon: Bell },
     ],
   },
@@ -217,7 +216,6 @@ export const userRouteMap: Record<string, string> = {
   "budget-request": "/budget-request",
   "liquidation-reporting": "/liquidation-reporting",
   "news-releases": "/news-releases",
-  "public-transparency": "/public-transparency",
   "compliance-status": "/compliance-status",
   notifications: "/notifications",
 };

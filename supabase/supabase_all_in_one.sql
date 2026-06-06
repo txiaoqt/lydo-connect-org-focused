@@ -1881,11 +1881,11 @@ begin
   elsif new.status = 'approved_green' then
     notif_type := 'document_green';
     notif_title := 'Document submission approved';
-    notif_message := 'Your document submission has been marked green.';
+    notif_message := 'Your document has been marked approved.';
   elsif new.status = 'rejected_red' then
     notif_type := 'document_red';
     notif_title := 'Document submission rejected';
-    notif_message := 'Your document submission has been marked red.';
+    notif_message := 'Your document has been marked rejected.';
   else
     return new;
   end if;
