@@ -319,6 +319,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [budgetPreviewCanInline, setBudgetPreviewCanInline] = useState(false);
   const [budgetPreviewLoading, setBudgetPreviewLoading] = useState(false);
   const [selectedBudgetAllocation, setSelectedBudgetAllocation] = useState<BarangayAllocationEntry | null>(null);
+  const [selectedLiquidationReportSnapshot, setSelectedLiquidationReportSnapshot] = useState<LiquidationReport | null>(null);
   const [selectedLiquidationReportId, setSelectedLiquidationReportId] = useState<string | null>(null);
   const [selectedLiquidationFileId, setSelectedLiquidationFileId] = useState<string | null>(null);
   const [liquidationDetailsOpen, setLiquidationDetailsOpen] = useState(false);
@@ -384,8 +385,11 @@ export default function AdminPortal({ section }: { section: string }) {
     [selectedBudgetRequest?.organizationId, state.organizationProfiles],
   );
   const selectedLiquidationReport = useMemo(
-    () => state.liquidationReports.find((item) => item.id === selectedLiquidationReportId) ?? null,
-    [selectedLiquidationReportId, state.liquidationReports],
+    () =>
+      state.liquidationReports.find((item) => item.id === selectedLiquidationReportId) ??
+      selectedLiquidationReportSnapshot ??
+      null,
+    [selectedLiquidationReportId, selectedLiquidationReportSnapshot, state.liquidationReports],
   );
   const selectedLiquidationReportFiles = useMemo(
     () =>
@@ -2132,12 +2136,13 @@ export default function AdminPortal({ section }: { section: string }) {
     setBudgetPreviewLoading(false);
   };
 
-  const openLiquidationDetails = (reportId: string) => {
+  const openLiquidationDetails = (report: LiquidationReport) => {
     const reportFiles = [...state.liquidationReportFiles]
-      .filter((file) => file.liquidationReportId === reportId)
+      .filter((file) => file.liquidationReportId === report.id)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
 
-    setSelectedLiquidationReportId(reportId);
+    setSelectedLiquidationReportSnapshot(report);
+    setSelectedLiquidationReportId(report.id);
     setSelectedLiquidationFileId(reportFiles[0]?.id ?? null);
     setLiquidationDetailsOpen(true);
     setLiquidationPreviewExpanded(typeof window !== "undefined" ? window.matchMedia("(min-width: 640px)").matches : false);
@@ -2145,6 +2150,7 @@ export default function AdminPortal({ section }: { section: string }) {
 
   const closeLiquidationDetails = () => {
     setLiquidationDetailsOpen(false);
+    setSelectedLiquidationReportSnapshot(null);
     setSelectedLiquidationReportId(null);
     setSelectedLiquidationFileId(null);
     setLiquidationPreviewUrl("");
@@ -3683,7 +3689,7 @@ export default function AdminPortal({ section }: { section: string }) {
                         <p className="text-sm text-muted-foreground">Remarks: {record.remarks || "None"}</p>
                       </div>
                       <div className="flex items-start justify-end">
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openLiquidationDetails(record.id)}>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openLiquidationDetails(record)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </Button>
