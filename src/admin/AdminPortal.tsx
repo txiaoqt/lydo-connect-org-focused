@@ -321,6 +321,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [selectedBudgetAllocation, setSelectedBudgetAllocation] = useState<BarangayAllocationEntry | null>(null);
   const [selectedLiquidationReportId, setSelectedLiquidationReportId] = useState<string | null>(null);
   const [selectedLiquidationFileId, setSelectedLiquidationFileId] = useState<string | null>(null);
+  const [liquidationDetailsOpen, setLiquidationDetailsOpen] = useState(false);
   const [liquidationPreviewUrl, setLiquidationPreviewUrl] = useState("");
   const [liquidationPreviewTitle, setLiquidationPreviewTitle] = useState("");
   const [liquidationPreviewEmptyMessage, setLiquidationPreviewEmptyMessage] = useState("");
@@ -2138,10 +2139,12 @@ export default function AdminPortal({ section }: { section: string }) {
 
     setSelectedLiquidationReportId(reportId);
     setSelectedLiquidationFileId(reportFiles[0]?.id ?? null);
+    setLiquidationDetailsOpen(true);
     setLiquidationPreviewExpanded(typeof window !== "undefined" ? window.matchMedia("(min-width: 640px)").matches : false);
   };
 
   const closeLiquidationDetails = () => {
+    setLiquidationDetailsOpen(false);
     setSelectedLiquidationReportId(null);
     setSelectedLiquidationFileId(null);
     setLiquidationPreviewUrl("");
@@ -3268,7 +3271,7 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </DialogContent>
             </Dialog>
-            <Dialog open={selectedLiquidationReport !== null} onOpenChange={(open) => { if (!open) closeLiquidationDetails(); }}>
+            <Dialog open={liquidationDetailsOpen} onOpenChange={(open) => { if (!open) closeLiquidationDetails(); }}>
               <DialogContent className="h-[100dvh] w-[calc(100vw-1rem)] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-[92dvh] sm:w-[min(96vw,96rem)] sm:max-w-none sm:rounded-2xl sm:border">
                 <div className="flex h-full min-h-0 flex-col">
                   <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
@@ -4521,6 +4524,7 @@ export default function AdminPortal({ section }: { section: string }) {
     createNotification,
     selectedBudgetRequestId,
     selectedLiquidationReportId,
+    liquidationDetailsOpen,
     selectedBudgetAllocation,
     createNewsRelease,
     createTemplate,
