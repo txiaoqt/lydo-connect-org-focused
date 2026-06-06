@@ -3887,14 +3887,38 @@ export default function AdminPortal({ section }: { section: string }) {
                   </SelectContent>
                 </Select>
               </div>
-              <PortalMetricCard title="Barangays with Allocation" value={budgetAllocationSummary.barangayCount.toLocaleString()} />
-              <PortalMetricCard title="Released Allocation" value={`PHP ${budgetAllocationSummary.totalReleased.toLocaleString()}`} />
+              <PortalMetricCard
+                label="Barangays with Allocation"
+                value={budgetAllocationSummary.barangayCount.toLocaleString()}
+                helper="Unique barangays that currently have released budgets in view."
+              />
+              <PortalMetricCard
+                label="Released Allocation"
+                value={`PHP ${budgetAllocationSummary.totalReleased.toLocaleString()}`}
+                helper="Total released cash for the selected district or barangay."
+              />
+            </div>
+
+            <div className="rounded-2xl border border-border/70 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
+              These summary cards show the filtered barangay allocation totals based on the district and barangay selection above.
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <PortalMetricCard title="Approved Allocation" value={`PHP ${budgetAllocationSummary.totalApproved.toLocaleString()}`} />
-              <PortalMetricCard title="Remaining Allocation" value={`PHP ${budgetAllocationSummary.totalRemaining.toLocaleString()}`} />
-              <PortalMetricCard title="Utilization Rate" value={`${budgetAllocationSummary.utilizationRate}%`} />
+              <PortalMetricCard
+                label="Approved Allocation"
+                value={`PHP ${budgetAllocationSummary.totalApproved.toLocaleString()}`}
+                helper="Approved budget amount before release."
+              />
+              <PortalMetricCard
+                label="Remaining Allocation"
+                value={`PHP ${budgetAllocationSummary.totalRemaining.toLocaleString()}`}
+                helper="Amount not yet released from the approved budget."
+              />
+              <PortalMetricCard
+                label="Utilization Rate"
+                value={`${budgetAllocationSummary.utilizationRate}%`}
+                helper="Released amount compared with approved amount."
+              />
             </div>
 
             <div className="mt-4 grid gap-4">
