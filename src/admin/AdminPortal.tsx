@@ -242,6 +242,31 @@ type BarangayAllocationEntry = {
   utilizationRate: number;
 };
 
+type BarangayAllocationOrganizationDetail = {
+  organizationId: string;
+  organizationName: string;
+  district: string;
+  barangay: string;
+  budgetRequestCount: number;
+  releasedBudgetCount: number;
+  approvedAmount: number;
+  releasedAmount: number;
+  remainingAmount: number;
+  utilizationRate: number;
+  requests: Array<{
+    id: string;
+    activityTitle: string;
+    status: BudgetRequest["status"];
+    approvedAmount: number;
+    releasedAmount: number;
+    remainingAmount: number;
+    activityDate: string;
+    releaseDate: string;
+    goSignalAt: string;
+    hardCopySubmittedAt: string;
+  }>;
+};
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -293,6 +318,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [budgetPreviewEmptyMessage, setBudgetPreviewEmptyMessage] = useState("");
   const [budgetPreviewCanInline, setBudgetPreviewCanInline] = useState(false);
   const [budgetPreviewLoading, setBudgetPreviewLoading] = useState(false);
+  const [selectedBudgetAllocation, setSelectedBudgetAllocation] = useState<BarangayAllocationEntry | null>(null);
   const [selectedLiquidationReportId, setSelectedLiquidationReportId] = useState<string | null>(null);
   const [selectedLiquidationFileId, setSelectedLiquidationFileId] = useState<string | null>(null);
   const [liquidationPreviewUrl, setLiquidationPreviewUrl] = useState("");
@@ -578,6 +604,63 @@ export default function AdminPortal({ section }: { section: string }) {
       }),
     [budgetAllocationBarangayFilter, budgetAllocationDistrictFilter, budgetAllocationRows],
   );
+  const selectedBudgetAllocationOrganizationDetails = useMemo<BarangayAllocationOrganizationDetail[]>(() => {
+    if (!selectedBudgetAllocation) return [];
+
+    const grouped = new Map<string, BarangayAllocationOrganizationDetail>();
+
+    state.budgetRequests
+      .filter((request) => budgetReleaseStatuses.has(request.status))
+      .forEach((request) => {
+        const organization = organizationProfileById.get(request.organizationId);
+        const district = organization?.district?.trim() || "Unassigned District";
+        const barangay = organization?.barangay?.trim() || "Unassigned Barangay";
+
+        if (district !== selectedBudgetAllocation.district || barangay !== selectedBudgetAllocation.barangay) return;
+
+        const current =
+          grouped.get(request.organizationId) ??
+          ({
+            organizationId: request.organizationId,
+            organizationName: organization?.organizationName || "Unknown organization",
+            district,
+            barangay,
+            budgetRequestCount: 0,
+            releasedBudgetCount: 0,
+            approvedAmount: 0,
+            releasedAmount: 0,
+            remainingAmount: 0,
+            utilizationRate: 0,
+            requests: [],
+          } satisfies BarangayAllocationOrganizationDetail);
+
+        const remainingAmount = Math.max(request.approvedAmount - request.releasedAmount, 0);
+        current.budgetRequestCount += 1;
+        current.releasedBudgetCount += 1;
+        current.approvedAmount += request.approvedAmount;
+        current.releasedAmount += request.releasedAmount;
+        current.remainingAmount += remainingAmount;
+        current.utilizationRate = current.approvedAmount > 0 ? Math.round((current.releasedAmount / current.approvedAmount) * 100) : 0;
+        current.requests.push({
+          id: request.id,
+          activityTitle: request.activityTitle,
+          status: request.status,
+          approvedAmount: request.approvedAmount,
+          releasedAmount: request.releasedAmount,
+          remainingAmount,
+          activityDate: request.activityDate,
+          releaseDate: request.releaseDate,
+          goSignalAt: request.goSignalAt,
+          hardCopySubmittedAt: request.hardCopySubmittedAt,
+        });
+        grouped.set(request.organizationId, current);
+      });
+
+    return [...grouped.values()].sort((left, right) => {
+      if (right.releasedAmount !== left.releasedAmount) return right.releasedAmount - left.releasedAmount;
+      return left.organizationName.localeCompare(right.organizationName);
+    });
+  }, [organizationProfileById, selectedBudgetAllocation, state.budgetRequests]);
   const budgetAllocationSummary = useMemo(() => {
     const totalApproved = filteredBudgetAllocationRows.reduce((sum, row) => sum + row.approvedAmount, 0);
     const totalReleased = filteredBudgetAllocationRows.reduce((sum, row) => sum + row.releasedAmount, 0);
@@ -3190,7 +3273,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     {selectedLiquidationReport ? (
                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
                         <div className="space-y-3">
-                          <div className="hidden rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
+                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
                             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                               {renderRegistrationDetailCard({
@@ -3423,6 +3506,131 @@ export default function AdminPortal({ section }: { section: string }) {
                   <div className="border-t border-border/70 px-4 py-3 sm:px-6 sm:py-4">
                     <DialogFooter>
                       <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeLiquidationDetails}>
+                        Close
+                      </Button>
+                    </DialogFooter>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog
+              open={selectedBudgetAllocation !== null}
+              onOpenChange={(open) => {
+                if (!open) setSelectedBudgetAllocation(null);
+              }}
+            >
+              <DialogContent className="h-[100dvh] w-[calc(100vw-1rem)] max-w-none overflow-hidden rounded-none border-0 p-0 sm:h-[92dvh] sm:w-[min(96vw,96rem)] sm:max-w-none sm:rounded-2xl sm:border">
+                <div className="flex h-full min-h-0 flex-col">
+                  <div className="border-b border-border/70 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
+                    <DialogHeader className="text-left sm:text-left">
+                      <DialogTitle className="text-xl leading-tight sm:text-2xl">
+                        {selectedBudgetAllocation?.barangay ?? "Barangay Allocation Details"}
+                      </DialogTitle>
+                      <DialogDescription className="max-w-2xl text-sm sm:text-base">
+                        Allocation breakdown for {selectedBudgetAllocation?.district ?? "the selected district"}.
+                      </DialogDescription>
+                    </DialogHeader>
+                    {selectedBudgetAllocation ? (
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <PortalMetricCard
+                          label="Organizations"
+                          value={selectedBudgetAllocation.organizationCount.toLocaleString()}
+                          helper="Organizations with released budgets in this barangay."
+                        />
+                        <PortalMetricCard
+                          label="Approved Allocation"
+                          value={`PHP ${selectedBudgetAllocation.approvedAmount.toLocaleString()}`}
+                          helper="Total approved amount across all released requests."
+                        />
+                        <PortalMetricCard
+                          label="Released Allocation"
+                          value={`PHP ${selectedBudgetAllocation.releasedAmount.toLocaleString()}`}
+                          helper="Cash already released to organizations."
+                        />
+                        <PortalMetricCard
+                          label="Utilization Rate"
+                          value={`${selectedBudgetAllocation.utilizationRate}%`}
+                          helper="Released versus approved amount."
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+                    {selectedBudgetAllocationOrganizationDetails.length ? (
+                      <div className="space-y-4">
+                        {selectedBudgetAllocationOrganizationDetails.map((detail) => (
+                          <Card key={detail.organizationId} className="border-border/70">
+                            <CardContent className="space-y-4 p-4 sm:p-5">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">{detail.district}</p>
+                                  <h3 className="mt-1 text-lg font-semibold text-foreground">{detail.organizationName}</h3>
+                                  <p className="text-sm text-muted-foreground">{detail.barangay}</p>
+                                </div>
+                                <div className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-primary">
+                                  {detail.releasedBudgetCount} released budget{detail.releasedBudgetCount === 1 ? "" : "s"}
+                                </div>
+                              </div>
+
+                              <div className="grid gap-3 md:grid-cols-4">
+                                <div className="rounded-xl border border-border/70 bg-muted/10 p-3">
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Approved</p>
+                                  <p className="mt-1 font-semibold text-foreground">PHP {detail.approvedAmount.toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-xl border border-border/70 bg-muted/10 p-3">
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Released</p>
+                                  <p className="mt-1 font-semibold text-foreground">PHP {detail.releasedAmount.toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-xl border border-border/70 bg-muted/10 p-3">
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Remaining</p>
+                                  <p className="mt-1 font-semibold text-foreground">PHP {detail.remainingAmount.toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-xl border border-border/70 bg-muted/10 p-3">
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Utilization</p>
+                                  <p className="mt-1 font-semibold text-foreground">{detail.utilizationRate}%</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-3">
+                                <p className="text-sm font-medium text-foreground">Released Requests</p>
+                                <div className="space-y-3">
+                                  {detail.requests.map((request) => (
+                                    <div key={request.id} className="rounded-2xl border border-border/70 bg-background p-4">
+                                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                          <p className="text-sm font-semibold text-foreground">{request.activityTitle}</p>
+                                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">
+                                            {request.activityDate || "No activity date"} · Released {request.releaseDate || "Pending"}
+                                          </p>
+                                        </div>
+                                        <PortalStatusBadge status={request.status} />
+                                      </div>
+                                      <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-4">
+                                        <p>Approved: PHP {request.approvedAmount.toLocaleString()}</p>
+                                        <p>Released: PHP {request.releasedAmount.toLocaleString()}</p>
+                                        <p>Remaining: PHP {request.remainingAmount.toLocaleString()}</p>
+                                        <p>Go signal: {request.goSignalAt || "Pending"}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <PortalEmptyState
+                        title="No released organization details"
+                        description="This barangay currently has no released budget requests to display."
+                      />
+                    )}
+                  </div>
+
+                  <div className="border-t border-border/70 px-4 py-3 sm:px-6 sm:py-4">
+                    <DialogFooter>
+                      <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setSelectedBudgetAllocation(null)}>
                         Close
                       </Button>
                     </DialogFooter>
@@ -3703,10 +3911,26 @@ export default function AdminPortal({ section }: { section: string }) {
               </Card>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <PortalMetricCard title="Released Budgets" value={budgetMonitoringEntries.length.toLocaleString()} />
-                <PortalMetricCard title="Released Amount" value={`PHP ${budgetMonitoringAnalysis.totalReleased.toLocaleString()}`} />
-                <PortalMetricCard title="Remaining Amount" value={`PHP ${budgetMonitoringAnalysis.totalRemaining.toLocaleString()}`} />
-                <PortalMetricCard title="Utilization Rate" value={`${budgetMonitoringAnalysis.utilizationRate}%`} />
+                <PortalMetricCard
+                  label="Released Budgets"
+                  value={budgetMonitoringEntries.length.toLocaleString()}
+                  helper="Budget requests that have already been released."
+                />
+                <PortalMetricCard
+                  label="Released Amount"
+                  value={`PHP ${budgetMonitoringAnalysis.totalReleased.toLocaleString()}`}
+                  helper="Total amount already released to organizations."
+                />
+                <PortalMetricCard
+                  label="Remaining Amount"
+                  value={`PHP ${budgetMonitoringAnalysis.totalRemaining.toLocaleString()}`}
+                  helper="Approved amount still not released."
+                />
+                <PortalMetricCard
+                  label="Utilization Rate"
+                  value={`${budgetMonitoringAnalysis.utilizationRate}%`}
+                  helper="Released amount as a share of approved funds."
+                />
               </div>
 
               <Card className="border-border/70">
@@ -3921,49 +4145,65 @@ export default function AdminPortal({ section }: { section: string }) {
               />
             </div>
 
-            <div className="mt-4 grid gap-4">
+            <div className="mt-4">
               {filteredBudgetAllocationRows.length ? (
-                filteredBudgetAllocationRows.map((entry) => (
-                  <Card key={`${entry.district}-${entry.barangay}`} className="border-border/70">
-                    <CardContent className="grid gap-4 p-4 md:grid-cols-[1.3fr_0.9fr]">
-                      <div className="space-y-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">{entry.district}</p>
-                            <h3 className="mt-1 text-lg font-semibold text-foreground">{entry.barangay}</h3>
+                <div className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+                  <div className="hidden border-b border-border/70 bg-muted/20 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/75 lg:grid lg:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr_0.8fr_0.45fr] lg:gap-4">
+                    <span>District / Barangay</span>
+                    <span>Organizations</span>
+                    <span>Approved</span>
+                    <span>Released</span>
+                    <span>Remaining</span>
+                    <span>Utilization</span>
+                  </div>
+                  <div className="divide-y divide-border/70">
+                    {filteredBudgetAllocationRows.map((entry) => (
+                      <button
+                        key={`${entry.district}-${entry.barangay}`}
+                        type="button"
+                        onClick={() => setSelectedBudgetAllocation(entry)}
+                        className="grid w-full gap-4 px-4 py-4 text-left transition hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none lg:grid-cols-[1.4fr_0.9fr_0.9fr_0.9fr_0.8fr_0.45fr] lg:items-center"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">{entry.district}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-semibold text-foreground">{entry.barangay}</h3>
+                            <span className="rounded-full border border-primary/15 bg-primary/8 px-2.5 py-1 text-xs font-medium text-primary">
+                              {entry.organizationCount} organization{entry.organizationCount === 1 ? "" : "s"}
+                            </span>
                           </div>
-                          <div className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-primary">
-                            {entry.organizationCount} organization{entry.organizationCount === 1 ? "" : "s"}
-                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {entry.releasedBudgetCount} released budget{entry.releasedBudgetCount === 1 ? "" : "s"} under monitoring
+                          </p>
                         </div>
-                        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
-                          <p>Released Budget: PHP {entry.releasedAmount.toLocaleString()}</p>
-                          <p>Approved Budget: PHP {entry.approvedAmount.toLocaleString()}</p>
-                          <p>Remaining Budget: PHP {entry.remainingAmount.toLocaleString()}</p>
-                          <p>Utilization: {entry.utilizationRate}%</p>
+                        <div className="space-y-1 lg:text-right">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75 lg:hidden">Approved</p>
+                          <p className="text-sm font-medium text-foreground">PHP {entry.approvedAmount.toLocaleString()}</p>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Released allocation progress</span>
-                            <span>{entry.utilizationRate}%</span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="space-y-1 lg:text-right">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75 lg:hidden">Released</p>
+                          <p className="text-sm font-medium text-foreground">PHP {entry.releasedAmount.toLocaleString()}</p>
+                        </div>
+                        <div className="space-y-1 lg:text-right">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75 lg:hidden">Remaining</p>
+                          <p className="text-sm font-medium text-foreground">PHP {entry.remainingAmount.toLocaleString()}</p>
+                        </div>
+                        <div className="space-y-1 lg:text-right">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75 lg:hidden">Utilization</p>
+                          <p className="text-sm font-semibold text-foreground">{entry.utilizationRate}%</p>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted lg:ml-auto lg:w-32">
                             <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(entry.utilizationRate, 100)}%` }} />
                           </div>
                         </div>
-                      </div>
-                      <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/10 p-4">
-                        <p className="text-sm font-medium text-foreground">Allocation Summary</p>
-                        <p className="text-sm text-muted-foreground">
-                          Released budgets from organizations registered in this barangay are accumulated here for quick district-level monitoring.
-                        </p>
-                        <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/admin/budget-utilization")}>
-                          Open Budget Review
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3 text-sm text-muted-foreground lg:justify-end lg:border-t-0 lg:pt-0">
+                          <span className="lg:hidden">Tap to view allocation details</span>
+                          <span className="hidden lg:inline">View details</span>
+                          <ChevronDown className="h-4 w-4 shrink-0 text-primary lg:rotate-[-90deg]" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <PortalEmptyState
                   title="No barangay allocations found"

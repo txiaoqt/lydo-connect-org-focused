@@ -49,6 +49,7 @@ import {
   majorClassificationOptions,
   type LiquidationReport,
   type LiquidationReportFile,
+  type LiquidationStatus,
   type SubmissionFile,
   statusLabelMap,
   formatSubClassificationLabel,
@@ -223,6 +224,12 @@ export default function UserPortal({ section }: { section: string }) {
   const [ocrPreviewOpen, setOcrPreviewOpen] = useState(false);
   const [documentReviewNote, setDocumentReviewNote] = useState<{ title: string; note: string; status: "needs_revision" | "rejected_red" } | null>(null);
   const [budgetReviewNote, setBudgetReviewNote] = useState<{ title: string; note: string; status: BudgetRequestStatus } | null>(null);
+  const [liquidationReviewNote, setLiquidationReviewNote] = useState<{
+    title: string;
+    note: string;
+    status: LiquidationStatus;
+  } | null>(null);
+  const [budgetRequestLockedModalOpen, setBudgetRequestLockedModalOpen] = useState(false);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
   const [profileRequiredModalOpen, setProfileRequiredModalOpen] = useState(false);
@@ -275,6 +282,11 @@ export default function UserPortal({ section }: { section: string }) {
       setBudgetFormMobileOpen(false);
     }
   }, [section]);
+
+  useEffect(() => {
+    const isBudgetRequestLocked = section === "budget-request" && currentProfile?.profileStatus !== "verified";
+    setBudgetRequestLockedModalOpen(isBudgetRequestLocked);
+  }, [currentProfile?.profileStatus, section]);
 
   const handleBudgetFileDraftChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -406,6 +418,7 @@ export default function UserPortal({ section }: { section: string }) {
     [currentProfile?.id, state.budgetRequests],
   );
   const latestBudget = budgetRequests[0] ?? null;
+  const isBudgetRequestLocked = section === "budget-request" && currentProfile?.profileStatus !== "verified";
   const liquidationReports = useMemo(
     () =>
       state.liquidationReports
@@ -1761,6 +1774,40 @@ export default function UserPortal({ section }: { section: string }) {
           </div>
         );
       case "budget-request":
+        if (isBudgetRequestLocked) {
+          return (
+            <div className="space-y-6">
+              <PortalSection
+                title="Budget Request"
+                description="This section becomes available after your organization registration is approved."
+              >
+                <Card className="border-border/70">
+                  <CardContent className="flex flex-col items-start gap-4 p-6 sm:p-8">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-amber-500/10 p-2 text-amber-600">
+                        <AlertTriangle className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-semibold">Waiting for Admin Approval</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Your budget request page is locked until the admin verifies your organization registration.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                      Please wait for the admin to approve your registration before creating or submitting any budget requests.
+                      Once your profile is verified, this page will become available automatically.
+                    </div>
+                    <Button type="button" onClick={() => navigate(userRouteMap["document-submission"])}>
+                      <ArrowRight className="mr-2 h-4 w-4" />
+                      Return to Document Submission
+                    </Button>
+                  </CardContent>
+                </Card>
+              </PortalSection>
+            </div>
+          );
+        }
         return (
           <div className="space-y-6">
             <PortalSection
@@ -2040,6 +2087,8 @@ export default function UserPortal({ section }: { section: string }) {
                 {liquidationReports.map((report) => {
                   const relatedBudget = budgetRequests.find((request) => request.id === report.budgetRequestId) ?? null;
                   const attachedFiles = liquidationFilesByReportId.get(report.id) ?? [];
+                  const hasLiquidationReviewNote =
+                    (report.status === "needs_revision" || report.status === "rejected_red") && report.remarks.trim().length > 0;
                   return (
                     <Card key={report.id} className="border-border/70">
                       <CardHeader>
@@ -2050,7 +2099,27 @@ export default function UserPortal({ section }: { section: string }) {
                               {relatedBudget?.purposeCategory || "No category"} | {relatedBudget ? formatCurrency(relatedBudget.approvedAmount || relatedBudget.requestedAmount || 0) : "PHP 0"}
                             </p>
                           </div>
-                          <PortalStatusBadge status={report.status} />
+                          <div className="flex items-center gap-2">
+                            {hasLiquidationReviewNote ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 px-2 text-xs text-primary hover:text-primary"
+                                onClick={() =>
+                                  setLiquidationReviewNote({
+                                    title: relatedBudget?.activityTitle || "Liquidation Comment",
+                                    note: report.remarks.trim(),
+                                    status: report.status,
+                                  })
+                                }
+                              >
+                                <MessageCircle className="mr-1.5 h-4 w-4" />
+                                Comment
+                              </Button>
+                            ) : null}
+                            <PortalStatusBadge status={report.status} />
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4 text-sm">
@@ -3218,6 +3287,66 @@ export default function UserPortal({ section }: { section: string }) {
           <DialogFooter>
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setBudgetReviewNote(null)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(liquidationReviewNote)}
+        onOpenChange={(open) => {
+          if (!open) setLiquidationReviewNote(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{liquidationReviewNote?.title || "Liquidation Comment"}</DialogTitle>
+            <DialogDescription>
+              {liquidationReviewNote?.status === "needs_revision"
+                ? "The admin requested changes for this liquidation report."
+                : liquidationReviewNote?.status === "rejected_red"
+                  ? "The admin rejected this liquidation report."
+                  : "Admin remarks for this liquidation report."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-foreground">
+            {liquidationReviewNote?.note || "No comment was provided."}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setLiquidationReviewNote(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={budgetRequestLockedModalOpen}
+        onOpenChange={(open) => {
+          setBudgetRequestLockedModalOpen(open);
+          if (!open && isBudgetRequestLocked) {
+            navigate(userRouteMap["document-submission"]);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Waiting for Admin Approval</DialogTitle>
+            <DialogDescription>
+              Your organization needs to be approved before the budget request page can be used.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            Please wait for the admin to approve your registration. Once approved, you can return here to create and submit
+            budget requests.
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              onClick={() => {
+                setBudgetRequestLockedModalOpen(false);
+                navigate(userRouteMap["document-submission"]);
+              }}
+            >
+              Return to Document Submission
             </Button>
           </DialogFooter>
         </DialogContent>
