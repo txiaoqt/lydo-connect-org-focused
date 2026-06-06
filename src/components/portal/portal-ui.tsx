@@ -13,12 +13,35 @@ export const PortalMetricCard = ({
   label,
   value,
   helper,
+  onClick,
+  className,
 }: {
   label: string;
   value: string | number;
   helper?: string;
+  onClick?: () => void;
+  className?: string;
 }) => (
-  <Card className="border-border/70 bg-card/90">
+  <Card
+    className={cn(
+      "border-border/70 bg-card/90",
+      onClick ? "cursor-pointer transition-transform transition-colors hover:-translate-y-0.5 hover:bg-muted/30" : "",
+      className,
+    )}
+    onClick={onClick}
+    role={onClick ? "button" : undefined}
+    tabIndex={onClick ? 0 : undefined}
+    onKeyDown={
+      onClick
+        ? (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onClick();
+            }
+          }
+        : undefined
+    }
+  >
     <CardContent className="p-3 sm:p-4">
       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">{label}</p>
       <div className="mt-2 text-xl font-semibold sm:text-2xl">{value}</div>

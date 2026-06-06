@@ -568,6 +568,16 @@ const fetchTransparencyPosts = async () => {
   return (data as TransparencyPostRow[] | null) ?? [];
 };
 
+const fetchNotifications = async () => {
+  const { data, error } = await supabase!
+    .from("notifications")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as NotificationRow[] | null) ?? [];
+};
+
 export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedState> | null> => {
   if (!supabase) return null;
 
@@ -588,9 +598,10 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
   const mappedTemplates = ((templateRows as RequiredDocumentTypeRow[] | null) ?? [])
     .map(mapTemplate)
     .filter((template): template is TemplateRecord => Boolean(template) && !legacyRemovedTemplateNames.has(template.name));
-  const [newsReleaseRows, transparencyPostRows] = await Promise.all([
+  const [newsReleaseRows, transparencyPostRows, notificationRows] = await Promise.all([
     fetchNewsReleases(),
     fetchTransparencyPosts(),
+    fetchNotifications(),
   ]);
 
   const organizationProfile = await fetchOrganizationProfile(session.user.id);
@@ -598,6 +609,7 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
     templates: mappedTemplates,
     newsReleases: newsReleaseRows.map(mapNewsRelease),
     transparencyPosts: transparencyPostRows.map(mapTransparencyPost),
+    notifications: notificationRows.map(mapNotification),
   };
 
   if (!organizationProfile) {

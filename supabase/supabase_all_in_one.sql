@@ -1822,7 +1822,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if new.status in ('approved_for_ftf_green', 'budget_released', 'completed') then
+  if new.status in ('budget_released', 'completed') then
     insert into public.liquidation_reports (
       budget_request_id,
       organization_id,

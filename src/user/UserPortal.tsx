@@ -117,6 +117,7 @@ const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
   "budget_released",
   "completed",
 ]);
+const liquidationUnlockedBudgetStatuses = new Set<BudgetRequest["status"]>(["budget_released", "completed"]);
 const ADMIN_RECIPIENT_ID = "admin-demo";
 const createNotificationId = () => `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createOcrEntityId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -412,7 +413,7 @@ export default function UserPortal({ section }: { section: string }) {
             report.organizationId === currentProfile?.id &&
             budgetRequests.some(
               (request) =>
-                request.id === report.budgetRequestId && approvedBudgetStatuses.has(request.status),
+                request.id === report.budgetRequestId && liquidationUnlockedBudgetStatuses.has(request.status),
             ),
         )
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
@@ -1298,11 +1299,15 @@ export default function UserPortal({ section }: { section: string }) {
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                       <p>{submission?.status === "under_admin_review" ? "Wait for admin review remarks." : "Complete the remaining required documents."}</p>
                     <p>
-                      {latestBudget?.status === "approved_for_ftf_green"
-                        ? "Prepare hard copies for face-to-face submission."
-                        : latestBudget
-                          ? "Budget request is ready for administrative review."
-                          : "Create your first budget request to start the review flow."}
+                      {latestBudget?.status === "budget_released"
+                        ? "Your budget has been released. You can now submit liquidation."
+                        : latestBudget?.status === "hard_copy_submitted"
+                          ? "Hard copy received. Wait for cash release before liquidation unlocks."
+                          : latestBudget?.status === "approved_for_ftf_green"
+                            ? "Prepare hard copies for face-to-face submission."
+                            : latestBudget
+                              ? "Budget request is ready for administrative review."
+                              : "Create your first budget request to start the review flow."}
                     </p>
                   </CardContent>
                 </Card>
@@ -1994,7 +1999,7 @@ export default function UserPortal({ section }: { section: string }) {
                   ) : (
                     <PortalEmptyState
                       title="No budget requests yet"
-                      description="Create the first request using the form on the left. Once approved, the liquidation page will unlock automatically."
+                      description="Create the first request using the form on the left. Once cash is released, the liquidation page will unlock automatically."
                     />
                   )}
                 </div>
@@ -2006,7 +2011,7 @@ export default function UserPortal({ section }: { section: string }) {
         return (
           <PortalSection
             title="Liquidation and Reporting"
-            description="Post-activity documents appear only after an approved budget request exists."
+            description="Post-activity documents appear only after cash has been released for the linked budget."
             action={<PortalStatusBadge status={latestLiquidation?.status ?? "pending_activity_completion"} />}
           >
             {liquidationReports.length ? (

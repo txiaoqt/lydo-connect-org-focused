@@ -60,6 +60,7 @@ const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
   "budget_released",
   "completed",
 ]);
+const liquidationUnlockedBudgetStatuses = new Set<BudgetRequest["status"]>(["budget_released", "completed"]);
 
 type LydoConnectContextValue = {
   state: LydoConnectState;
@@ -164,7 +165,7 @@ const syncLiquidationReportForBudget = (
   budget: BudgetRequest,
   nowIso: string,
 ) => {
-  if (!approvedBudgetStatuses.has(budget.status)) return liquidations;
+  if (!liquidationUnlockedBudgetStatuses.has(budget.status)) return liquidations;
 
   const existing = liquidations.find((report) => report.budgetRequestId === budget.id) ?? null;
   const goSignalAt = budget.goSignalAt || existing?.goSignalAt || nowIso;
@@ -347,7 +348,7 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
               updatedAt: request.id === id ? nowIso : request.updatedAt,
             })),
             liquidationReports:
-              updatedBudget && approvedBudgetStatuses.has(updatedBudget.status)
+              updatedBudget && liquidationUnlockedBudgetStatuses.has(updatedBudget.status)
                 ? syncLiquidationReportForBudget(current.liquidationReports, { ...updatedBudget, updatedAt: nowIso }, nowIso)
                 : current.liquidationReports,
           };

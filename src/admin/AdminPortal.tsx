@@ -29,6 +29,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { adminNavigationGroups as baseAdminNavigationGroups, type NewsRelease, type TransparencyPost } from "@/lib/lydo-connect-data";
+import { statusLabelMap } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
   createAdminActivityLogInSupabase,
@@ -137,6 +138,8 @@ const renderRegistrationDetailCard = (params: {
   </div>
 );
 
+const budgetReleaseStatuses = new Set<BudgetRequest["status"]>(["budget_released", "completed"]);
+
 type PendingAdminConfirmation =
   | {
       kind: "document";
@@ -154,6 +157,36 @@ type PendingAdminConfirmation =
       organizationId: string;
       organizationName: string;
       userId: string;
+    }
+  | {
+      kind: "budget";
+      action: "approve" | "submitted_hardcopy" | "cash_released" | "needs_revision" | "reject";
+      budgetRequestId: string;
+      organizationId: string;
+      organizationName: string;
+      activityTitle: string;
+      requestedAmount: number;
+    }
+  | {
+      kind: "liquidation";
+      action: "approve" | "needs_revision" | "overdue";
+      liquidationReportId: string;
+      budgetRequestId: string;
+      organizationId: string;
+      organizationName: string;
+      activityTitle: string;
+    }
+  | {
+      kind: "news_release";
+      action: "publish" | "hide";
+      id: string;
+      title: string;
+    }
+  | {
+      kind: "transparency_post";
+      action: "publish" | "hide";
+      id: string;
+      title: string;
     };
 
 type PendingDeleteConfirmation =
@@ -234,6 +267,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [pendingAdminConfirmation, setPendingAdminConfirmation] = useState<PendingAdminConfirmation | null>(null);
   const [pendingDeleteConfirmation, setPendingDeleteConfirmation] = useState<PendingDeleteConfirmation | null>(null);
   const [approvalAcknowledged, setApprovalAcknowledged] = useState(false);
+  const [statusChangeRemarkDraft, setStatusChangeRemarkDraft] = useState("");
   const [processingAdminConfirmation, setProcessingAdminConfirmation] = useState(false);
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
   const [expandedUserIds, setExpandedUserIds] = useState<string[]>([]);
@@ -331,12 +365,23 @@ export default function AdminPortal({ section }: { section: string }) {
     () => state.organizationProfiles.find((org) => org.id === selectedLiquidationReport?.organizationId) ?? null,
     [selectedLiquidationReport?.organizationId, state.organizationProfiles],
   );
+  const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.replaceAll("_", " ");
+  const getManilaDateIso = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+  const visibleLiquidationReports = useMemo(
+    () =>
+      state.liquidationReports
+        .filter((report) => {
+          const linkedBudget = state.budgetRequests.find((request) => request.id === report.budgetRequestId) ?? null;
+          return Boolean(linkedBudget && budgetReleaseStatuses.has(linkedBudget.status));
+        })
+        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()),
+    [budgetReleaseStatuses, state.budgetRequests, state.liquidationReports],
+  );
   const budgetMonitoringEntries = useMemo<BudgetMonitoringEntry[]>(() => {
     const now = new Date();
-    const approvedStatuses = new Set(["approved_for_ftf_green", "budget_released", "completed"]);
 
     return state.budgetRequests
-      .filter((request) => approvedStatuses.has(request.status))
+      .filter((request) => budgetReleaseStatuses.has(request.status))
       .map((request) => {
         const liquidation = state.liquidationReports.find((item) => item.budgetRequestId === request.id) ?? null;
         const approvedAmount = Number(request.approvedAmount || request.requestedAmount || 0);
@@ -423,7 +468,7 @@ export default function AdminPortal({ section }: { section: string }) {
     const pendingLiquidationCount = budgetMonitoringEntries.filter((entry) => !entry.liquidationReportId).length;
 
     const insights = [
-      `${budgetMonitoringEntries.length} approved budget${budgetMonitoringEntries.length === 1 ? "" : "s"} are now under automatic monitoring.`,
+      `${budgetMonitoringEntries.length} cash-released budget${budgetMonitoringEntries.length === 1 ? "" : "s"} are now under automatic monitoring.`,
       `${pendingLiquidationCount} budget${pendingLiquidationCount === 1 ? "" : "s"} still need an attached liquidation record.`,
       `${overdueCount} budget${overdueCount === 1 ? "" : "s"} are flagged overdue or past deadline.`,
       `${utilizationRate}% of approved funds have been released so far.`,
@@ -746,12 +791,14 @@ export default function AdminPortal({ section }: { section: string }) {
   const openAdminConfirmation = (params: PendingAdminConfirmation) => {
     setPendingAdminConfirmation(params);
     setApprovalAcknowledged(false);
+    setStatusChangeRemarkDraft("currentAdminRemarks" in params ? params.currentAdminRemarks ?? "" : "");
   };
 
   const closeAdminConfirmation = () => {
     if (processingAdminConfirmation) return;
     setPendingAdminConfirmation(null);
     setApprovalAcknowledged(false);
+    setStatusChangeRemarkDraft("");
   };
 
   const toggleRegistrationCard = (organizationId: string) => {
@@ -798,6 +845,9 @@ export default function AdminPortal({ section }: { section: string }) {
         description: "",
         checkboxLabel: "",
         confirmLabel: "",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
       };
     }
 
@@ -808,6 +858,9 @@ export default function AdminPortal({ section }: { section: string }) {
           description: `Click the checkbox to acknowledge this approval before marking ${pendingAdminConfirmation.fileName} as approved.`,
           checkboxLabel: "I acknowledge this approval action.",
           confirmLabel: "Approve Submission",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
         };
       }
       if (pendingAdminConfirmation.action === "needs_revision") {
@@ -816,6 +869,9 @@ export default function AdminPortal({ section }: { section: string }) {
           description: `Click the checkbox to acknowledge this revision request before returning ${pendingAdminConfirmation.fileName} to the organization user.`,
           checkboxLabel: "I acknowledge this revision request.",
           confirmLabel: "Request Revision",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
         };
       }
       return {
@@ -823,6 +879,9 @@ export default function AdminPortal({ section }: { section: string }) {
         description: `Click the checkbox to acknowledge this rejection before marking ${pendingAdminConfirmation.fileName} as rejected.`,
         checkboxLabel: "I acknowledge this rejection action.",
         confirmLabel: "Reject Submission",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
       };
     }
 
@@ -832,14 +891,169 @@ export default function AdminPortal({ section }: { section: string }) {
         description: `Click the checkbox to acknowledge this approval before verifying ${pendingAdminConfirmation.organizationName}.`,
         checkboxLabel: "I acknowledge this verification action.",
         confirmLabel: "Mark Verified",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
+      };
+    }
+
+    if (pendingAdminConfirmation.kind === "profile") {
+      return {
+        title: "Confirm Needs Update Status",
+        description: `Click the checkbox to acknowledge this update request before marking ${pendingAdminConfirmation.organizationName} as needing changes.`,
+        checkboxLabel: "I acknowledge this needs update action.",
+        confirmLabel: "Mark Needs Update",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
+      };
+    }
+
+    if (pendingAdminConfirmation.kind === "budget") {
+      if (pendingAdminConfirmation.action === "approve") {
+        return {
+          title: "Confirm Budget Approval",
+          description: `Click the checkbox to acknowledge this approval before marking ${pendingAdminConfirmation.activityTitle} as approved for face-to-face submission.`,
+          checkboxLabel: "I acknowledge this budget approval.",
+          confirmLabel: "Approve Budget",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
+        };
+      }
+      if (pendingAdminConfirmation.action === "submitted_hardcopy") {
+        return {
+          title: "Confirm Hardcopy Submission",
+          description: `Click the checkbox to acknowledge that the hard copy for ${pendingAdminConfirmation.activityTitle} has been submitted.`,
+          checkboxLabel: "I acknowledge this hardcopy submission.",
+          confirmLabel: "Mark Submitted Hardcopy",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
+        };
+      }
+      if (pendingAdminConfirmation.action === "cash_released") {
+        return {
+          title: "Confirm Cash Release",
+          description: `Click the checkbox to confirm that cash has been released for ${pendingAdminConfirmation.activityTitle}. This will move the budget to monitoring and unlock liquidation.`,
+          checkboxLabel: "I acknowledge this cash release.",
+          confirmLabel: "Release Cash",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
+        };
+      }
+      if (pendingAdminConfirmation.action === "needs_revision") {
+        return {
+          title: "Confirm Budget Revision",
+          description: `Click the checkbox and add a comment before requesting changes for ${pendingAdminConfirmation.activityTitle}.`,
+          checkboxLabel: "I acknowledge this revision request.",
+          confirmLabel: "Request Revision",
+          showCommentBox: true,
+          commentLabel: "Admin Comment",
+          commentPlaceholder: "Explain what needs to be corrected before approval.",
+        };
+      }
+      return {
+        title: "Confirm Budget Rejection",
+        description: `Click the checkbox and add a comment before rejecting ${pendingAdminConfirmation.activityTitle}.`,
+        checkboxLabel: "I acknowledge this rejection action.",
+        confirmLabel: "Reject Budget",
+        showCommentBox: true,
+        commentLabel: "Admin Comment",
+        commentPlaceholder: "Explain why the budget request was rejected.",
+      };
+    }
+
+    if (pendingAdminConfirmation.action === "overdue") {
+      return {
+        title: "Confirm Liquidation Overdue",
+        description: `Click the checkbox to mark ${pendingAdminConfirmation.activityTitle} as overdue.`,
+        checkboxLabel: "I acknowledge this overdue action.",
+        confirmLabel: "Mark Overdue",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
+      };
+    }
+
+    if (pendingAdminConfirmation.kind === "liquidation") {
+      if (pendingAdminConfirmation.action === "approve") {
+        return {
+          title: "Confirm Liquidation Go Signal",
+          description: `Click the checkbox to approve the liquidation record for ${pendingAdminConfirmation.activityTitle}.`,
+          checkboxLabel: "I acknowledge this liquidation approval.",
+          confirmLabel: "Approve Liquidation",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
+        };
+      }
+      return {
+        title: "Confirm Liquidation Revision",
+        description: `Click the checkbox and add a comment before requesting changes for ${pendingAdminConfirmation.activityTitle}.`,
+        checkboxLabel: "I acknowledge this revision request.",
+        confirmLabel: "Request Revision",
+        showCommentBox: true,
+        commentLabel: "Admin Comment",
+        commentPlaceholder: "Explain what needs to be corrected before liquidation can proceed.",
+      };
+    }
+
+    if (pendingAdminConfirmation.kind === "news_release") {
+      if (pendingAdminConfirmation.action === "publish") {
+        return {
+          title: "Confirm News Publish",
+          description: `Click the checkbox to publish "${pendingAdminConfirmation.title}" to the portal.`,
+          checkboxLabel: "I acknowledge this publish action.",
+          confirmLabel: "Publish News",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
+        };
+      }
+      return {
+        title: "Confirm News Hide",
+        description: `Click the checkbox to hide "${pendingAdminConfirmation.title}" from public view.`,
+        checkboxLabel: "I acknowledge this hide action.",
+        confirmLabel: "Hide News",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
+      };
+    }
+
+    if (pendingAdminConfirmation.kind === "transparency_post") {
+      if (pendingAdminConfirmation.action === "publish") {
+        return {
+          title: "Confirm Transparency Publish",
+          description: `Click the checkbox to publish "${pendingAdminConfirmation.title}" to the portal.`,
+          checkboxLabel: "I acknowledge this publish action.",
+          confirmLabel: "Publish Post",
+          showCommentBox: false,
+          commentLabel: "",
+          commentPlaceholder: "",
+        };
+      }
+      return {
+        title: "Confirm Transparency Hide",
+        description: `Click the checkbox to hide "${pendingAdminConfirmation.title}" from public view.`,
+        checkboxLabel: "I acknowledge this hide action.",
+        confirmLabel: "Hide Post",
+        showCommentBox: false,
+        commentLabel: "",
+        commentPlaceholder: "",
       };
     }
 
     return {
-      title: "Confirm Needs Update Status",
-      description: `Click the checkbox to acknowledge this update request before marking ${pendingAdminConfirmation.organizationName} as needing changes.`,
-      checkboxLabel: "I acknowledge this needs update action.",
-      confirmLabel: "Mark Needs Update",
+      title: "",
+      description: "",
+      checkboxLabel: "",
+      confirmLabel: "",
+      showCommentBox: false,
+      commentLabel: "",
+      commentPlaceholder: "",
     };
   };
 
@@ -912,8 +1126,366 @@ export default function AdminPortal({ section }: { section: string }) {
             description: `${pendingAdminConfirmation.organizationName}'s document submission is now rejected.`,
           });
         }
+      } else if (pendingAdminConfirmation.kind === "budget") {
+        const adminRemarks = statusChangeRemarkDraft.trim();
+        const selectedBudget = state.budgetRequests.find((item) => item.id === pendingAdminConfirmation.budgetRequestId) ?? null;
+        const approvedAmount = Number(selectedBudget?.approvedAmount || pendingAdminConfirmation.requestedAmount || 0);
+
+        if (pendingAdminConfirmation.action === "approve" && selectedBudget?.status !== "draft" && selectedBudget?.status !== "submitted" && selectedBudget?.status !== "under_review") {
+          toast({
+            title: "Action unavailable",
+            description: "This budget request has already moved beyond the approval step.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (
+          pendingAdminConfirmation.action === "submitted_hardcopy" &&
+          selectedBudget?.status !== "approved_for_ftf_green"
+        ) {
+          toast({
+            title: "Action unavailable",
+            description: "Hard copy submission can only be recorded after the budget is approved for FTF submission.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (
+          pendingAdminConfirmation.action === "cash_released" &&
+          selectedBudget?.status !== "hard_copy_submitted"
+        ) {
+          toast({
+            title: "Action unavailable",
+            description: "Cash can only be released after the hard copy has been recorded as submitted.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (
+          pendingAdminConfirmation.action === "needs_revision" &&
+          !adminRemarks
+        ) {
+          toast({
+            title: "Comment required",
+            description: "Please add a short comment before requesting a revision.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (pendingAdminConfirmation.action === "reject" && !adminRemarks) {
+          toast({
+            title: "Comment required",
+            description: "Please add a short comment before rejecting a budget request.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (pendingAdminConfirmation.action === "approve") {
+          await updateBudgetRequestInSupabase(pendingAdminConfirmation.budgetRequestId, {
+            status: "approved_for_ftf_green",
+            approvedAmount,
+            goSignalAt: new Date().toISOString(),
+          });
+        } else if (pendingAdminConfirmation.action === "submitted_hardcopy") {
+          await updateBudgetRequestInSupabase(pendingAdminConfirmation.budgetRequestId, {
+            status: "hard_copy_submitted",
+            hardCopySubmittedAt: new Date().toISOString(),
+          });
+        } else if (pendingAdminConfirmation.action === "cash_released") {
+          await updateBudgetRequestInSupabase(pendingAdminConfirmation.budgetRequestId, {
+            status: "budget_released",
+            releasedAmount: approvedAmount,
+            releaseDate: getManilaDateIso(),
+          });
+        } else if (pendingAdminConfirmation.action === "needs_revision") {
+          await updateBudgetRequestInSupabase(pendingAdminConfirmation.budgetRequestId, {
+            status: "needs_revision",
+            remarks: adminRemarks,
+          });
+        } else {
+          await updateBudgetRequestInSupabase(pendingAdminConfirmation.budgetRequestId, {
+            status: "rejected_red",
+            remarks: adminRemarks,
+          });
+        }
+
+        await refreshAdminState();
+
+        if (pendingAdminConfirmation.action === "approve") {
+          await appendAuditLog(
+            "Approved budget request",
+            "budget_request",
+            pendingAdminConfirmation.budgetRequestId,
+            `Marked budget request "${pendingAdminConfirmation.activityTitle}" as approved for face-to-face submission.`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Budget request approved",
+            message: "The admin approved your budget request and issued the go signal for the next step.",
+            type: "budget_go_signal",
+            relatedType: "budget_request",
+            relatedId: pendingAdminConfirmation.budgetRequestId,
+          });
+          toast({
+            title: "Budget approved",
+            description: `${pendingAdminConfirmation.organizationName}'s budget request is now marked green.`,
+          });
+        } else if (pendingAdminConfirmation.action === "submitted_hardcopy") {
+          await appendAuditLog(
+            "Budget hard copy submitted",
+            "budget_request",
+            pendingAdminConfirmation.budgetRequestId,
+            `Recorded hard copy submission for budget request "${pendingAdminConfirmation.activityTitle}".`,
+            pendingAdminConfirmation.organizationId,
+          );
+          toast({
+            title: "Hard copy recorded",
+            description: `${pendingAdminConfirmation.organizationName}'s hard copy has been marked as submitted.`,
+          });
+        } else if (pendingAdminConfirmation.action === "cash_released") {
+          await appendAuditLog(
+            "Budget cash released",
+            "budget_request",
+            pendingAdminConfirmation.budgetRequestId,
+            `Released cash for budget request "${pendingAdminConfirmation.activityTitle}".`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Budget released",
+            message: "Your budget has been released.",
+            type: "budget_released",
+            relatedType: "budget_request",
+            relatedId: pendingAdminConfirmation.budgetRequestId,
+          });
+          toast({
+            title: "Cash released",
+            description: `${pendingAdminConfirmation.organizationName}'s budget is now in monitoring and liquidation has been unlocked.`,
+          });
+        } else if (pendingAdminConfirmation.action === "needs_revision") {
+          await appendAuditLog(
+            "Budget request needs revision",
+            "budget_request",
+            pendingAdminConfirmation.budgetRequestId,
+            `Requested revisions for budget request "${pendingAdminConfirmation.activityTitle}".`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Budget revision requested",
+            message: adminRemarks,
+            type: "budget_revision",
+            relatedType: "budget_request",
+            relatedId: pendingAdminConfirmation.budgetRequestId,
+          });
+          toast({
+            title: "Revision requested",
+            description: `${pendingAdminConfirmation.organizationName} was asked to revise the budget request.`,
+          });
+        } else {
+          await appendAuditLog(
+            "Rejected budget request",
+            "budget_request",
+            pendingAdminConfirmation.budgetRequestId,
+            `Rejected budget request "${pendingAdminConfirmation.activityTitle}".`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Budget request rejected",
+            message: adminRemarks,
+            type: "budget_rejected",
+            relatedType: "budget_request",
+            relatedId: pendingAdminConfirmation.budgetRequestId,
+          });
+          toast({
+            title: "Budget rejected",
+            description: `${pendingAdminConfirmation.organizationName}'s budget request was rejected.`,
+          });
+        }
+      } else if (pendingAdminConfirmation.kind === "liquidation") {
+        const status =
+          pendingAdminConfirmation.action === "approve"
+            ? "approved_for_ftf_green"
+            : pendingAdminConfirmation.action === "needs_revision"
+              ? "needs_revision"
+              : "overdue";
+        const adminRemarks = statusChangeRemarkDraft.trim();
+
+        if (pendingAdminConfirmation.action !== "approve" && pendingAdminConfirmation.action !== "overdue" && !adminRemarks) {
+          toast({
+            title: "Comment required",
+            description: "Please add a short comment before requesting a revision.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        await updateLiquidationReportInSupabase(pendingAdminConfirmation.liquidationReportId, {
+          status,
+          remarks: pendingAdminConfirmation.action === "approve" ? undefined : adminRemarks,
+          goSignalAt: pendingAdminConfirmation.action === "approve" ? new Date().toISOString() : undefined,
+        });
+        await refreshAdminState();
+
+        if (pendingAdminConfirmation.action === "approve") {
+          await appendAuditLog(
+            "Approved liquidation report",
+            "liquidation_report",
+            pendingAdminConfirmation.liquidationReportId,
+            `Marked liquidation report for "${pendingAdminConfirmation.activityTitle}" as approved for face-to-face submission.`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Liquidation go signal issued",
+            message: "Your liquidation soft copies have been pre-checked. You may now submit the hard copies face-to-face.",
+            type: "liquidation_go_signal",
+            relatedType: "liquidation_report",
+            relatedId: pendingAdminConfirmation.liquidationReportId,
+          });
+          toast({
+            title: "Liquidation approved",
+            description: `${pendingAdminConfirmation.organizationName}'s liquidation report is now approved.`,
+          });
+        } else if (pendingAdminConfirmation.action === "needs_revision") {
+          await appendAuditLog(
+            "Liquidation needs revision",
+            "liquidation_report",
+            pendingAdminConfirmation.liquidationReportId,
+            `Requested revisions for liquidation report "${pendingAdminConfirmation.activityTitle}".`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Liquidation revision requested",
+            message: adminRemarks,
+            type: "liquidation_revision",
+            relatedType: "liquidation_report",
+            relatedId: pendingAdminConfirmation.liquidationReportId,
+          });
+          toast({
+            title: "Revision requested",
+            description: `${pendingAdminConfirmation.organizationName} was asked to revise the liquidation report.`,
+          });
+        } else {
+          await appendAuditLog(
+            "Marked liquidation overdue",
+            "liquidation_report",
+            pendingAdminConfirmation.liquidationReportId,
+            `Marked liquidation report "${pendingAdminConfirmation.activityTitle}" as overdue.`,
+            pendingAdminConfirmation.organizationId,
+          );
+          notifyOrganizationUser({
+            userId: state.organizationProfiles.find((org) => org.id === pendingAdminConfirmation.organizationId)?.userId ?? "",
+            organizationId: pendingAdminConfirmation.organizationId,
+            title: "Liquidation overdue",
+            message: "Your liquidation submission is overdue.",
+            type: "overdue",
+            relatedType: "liquidation_report",
+            relatedId: pendingAdminConfirmation.liquidationReportId,
+          });
+          toast({
+            title: "Liquidation marked overdue",
+            description: `${pendingAdminConfirmation.organizationName}'s liquidation report is now overdue.`,
+          });
+        }
+      } else if (pendingAdminConfirmation.kind === "news_release") {
+        const visibilityStatus = pendingAdminConfirmation.action === "publish" ? "published" : "hidden";
+        const updatedNewsRelease = await updateNewsReleaseInSupabase(pendingAdminConfirmation.id, {
+          visibilityStatus,
+        });
+        updateNewsRelease(pendingAdminConfirmation.id, updatedNewsRelease);
+        await refreshAdminState();
+
+        if (pendingAdminConfirmation.action === "publish") {
+          await appendAuditLog(
+            "Published news release",
+            "news_release",
+            pendingAdminConfirmation.id,
+            `Published news release "${updatedNewsRelease.title}".`,
+          );
+          toast({
+            title: "News release published",
+            description: `${updatedNewsRelease.title} is now visible in the portal.`,
+          });
+        } else {
+          await appendAuditLog(
+            "Hidden news release",
+            "news_release",
+            pendingAdminConfirmation.id,
+            `Hidden news release "${updatedNewsRelease.title}".`,
+          );
+          toast({
+            title: "News release hidden",
+            description: `${updatedNewsRelease.title} is now hidden from public view.`,
+          });
+        }
+      } else if (pendingAdminConfirmation.kind === "transparency_post") {
+        const visibilityStatus = pendingAdminConfirmation.action === "publish" ? "published" : "hidden";
+        const updatedPost = await updateTransparencyPostInSupabase(pendingAdminConfirmation.id, {
+          visibilityStatus,
+        });
+        updateTransparencyPost(pendingAdminConfirmation.id, updatedPost);
+        await refreshAdminState();
+
+        if (pendingAdminConfirmation.action === "publish") {
+          await appendAuditLog(
+            "Published transparency post",
+            "transparency_post",
+            pendingAdminConfirmation.id,
+            `Published transparency post "${updatedPost.title}".`,
+          );
+          toast({
+            title: "Transparency post published",
+            description: `${updatedPost.title} is now visible in the portal.`,
+          });
+        } else {
+          await appendAuditLog(
+            "Hidden transparency post",
+            "transparency_post",
+            pendingAdminConfirmation.id,
+            `Hidden transparency post "${updatedPost.title}".`,
+          );
+          toast({
+            title: "Transparency post hidden",
+            description: `${updatedPost.title} is now hidden from public view.`,
+          });
+        }
       } else {
         if (pendingAdminConfirmation.action === "verify") {
+          const organizationSubmission =
+            state.documentSubmissions.find((item) => item.organizationId === pendingAdminConfirmation.organizationId) ?? null;
+          const organizationFiles = organizationSubmission
+            ? state.documentSubmissionFiles.filter(
+                (file) => file.submissionId === organizationSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
+              )
+            : [];
+          const approvedDocumentCount = organizationFiles.filter((file) => file.adminStatus === "approved_green").length;
+          const allRequiredDocumentsApproved =
+            organizationFiles.length === templateDocuments.length && approvedDocumentCount === templateDocuments.length;
+
+          if (!allRequiredDocumentsApproved) {
+            toast({
+              title: "Verification unavailable",
+              description: `Please approve all ${templateDocuments.length} submitted documents before marking this organization verified.`,
+              variant: "destructive",
+            });
+            return;
+          }
+
           const verifiedAt = new Date().toISOString();
           await updateOrganizationProfileReviewInSupabase(pendingAdminConfirmation.organizationId, {
             profileStatus: "verified",
@@ -953,6 +1525,7 @@ export default function AdminPortal({ section }: { section: string }) {
 
       setPendingAdminConfirmation(null);
       setApprovalAcknowledged(false);
+      setStatusChangeRemarkDraft("");
     } catch (error) {
       toast({
         title: "Status update failed",
@@ -1513,19 +2086,69 @@ export default function AdminPortal({ section }: { section: string }) {
         return (
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <PortalMetricCard label="Registered Organizations" value={overviewStats.organizations} />
-              <PortalMetricCard label="Pending Profiles" value={overviewStats.pendingProfiles} />
-              <PortalMetricCard label="Pending Documents" value={overviewStats.pendingDocuments} />
-              <PortalMetricCard label="Overdue Liquidations" value={overviewStats.overdueLiquidation} />
+              <PortalMetricCard
+                label="Registered Organizations"
+                value={overviewStats.organizations}
+                helper="Open the registrations list."
+                onClick={() => navigate(routeMap.registrations)}
+              />
+              <PortalMetricCard
+                label="Pending Profiles"
+                value={overviewStats.pendingProfiles}
+                helper="Review incomplete and pending registrations."
+                onClick={() => navigate(routeMap.registrations)}
+              />
+              <PortalMetricCard
+                label="Pending Documents"
+                value={overviewStats.pendingDocuments}
+                helper="Jump to document validation."
+                onClick={() => navigate(routeMap.registrations)}
+              />
+              <PortalMetricCard
+                label="Overdue Liquidations"
+                value={overviewStats.overdueLiquidation}
+                helper="Open liquidation monitoring."
+                onClick={() => navigate(routeMap["liquidation-monitoring"])}
+              />
             </div>
             <PortalSection title="Operational Summary" description="Everything the admin side needs to monitor at a glance.">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <PortalMetricCard label="Document Revisions" value={overviewStats.revisions} />
-                <PortalMetricCard label="Approved Documents" value={overviewStats.approvedDocs} />
-                <PortalMetricCard label="Budget Go Signals" value={overviewStats.approvedBudget} />
-                <PortalMetricCard label="Budget Released" value={overviewStats.releasedBudget} />
-                <PortalMetricCard label="Pending Liquidation" value={overviewStats.pendingLiquidation} />
-                <PortalMetricCard label="Non-compliant Orgs" value={overviewStats.nonCompliant} />
+                <PortalMetricCard
+                  label="Document Revisions"
+                  value={overviewStats.revisions}
+                  helper="Review corrected submissions."
+                  onClick={() => navigate(routeMap.registrations)}
+                />
+                <PortalMetricCard
+                  label="Approved Documents"
+                  value={overviewStats.approvedDocs}
+                  helper="See verified document sets."
+                  onClick={() => navigate(routeMap.registrations)}
+                />
+                <PortalMetricCard
+                  label="Budget Go Signals"
+                  value={overviewStats.approvedBudget}
+                  helper="Open budget utilization."
+                  onClick={() => navigate(routeMap["budget-utilization"])}
+                />
+                <PortalMetricCard
+                  label="Budget Released"
+                  value={overviewStats.releasedBudget}
+                  helper="Track released budget activity."
+                  onClick={() => navigate(routeMap["budget-utilization"])}
+                />
+                <PortalMetricCard
+                  label="Pending Liquidation"
+                  value={overviewStats.pendingLiquidation}
+                  helper="Inspect liquidation status."
+                  onClick={() => navigate(routeMap["liquidation-monitoring"])}
+                />
+                <PortalMetricCard
+                  label="Non-compliant Orgs"
+                  value={overviewStats.nonCompliant}
+                  helper="Review inactive organizations."
+                  onClick={() => navigate(routeMap.users)}
+                />
               </div>
             </PortalSection>
             <PortalSection title="Recent Activity" description="Latest activity log entries and unread notifications.">
@@ -1572,6 +2195,8 @@ export default function AdminPortal({ section }: { section: string }) {
               (file) => file.submissionId === selectedSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
             )
           : [];
+        const approvedDocumentCount = selectedFiles.filter((file) => file.adminStatus === "approved_green").length;
+        const allRequiredDocumentsApproved = selectedFiles.length === templateDocuments.length && approvedDocumentCount === templateDocuments.length;
 
         if (selectedOrg) {
           return (
@@ -1603,11 +2228,15 @@ export default function AdminPortal({ section }: { section: string }) {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                      <div className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                        {approvedDocumentCount}/{templateDocuments.length} approved
+                      </div>
                       <Button
                         size="sm"
                         variant="outline"
                         className="w-full sm:w-auto"
+                        disabled={!allRequiredDocumentsApproved}
                         onClick={() =>
                           openAdminConfirmation({
                             kind: "profile",
@@ -1617,7 +2246,7 @@ export default function AdminPortal({ section }: { section: string }) {
                             userId: selectedOrg.userId,
                           })
                         }
-                      >
+                        >
                         Mark Verified
                       </Button>
                       <Button
@@ -1633,11 +2262,14 @@ export default function AdminPortal({ section }: { section: string }) {
                             userId: selectedOrg.userId,
                           })
                         }
-                      >
+                        >
                         Needs Update
                       </Button>
                     </div>
                   </div>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Verification is available only after all {templateDocuments.length} submitted documents are marked approved.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
@@ -1718,15 +2350,6 @@ export default function AdminPortal({ section }: { section: string }) {
                                 {file ? (
                                   <div className="flex flex-wrap items-center gap-2">
                                     <PortalStatusBadge status={file.adminStatus ?? "submitted"} />
-                                    <span className="text-xs text-muted-foreground">
-                                      {file.adminStatus === "approved_green"
-                                        ? "Approved"
-                                        : file.adminStatus === "needs_revision"
-                                          ? "Needs revision"
-                                          : file.adminStatus === "rejected_red"
-                                            ? "Rejected"
-                                            : "Pending review"}
-                                    </span>
                                   </div>
                                 ) : null}
                               </div>
@@ -2132,7 +2755,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     {selectedBudgetRequest ? (
                       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
                         <div className="space-y-4">
-                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
+                          <div className="hidden rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
                             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
                             <div className="mt-4 grid gap-4 sm:grid-cols-2">
                               {renderRegistrationDetailCard({
@@ -2290,26 +2913,25 @@ export default function AdminPortal({ section }: { section: string }) {
 
                           <div className="rounded-2xl border border-border/70 bg-muted/15 p-4 sm:p-5">
                             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                              Current status: <span className="font-medium text-foreground">{selectedBudgetRequest.status}</span>
-                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                              <span>Current status:</span>
+                              <PortalStatusBadge status={selectedBudgetRequest.status} />
+                            </div>
                             <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="w-full sm:w-auto"
                                 onClick={() =>
-                                  void performBudgetRequestStatusUpdate(
-                                    {
-                                      id: selectedBudgetRequest.id,
-                                      organizationId: selectedBudgetRequest.organizationId,
-                                      organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
-                                      submittedBy: selectedBudgetRequest.submittedBy,
-                                      activityTitle: selectedBudgetRequest.activityTitle,
-                                      requestedAmount: selectedBudgetRequest.requestedAmount,
-                                    },
-                                    "approve",
-                                  )
+                                  openAdminConfirmation({
+                                    kind: "budget",
+                                    action: "approve",
+                                    budgetRequestId: selectedBudgetRequest.id,
+                                    organizationId: selectedBudgetRequest.organizationId,
+                                    organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedBudgetRequest.activityTitle,
+                                    requestedAmount: selectedBudgetRequest.requestedAmount,
+                                  })
                                 }
                               >
                                 Approve
@@ -2318,18 +2940,54 @@ export default function AdminPortal({ section }: { section: string }) {
                                 size="sm"
                                 variant="outline"
                                 className="w-full sm:w-auto"
+                                disabled={selectedBudgetRequest.status !== "approved_for_ftf_green"}
                                 onClick={() =>
-                                  void performBudgetRequestStatusUpdate(
-                                    {
-                                      id: selectedBudgetRequest.id,
-                                      organizationId: selectedBudgetRequest.organizationId,
-                                      organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
-                                      submittedBy: selectedBudgetRequest.submittedBy,
-                                      activityTitle: selectedBudgetRequest.activityTitle,
-                                      requestedAmount: selectedBudgetRequest.requestedAmount,
-                                    },
-                                    "needs_revision",
-                                  )
+                                  openAdminConfirmation({
+                                    kind: "budget",
+                                    action: "submitted_hardcopy",
+                                    budgetRequestId: selectedBudgetRequest.id,
+                                    organizationId: selectedBudgetRequest.organizationId,
+                                    organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedBudgetRequest.activityTitle,
+                                    requestedAmount: selectedBudgetRequest.requestedAmount,
+                                  })
+                                }
+                              >
+                                Submitted hardcopy
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                disabled={selectedBudgetRequest.status !== "hard_copy_submitted"}
+                                onClick={() =>
+                                  openAdminConfirmation({
+                                    kind: "budget",
+                                    action: "cash_released",
+                                    budgetRequestId: selectedBudgetRequest.id,
+                                    organizationId: selectedBudgetRequest.organizationId,
+                                    organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedBudgetRequest.activityTitle,
+                                    requestedAmount: selectedBudgetRequest.requestedAmount,
+                                  })
+                                }
+                              >
+                                Cash released
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full sm:w-auto"
+                                onClick={() =>
+                                  openAdminConfirmation({
+                                    kind: "budget",
+                                    action: "needs_revision",
+                                    budgetRequestId: selectedBudgetRequest.id,
+                                    organizationId: selectedBudgetRequest.organizationId,
+                                    organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedBudgetRequest.activityTitle,
+                                    requestedAmount: selectedBudgetRequest.requestedAmount,
+                                  })
                                 }
                               >
                                 Needs Revision
@@ -2339,17 +2997,15 @@ export default function AdminPortal({ section }: { section: string }) {
                                 variant="outline"
                                 className="w-full sm:w-auto"
                                 onClick={() =>
-                                  void performBudgetRequestStatusUpdate(
-                                    {
-                                      id: selectedBudgetRequest.id,
-                                      organizationId: selectedBudgetRequest.organizationId,
-                                      organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
-                                      submittedBy: selectedBudgetRequest.submittedBy,
-                                      activityTitle: selectedBudgetRequest.activityTitle,
-                                      requestedAmount: selectedBudgetRequest.requestedAmount,
-                                    },
-                                    "reject",
-                                  )
+                                  openAdminConfirmation({
+                                    kind: "budget",
+                                    action: "reject",
+                                    budgetRequestId: selectedBudgetRequest.id,
+                                    organizationId: selectedBudgetRequest.organizationId,
+                                    organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedBudgetRequest.activityTitle,
+                                    requestedAmount: selectedBudgetRequest.requestedAmount,
+                                  })
                                 }
                               >
                                 Reject
@@ -2389,7 +3045,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     {selectedLiquidationReport ? (
                       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
                         <div className="space-y-3">
-                          <div className="rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
+                          <div className="hidden rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
                             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Organization Details</p>
                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                               {renderRegistrationDetailCard({
@@ -2460,38 +3116,25 @@ export default function AdminPortal({ section }: { section: string }) {
                         <div className="space-y-3">
                           <div className="rounded-2xl border border-border/70 bg-muted/15 p-3 sm:p-5">
                             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Status Controls</p>
-                            <p className="mt-1.5 text-sm text-muted-foreground">
-                              Current status: <span className="font-medium text-foreground">{selectedLiquidationReport.status}</span>
-                            </p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                              <span>Current status:</span>
+                              <PortalStatusBadge status={selectedLiquidationReport.status} />
+                            </div>
                             <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="w-full sm:w-auto"
                                 onClick={() =>
-                                  void (async () => {
-                                    try {
-                                      await updateLiquidationReportInSupabase(selectedLiquidationReport.id, {
-                                        status: "approved_for_ftf_green",
-                                        goSignalAt: new Date().toISOString(),
-                                      });
-                                      await refreshAdminState();
-                                      await appendAuditLog(
-                                        "Approved liquidation report",
-                                        "liquidation_report",
-                                        selectedLiquidationReport.id,
-                                        "Marked liquidation report as approved for face-to-face green.",
-                                        selectedLiquidationReport.organizationId,
-                                      );
-                                    } catch (error) {
-                                      toast({
-                                        title: "Unable to update liquidation",
-                                        description:
-                                          error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  })()
+                                  openAdminConfirmation({
+                                    kind: "liquidation",
+                                    action: "approve",
+                                    liquidationReportId: selectedLiquidationReport.id,
+                                    budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                                    organizationId: selectedLiquidationReport.organizationId,
+                                    organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                                  })
                                 }
                               >
                                 Approve
@@ -2501,26 +3144,15 @@ export default function AdminPortal({ section }: { section: string }) {
                                 variant="outline"
                                 className="w-full sm:w-auto"
                                 onClick={() =>
-                                  void (async () => {
-                                    try {
-                                      await updateLiquidationReportInSupabase(selectedLiquidationReport.id, { status: "needs_revision" });
-                                      await refreshAdminState();
-                                      await appendAuditLog(
-                                        "Liquidation needs revision",
-                                        "liquidation_report",
-                                        selectedLiquidationReport.id,
-                                        "Marked liquidation report as needing revision.",
-                                        selectedLiquidationReport.organizationId,
-                                      );
-                                    } catch (error) {
-                                      toast({
-                                        title: "Unable to update liquidation",
-                                        description:
-                                          error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  })()
+                                  openAdminConfirmation({
+                                    kind: "liquidation",
+                                    action: "needs_revision",
+                                    liquidationReportId: selectedLiquidationReport.id,
+                                    budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                                    organizationId: selectedLiquidationReport.organizationId,
+                                    organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                                  })
                                 }
                               >
                                 Needs Revision
@@ -2530,26 +3162,15 @@ export default function AdminPortal({ section }: { section: string }) {
                                 variant="outline"
                                 className="w-full sm:w-auto"
                                 onClick={() =>
-                                  void (async () => {
-                                    try {
-                                      await updateLiquidationReportInSupabase(selectedLiquidationReport.id, { status: "overdue" });
-                                      await refreshAdminState();
-                                      await appendAuditLog(
-                                        "Marked liquidation overdue",
-                                        "liquidation_report",
-                                        selectedLiquidationReport.id,
-                                        "Marked liquidation report as overdue.",
-                                        selectedLiquidationReport.organizationId,
-                                      );
-                                    } catch (error) {
-                                      toast({
-                                        title: "Unable to update liquidation",
-                                        description:
-                                          error instanceof Error ? error.message : "The liquidation report could not be updated right now.",
-                                        variant: "destructive",
-                                      });
-                                    }
-                                  })()
+                                  openAdminConfirmation({
+                                    kind: "liquidation",
+                                    action: "overdue",
+                                    liquidationReportId: selectedLiquidationReport.id,
+                                    budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                                    organizationId: selectedLiquidationReport.organizationId,
+                                    organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                                    activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                                  })
                                 }
                               >
                                 Mark Overdue
@@ -2670,8 +3291,8 @@ export default function AdminPortal({ section }: { section: string }) {
         return (
           <PortalSection title="Liquidation Monitoring" description="Track deadlines and go-signal dates.">
             <div className="grid gap-4">
-              {state.liquidationReports.length ? (
-                state.liquidationReports.map((record) => (
+              {visibleLiquidationReports.length ? (
+                visibleLiquidationReports.map((record) => (
                   <Card key={record.id} className="border-border/70">
                     <CardContent className="grid gap-4 p-4 md:grid-cols-[1.6fr_0.9fr]">
                       <div className="space-y-3">
@@ -2702,7 +3323,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   </Card>
                 ))
               ) : (
-                <PortalEmptyState title="No liquidation records yet" description="Approved budgets create liquidation records automatically." />
+                <PortalEmptyState title="No liquidation records yet" description="Cash-released budgets create liquidation records automatically." />
               )}
             </div>
           </PortalSection>
@@ -2754,22 +3375,12 @@ export default function AdminPortal({ section }: { section: string }) {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            void (async () => {
-                              try {
-                                const updatedNewsRelease = await updateNewsReleaseInSupabase(news.id, {
-                                  visibilityStatus: "published",
-                                });
-                                updateNewsRelease(news.id, updatedNewsRelease);
-                                await appendAuditLog("Published news release", "news_release", news.id, `Published news release "${updatedNewsRelease.title}".`);
-                                await refreshAdminState();
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update news release",
-                                  description: error instanceof Error ? error.message : "The news release could not be updated.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
+                            openAdminConfirmation({
+                              kind: "news_release",
+                              action: "publish",
+                              id: news.id,
+                              title: news.title,
+                            })
                           }
                         >
                           Publish
@@ -2778,22 +3389,12 @@ export default function AdminPortal({ section }: { section: string }) {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            void (async () => {
-                              try {
-                                const updatedNewsRelease = await updateNewsReleaseInSupabase(news.id, {
-                                  visibilityStatus: "hidden",
-                                });
-                                updateNewsRelease(news.id, updatedNewsRelease);
-                                await appendAuditLog("Hidden news release", "news_release", news.id, `Hidden news release "${updatedNewsRelease.title}".`);
-                                await refreshAdminState();
-                              } catch (error) {
-                                toast({
-                                  title: "Unable to update news release",
-                                  description: error instanceof Error ? error.message : "The news release could not be updated.",
-                                  variant: "destructive",
-                                });
-                              }
-                            })()
+                            openAdminConfirmation({
+                              kind: "news_release",
+                              action: "hide",
+                              id: news.id,
+                              title: news.title,
+                            })
                           }
                         >
                           Hide
@@ -2921,7 +3522,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       <h3 className="mt-2 text-lg font-semibold text-foreground">Budget Monitoring Overview</h3>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {budgetMonitoringEntries.length} monitored budget{budgetMonitoringEntries.length === 1 ? "" : "s"}.
+                      {budgetMonitoringEntries.length} cash-released budget{budgetMonitoringEntries.length === 1 ? "" : "s"} under monitoring.
                     </p>
                   </div>
                   <div className="h-72">
@@ -2938,7 +3539,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       </ResponsiveContainer>
                     ) : (
                       <div className="grid h-full place-items-center rounded-xl border border-dashed border-border/70 bg-muted/10 text-sm text-muted-foreground">
-                        No monitored budgets yet.
+                        No cash-released budgets yet.
                       </div>
                     )}
                   </div>
@@ -2946,7 +3547,7 @@ export default function AdminPortal({ section }: { section: string }) {
               </Card>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <PortalMetricCard title="Approved Budgets" value={budgetMonitoringEntries.length.toLocaleString()} />
+                <PortalMetricCard title="Released Budgets" value={budgetMonitoringEntries.length.toLocaleString()} />
                 <PortalMetricCard title="Released Amount" value={`PHP ${budgetMonitoringAnalysis.totalReleased.toLocaleString()}`} />
                 <PortalMetricCard title="Remaining Amount" value={`PHP ${budgetMonitoringAnalysis.totalRemaining.toLocaleString()}`} />
                 <PortalMetricCard title="Utilization Rate" value={`${budgetMonitoringAnalysis.utilizationRate}%`} />
@@ -3028,7 +3629,7 @@ export default function AdminPortal({ section }: { section: string }) {
                             <p>Go Signal: {entry.goSignalAt || "Pending"}</p>
                             <p>Deadline: {entry.deadlineAt || "Pending"}</p>
                             <p>Hard Copy Submitted: {entry.hardCopySubmittedAt || "Pending"}</p>
-                            <p>Liquidation Status: {entry.liquidationStatus}</p>
+                              <p>Liquidation Status: {formatStatusLabel(entry.liquidationStatus)}</p>
                           </div>
                           <div className="rounded-xl border border-border/70 bg-muted/10 p-3 text-sm text-muted-foreground">
                             <p className="font-medium text-foreground">Monitoring Analysis</p>
@@ -3472,6 +4073,20 @@ export default function AdminPortal({ section }: { section: string }) {
             />
             <span>{adminConfirmationCopy.checkboxLabel}</span>
           </label>
+          {adminConfirmationCopy.showCommentBox ? (
+            <div className="space-y-2 rounded-xl border border-border/70 bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground">{adminConfirmationCopy.commentLabel}</p>
+                <span className="text-xs text-muted-foreground">Required for revision or rejection</span>
+              </div>
+              <Textarea
+                value={statusChangeRemarkDraft}
+                onChange={(event) => setStatusChangeRemarkDraft(event.target.value)}
+                placeholder={adminConfirmationCopy.commentPlaceholder}
+                className="min-h-28"
+              />
+            </div>
+          ) : null}
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeAdminConfirmation} disabled={processingAdminConfirmation}>
               Cancel
