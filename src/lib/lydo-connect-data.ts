@@ -1,4 +1,4 @@
-import { BarChart3, Bell, CalendarDays, ClipboardList, FileCheck2, FileText, Megaphone, Sparkles, Users } from "lucide-react";
+import { BarChart3, Bell, CalendarDays, ClipboardList, FileCheck2, FileText, Megaphone, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type ProfileStatus =
