@@ -23,6 +23,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { PortalShell } from "@/components/portal/PortalShell";
@@ -229,6 +231,17 @@ type BudgetMonitoringChartRow = {
   remainingAmount: number;
 };
 
+type BarangayAllocationEntry = {
+  district: string;
+  barangay: string;
+  organizationCount: number;
+  releasedBudgetCount: number;
+  approvedAmount: number;
+  releasedAmount: number;
+  remainingAmount: number;
+  utilizationRate: number;
+};
+
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -288,6 +301,9 @@ export default function AdminPortal({ section }: { section: string }) {
   const [liquidationPreviewCanInline, setLiquidationPreviewCanInline] = useState(false);
   const [liquidationPreviewLoading, setLiquidationPreviewLoading] = useState(false);
   const [liquidationPreviewExpanded, setLiquidationPreviewExpanded] = useState(false);
+  const [budgetMonitoringTab, setBudgetMonitoringTab] = useState<"overview" | "barangay-allocation">("overview");
+  const [budgetAllocationDistrictFilter, setBudgetAllocationDistrictFilter] = useState("all");
+  const [budgetAllocationBarangayFilter, setBudgetAllocationBarangayFilter] = useState("all");
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
   const documentPreviewSourceRef = useRef<Record<string, string>>({});
 
@@ -487,6 +503,94 @@ export default function AdminPortal({ section }: { section: string }) {
       insights,
     };
   }, [budgetMonitoringEntries]);
+  const organizationProfileById = useMemo(
+    () => new Map(state.organizationProfiles.map((organization) => [organization.id, organization] as const)),
+    [state.organizationProfiles],
+  );
+  const budgetAllocationRows = useMemo<BarangayAllocationEntry[]>(() => {
+    const grouped = new Map<string, BarangayAllocationEntry>();
+    const organizationIdsByGroup = new Map<string, Set<string>>();
+
+    state.budgetRequests
+      .filter((request) => budgetReleaseStatuses.has(request.status))
+      .forEach((request) => {
+        const organization = organizationProfileById.get(request.organizationId) ?? null;
+        const district = organization?.district?.trim() || "Unassigned District";
+        const barangay = organization?.barangay?.trim() || "Unassigned Barangay";
+        const releasedAmount = Number(request.releasedAmount || 0);
+        const approvedAmount = Number(request.approvedAmount || request.requestedAmount || 0);
+        const remainingAmount = Math.max(approvedAmount - releasedAmount, 0);
+        const utilizationRate = approvedAmount > 0 ? Math.round((releasedAmount / approvedAmount) * 100) : 0;
+        const key = `${district}::${barangay}`;
+        const organizationIds = organizationIdsByGroup.get(key) ?? new Set<string>();
+        organizationIds.add(request.organizationId);
+        organizationIdsByGroup.set(key, organizationIds);
+        const existing = grouped.get(key);
+
+        if (existing) {
+          existing.organizationCount = organizationIds.size;
+          existing.releasedBudgetCount += 1;
+          existing.approvedAmount += approvedAmount;
+          existing.releasedAmount += releasedAmount;
+          existing.remainingAmount += remainingAmount;
+          existing.utilizationRate = existing.approvedAmount > 0 ? Math.round((existing.releasedAmount / existing.approvedAmount) * 100) : 0;
+          return;
+        }
+
+        grouped.set(key, {
+          district,
+          barangay,
+          organizationCount: organizationIds.size,
+          releasedBudgetCount: 1,
+          approvedAmount,
+          releasedAmount,
+          remainingAmount,
+          utilizationRate,
+        });
+      });
+
+    return [...grouped.values()].sort((left, right) => {
+      if (left.district !== right.district) return left.district.localeCompare(right.district);
+      if (left.releasedAmount !== right.releasedAmount) return right.releasedAmount - left.releasedAmount;
+      return left.barangay.localeCompare(right.barangay);
+    });
+  }, [organizationProfileById, state.budgetRequests]);
+  const budgetAllocationDistrictOptions = useMemo(
+    () =>
+      Array.from(new Set(state.organizationProfiles.map((organization) => organization.district?.trim()).filter((value): value is string => Boolean(value))))
+        .sort((left, right) => left.localeCompare(right)),
+    [state.organizationProfiles],
+  );
+  const budgetAllocationBarangayOptions = useMemo(() => {
+    const sourceRows =
+      budgetAllocationDistrictFilter === "all"
+        ? budgetAllocationRows
+        : budgetAllocationRows.filter((row) => row.district === budgetAllocationDistrictFilter);
+    return Array.from(new Set(sourceRows.map((row) => row.barangay)))
+      .sort((left, right) => left.localeCompare(right));
+  }, [budgetAllocationDistrictFilter, budgetAllocationRows]);
+  const filteredBudgetAllocationRows = useMemo(
+    () =>
+      budgetAllocationRows.filter((row) => {
+        if (budgetAllocationDistrictFilter !== "all" && row.district !== budgetAllocationDistrictFilter) return false;
+        if (budgetAllocationBarangayFilter !== "all" && row.barangay !== budgetAllocationBarangayFilter) return false;
+        return true;
+      }),
+    [budgetAllocationBarangayFilter, budgetAllocationDistrictFilter, budgetAllocationRows],
+  );
+  const budgetAllocationSummary = useMemo(() => {
+    const totalApproved = filteredBudgetAllocationRows.reduce((sum, row) => sum + row.approvedAmount, 0);
+    const totalReleased = filteredBudgetAllocationRows.reduce((sum, row) => sum + row.releasedAmount, 0);
+    const totalRemaining = filteredBudgetAllocationRows.reduce((sum, row) => sum + row.remainingAmount, 0);
+    const utilizationRate = totalApproved > 0 ? Math.round((totalReleased / totalApproved) * 100) : 0;
+    return {
+      barangayCount: filteredBudgetAllocationRows.length,
+      totalApproved,
+      totalReleased,
+      totalRemaining,
+      utilizationRate,
+    };
+  }, [filteredBudgetAllocationRows]);
   const budgetMonitoringChartData = useMemo<BudgetMonitoringChartRow[]>(() => {
     const rows: BudgetMonitoringChartRow[] = [
       { riskLabel: "On Track", count: 0, approvedAmount: 0, releasedAmount: 0, remainingAmount: 0 },
@@ -525,6 +629,19 @@ export default function AdminPortal({ section }: { section: string }) {
       ]),
     [budgetMonitoringEntries],
   );
+  const budgetAllocationReportRows = useMemo(
+    () =>
+      filteredBudgetAllocationRows.map((entry) => [
+        entry.district,
+        entry.barangay,
+        String(entry.organizationCount),
+        String(entry.approvedAmount),
+        String(entry.releasedAmount),
+        String(entry.remainingAmount),
+        String(entry.utilizationRate),
+      ]),
+    [filteredBudgetAllocationRows],
+  );
   const exportBudgetMonitoringReport = () => {
     if (!budgetMonitoringEntries.length) {
       toast({ title: "No Data", description: "No monitored budgets are available to export." });
@@ -555,6 +672,34 @@ export default function AdminPortal({ section }: { section: string }) {
     const link = document.createElement("a");
     link.href = url;
     link.download = `budget-monitoring-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+  const exportBudgetAllocationReport = () => {
+    if (!filteredBudgetAllocationRows.length) {
+      toast({ title: "No Data", description: "No barangay allocations match the current filters." });
+      return;
+    }
+
+    const headers = [
+      "District",
+      "Barangay",
+      "Organizations",
+      "Approved Amount",
+      "Released Amount",
+      "Remaining Amount",
+      "Utilization Rate",
+    ];
+    const csv = [headers, ...budgetAllocationReportRows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `barangay-allocation-report-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -3497,23 +3642,34 @@ export default function AdminPortal({ section }: { section: string }) {
       case "budget-monitoring":
       case "public-transparency-posts":
         return (
-          <PortalSection
-            title="Budget Monitoring"
-            description="Approved budgets are monitored automatically after approval so release, utilization, and liquidation progress stay visible."
-            action={
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={exportBudgetMonitoringReport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Report
-                </Button>
-                <Button type="button" onClick={() => navigate("/admin/budget-utilization")}>
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  Review Budget Requests
-                </Button>
-              </div>
-            }
+          <Tabs
+            value={budgetMonitoringTab}
+            onValueChange={(value) => setBudgetMonitoringTab(value as typeof budgetMonitoringTab)}
+            className="space-y-6"
           >
-            <div className="grid gap-4">
+            <TabsList className="grid w-full max-w-xl grid-cols-2">
+              <TabsTrigger value="overview">Monitoring Overview</TabsTrigger>
+              <TabsTrigger value="barangay-allocation">Barangay Allocation</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="mt-0">
+              <PortalSection
+                title="Budget Monitoring"
+                description="Approved budgets are monitored automatically after approval so release, utilization, and liquidation progress stay visible."
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={exportBudgetMonitoringReport}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export Report
+                    </Button>
+                    <Button type="button" onClick={() => navigate("/admin/budget-utilization")}>
+                      <ClipboardList className="mr-2 h-4 w-4" />
+                      Review Budget Requests
+                    </Button>
+                  </div>
+                }
+              >
+                <div className="grid gap-4">
               <Card className="border-border/70">
                 <CardContent className="space-y-4 p-4 sm:p-5">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -3679,6 +3835,121 @@ export default function AdminPortal({ section }: { section: string }) {
               )}
             </div>
           </PortalSection>
+        </TabsContent>
+
+        <TabsContent value="barangay-allocation" className="mt-0">
+          <PortalSection
+            title="Barangay Allocation"
+            description="See how released budgets are distributed by barangay and district, then filter the list to focus on one area at a time."
+            action={
+              <Button type="button" variant="outline" onClick={exportBudgetAllocationReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Filtered Report
+              </Button>
+            }
+          >
+            <div className="grid gap-4 lg:grid-cols-4">
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">District</p>
+                <Select
+                  value={budgetAllocationDistrictFilter}
+                  onValueChange={(value) => {
+                    setBudgetAllocationDistrictFilter(value);
+                    setBudgetAllocationBarangayFilter("all");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All districts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Districts</SelectItem>
+                    {budgetAllocationDistrictOptions.map((district) => (
+                      <SelectItem key={district} value={district}>
+                        {district}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">Barangay</p>
+                <Select value={budgetAllocationBarangayFilter} onValueChange={setBudgetAllocationBarangayFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All barangays" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Barangays</SelectItem>
+                    {budgetAllocationBarangayOptions.map((barangay) => (
+                      <SelectItem key={barangay} value={barangay}>
+                        {barangay}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <PortalMetricCard title="Barangays with Allocation" value={budgetAllocationSummary.barangayCount.toLocaleString()} />
+              <PortalMetricCard title="Released Allocation" value={`PHP ${budgetAllocationSummary.totalReleased.toLocaleString()}`} />
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <PortalMetricCard title="Approved Allocation" value={`PHP ${budgetAllocationSummary.totalApproved.toLocaleString()}`} />
+              <PortalMetricCard title="Remaining Allocation" value={`PHP ${budgetAllocationSummary.totalRemaining.toLocaleString()}`} />
+              <PortalMetricCard title="Utilization Rate" value={`${budgetAllocationSummary.utilizationRate}%`} />
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              {filteredBudgetAllocationRows.length ? (
+                filteredBudgetAllocationRows.map((entry) => (
+                  <Card key={`${entry.district}-${entry.barangay}`} className="border-border/70">
+                    <CardContent className="grid gap-4 p-4 md:grid-cols-[1.3fr_0.9fr]">
+                      <div className="space-y-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">{entry.district}</p>
+                            <h3 className="mt-1 text-lg font-semibold text-foreground">{entry.barangay}</h3>
+                          </div>
+                          <div className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1 text-xs font-medium text-primary">
+                            {entry.organizationCount} organization{entry.organizationCount === 1 ? "" : "s"}
+                          </div>
+                        </div>
+                        <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                          <p>Released Budget: PHP {entry.releasedAmount.toLocaleString()}</p>
+                          <p>Approved Budget: PHP {entry.approvedAmount.toLocaleString()}</p>
+                          <p>Remaining Budget: PHP {entry.remainingAmount.toLocaleString()}</p>
+                          <p>Utilization: {entry.utilizationRate}%</p>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Released allocation progress</span>
+                            <span>{entry.utilizationRate}%</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(entry.utilizationRate, 100)}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/10 p-4">
+                        <p className="text-sm font-medium text-foreground">Allocation Summary</p>
+                        <p className="text-sm text-muted-foreground">
+                          Released budgets from organizations registered in this barangay are accumulated here for quick district-level monitoring.
+                        </p>
+                        <Button type="button" variant="outline" className="w-full" onClick={() => navigate("/admin/budget-utilization")}>
+                          Open Budget Review
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <PortalEmptyState
+                  title="No barangay allocations found"
+                  description="Try another district or barangay filter. Only released budgets are included in this allocation view."
+                />
+              )}
+            </div>
+          </PortalSection>
+        </TabsContent>
+      </Tabs>
         );
       case "templates":
         return (
