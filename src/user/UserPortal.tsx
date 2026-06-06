@@ -222,6 +222,7 @@ export default function UserPortal({ section }: { section: string }) {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [ocrPreviewOpen, setOcrPreviewOpen] = useState(false);
   const [documentReviewNote, setDocumentReviewNote] = useState<{ title: string; note: string; status: "needs_revision" | "rejected_red" } | null>(null);
+  const [budgetReviewNote, setBudgetReviewNote] = useState<{ title: string; note: string; status: BudgetRequestStatus } | null>(null);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
   const [profileRequiredModalOpen, setProfileRequiredModalOpen] = useState(false);
@@ -1949,7 +1950,27 @@ export default function UserPortal({ section }: { section: string }) {
                                 <CardTitle className="text-base">{request.activityTitle || "Untitled request"}</CardTitle>
                                 <p className="mt-1 text-sm text-muted-foreground">{request.purposeCategory || "No category yet"}</p>
                               </div>
-                              <PortalStatusBadge status={request.status} />
+                              <div className="flex items-center gap-2">
+                                {request.remarks?.trim() ? (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2 text-xs text-primary hover:text-primary"
+                                    onClick={() =>
+                                      setBudgetReviewNote({
+                                        title: request.activityTitle || "Budget Comment",
+                                        note: request.remarks.trim(),
+                                        status: request.status,
+                                      })
+                                    }
+                                  >
+                                    <MessageCircle className="mr-1.5 h-4 w-4" />
+                                    Comment
+                                  </Button>
+                                ) : null}
+                                <PortalStatusBadge status={request.status} />
+                              </div>
                             </div>
                           </CardHeader>
                           <CardContent className="space-y-3 text-sm text-muted-foreground">
@@ -3170,6 +3191,33 @@ export default function UserPortal({ section }: { section: string }) {
           <DialogFooter>
             <Button type="button" className="w-full sm:w-auto" onClick={() => setProfileRequiredModalOpen(false)}>
               Okay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(budgetReviewNote)}
+        onOpenChange={(open) => {
+          if (!open) setBudgetReviewNote(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{budgetReviewNote?.title || "Budget Comment"}</DialogTitle>
+            <DialogDescription>
+              {budgetReviewNote?.status === "needs_revision"
+                ? "The admin requested changes for this budget request."
+                : budgetReviewNote?.status === "rejected_red"
+                  ? "The admin rejected this budget request."
+                  : "Admin remarks for this budget request."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-foreground">
+            {budgetReviewNote?.note || "No comment was provided."}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setBudgetReviewNote(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
