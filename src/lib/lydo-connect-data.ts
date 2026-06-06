@@ -264,6 +264,8 @@ export type OrganizationProfile = {
   contactNumber: string;
   district: string;
   barangay: string;
+  isExistingOrganization: boolean;
+  organizationIdentifierNumber: string;
   majorClassification: MajorClassification | "";
   subClassification: SubClassification | "";
   advocacies: Advocacy[];

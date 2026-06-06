@@ -71,6 +71,8 @@ const SignUp = () => {
   const [contactNumber, setContactNumber] = useState("");
   const [district, setDistrict] = useState<PasigDistrict | "">("");
   const [barangayId, setBarangayId] = useState("");
+  const [isExistingOrganization, setIsExistingOrganization] = useState(false);
+  const [organizationIdentifierNumber, setOrganizationIdentifierNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -87,6 +89,9 @@ const SignUp = () => {
   const districtBarangays = district ? pasigDistrictBarangays[district] : [];
   const selectedBarangayName = districtBarangays.find((item) => item.id === barangayId)?.name ?? "N/A";
   const selectedDistrictName = district || "N/A";
+  const normalizedIdentifierNumber = organizationIdentifierNumber.trim();
+  const isIdentifierRequired = isExistingOrganization;
+  const isIdentifierValid = !isIdentifierRequired || normalizedIdentifierNumber.length > 0;
   const canSubmit = Boolean(
     useSupabaseAuth &&
       name.trim() &&
@@ -95,6 +100,7 @@ const SignUp = () => {
       isContactNumberValid &&
       district &&
       barangayId &&
+      isIdentifierValid &&
       password &&
       confirmPassword &&
       passwordsMatch,
@@ -111,6 +117,12 @@ const SignUp = () => {
       setBarangayId(nextOptions[0]?.id ?? "");
     }
   }, [barangayId, district]);
+
+  useEffect(() => {
+    if (!isExistingOrganization) {
+      setOrganizationIdentifierNumber("");
+    }
+  }, [isExistingOrganization]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +151,14 @@ const SignUp = () => {
       return;
     }
 
+    if (isExistingOrganization && !normalizedIdentifierNumber) {
+      toast({
+        title: "Identifier Required",
+        description: "Please enter the organization identifier number for existing organizations.",
+      });
+      return;
+    }
+
     setIsConfirmOpen(true);
   };
 
@@ -152,6 +172,8 @@ const SignUp = () => {
       district,
       barangayId,
       barangayName: selectedBarangayName,
+      isExistingOrganization,
+      organizationIdentifierNumber: normalizedIdentifierNumber,
     });
     setIsCreating(false);
     if (result.error) {
@@ -288,6 +310,42 @@ const SignUp = () => {
               )}
             </div>
           </div>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="existing-organization"
+                checked={isExistingOrganization}
+                onCheckedChange={(checked) => setIsExistingOrganization(Boolean(checked))}
+                disabled={isCreating}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="existing-organization" className="text-sm font-medium text-foreground">
+                  Existing organization
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Check this if your organization already has a YORP Pasig identifier number.
+                </p>
+              </div>
+            </div>
+            {isExistingOrganization && (
+              <div className="space-y-2">
+                <Label htmlFor="organizationIdentifierNumber" className="text-foreground">
+                  Organization Identifier Number
+                </Label>
+                <Input
+                  id="organizationIdentifierNumber"
+                  placeholder="Enter the YORP Pasig identifier number"
+                  value={organizationIdentifierNumber}
+                  onChange={(e) => setOrganizationIdentifierNumber(e.target.value)}
+                  className="bg-background border-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring"
+                  required
+                />
+                {!isIdentifierValid && (
+                  <p className="text-xs text-destructive">Identifier number is required for existing organizations.</p>
+                )}
+              </div>
+            )}
+          </div>
           <div className="space-y-2">
             <Label htmlFor="password" className="text-foreground">Password</Label>
             <Input
@@ -334,6 +392,14 @@ const SignUp = () => {
               <span className="block text-foreground">Email: {email.trim() || "N/A"}</span>
               <span className="block text-foreground">District: {selectedDistrictName}</span>
               <span className="block text-foreground">Barangay: {selectedBarangayName}</span>
+              <span className="block text-foreground">
+                Existing Organization: {isExistingOrganization ? "Yes" : "No"}
+              </span>
+              {isExistingOrganization && (
+                <span className="block text-foreground">
+                  Identifier Number: {normalizedIdentifierNumber || "N/A"}
+                </span>
+              )}
               <span className="mt-3 flex items-start gap-2">
                 <Checkbox
                   id="signup-policy-agreement"

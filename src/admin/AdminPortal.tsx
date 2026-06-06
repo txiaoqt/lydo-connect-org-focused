@@ -1704,8 +1704,13 @@ export default function AdminPortal({ section }: { section: string }) {
           const approvedDocumentCount = organizationFiles.filter((file) => file.adminStatus === "approved_green").length;
           const allRequiredDocumentsApproved =
             organizationFiles.length === templateDocuments.length && approvedDocumentCount === templateDocuments.length;
+          const selectedOrganization =
+            state.organizationProfiles.find((item) => item.id === pendingAdminConfirmation.organizationId) ?? null;
+          const canVerifyWithoutDocuments =
+            Boolean(selectedOrganization?.isExistingOrganization) &&
+            Boolean(selectedOrganization?.organizationIdentifierNumber.trim());
 
-          if (!allRequiredDocumentsApproved) {
+          if (!allRequiredDocumentsApproved && !canVerifyWithoutDocuments) {
             toast({
               title: "Verification unavailable",
               description: `Please approve all ${templateDocuments.length} submitted documents before marking this organization verified.`,
@@ -2425,6 +2430,8 @@ export default function AdminPortal({ section }: { section: string }) {
           : [];
         const approvedDocumentCount = selectedFiles.filter((file) => file.adminStatus === "approved_green").length;
         const allRequiredDocumentsApproved = selectedFiles.length === templateDocuments.length && approvedDocumentCount === templateDocuments.length;
+        const canVerifyWithoutDocuments =
+          Boolean(selectedOrg.isExistingOrganization) && Boolean(selectedOrg.organizationIdentifierNumber.trim());
 
         if (selectedOrg) {
           return (
@@ -2456,7 +2463,11 @@ export default function AdminPortal({ section }: { section: string }) {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                      <div className="inline-flex items-center rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-foreground">
+                        {selectedOrg.isExistingOrganization ? "Existing org" : "New org"}
+                        {selectedOrg.isExistingOrganization ? ` · ${selectedOrg.organizationIdentifierNumber || "No ID"}` : ""}
+                      </div>
                       <div className="inline-flex items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
                         {approvedDocumentCount}/{templateDocuments.length} approved
                       </div>
@@ -2464,7 +2475,7 @@ export default function AdminPortal({ section }: { section: string }) {
                         size="sm"
                         variant="outline"
                         className="w-full sm:w-auto"
-                        disabled={!allRequiredDocumentsApproved}
+                        disabled={!allRequiredDocumentsApproved && !canVerifyWithoutDocuments}
                         onClick={() =>
                           openAdminConfirmation({
                             kind: "profile",
@@ -2496,7 +2507,9 @@ export default function AdminPortal({ section }: { section: string }) {
                     </div>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    Verification is available only after all {templateDocuments.length} submitted documents are marked approved.
+                    {canVerifyWithoutDocuments
+                      ? "This organization is marked as existing, so verification can proceed after the identifier number is validated."
+                      : `Verification is available only after all ${templateDocuments.length} submitted documents are marked approved.`}
                   </p>
                 </div>
 
@@ -4506,6 +4519,9 @@ export default function AdminPortal({ section }: { section: string }) {
     }
   }, [
     createNotification,
+    selectedBudgetRequestId,
+    selectedLiquidationReportId,
+    selectedBudgetAllocation,
     createNewsRelease,
     createTemplate,
     deleteNewsReleaseInSupabase,

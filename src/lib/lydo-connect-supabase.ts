@@ -43,6 +43,8 @@ type OrganizationProfileRow = {
   contact_number: string;
   district: string;
   barangay: string;
+  is_existing_organization: boolean | null;
+  organization_identifier_number: string | null;
   major_classification: string | null;
   sub_classification: string | null;
   advocacies: string[] | null;
@@ -275,6 +277,8 @@ const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfil
   contactNumber: row.contact_number,
   district: row.district,
   barangay: row.barangay,
+  isExistingOrganization: Boolean(row.is_existing_organization),
+  organizationIdentifierNumber: row.organization_identifier_number ?? "",
   majorClassification: (row.major_classification ?? "") as OrganizationProfile["majorClassification"],
   subClassification: (row.sub_classification ?? "") as OrganizationProfile["subClassification"],
   advocacies: (row.advocacies ?? []) as OrganizationProfile["advocacies"],
@@ -712,6 +716,8 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
     contact_number: profile.contactNumber.trim(),
     district: profile.district.trim(),
     barangay: profile.barangay.trim(),
+    is_existing_organization: profile.isExistingOrganization,
+    organization_identifier_number: profile.isExistingOrganization ? profile.organizationIdentifierNumber.trim() : "",
     major_classification: profile.majorClassification || null,
     sub_classification: profile.subClassification || null,
     advocacies: profile.advocacies,
@@ -727,7 +733,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
   const { data, error } = await supabase
     .from("organization_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,verified_at,internal_notes,created_at,updated_at")
+    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,is_existing_organization,organization_identifier_number,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,verified_at,internal_notes,created_at,updated_at")
     .single();
 
   if (error || !data) {

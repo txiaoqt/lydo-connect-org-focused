@@ -14,6 +14,8 @@ export type AuthUser = {
     contactNumber?: string;
     district?: string;
     barangay?: string;
+    isExistingOrganization?: boolean;
+    organizationIdentifierNumber?: string;
   };
 };
 
@@ -37,6 +39,8 @@ type SignUpParams = {
   district?: string;
   barangayId?: string;
   barangayName?: string;
+  isExistingOrganization?: boolean;
+  organizationIdentifierNumber?: string;
 };
 
 type AuthContextValue = {
@@ -185,6 +189,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           contactNumber: (authUser.user_metadata?.contact_number as string | undefined) ?? "",
           district: (authUser.user_metadata?.district as string | undefined) ?? "",
           barangay: (authUser.user_metadata?.barangay_name as string | undefined) ?? "",
+          isExistingOrganization: Boolean(authUser.user_metadata?.is_existing_organization),
+          organizationIdentifierNumber: (authUser.user_metadata?.organization_identifier_number as string | undefined) ?? "",
         },
       };
 
@@ -301,7 +307,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return {};
   };
 
-  const signUp = async ({ email, password, organizationName, contactNumber, district, barangayId, barangayName }: SignUpParams) => {
+  const signUp = async ({
+    email,
+    password,
+    organizationName,
+    contactNumber,
+    district,
+    barangayId,
+    barangayName,
+    isExistingOrganization,
+    organizationIdentifierNumber,
+  }: SignUpParams) => {
     if (!supabase) {
       return {
         error: "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
@@ -321,6 +337,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           district: district ?? "",
           barangay_id: barangayId ?? "",
           barangay_name: barangayName ?? "",
+          is_existing_organization: Boolean(isExistingOrganization),
+          organization_identifier_number: organizationIdentifierNumber ?? "",
           municipality: "Prototype Municipality",
         },
       },

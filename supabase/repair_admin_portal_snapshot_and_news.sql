@@ -2,7 +2,9 @@
 -- It adds the admin snapshot RPC used by the admin portal after sign-in.
 
 alter table if exists public.organization_profiles
-  add column if not exists verified_at timestamptz;
+  add column if not exists verified_at timestamptz,
+  add column if not exists is_existing_organization boolean not null default false,
+  add column if not exists organization_identifier_number text not null default '';
 
 alter table if exists public.document_submission_files
   add column if not exists ocr_metadata jsonb;
@@ -469,7 +471,10 @@ returns table (
   organization_name text,
   organization_email citext,
   contact_number text,
+  district text,
   barangay text,
+  is_existing_organization boolean,
+  organization_identifier_number text,
   major_classification text,
   sub_classification text,
   advocacies text[],
@@ -517,6 +522,8 @@ begin
     organization_profiles.contact_number,
     organization_profiles.district,
     organization_profiles.barangay,
+    organization_profiles.is_existing_organization,
+    organization_profiles.organization_identifier_number,
     organization_profiles.major_classification,
     organization_profiles.sub_classification,
     organization_profiles.advocacies,
