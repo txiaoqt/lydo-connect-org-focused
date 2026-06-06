@@ -1,116 +1,196 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-label="Use case diagram of LYDO Connect">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-label="General use case diagram of LYDO Connect">
   <defs>
     <style>
       .title { font: 700 24px Arial, sans-serif; fill: #111827; }
       .actor-label { font: 400 18px Arial, sans-serif; fill: #111827; }
-      .uc-label { font: 400 14px Arial, sans-serif; fill: #111827; }
-      .system { fill: #ffffff; stroke: #334155; stroke-width: 3; }
-      .usecase { fill: #ffffff; stroke: #0f172a; stroke-width: 2; }
-      .link { stroke: #1f2937; stroke-width: 2; fill: none; }
-      .dashed { stroke: #3b82f6; stroke-width: 1.8; fill: none; stroke-dasharray: 7 6; }
-      .actor { stroke: #0f172a; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+      .case-label { font: 400 14px Arial, sans-serif; fill: #111827; }
+      .rel-label { font: 400 12px Arial, sans-serif; fill: #2563eb; }
       .note { font: 400 12px Arial, sans-serif; fill: #475569; }
+      .system { fill: #ffffff; stroke: #334155; stroke-width: 3; }
+      .primary { fill: #8fd3f4; stroke: #2b6f8f; stroke-width: 2; }
+      .helper { fill: #ffffff; stroke: #0f172a; stroke-width: 2; }
+      .link { stroke: #1f2937; stroke-width: 2; fill: none; }
+      .dashed { stroke: #3b82f6; stroke-width: 1.7; fill: none; stroke-dasharray: 7 6; }
+      .actor { stroke: #0f172a; stroke-width: 2.5; fill: none; stroke-linecap: round; }
     </style>
   </defs>
 
-  <rect x="40" y="40" width="1320" height="820" class="system"/>
-  <text x="700" y="72" text-anchor="middle" class="title">LYDO Connect System</text>
+  <rect x="48" y="48" width="1504" height="884" class="system"/>
+  <text x="800" y="80" text-anchor="middle" class="title">LYDO Connect System</text>
 
   <!-- Actors -->
-  <g transform="translate(95,210)">
+  <g transform="translate(118,240)">
     <circle cx="0" cy="0" r="16" class="actor"/>
-    <line x1="0" y1="16" x2="0" y2="80" class="actor"/>
-    <line x1="-30" y1="38" x2="30" y2="38" class="actor"/>
-    <line x1="0" y1="80" x2="-24" y2="126" class="actor"/>
-    <line x1="0" y1="80" x2="24" y2="126" class="actor"/>
-    <text x="-46" y="162" class="actor-label">Organization User</text>
+    <line x1="0" y1="16" x2="0" y2="84" class="actor"/>
+    <line x1="-30" y1="40" x2="30" y2="40" class="actor"/>
+    <line x1="0" y1="84" x2="-24" y2="130" class="actor"/>
+    <line x1="0" y1="84" x2="24" y2="130" class="actor"/>
+    <text x="-52" y="170" class="actor-label">Organization User</text>
   </g>
 
-  <g transform="translate(1290,210)">
+  <g transform="translate(1482,240)">
     <circle cx="0" cy="0" r="16" class="actor"/>
-    <line x1="0" y1="16" x2="0" y2="80" class="actor"/>
-    <line x1="-30" y1="38" x2="30" y2="38" class="actor"/>
-    <line x1="0" y1="80" x2="-24" y2="126" class="actor"/>
-    <line x1="0" y1="80" x2="24" y2="126" class="actor"/>
-    <text x="-36" y="162" class="actor-label">LYDO Admin</text>
+    <line x1="0" y1="16" x2="0" y2="84" class="actor"/>
+    <line x1="-30" y1="40" x2="30" y2="40" class="actor"/>
+    <line x1="0" y1="84" x2="-24" y2="130" class="actor"/>
+    <line x1="0" y1="84" x2="24" y2="130" class="actor"/>
+    <text x="-36" y="170" class="actor-label">LYDO Admin</text>
   </g>
 
-  <!-- Organization user use cases -->
-  <ellipse cx="270" cy="130" rx="110" ry="30" class="usecase"/>
-  <text x="270" y="135" text-anchor="middle" class="uc-label">Login</text>
+  <!-- Organization primary use cases -->
+  <ellipse cx="290" cy="150" rx="120" ry="32" class="primary"/>
+  <text x="290" y="155" text-anchor="middle" class="case-label">Login</text>
 
-  <ellipse cx="270" cy="215" rx="110" ry="30" class="usecase"/>
-  <text x="270" y="220" text-anchor="middle" class="uc-label">Manage Account</text>
+  <ellipse cx="290" cy="235" rx="128" ry="32" class="primary"/>
+  <text x="290" y="240" text-anchor="middle" class="case-label">Policy Agreement</text>
 
-  <ellipse cx="320" cy="315" rx="135" ry="32" class="usecase"/>
-  <text x="320" y="320" text-anchor="middle" class="uc-label">Manage Organization Profile</text>
+  <ellipse cx="365" cy="325" rx="152" ry="34" class="primary"/>
+  <text x="365" y="330" text-anchor="middle" class="case-label">Manage Organization Profile</text>
 
-  <ellipse cx="320" cy="420" rx="125" ry="32" class="usecase"/>
-  <text x="320" y="425" text-anchor="middle" class="uc-label">Submit Documents</text>
+  <ellipse cx="365" cy="415" rx="140" ry="34" class="primary"/>
+  <text x="365" y="420" text-anchor="middle" class="case-label">Submit Documents</text>
 
-  <ellipse cx="320" cy="530" rx="140" ry="32" class="usecase"/>
-  <text x="320" y="535" text-anchor="middle" class="uc-label">Manage Budget Requests</text>
+  <ellipse cx="365" cy="505" rx="150" ry="34" class="primary"/>
+  <text x="365" y="510" text-anchor="middle" class="case-label">Manage Budget Requests</text>
 
-  <ellipse cx="320" cy="645" rx="145" ry="32" class="usecase"/>
-  <text x="320" y="650" text-anchor="middle" class="uc-label">Submit Liquidation Report</text>
+  <ellipse cx="365" cy="595" rx="158" ry="34" class="primary"/>
+  <text x="365" y="600" text-anchor="middle" class="case-label">Submit Liquidation Report</text>
 
-  <ellipse cx="320" cy="765" rx="120" ry="32" class="usecase"/>
-  <text x="320" y="770" text-anchor="middle" class="uc-label">View News Preview</text>
+  <ellipse cx="365" cy="685" rx="136" ry="34" class="primary"/>
+  <text x="365" y="690" text-anchor="middle" class="case-label">View News Preview</text>
 
-  <!-- Admin use cases -->
-  <ellipse cx="1080" cy="145" rx="150" ry="32" class="usecase"/>
-  <text x="1080" y="150" text-anchor="middle" class="uc-label">Review Organization Records</text>
+  <!-- Organization helper use cases -->
+  <ellipse cx="700" cy="150" rx="132" ry="28" class="helper"/>
+  <text x="700" y="155" text-anchor="middle" class="case-label">Authenticate User</text>
 
-  <ellipse cx="1080" cy="250" rx="140" ry="32" class="usecase"/>
-  <text x="1080" y="255" text-anchor="middle" class="uc-label">Manage Required Docs</text>
+  <ellipse cx="700" cy="205" rx="110" ry="28" class="helper"/>
+  <text x="700" y="210" text-anchor="middle" class="case-label">Login Error</text>
 
-  <ellipse cx="1080" cy="355" rx="150" ry="32" class="usecase"/>
-  <text x="1080" y="360" text-anchor="middle" class="uc-label">Review Document Submissions</text>
+  <ellipse cx="700" cy="235" rx="126" ry="28" class="helper"/>
+  <text x="700" y="240" text-anchor="middle" class="case-label">Load Active Policy</text>
 
-  <ellipse cx="1080" cy="460" rx="145" ry="32" class="usecase"/>
-  <text x="1080" y="465" text-anchor="middle" class="uc-label">Review Budget Requests</text>
+  <ellipse cx="700" cy="325" rx="138" ry="28" class="helper"/>
+  <text x="700" y="330" text-anchor="middle" class="case-label">Validate Profile Details</text>
 
-  <ellipse cx="1080" cy="565" rx="160" ry="32" class="usecase"/>
-  <text x="1080" y="570" text-anchor="middle" class="uc-label">Monitor Barangay Allocation</text>
+  <ellipse cx="700" cy="415" rx="136" ry="28" class="helper"/>
+  <text x="700" y="420" text-anchor="middle" class="case-label">Validate Uploaded File</text>
 
-  <ellipse cx="1080" cy="670" rx="150" ry="32" class="usecase"/>
-  <text x="1080" y="675" text-anchor="middle" class="uc-label">Review Liquidation Reports</text>
+  <ellipse cx="700" cy="505" rx="136" ry="28" class="helper"/>
+  <text x="700" y="510" text-anchor="middle" class="case-label">Validate Budget Details</text>
 
-  <ellipse cx="1080" cy="775" rx="160" ry="32" class="usecase"/>
-  <text x="1080" y="780" text-anchor="middle" class="uc-label">Review Notifications and Logs</text>
+  <ellipse cx="700" cy="595" rx="132" ry="28" class="helper"/>
+  <text x="700" y="600" text-anchor="middle" class="case-label">Check Budget Approval</text>
 
-  <!-- Links from organization user -->
-  <line x1="150" y1="230" x2="160" y2="130" class="link"/>
-  <line x1="150" y1="230" x2="160" y2="215" class="link"/>
-  <line x1="170" y1="250" x2="180" y2="315" class="link"/>
-  <line x1="175" y1="255" x2="195" y2="420" class="link"/>
-  <line x1="185" y1="260" x2="205" y2="530" class="link"/>
-  <line x1="190" y1="265" x2="215" y2="645" class="link"/>
-  <line x1="195" y1="270" x2="220" y2="765" class="link"/>
+  <ellipse cx="700" cy="685" rx="120" ry="28" class="helper"/>
+  <text x="700" y="690" text-anchor="middle" class="case-label">Open Source Post</text>
 
-  <!-- Links from admin -->
-  <line x1="1210" y1="230" x2="1180" y2="145" class="link"/>
-  <line x1="1210" y1="230" x2="1180" y2="250" class="link"/>
-  <line x1="1210" y1="250" x2="1180" y2="355" class="link"/>
-  <line x1="1210" y1="270" x2="1180" y2="460" class="link"/>
-  <line x1="1210" y1="290" x2="1180" y2="565" class="link"/>
-  <line x1="1210" y1="310" x2="1180" y2="670" class="link"/>
-  <line x1="1210" y1="330" x2="1180" y2="775" class="link"/>
+  <!-- Admin primary use cases -->
+  <ellipse cx="1280" cy="150" rx="158" ry="32" class="primary"/>
+  <text x="1280" y="155" text-anchor="middle" class="case-label">Review Organization Records</text>
 
-  <!-- Include / extend notes -->
-  <text x="435" y="158" class="note">&lt;&lt;include&gt;&gt; Authenticate User</text>
-  <text x="435" y="188" class="note">&lt;&lt;extend&gt;&gt; Login Error</text>
-  <text x="470" y="290" class="note">&lt;&lt;include&gt;&gt; Validate Profile Details</text>
-  <text x="470" y="398" class="note">&lt;&lt;include&gt;&gt; Validate Uploaded File</text>
-  <text x="470" y="508" class="note">&lt;&lt;include&gt;&gt; Validate Budget Details</text>
-  <text x="470" y="620" class="note">&lt;&lt;include&gt;&gt; Check Budget Approval</text>
-  <text x="470" y="735" class="note">&lt;&lt;include&gt;&gt; Open Source Post</text>
+  <ellipse cx="1280" cy="235" rx="150" ry="32" class="primary"/>
+  <text x="1280" y="240" text-anchor="middle" class="case-label">Manage Required Docs</text>
 
-  <text x="850" y="200" class="note">&lt;&lt;include&gt;&gt; Review Record Status</text>
-  <text x="845" y="305" class="note">&lt;&lt;include&gt;&gt; Update Required Docs</text>
-  <text x="840" y="410" class="note">&lt;&lt;include&gt;&gt; Review Submission Details</text>
-  <text x="845" y="515" class="note">&lt;&lt;include&gt;&gt; Apply Budget Updates</text>
-  <text x="835" y="620" class="note">&lt;&lt;include&gt;&gt; Load Budget Summary</text>
-  <text x="835" y="725" class="note">&lt;&lt;include&gt;&gt; Review Liquidation Status</text>
-  <text x="820" y="830" class="note">&lt;&lt;include&gt;&gt; Review Logs and Notifications</text>
+  <ellipse cx="1280" cy="325" rx="162" ry="34" class="primary"/>
+  <text x="1280" y="330" text-anchor="middle" class="case-label">Review Document Submissions</text>
+
+  <ellipse cx="1280" cy="415" rx="150" ry="34" class="primary"/>
+  <text x="1280" y="420" text-anchor="middle" class="case-label">Review Budget Requests</text>
+
+  <ellipse cx="1280" cy="505" rx="168" ry="34" class="primary"/>
+  <text x="1280" y="510" text-anchor="middle" class="case-label">Monitor Barangay Allocation</text>
+
+  <ellipse cx="1280" cy="595" rx="160" ry="34" class="primary"/>
+  <text x="1280" y="600" text-anchor="middle" class="case-label">Review Liquidation Reports</text>
+
+  <ellipse cx="1280" cy="705" rx="170" ry="34" class="primary"/>
+  <text x="1280" y="710" text-anchor="middle" class="case-label">Review Notifications and Logs</text>
+
+  <!-- Admin helper use cases -->
+  <ellipse cx="920" cy="150" rx="128" ry="28" class="helper"/>
+  <text x="920" y="155" text-anchor="middle" class="case-label">Review Record Status</text>
+
+  <ellipse cx="920" cy="235" rx="126" ry="28" class="helper"/>
+  <text x="920" y="240" text-anchor="middle" class="case-label">Update Required Docs</text>
+
+  <ellipse cx="920" cy="325" rx="132" ry="28" class="helper"/>
+  <text x="920" y="330" text-anchor="middle" class="case-label">Review Submission Details</text>
+
+  <ellipse cx="920" cy="415" rx="124" ry="28" class="helper"/>
+  <text x="920" y="420" text-anchor="middle" class="case-label">Apply Budget Updates</text>
+
+  <ellipse cx="920" cy="505" rx="126" ry="28" class="helper"/>
+  <text x="920" y="510" text-anchor="middle" class="case-label">Load Budget Summary</text>
+
+  <ellipse cx="920" cy="595" rx="130" ry="28" class="helper"/>
+  <text x="920" y="600" text-anchor="middle" class="case-label">Review Liquidation Status</text>
+
+  <ellipse cx="920" cy="705" rx="154" ry="28" class="helper"/>
+  <text x="920" y="710" text-anchor="middle" class="case-label">Review Logs and Notifications</text>
+
+  <!-- Actor to primary links -->
+  <line x1="150" y1="250" x2="168" y2="150" class="link"/>
+  <line x1="150" y1="260" x2="165" y2="235" class="link"/>
+  <line x1="150" y1="272" x2="195" y2="325" class="link"/>
+  <line x1="150" y1="284" x2="205" y2="415" class="link"/>
+  <line x1="150" y1="296" x2="212" y2="505" class="link"/>
+  <line x1="150" y1="308" x2="220" y2="595" class="link"/>
+  <line x1="150" y1="320" x2="228" y2="685" class="link"/>
+
+  <line x1="1430" y1="250" x2="1412" y2="150" class="link"/>
+  <line x1="1430" y1="260" x2="1412" y2="235" class="link"/>
+  <line x1="1430" y1="272" x2="1408" y2="325" class="link"/>
+  <line x1="1430" y1="284" x2="1405" y2="415" class="link"/>
+  <line x1="1430" y1="296" x2="1400" y2="505" class="link"/>
+  <line x1="1430" y1="308" x2="1398" y2="595" class="link"/>
+  <line x1="1430" y1="320" x2="1395" y2="705" class="link"/>
+
+  <!-- Include / extend relations: organization -->
+  <line x1="410" y1="150" x2="568" y2="150" class="dashed"/>
+  <text x="470" y="138" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="410" y1="162" x2="566" y2="198" class="dashed"/>
+  <text x="468" y="193" class="rel-label">&lt;&lt;extend&gt;&gt;</text>
+
+  <line x1="418" y1="235" x2="574" y2="235" class="dashed"/>
+  <text x="474" y="224" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="470" y1="325" x2="568" y2="325" class="dashed"/>
+  <text x="498" y="314" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="505" y1="415" x2="568" y2="415" class="dashed"/>
+  <text x="520" y="404" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="515" y1="505" x2="568" y2="505" class="dashed"/>
+  <text x="522" y="494" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="523" y1="595" x2="570" y2="595" class="dashed"/>
+  <text x="526" y="584" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="501" y1="685" x2="578" y2="685" class="dashed"/>
+  <text x="525" y="674" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Include relations: admin -->
+  <line x1="1142" y1="150" x2="1048" y2="150" class="dashed"/>
+  <text x="1060" y="138" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1132" y1="235" x2="1046" y2="235" class="dashed"/>
+  <text x="1065" y="224" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1120" y1="325" x2="1052" y2="325" class="dashed"/>
+  <text x="1058" y="314" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1130" y1="415" x2="1044" y2="415" class="dashed"/>
+  <text x="1060" y="404" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1110" y1="505" x2="1046" y2="505" class="dashed"/>
+  <text x="1050" y="494" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1120" y1="595" x2="1048" y2="595" class="dashed"/>
+  <text x="1058" y="584" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <line x1="1110" y1="705" x2="1066" y2="705" class="dashed"/>
+  <text x="1042" y="694" class="rel-label">&lt;&lt;include&gt;&gt;</text>
+
+  <text x="118" y="885" class="note">The diagram keeps the scope to Organization User and LYDO Admin only, with no public visitor actor.</text>
 </svg>
