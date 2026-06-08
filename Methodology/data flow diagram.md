@@ -16,7 +16,7 @@ flowchart LR
     E2[/"E2 LYDO Admin / Staff / LYDO Personnel"/]
 
     E1 -->|"Account/login details; policy acceptance; organization profile details; required documents; budget request and liquidation details; news preview and notification interactions"| P0
-    P0 -->|"Authentication result; policy prompts; registration and document status; budget and liquidation updates; published news preview; notifications"| E1
+    P0 -->|"Authentication result; policy prompts; organization profile and document status; budget and liquidation updates; published news preview; notifications"| E1
 
     E2 -->|"Review and update profiles, documents, budget requests, liquidation reports, news releases, templates, notifications, and logs"| P0
     P0 -->|"Monitoring summaries; review queues; barangay budget reports; audit outputs; status updates"| E2
@@ -64,7 +64,7 @@ flowchart LR
     P2 -->|"Retrieve required document types"| D4
     P2 -->|"Store / update organization profile"| D3
     P2 -->|"Store submission files and document status"| D5
-    P2 -->|"Registration and document status"| E1
+    P2 -->|"Profile and document status"| E1
 
     E1 -->|"Budget request details / supporting file"| P3
     P3 -->|"Store / update budget request records"| D6
@@ -88,6 +88,16 @@ flowchart LR
     P5 -->|"Reports, summaries, and monitoring results"| E2
 ```
 
+### Process 2.0 Organization Profile and Document Submission
+
+The Level 1 DFD shows how authenticated organization users complete their organization profile and submit the required documents in LYDO Connect. The process uses the organization profile records, required document types, document submission files, and notification or activity log data to save updates and track submission status.
+
+- Organization users enter profile details and upload required documents through the protected portal.
+- The system checks the linked account, required document list, and profile completeness before saving records.
+- Profile updates and submitted files are stored in the organization profile and document submission data stores.
+- Submission activity and status changes are recorded in the notifications and activity log store.
+- Admin or staff users can review the saved profile and submitted documents for monitoring and follow-up.
+
 ## Figure 3. Data Flow Diagram Level 2 of Process 2.0 Organization Profile and Document Submission
 
 ```mermaid
@@ -101,10 +111,10 @@ flowchart LR
 
     subgraph CORE["Process 2.0 Decomposition"]
         direction LR
-        P21([2.1 Submit Organization Profile])
-        P22([2.2 Validate Profile and Requirements])
-        P23([2.3 Save Profile and Document Records])
-        P24([2.4 Manage and Monitor Organization Registrations])
+        P21([2.1 Complete Organization Profile])
+        P22([2.2 Validate Profile and Document Requirements])
+        P23([2.3 Save Profile and Submission Records])
+        P24([2.4 Review and Monitor Profile and Document Status])
     end
 
     subgraph STORES["Data Stores"]
@@ -118,29 +128,46 @@ flowchart LR
     end
 
     E1 -->|"Organization details and required document files"| P21
-    P21 -->|"Submitted profile and document package"| P22
+    P21 -->|"Profile data and selected file submission"| P22
 
     P22 -->|"Check user account details"| D1
-    D1 -->|"Account details"| P22
-
-    P22 -->|"Check policy acceptance"| D2
-    D2 -->|"Policy acceptance status"| P22
+    D1 -->|"Account record"| P22
 
     P22 -->|"Check required document list"| D4
-    D4 -->|"Required document rules"| P22
+    D4 -->|"Document requirements"| P22
 
     P22 -->|"Validated profile and document package"| P23
     P23 -->|"New or updated organization profile"| D3
     P23 -->|"Document submission records"| D5
     P23 -->|"Activity log / status update"| D6
-    P23 -->|"Registration confirmation / status"| E1
+    P23 -->|"Profile save confirmation / submission status"| E1
 
-    E2 -->|"Review or update registration records"| P24
+    E2 -->|"Review or update profile and document records"| P24
     P24 -->|"Retrieve and update profile records"| D3
     P24 -->|"Retrieve and review document files"| D5
     P24 -->|"Store review activity log"| D6
-    P24 -->|"Profile summary / monitoring results"| E2
+    P24 -->|"Profile and submission summary / monitoring results"| E2
 ```
+
+### Process 2.0 Decomposition
+
+The Level 2 DFD breaks Process 2.0 into smaller actions that reflect the actual organization profile and document submission workflow in the system.
+
+#### 2.1 Complete Organization Profile
+
+The organization user enters or updates the profile details linked to the account, including the organization name, contact information, address, classification, adviser, representative, and other required profile fields.
+
+#### 2.2 Validate Profile and Document Requirements
+
+The system validates the account-linked profile data and checks the required document list before allowing the submission to proceed. This step helps ensure that the profile is complete and that the selected file matches the expected document type.
+
+#### 2.3 Save Profile and Submission Records
+
+The system stores the updated organization profile, saves the uploaded document record, and records the submission activity. After saving, the system returns a confirmation or status update to the organization user.
+
+#### 2.4 Review and Monitor Profile and Document Status
+
+Admin or staff users review the saved organization profile and submitted documents, update review status when needed, and monitor the results through the stored profile, submission, and activity log records.
 
 ## Data Flow Summary
 
