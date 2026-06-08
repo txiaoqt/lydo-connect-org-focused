@@ -1,6 +1,6 @@
 # Data Flow Diagram
 
-This section presents the Data Flow Diagram (DFD) of LYDO Connect in three levels: the Context Diagram (Level 0), DFD Level 1, and DFD Level 2 of Process 2.0 Organization Profile and Document Submission. The diagrams follow the current site scope and focus on authenticated organization work, budget and liquidation processing, news previewing, notifications, and admin monitoring/reporting.
+This section presents the Data Flow Diagram (DFD) of LYDO Connect in three levels: the Context Diagram (Level 0), DFD Level 1, and DFD Level 2 of Process 2.0 Organization Profile and Document Submission. The diagrams follow the current site scope and focus on account access, organization profile and document submission, budget request and liquidation workflows, public information, notifications, and admin monitoring/reporting.
 
 ## External Entities
 
@@ -22,6 +22,8 @@ flowchart LR
     P0 -->|"Monitoring summaries; review queues; barangay budget reports; audit outputs; status updates"| E2
 ```
 
+The context diagram provides a top-level view of the LYDO Connect System and its external entities. The system interacts with two primary entities: the Organization User / Authenticated User, who submits login details, manages organization profile information, uploads required documents, prepares budget requests, submits liquidation reports, views news and transparency posts, and checks status updates; and the LYDO Admin / Staff / LYDO Personnel, who uses system outputs for monitoring, review, validation, and operations. In return, the system delivers access results, profile and document status, budget and liquidation updates, public news and transparency information, notifications, and administrative outputs such as monitoring summaries, review queues, reports, and audit logs.
+
 ## Figure 2. Data Flow Diagram Level 1
 
 ```mermaid
@@ -36,91 +38,76 @@ flowchart LR
     subgraph CORE["Core Processes"]
         direction TB
         P1([1.0 Manage User Access])
-        P2([2.0 Manage Organization Profile and Documents])
-        P3([3.0 Manage Budget Requests and Liquidation])
-        P4([4.0 Manage News, Notifications, and Records])
-        P5([5.0 Admin Monitoring and Reports])
+        P2([2.0 Manage Organization Profile and Document Submission])
+        P3([3.0 Manage Budget Requests])
+        P4([4.0 Manage Liquidation Reporting])
+        P5([5.0 Manage News, Transparency, Notifications, and Monitoring])
     end
 
     subgraph STORES["Data Stores"]
         direction TB
         D1[(D1 User Accounts and Roles)]
-        D2[(D2 Policy Versions and Acceptance)]
-        D3[(D3 Organization Profiles)]
-        D4[(D4 Required Document Types)]
-        D5[(D5 Document Submissions and Files)]
-        D6[(D6 Budget Requests and Attachments)]
-        D7[(D7 Liquidation Reports and Files)]
-        D8[(D8 News Releases and Transparency Posts)]
-        D9[(D9 Notifications and Activity Logs)]
+        D2[(D2 Organization Profiles and Documents)]
+        D3[(D3 Budget Requests and Attachments)]
+        D4[(D4 Liquidation Reports and Files)]
+        D5[(D5 News Releases, Transparency, Notifications, and Activity Logs)]
     end
 
     E1 -->|"Account details / login"| P1
     P1 -->|"Store / verify account data"| D1
-    P1 -->|"Load active policy and acceptance status"| D2
     P1 -->|"Access result / policy prompt"| E1
 
     E1 -->|"Organization profile details / document files"| P2
-    P2 -->|"Retrieve required document types"| D4
-    P2 -->|"Store / update organization profile"| D3
-    P2 -->|"Store submission files and document status"| D5
+    P2 -->|"Store / update organization profile"| D2
+    P2 -->|"Store submission files and document status"| D2
+    P2 -->|"Store profile and submission activity"| D5
     P2 -->|"Profile and document status"| E1
 
     E1 -->|"Budget request details / supporting file"| P3
-    P3 -->|"Store / update budget request records"| D6
-    P3 -->|"Create or update liquidation record after approval"| D7
-    P3 -->|"Write workflow log"| D9
+    P3 -->|"Store / update budget request records"| D3
+    P3 -->|"Write workflow log"| D5
     P3 -->|"Budget and liquidation updates"| E1
 
-    E1 -->|"News preview / notification check"| P4
-    P4 -->|"Retrieve published news and transparency records"| D8
-    P4 -->|"Read notifications"| D9
-    P4 -->|"Preview and alert updates"| E1
+    E1 -->|"Liquidation details / post-activity files"| P4
+    P4 -->|"Store and update liquidation report records"| D4
+    P4 -->|"Write workflow log"| D5
+    P4 -->|"Liquidation status / review updates"| E1
+
+    E1 -->|"News, transparency, compliance, and notification check"| P5
+    P5 -->|"Retrieve public news, transparency, and notification records"| D5
+    P5 -->|"View updates and alerts"| E1
 
     E2 -->|"Review and update records"| P5
-    P5 -->|"Update organization profiles"| D3
-    P5 -->|"Review document submissions"| D5
-    P5 -->|"Review budget requests"| D6
-    P5 -->|"Review liquidation reports"| D7
-    P5 -->|"Maintain required document types"| D4
-    P5 -->|"Manage news and transparency records"| D8
-    P5 -->|"Store monitoring results and audit logs"| D9
+    P5 -->|"Update organization profiles and document records"| D2
+    P5 -->|"Review budget requests"| D3
+    P5 -->|"Review liquidation reports"| D4
+    P5 -->|"Manage news, transparency, notifications, and logs"| D5
     P5 -->|"Reports, summaries, and monitoring results"| E2
 ```
 
-### Process 2.0 Organization Profile and Document Submission
+### Level 1 Overview
 
-The Level 1 DFD shows how authenticated organization users complete their organization profile and submit the required documents in LYDO Connect. The process uses the organization profile records, required document types, document submission files, and notification or activity log data to save updates and track submission status.
-
-- Organization users enter profile details and upload required documents through the protected portal.
-- The system checks the linked account, required document list, and profile completeness before saving records.
-- Profile updates and submitted files are stored in the organization profile and document submission data stores.
-- Submission activity and status changes are recorded in the notifications and activity log store.
-- Admin or staff users can review the saved profile and submitted documents for monitoring and follow-up.
-
-### Level 1 Process Breakdown
-
-The Level 1 DFD presents the main LYDO Connect workflow in five core processes. It shows how user access, public information viewing, profile and document submission, budget and liquidation handling, and admin monitoring are connected to the appropriate data stores.
+The Level 1 DFD presents the current LYDO Connect workflow in five core processes. It shows how user access, organization profile and document submission, budget requests, liquidation reporting, and public content or admin monitoring are handled through the available data stores.
 
 - `1.0 Manage User Access`
-  - Youth or public users submit account details or login information to enter the system.
-  - The process verifies the account data and stores it in the user account records before returning the access result to the user.
+  - Organization users and admins submit account details or login information to enter the system.
+  - The process verifies account data in `D1 User Accounts and Roles` and returns the access result to the user.
 
-- `2.0 View Public Information and Transparency`
-  - Youth or public users browse programs, events, and transparency information available in the system.
-  - The process retrieves the published transparency and organization records needed for public viewing.
+- `2.0 Manage Organization Profile and Document Submission`
+  - Organization users enter profile details and upload required documents through the protected portal.
+  - The process stores and updates profile and submission data in `D2 Organization Profiles and Documents` and records activity in `D5 News Releases, Transparency, Notifications, and Activity Logs`.
 
-- `3.0 Program and Event Registration`
-  - Youth or public users submit registration details for available programs and events.
-  - The process stores registration data in the registration records and can retrieve public registration-related information when needed.
+- `3.0 Manage Budget Requests`
+  - Organization users prepare and submit budget request details with supporting files.
+  - The process stores budget request records in `D3 Budget Requests and Attachments` and writes workflow logs to `D5`.
 
-- `4.0 Youth Service Request`
-  - Youth or public users submit request or concern details through the system.
-  - The process stores and updates the request records so the submitted concerns can be tracked and reviewed.
+- `4.0 Manage Liquidation Reporting`
+  - Organization users submit liquidation details and post-activity files after budget release and approval.
+  - The process stores liquidation records in `D4 Liquidation Reports and Files` and records the related status updates in `D5`.
 
-- `5.0 Manage Records and Generate Reports`
-  - Admin or staff users manage programs, events, records, and content in the system.
-  - The process updates the stored records, monitors service requests, and generates reports and audit outputs for review and monitoring.
+- `5.0 Manage News, Transparency, Notifications, and Monitoring`
+  - Youth/public users view news releases, transparency posts, compliance updates, and notifications.
+  - Admin or staff users manage these records, review stored workflow data, and generate monitoring summaries and reports through `D5`.
 
 ## Figure 3. Data Flow Diagram Level 2 of Process 2.0 Organization Profile and Document Submission
 
@@ -135,7 +122,7 @@ flowchart LR
 
     subgraph CORE["Process 2.0 Decomposition"]
         direction LR
-        P21([2.1 Complete Organization Profile])
+        P21([2.1 Submit Organization Profile])
         P22([2.2 Validate Profile and Document Requirements])
         P23([2.3 Save Profile and Submission Records])
         P24([2.4 Review and Monitor Profile and Document Status])
@@ -144,11 +131,10 @@ flowchart LR
     subgraph STORES["Data Stores"]
         direction TB
         D1[(D1 User Accounts and Roles)]
-        D2[(D2 Policy Versions and Acceptance)]
-        D3[(D3 Organization Profiles)]
-        D4[(D4 Required Document Types)]
-        D5[(D5 Document Submissions and Files)]
-        D6[(D6 Notifications and Activity Logs)]
+        D2[(D2 Organization Profiles)]
+        D3[(D3 Required Document Types)]
+        D4[(D4 Document Submissions and Files)]
+        D5[(D5 Notifications and Activity Logs)]
     end
 
     E1 -->|"Organization details and required document files"| P21
@@ -157,19 +143,19 @@ flowchart LR
     P22 -->|"Check user account details"| D1
     D1 -->|"Account record"| P22
 
-    P22 -->|"Check required document list"| D4
-    D4 -->|"Document requirements"| P22
+    P22 -->|"Check required document list"| D3
+    D3 -->|"Document requirements"| P22
 
     P22 -->|"Validated profile and document package"| P23
-    P23 -->|"New or updated organization profile"| D3
-    P23 -->|"Document submission records"| D5
-    P23 -->|"Activity log / status update"| D6
+    P23 -->|"New or updated organization profile"| D2
+    P23 -->|"Document submission records"| D4
+    P23 -->|"Activity log / status update"| D5
     P23 -->|"Profile save confirmation / submission status"| E1
 
     E2 -->|"Review or update profile and document records"| P24
-    P24 -->|"Retrieve and update profile records"| D3
-    P24 -->|"Retrieve and review document files"| D5
-    P24 -->|"Store review activity log"| D6
+    P24 -->|"Retrieve and update profile records"| D2
+    P24 -->|"Retrieve and review document files"| D4
+    P24 -->|"Store review activity log"| D5
     P24 -->|"Profile and submission summary / monitoring results"| E2
 ```
 
@@ -177,7 +163,7 @@ flowchart LR
 
 The Level 2 DFD breaks Process 2.0 into smaller actions that reflect the actual organization profile and document submission workflow in the system.
 
-- `2.1 Complete Organization Profile`
+- `2.1 Submit Organization Profile`
   - The organization user enters or updates the profile details linked to the account, including the organization name, contact information, address, classification, adviser, representative, and other required profile fields.
 
 - `2.2 Validate Profile and Document Requirements`
@@ -202,4 +188,4 @@ The Level 2 DFD breaks Process 2.0 into smaller actions that reflect the actual 
 
 ## Scope Note
 
-The DFD matches the current LYDO Connect workflow and intentionally excludes legacy program/event registration and other earlier-draft public-visitor flows.
+The DFD matches the current LYDO Connect workflow and focuses on the modules currently available in the site.
