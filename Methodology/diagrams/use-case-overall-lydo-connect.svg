@@ -10,12 +10,16 @@
     .helper-usecase { fill: #ffffff; stroke: #111827; stroke-width: 2; }
     .assoc { stroke: #111827; stroke-width: 2.2; fill: none; }
     .include { stroke: #111827; stroke-width: 1.8; fill: none; stroke-dasharray: 7 6; }
+    .extend { stroke: #2563eb; stroke-width: 1.8; fill: none; stroke-dasharray: 7 6; }
     .actor-line { stroke: #111827; stroke-width: 3; }
   </style>
 
   <defs>
     <marker id="arrow-black" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#111827"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
     </marker>
   </defs>
 
@@ -69,6 +73,9 @@
   <text x="430" y="939" text-anchor="middle" class="label">View Request Status</text>
   <text x="430" y="959" text-anchor="middle" class="label">and Remarks</text>
 
+  <ellipse cx="700" cy="990" rx="105" ry="28" class="helper-usecase"/>
+  <text x="700" y="996" text-anchor="middle" class="small">View Attached Remarks</text>
+
   <ellipse cx="430" cy="1055" rx="182" ry="36" class="main-usecase"/>
   <text x="430" y="1049" text-anchor="middle" class="label">View News and</text>
   <text x="430" y="1069" text-anchor="middle" class="label">Transparency Posts</text>
@@ -97,9 +104,15 @@
   <text x="1360" y="294" text-anchor="middle" class="label">Review Organization</text>
   <text x="1360" y="314" text-anchor="middle" class="label">Registration</text>
 
+  <ellipse cx="1115" cy="245" rx="100" ry="28" class="helper-usecase"/>
+  <text x="1115" y="251" text-anchor="middle" class="small">Request Revision</text>
+
   <ellipse cx="1360" cy="410" rx="165" ry="36" class="main-usecase"/>
   <text x="1360" y="404" text-anchor="middle" class="label">Review Compliance</text>
   <text x="1360" y="424" text-anchor="middle" class="label">Documents</text>
+
+  <ellipse cx="1090" cy="455" rx="118" ry="28" class="helper-usecase"/>
+  <text x="1090" y="461" text-anchor="middle" class="small">Request Document Resubmission</text>
 
   <ellipse cx="1360" cy="520" rx="155" ry="36" class="main-usecase"/>
   <text x="1360" y="526" text-anchor="middle" class="label">Review Budget Requests</text>
@@ -111,6 +124,9 @@
   <ellipse cx="1360" cy="740" rx="205" ry="36" class="main-usecase"/>
   <text x="1360" y="734" text-anchor="middle" class="label">Monitor Budget Allocation</text>
   <text x="1360" y="754" text-anchor="middle" class="label">and Utilization</text>
+
+  <ellipse cx="1085" cy="785" rx="108" ry="28" class="helper-usecase"/>
+  <text x="1085" y="791" text-anchor="middle" class="small">Flag Budget Discrepancy</text>
 
   <ellipse cx="1360" cy="850" rx="188" ry="36" class="main-usecase"/>
   <text x="1360" y="844" text-anchor="middle" class="label">Validate YPOP and</text>
@@ -187,4 +203,17 @@
 
   <path d="M1185 1070 H1040 V1060 H1012" class="include" marker-end="url(#arrow-black)"/>
   <text x="1075" y="1050" class="small">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- Extend relationships -->
+  <path d="M1215 245 H1195 V276 H1202" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1165" y="236" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M1208 455 H1188 V436 H1200" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1148" y="446" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M1193 785 H1173 V770 H1182" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1142" y="776" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+
+  <path d="M595 990 H545 V968 H525" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="560" y="982" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 </svg>
