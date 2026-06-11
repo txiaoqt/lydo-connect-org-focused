@@ -65,27 +65,27 @@
   <text x="390" y="769" text-anchor="middle" class="label">Manage YPOP</text>
   <text x="390" y="789" text-anchor="middle" class="label">Entries</text>
 
-  <ellipse cx="655" cy="160" rx="115" ry="32" class="helper-usecase"/>
-  <text x="655" y="166" text-anchor="middle" class="small">Authenticate User</text>
+  <ellipse cx="690" cy="150" rx="115" ry="32" class="helper-usecase"/>
+  <text x="690" y="156" text-anchor="middle" class="small">Authenticate User</text>
 
-  <ellipse cx="655" cy="240" rx="120" ry="32" class="helper-usecase"/>
-  <text x="655" y="246" text-anchor="middle" class="small">Load Active Policy</text>
+  <ellipse cx="690" cy="235" rx="120" ry="32" class="helper-usecase"/>
+  <text x="690" y="241" text-anchor="middle" class="small">Load Active Policy</text>
 
-  <ellipse cx="655" cy="345" rx="145" ry="32" class="helper-usecase"/>
-  <text x="655" y="339" text-anchor="middle" class="small">Validate Profile</text>
-  <text x="655" y="357" text-anchor="middle" class="small">and Form Data</text>
+  <ellipse cx="690" cy="350" rx="145" ry="32" class="helper-usecase"/>
+  <text x="690" y="344" text-anchor="middle" class="small">Validate Profile</text>
+  <text x="690" y="362" text-anchor="middle" class="small">and Form Data</text>
 
-  <ellipse cx="655" cy="460" rx="135" ry="32" class="helper-usecase"/>
-  <text x="655" y="454" text-anchor="middle" class="small">Validate Uploaded</text>
-  <text x="655" y="472" text-anchor="middle" class="small">Files</text>
+  <ellipse cx="690" cy="470" rx="135" ry="32" class="helper-usecase"/>
+  <text x="690" y="464" text-anchor="middle" class="small">Validate Uploaded</text>
+  <text x="690" y="482" text-anchor="middle" class="small">Files</text>
 
-  <ellipse cx="655" cy="590" rx="165" ry="32" class="helper-usecase"/>
-  <text x="655" y="584" text-anchor="middle" class="small">Update Statuses and</text>
-  <text x="655" y="602" text-anchor="middle" class="small">Generate Notifications</text>
+  <ellipse cx="690" cy="590" rx="165" ry="32" class="helper-usecase"/>
+  <text x="690" y="584" text-anchor="middle" class="small">Update Statuses and</text>
+  <text x="690" y="602" text-anchor="middle" class="small">Generate Notifications</text>
 
-  <ellipse cx="655" cy="705" rx="150" ry="32" class="helper-usecase"/>
-  <text x="655" y="699" text-anchor="middle" class="small">Preview Files and</text>
-  <text x="655" y="717" text-anchor="middle" class="small">News Records</text>
+  <ellipse cx="690" cy="710" rx="150" ry="32" class="helper-usecase"/>
+  <text x="690" y="704" text-anchor="middle" class="small">Preview Files and</text>
+  <text x="690" y="722" text-anchor="middle" class="small">News Records</text>
 
   <ellipse cx="1210" cy="210" rx="175" ry="36" class="main-usecase"/>
   <text x="1210" y="204" text-anchor="middle" class="label">Review Registration</text>
@@ -125,56 +125,56 @@
   <path d="M1430 360 C1385 510, 1360 650, 1310 665" class="assoc"/>
   <path d="M1430 360 C1385 585, 1360 760, 1315 780" class="assoc"/>
 
-  <path d="M485 190 C525 180, 545 172, 560 167" class="include" marker-end="url(#arrow-black)"/>
+  <path d="M485 190 C540 175, 590 160, 575 154" class="include" marker-end="url(#arrow-black)"/>
   <text x="525" y="170" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M486 208 C530 220, 548 228, 560 233" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="525" y="230" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M485 210 C540 220, 590 230, 570 232" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="520" y="222" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M520 315 C560 315, 575 325, 600 332" class="include" marker-end="url(#arrow-black)"/>
+  <path d="M540 315 C585 320, 605 330, 548 344" class="include" marker-end="url(#arrow-black)"/>
   <text x="535" y="304" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M550 425 C580 420, 595 400, 610 370" class="include" marker-end="url(#arrow-black)"/>
-  <text x="548" y="396" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M552 438 C585 444, 598 448, 612 452" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="438" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M535 452 C580 500, 595 620, 615 682" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="560" y="565" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M555 418 C600 402, 620 385, 560 360" class="include" marker-end="url(#arrow-black)"/>
+  <text x="565" y="388" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M555 440 C600 450, 620 458, 558 468" class="include" marker-end="url(#arrow-black)"/>
+  <text x="575" y="446" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M540 450 C590 520, 615 625, 560 694" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="585" y="585" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M540 545 C585 520, 600 520, 615 515" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="518" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M540 555 C585 565, 600 570, 615 577" class="include" marker-end="url(#arrow-black)"/>
-  <text x="564" y="558" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M548 535 C600 508, 625 500, 565 478" class="include" marker-end="url(#arrow-black)"/>
+  <text x="585" y="512" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M548 555 C600 570, 625 580, 525 588" class="include" marker-end="url(#arrow-black)"/>
+  <text x="585" y="566" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M545 660 C590 620, 603 610, 615 605" class="include" marker-end="url(#arrow-black)"/>
-  <text x="564" y="630" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M548 675 C590 695, 603 698, 615 700" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="562" y="690" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M550 652 C605 622, 628 612, 526 596" class="include" marker-end="url(#arrow-black)"/>
+  <text x="585" y="628" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M550 678 C600 695, 628 702, 540 708" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="585" y="694" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M540 775 C585 730, 603 618, 622 618" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="722" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M540 785 C585 748, 603 490, 620 485" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="642" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M548 765 C610 715, 635 660, 532 602" class="include" marker-end="url(#arrow-black)"/>
+  <text x="602" y="700" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M548 785 C615 740, 635 610, 572 486" class="include" marker-end="url(#arrow-black)"/>
+  <text x="610" y="630" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M1035 210 C955 210, 885 225, 770 430" class="include" marker-end="url(#arrow-black)"/>
-  <text x="890" y="240" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M1040 230 C955 260, 885 430, 770 676" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="900" y="355" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M1035 210 C960 210, 900 225, 812 458" class="include" marker-end="url(#arrow-black)"/>
+  <text x="905" y="235" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1040 230 C965 260, 915 430, 835 690" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="935" y="360" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1028 325 C940 325, 885 410, 770 560" class="include" marker-end="url(#arrow-black)"/>
-  <text x="905" y="332" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1028 325 C955 325, 900 430, 855 575" class="include" marker-end="url(#arrow-black)"/>
+  <text x="920" y="330" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M1000 440 C930 430, 875 485, 770 575" class="include" marker-end="url(#arrow-black)"/>
-  <text x="890" y="448" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1000 440 C930 440, 885 500, 840 570" class="include" marker-end="url(#arrow-black)"/>
+  <text x="895" y="446" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M1015 555 C925 555, 870 520, 770 470" class="include" marker-end="url(#arrow-black)"/>
-  <text x="885" y="540" class="small">&lt;&lt;include&gt;&gt;</text>
-  <path d="M1015 568 C930 610, 875 615, 770 618" class="include" marker-end="url(#arrow-black)"/>
-  <text x="885" y="602" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1015 555 C930 555, 885 525, 822 486" class="include" marker-end="url(#arrow-black)"/>
+  <text x="900" y="536" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1015 568 C930 590, 885 595, 855 592" class="include" marker-end="url(#arrow-black)"/>
+  <text x="900" y="586" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M1025 670 C930 670, 885 690, 805 700" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="900" y="660" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M1025 670 C940 670, 900 690, 840 706" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="915" y="664" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1025 785 C930 785, 885 680, 770 610" class="include" marker-end="url(#arrow-black)"/>
-  <text x="900" y="760" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1025 785 C930 785, 885 690, 855 610" class="include" marker-end="url(#arrow-black)"/>
+  <text x="905" y="758" class="small">&lt;&lt;include&gt;&gt;</text>
 </svg>
