@@ -4,58 +4,108 @@ flowchart LR
     AD[LYDO Admin]
 
     subgraph SYS[LYDO Connect System]
-      UC1((Sign up))
-      UC2((Sign in))
-      UC3((Authenticate user))
-      UC4((Login error))
-      UC5((Policy agreement))
-      UC6((Sign out))
-      UC7((Manage organization profile))
-      UC8((Submit documents))
-      UC9((Validate uploaded file))
-      UC10((Manage budget requests))
-      UC11((Budget submission error))
-      UC12((Submit liquidation report))
-      UC13((View news release preview))
-      UC14((View public transparency posts))
-      UC15((View notifications))
-      UC16((Review organization records))
-      UC17((Manage news releases))
-      UC18((Manage transparency posts))
-      UC19((Manage required document types))
-      UC20((Review notifications and activity logs))
+      subgraph PUB[Public and Account Access]
+        UC1((Browse public pages))
+        UC2((Register account))
+        UC3((Sign in and reset password))
+        UC4((View news release record))
+      end
+
+      subgraph ORG[Organization User Workflow]
+        UC5((Accept policy agreement))
+        UC6((Access dashboard and sign out))
+        UC7((Manage organization profile))
+        UC8((Submit and track compliance documents))
+        UC9((Manage budget requests))
+        UC10((Submit liquidation reports))
+        UC11((Manage YPOP incentive entries))
+        UC12((View notifications and status updates))
+        UC13((Browse protected news releases))
+      end
+
+      subgraph ADM[Admin Workflow]
+        UC14((View admin overview))
+        UC15((Review registrations and document compliance))
+        UC16((Manage YORP registry))
+        UC17((Review budget requests and releases))
+        UC18((Review liquidation reports))
+        UC19((Monitor budget tracking and barangay allocation))
+        UC20((Manage YPOP periods and validation))
+        UC21((Manage news releases))
+        UC22((Manage document templates))
+        UC23((Review notifications and activity logs))
+      end
+
+      subgraph SUP[Supporting Use Cases]
+        UC24((Authenticate user))
+        UC25((Load active policy))
+        UC26((Validate profile and form data))
+        UC27((Validate uploaded files))
+        UC28((Update statuses and generate notifications))
+        UC29((Preview uploaded files and source links))
+      end
     end
 
     PV --> UC1
     PV --> UC2
-    PV --> UC13
-    PV --> UC14
+    PV --> UC3
+    PV --> UC4
 
-    OU --> UC1
-    OU --> UC2
+    OU --> UC3
+    OU --> UC5
     OU --> UC6
     OU --> UC7
     OU --> UC8
+    OU --> UC9
     OU --> UC10
+    OU --> UC11
     OU --> UC12
     OU --> UC13
-    OU --> UC14
-    OU --> UC15
+    OU --> UC4
 
+    AD --> UC3
+    AD --> UC14
+    AD --> UC15
     AD --> UC16
     AD --> UC17
     AD --> UC18
     AD --> UC19
     AD --> UC20
+    AD --> UC21
+    AD --> UC22
+    AD --> UC23
+    AD --> UC4
 
-    UC2 -.->|<<include>>| UC3
-    UC2 -.->|<<include>>| UC5
-    UC2 -.->|<<extend>>| UC4
-    UC8 -.->|<<include>>| UC9
-    UC8 -.->|<<extend>>| UC11
-    UC12 -.->|<<extend>>| UC10
+    UC3 -.->|<<include>>| UC24
+    UC5 -.->|<<include>>| UC25
+    UC7 -.->|<<include>>| UC26
+    UC8 -.->|<<include>>| UC26
+    UC8 -.->|<<include>>| UC27
+    UC8 -.->|<<include>>| UC28
+    UC8 -.->|<<extend>>| UC29
+    UC9 -.->|<<include>>| UC26
+    UC9 -.->|<<include>>| UC27
+    UC9 -.->|<<include>>| UC28
+    UC10 -.->|<<include>>| UC26
+    UC10 -.->|<<include>>| UC27
+    UC10 -.->|<<include>>| UC28
+    UC11 -.->|<<include>>| UC26
+    UC11 -.->|<<include>>| UC27
+    UC11 -.->|<<include>>| UC28
+    UC13 -.->|<<extend>>| UC29
+    UC15 -.->|<<include>>| UC29
+    UC15 -.->|<<include>>| UC28
+    UC17 -.->|<<include>>| UC28
+    UC18 -.->|<<include>>| UC28
+    UC19 -.->|<<include>>| UC28
+    UC20 -.->|<<include>>| UC27
+    UC20 -.->|<<include>>| UC28
+    UC21 -.->|<<extend>>| UC29
+    UC22 -.->|<<include>>| UC27
+    UC22 -.->|<<include>>| UC28
+    UC23 -.->|<<include>>| UC28
 
     classDef actor fill:#e0f2fe,stroke:#0f172a,stroke-width:1px,color:#0f172a;
     classDef usecase fill:#ffffff,stroke:#0f172a,stroke-width:1px,color:#0f172a;
     class PV,OU,AD actor;
-    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18,UC19,UC20 usecase;
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18,UC19,UC20,UC21,UC22,UC23,UC24,UC25,UC26,UC27,UC28,UC29 usecase;

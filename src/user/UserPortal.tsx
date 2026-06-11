@@ -108,6 +108,7 @@ import {
 } from "@/lib/document-ocr";
 
 const getReadiness = (filled: number, total: number) => (total === 0 ? 0 : Math.round((filled / total) * 100));
+const normalizeText = (value?: string | null) => value?.trim() ?? "";
 const hasUploadedTemplateFile = (fileUrl?: string, fileName?: string) =>
   Boolean(fileName?.trim() && fileUrl?.trim() && !fileUrl.startsWith("#"));
 const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.replaceAll("_", " ");
@@ -225,14 +226,22 @@ const createOrganizationProfileDraft = (
   return {
     ...blank,
     ...profile,
-    organizationName: profile.organizationName.trim() || blank.organizationName,
-    organizationEmail: profile.organizationEmail.trim() || blank.organizationEmail,
-    contactNumber: profile.contactNumber.trim() || blank.contactNumber,
-    district: profile.district.trim() || blank.district,
-    barangay: profile.barangay.trim() || blank.barangay,
+    organizationName: normalizeText(profile.organizationName) || blank.organizationName,
+    organizationEmail: normalizeText(profile.organizationEmail) || blank.organizationEmail,
+    contactNumber: normalizeText(profile.contactNumber) || blank.contactNumber,
+    district: normalizeText(profile.district) || blank.district,
+    barangay: normalizeText(profile.barangay) || blank.barangay,
     isExistingOrganization: Boolean(profile.isExistingOrganization),
-    organizationIdentifierNumber: profile.organizationIdentifierNumber.trim() || blank.organizationIdentifierNumber,
-    advocacies: [...profile.advocacies],
+    organizationIdentifierNumber: normalizeText(profile.organizationIdentifierNumber) || blank.organizationIdentifierNumber,
+    majorClassification: normalizeText(profile.majorClassification) as OrganizationProfile["majorClassification"],
+    subClassification: normalizeText(profile.subClassification) as OrganizationProfile["subClassification"],
+    adviserName: normalizeText(profile.adviserName),
+    representativeName: normalizeText(profile.representativeName),
+    address: normalizeText(profile.address),
+    facebookPageUrl: normalizeText(profile.facebookPageUrl),
+    verifiedAt: normalizeText(profile.verifiedAt),
+    internalNotes: normalizeText(profile.internalNotes),
+    advocacies: Array.isArray(profile.advocacies) ? [...profile.advocacies] : [],
   };
 };
 
