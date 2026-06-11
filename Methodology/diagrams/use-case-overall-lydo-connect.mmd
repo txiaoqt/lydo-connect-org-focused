@@ -1,111 +1,71 @@
 flowchart LR
-    PV[Public Visitor]
     OU[Organization User]
     AD[LYDO Admin]
 
     subgraph SYS[LYDO Connect System]
-      subgraph PUB[Public and Account Access]
-        UC1((Browse public pages))
-        UC2((Register account))
-        UC3((Sign in and reset password))
-        UC4((View news release record))
-      end
+      UC1((Login))
+      UC2((Manage organization profile))
+      UC3((Submit compliance documents))
+      UC4((Manage budget requests))
+      UC5((Submit liquidation reports))
+      UC6((Manage YPOP entries))
 
-      subgraph ORG[Organization User Workflow]
-        UC5((Accept policy agreement))
-        UC6((Access dashboard and sign out))
-        UC7((Manage organization profile))
-        UC8((Submit and track compliance documents))
-        UC9((Manage budget requests))
-        UC10((Submit liquidation reports))
-        UC11((Manage YPOP incentive entries))
-        UC12((View notifications and status updates))
-        UC13((Browse protected news releases))
-      end
+      UC7((Authenticate user))
+      UC8((Load active policy))
+      UC9((Validate profile and form data))
+      UC10((Validate uploaded files))
+      UC11((Update statuses and generate notifications))
+      UC12((Preview files and news records))
 
-      subgraph ADM[Admin Workflow]
-        UC14((View admin overview))
-        UC15((Review registrations and document compliance))
-        UC16((Manage YORP registry))
-        UC17((Review budget requests and releases))
-        UC18((Review liquidation reports))
-        UC19((Monitor budget tracking and barangay allocation))
-        UC20((Manage YPOP periods and validation))
-        UC21((Manage news releases))
-        UC22((Manage document templates))
-        UC23((Review notifications and activity logs))
-      end
-
-      subgraph SUP[Supporting Use Cases]
-        UC24((Authenticate user))
-        UC25((Load active policy))
-        UC26((Validate profile and form data))
-        UC27((Validate uploaded files))
-        UC28((Update statuses and generate notifications))
-        UC29((Preview uploaded files and source links))
-      end
+      UC13((Review registration and documents))
+      UC14((Review budget and liquidation records))
+      UC15((Monitor budget tracking and barangay allocation))
+      UC16((Manage YPOP validation and YORP registry))
+      UC17((Manage news releases and templates))
+      UC18((Review notifications and activity logs))
     end
 
-    PV --> UC1
-    PV --> UC2
-    PV --> UC3
-    PV --> UC4
-
+    OU --> UC1
+    OU --> UC2
     OU --> UC3
+    OU --> UC4
     OU --> UC5
     OU --> UC6
-    OU --> UC7
-    OU --> UC8
-    OU --> UC9
-    OU --> UC10
-    OU --> UC11
-    OU --> UC12
-    OU --> UC13
-    OU --> UC4
 
-    AD --> UC3
+    AD --> UC1
+    AD --> UC13
     AD --> UC14
     AD --> UC15
     AD --> UC16
     AD --> UC17
     AD --> UC18
-    AD --> UC19
-    AD --> UC20
-    AD --> UC21
-    AD --> UC22
-    AD --> UC23
-    AD --> UC4
 
-    UC3 -.->|<<include>>| UC24
-    UC5 -.->|<<include>>| UC25
-    UC7 -.->|<<include>>| UC26
-    UC8 -.->|<<include>>| UC26
-    UC8 -.->|<<include>>| UC27
-    UC8 -.->|<<include>>| UC28
-    UC8 -.->|<<extend>>| UC29
-    UC9 -.->|<<include>>| UC26
-    UC9 -.->|<<include>>| UC27
-    UC9 -.->|<<include>>| UC28
-    UC10 -.->|<<include>>| UC26
-    UC10 -.->|<<include>>| UC27
-    UC10 -.->|<<include>>| UC28
-    UC11 -.->|<<include>>| UC26
-    UC11 -.->|<<include>>| UC27
-    UC11 -.->|<<include>>| UC28
-    UC13 -.->|<<extend>>| UC29
-    UC15 -.->|<<include>>| UC29
-    UC15 -.->|<<include>>| UC28
-    UC17 -.->|<<include>>| UC28
-    UC18 -.->|<<include>>| UC28
-    UC19 -.->|<<include>>| UC28
-    UC20 -.->|<<include>>| UC27
-    UC20 -.->|<<include>>| UC28
-    UC21 -.->|<<extend>>| UC29
-    UC22 -.->|<<include>>| UC27
-    UC22 -.->|<<include>>| UC28
-    UC23 -.->|<<include>>| UC28
+    UC1 -.->|<<include>>| UC7
+    UC1 -.->|<<extend>>| UC8
+    UC2 -.->|<<include>>| UC9
+    UC3 -.->|<<include>>| UC9
+    UC3 -.->|<<include>>| UC10
+    UC3 -.->|<<extend>>| UC12
+    UC4 -.->|<<include>>| UC9
+    UC4 -.->|<<include>>| UC10
+    UC5 -.->|<<include>>| UC11
+    UC5 -.->|<<extend>>| UC12
+    UC6 -.->|<<include>>| UC10
+    UC6 -.->|<<include>>| UC11
+    UC6 -.->|<<extend>>| UC12
+    UC13 -.->|<<include>>| UC11
+    UC13 -.->|<<extend>>| UC12
+    UC14 -.->|<<include>>| UC11
+    UC14 -.->|<<extend>>| UC12
+    UC15 -.->|<<include>>| UC11
+    UC16 -.->|<<include>>| UC10
+    UC16 -.->|<<include>>| UC11
+    UC16 -.->|<<extend>>| UC12
+    UC17 -.->|<<include>>| UC10
+    UC17 -.->|<<extend>>| UC12
+    UC18 -.->|<<include>>| UC11
 
     classDef actor fill:#e0f2fe,stroke:#0f172a,stroke-width:1px,color:#0f172a;
     classDef usecase fill:#ffffff,stroke:#0f172a,stroke-width:1px,color:#0f172a;
-    class PV,OU,AD actor;
-    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18,UC19,UC20,UC21,UC22,UC23,UC24,UC25,UC26,UC27,UC28,UC29 usecase;
+    class OU,AD actor;
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14,UC15,UC16,UC17,UC18 usecase;
