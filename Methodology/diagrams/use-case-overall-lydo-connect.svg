@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-label="Figure 1. General Use Case Diagram of LYDO Connect">
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1280" viewBox="0 0 1700 1280" role="img" aria-label="Figure 1. General Use Case Diagram of LYDO Connect">
   <style>
-    .title { font: 700 24px Arial, sans-serif; fill: #111827; }
-    .system-title { font: 700 22px Arial, sans-serif; fill: #111827; }
+    .title { font: 700 26px Arial, sans-serif; fill: #111827; }
+    .system-title { font: 700 24px Arial, sans-serif; fill: #111827; }
     .label { font: 16px Arial, sans-serif; fill: #111827; }
     .small { font: 14px Arial, sans-serif; fill: #111827; }
     .actor-name { font: 20px Arial, sans-serif; fill: #111827; }
@@ -23,173 +23,232 @@
     </marker>
   </defs>
 
-  <text x="60" y="50" class="title">Figure 1. General Use Case Diagram of LYDO Connect</text>
+  <text x="60" y="52" class="title">Figure 1. General Use Case Diagram of LYDO Connect</text>
 
-  <rect x="210" y="95" width="1180" height="840" class="system-box"/>
-  <text x="800" y="128" text-anchor="middle" class="system-title">LYDO Connect System</text>
+  <rect x="220" y="90" width="1260" height="1120" class="system-box"/>
+  <text x="850" y="126" text-anchor="middle" class="system-title">LYDO Connect System</text>
 
-  <!-- Left actor -->
-  <circle cx="95" cy="350" r="16" fill="#9bdcf9" stroke="#111827" stroke-width="2"/>
-  <line x1="95" y1="366" x2="95" y2="440" class="actor-line"/>
-  <line x1="45" y1="390" x2="145" y2="390" class="actor-line"/>
-  <line x1="95" y1="440" x2="60" y2="495" class="actor-line"/>
-  <line x1="95" y1="440" x2="130" y2="495" class="actor-line"/>
-  <text x="95" y="535" text-anchor="middle" class="actor-name">Organization User</text>
+  <!-- Actors -->
+  <circle cx="105" cy="470" r="16" fill="#9bdcf9" stroke="#111827" stroke-width="2"/>
+  <line x1="105" y1="486" x2="105" y2="560" class="actor-line"/>
+  <line x1="55" y1="510" x2="155" y2="510" class="actor-line"/>
+  <line x1="105" y1="560" x2="70" y2="615" class="actor-line"/>
+  <line x1="105" y1="560" x2="140" y2="615" class="actor-line"/>
+  <text x="105" y="655" text-anchor="middle" class="actor-name">Organization User</text>
 
-  <!-- Right actor -->
-  <circle cx="1495" cy="350" r="16" fill="#9bdcf9" stroke="#111827" stroke-width="2"/>
-  <line x1="1495" y1="366" x2="1495" y2="440" class="actor-line"/>
-  <line x1="1445" y1="390" x2="1545" y2="390" class="actor-line"/>
-  <line x1="1495" y1="440" x2="1460" y2="495" class="actor-line"/>
-  <line x1="1495" y1="440" x2="1530" y2="495" class="actor-line"/>
-  <text x="1495" y="535" text-anchor="middle" class="actor-name">LYDO Admin</text>
+  <circle cx="1595" cy="470" r="16" fill="#9bdcf9" stroke="#111827" stroke-width="2"/>
+  <line x1="1595" y1="486" x2="1595" y2="560" class="actor-line"/>
+  <line x1="1545" y1="510" x2="1645" y2="510" class="actor-line"/>
+  <line x1="1595" y1="560" x2="1560" y2="615" class="actor-line"/>
+  <line x1="1595" y1="560" x2="1630" y2="615" class="actor-line"/>
+  <text x="1595" y="655" text-anchor="middle" class="actor-name">LYDO Admin</text>
 
-  <!-- Left main use cases -->
-  <ellipse cx="390" cy="210" rx="95" ry="34" class="main-usecase"/>
-  <text x="390" y="216" text-anchor="middle" class="label">Login</text>
+  <!-- Organization User main use cases -->
+  <ellipse cx="430" cy="180" rx="120" ry="34" class="main-usecase"/>
+  <text x="430" y="186" text-anchor="middle" class="label">Log in to Account</text>
 
-  <ellipse cx="390" cy="320" rx="155" ry="36" class="main-usecase"/>
-  <text x="390" y="314" text-anchor="middle" class="label">Manage Organization</text>
-  <text x="390" y="334" text-anchor="middle" class="label">Profile</text>
+  <ellipse cx="430" cy="280" rx="150" ry="36" class="main-usecase"/>
+  <text x="430" y="274" text-anchor="middle" class="label">Manage Organization</text>
+  <text x="430" y="294" text-anchor="middle" class="label">Profile</text>
 
-  <ellipse cx="390" cy="440" rx="165" ry="36" class="main-usecase"/>
-  <text x="390" y="434" text-anchor="middle" class="label">Submit Compliance</text>
-  <text x="390" y="454" text-anchor="middle" class="label">Documents</text>
+  <ellipse cx="430" cy="390" rx="162" ry="36" class="main-usecase"/>
+  <text x="430" y="384" text-anchor="middle" class="label">Submit Registration</text>
+  <text x="430" y="404" text-anchor="middle" class="label">Requirements</text>
 
-  <ellipse cx="390" cy="560" rx="155" ry="36" class="main-usecase"/>
-  <text x="390" y="554" text-anchor="middle" class="label">Manage Budget</text>
-  <text x="390" y="574" text-anchor="middle" class="label">Requests</text>
+  <ellipse cx="430" cy="500" rx="160" ry="36" class="main-usecase"/>
+  <text x="430" y="494" text-anchor="middle" class="label">Upload Compliance</text>
+  <text x="430" y="514" text-anchor="middle" class="label">Documents</text>
 
-  <ellipse cx="390" cy="680" rx="160" ry="36" class="main-usecase"/>
-  <text x="390" y="674" text-anchor="middle" class="label">Submit Liquidation</text>
-  <text x="390" y="694" text-anchor="middle" class="label">Reports</text>
+  <ellipse cx="430" cy="610" rx="145" ry="36" class="main-usecase"/>
+  <text x="430" y="616" text-anchor="middle" class="label">Submit Budget Request</text>
 
-  <ellipse cx="390" cy="800" rx="150" ry="36" class="main-usecase"/>
-  <text x="390" y="794" text-anchor="middle" class="label">Manage YPOP</text>
-  <text x="390" y="814" text-anchor="middle" class="label">Entries</text>
+  <ellipse cx="430" cy="720" rx="155" ry="36" class="main-usecase"/>
+  <text x="430" y="714" text-anchor="middle" class="label">Submit Liquidation</text>
+  <text x="430" y="734" text-anchor="middle" class="label">Report</text>
 
-  <!-- Center helper use cases -->
-  <ellipse cx="760" cy="160" rx="115" ry="30" class="helper-usecase"/>
-  <text x="760" y="166" text-anchor="middle" class="small">Authenticate User</text>
+  <ellipse cx="430" cy="830" rx="145" ry="36" class="main-usecase"/>
+  <text x="430" y="824" text-anchor="middle" class="label">Manage YPOP Entries</text>
 
-  <ellipse cx="760" cy="245" rx="120" ry="30" class="helper-usecase"/>
-  <text x="760" y="251" text-anchor="middle" class="small">Load Active Policy</text>
+  <ellipse cx="430" cy="940" rx="170" ry="36" class="main-usecase"/>
+  <text x="430" y="934" text-anchor="middle" class="label">View Request Status</text>
+  <text x="430" y="954" text-anchor="middle" class="label">and Remarks</text>
 
-  <ellipse cx="680" cy="360" rx="145" ry="34" class="helper-usecase"/>
-  <text x="680" y="354" text-anchor="middle" class="small">Validate Profile</text>
-  <text x="680" y="372" text-anchor="middle" class="small">and Form Data</text>
+  <ellipse cx="430" cy="1050" rx="182" ry="36" class="main-usecase"/>
+  <text x="430" y="1044" text-anchor="middle" class="label">View News and</text>
+  <text x="430" y="1064" text-anchor="middle" class="label">Transparency Posts</text>
 
-  <ellipse cx="680" cy="480" rx="132" ry="34" class="helper-usecase"/>
-  <text x="680" y="474" text-anchor="middle" class="small">Validate Uploaded</text>
-  <text x="680" y="492" text-anchor="middle" class="small">Files</text>
+  <ellipse cx="430" cy="1160" rx="145" ry="36" class="main-usecase"/>
+  <text x="430" y="1166" text-anchor="middle" class="label">Receive Notifications</text>
 
-  <ellipse cx="840" cy="610" rx="165" ry="34" class="helper-usecase"/>
-  <text x="840" y="604" text-anchor="middle" class="small">Update Statuses and</text>
-  <text x="840" y="622" text-anchor="middle" class="small">Generate Notifications</text>
+  <!-- Included use cases -->
+  <ellipse cx="850" cy="150" rx="115" ry="30" class="helper-usecase"/>
+  <text x="850" y="156" text-anchor="middle" class="small">Authenticate User</text>
 
-  <ellipse cx="680" cy="740" rx="145" ry="34" class="helper-usecase"/>
-  <text x="680" y="734" text-anchor="middle" class="small">Preview Files and</text>
-  <text x="680" y="752" text-anchor="middle" class="small">News Records</text>
+  <ellipse cx="850" cy="330" rx="135" ry="32" class="helper-usecase"/>
+  <text x="850" y="336" text-anchor="middle" class="small">Upload Required Documents</text>
 
-  <!-- Right main use cases -->
-  <ellipse cx="1210" cy="210" rx="175" ry="36" class="main-usecase"/>
-  <text x="1210" y="204" text-anchor="middle" class="label">Review Registration</text>
-  <text x="1210" y="224" text-anchor="middle" class="label">and Documents</text>
+  <ellipse cx="850" cy="430" rx="138" ry="32" class="helper-usecase"/>
+  <text x="850" y="436" text-anchor="middle" class="small">Validate Required Documents</text>
 
-  <ellipse cx="1210" cy="330" rx="185" ry="36" class="main-usecase"/>
-  <text x="1210" y="324" text-anchor="middle" class="label">Review Budget and</text>
-  <text x="1210" y="344" text-anchor="middle" class="label">Liquidation Records</text>
+  <ellipse cx="850" cy="540" rx="140" ry="32" class="helper-usecase"/>
+  <text x="850" y="546" text-anchor="middle" class="small">Upload Supporting Documents</text>
 
-  <ellipse cx="1210" cy="450" rx="210" ry="36" class="main-usecase"/>
-  <text x="1210" y="444" text-anchor="middle" class="label">Monitor Budget Tracking and</text>
-  <text x="1210" y="464" text-anchor="middle" class="label">Barangay Allocation</text>
+  <ellipse cx="850" cy="650" rx="142" ry="32" class="helper-usecase"/>
+  <text x="850" y="656" text-anchor="middle" class="small">Upload Liquidation Documents</text>
 
-  <ellipse cx="1210" cy="570" rx="200" ry="36" class="main-usecase"/>
-  <text x="1210" y="564" text-anchor="middle" class="label">Manage YPOP Validation</text>
-  <text x="1210" y="584" text-anchor="middle" class="label">and YORP Registry</text>
+  <ellipse cx="850" cy="790" rx="132" ry="32" class="helper-usecase"/>
+  <text x="850" y="796" text-anchor="middle" class="small">Review Submitted Documents</text>
 
-  <ellipse cx="1210" cy="690" rx="185" ry="36" class="main-usecase"/>
-  <text x="1210" y="684" text-anchor="middle" class="label">Manage News Releases</text>
-  <text x="1210" y="704" text-anchor="middle" class="label">and Templates</text>
+  <ellipse cx="850" cy="930" rx="120" ry="32" class="helper-usecase"/>
+  <text x="850" y="936" text-anchor="middle" class="small">Update Request Status</text>
 
-  <ellipse cx="1210" cy="810" rx="190" ry="36" class="main-usecase"/>
-  <text x="1210" y="804" text-anchor="middle" class="label">Review Notifications</text>
-  <text x="1210" y="824" text-anchor="middle" class="label">and Activity Logs</text>
+  <ellipse cx="850" cy="1080" rx="112" ry="32" class="helper-usecase"/>
+  <text x="850" y="1086" text-anchor="middle" class="small">Notify Organization User</text>
+
+  <!-- Admin main use cases -->
+  <ellipse cx="1245" cy="180" rx="145" ry="34" class="main-usecase"/>
+  <text x="1245" y="186" text-anchor="middle" class="label">Log in to Admin Account</text>
+
+  <ellipse cx="1245" cy="300" rx="170" ry="36" class="main-usecase"/>
+  <text x="1245" y="294" text-anchor="middle" class="label">Review Organization</text>
+  <text x="1245" y="314" text-anchor="middle" class="label">Registration</text>
+
+  <ellipse cx="1245" cy="410" rx="165" ry="36" class="main-usecase"/>
+  <text x="1245" y="404" text-anchor="middle" class="label">Review Compliance</text>
+  <text x="1245" y="424" text-anchor="middle" class="label">Documents</text>
+
+  <ellipse cx="1245" cy="520" rx="155" ry="36" class="main-usecase"/>
+  <text x="1245" y="526" text-anchor="middle" class="label">Review Budget Requests</text>
+
+  <ellipse cx="1245" cy="630" rx="165" ry="36" class="main-usecase"/>
+  <text x="1245" y="624" text-anchor="middle" class="label">Review Liquidation</text>
+  <text x="1245" y="644" text-anchor="middle" class="label">Reports</text>
+
+  <ellipse cx="1245" cy="740" rx="205" ry="36" class="main-usecase"/>
+  <text x="1245" y="734" text-anchor="middle" class="label">Monitor Budget Allocation</text>
+  <text x="1245" y="754" text-anchor="middle" class="label">and Utilization</text>
+
+  <ellipse cx="1245" cy="850" rx="188" ry="36" class="main-usecase"/>
+  <text x="1245" y="844" text-anchor="middle" class="label">Validate YPOP and</text>
+  <text x="1245" y="864" text-anchor="middle" class="label">YORR Records</text>
+
+  <ellipse cx="1245" cy="960" rx="200" ry="36" class="main-usecase"/>
+  <text x="1245" y="954" text-anchor="middle" class="label">Post News and</text>
+  <text x="1245" y="974" text-anchor="middle" class="label">Transparency Updates</text>
+
+  <ellipse cx="1245" cy="1070" rx="175" ry="36" class="main-usecase"/>
+  <text x="1245" y="1064" text-anchor="middle" class="label">Send Remarks and</text>
+  <text x="1245" y="1084" text-anchor="middle" class="label">Notifications</text>
+
+  <ellipse cx="1245" cy="1180" rx="125" ry="34" class="main-usecase"/>
+  <text x="1245" y="1186" text-anchor="middle" class="label">View Audit Logs</text>
+
+  <!-- Extend use cases -->
+  <ellipse cx="1040" cy="250" rx="100" ry="28" class="helper-usecase"/>
+  <text x="1040" y="256" text-anchor="middle" class="small">Request Revision</text>
+
+  <ellipse cx="1040" cy="380" rx="118" ry="28" class="helper-usecase"/>
+  <text x="1040" y="386" text-anchor="middle" class="small">Request Document Resubmission</text>
+
+  <ellipse cx="1040" cy="490" rx="112" ry="28" class="helper-usecase"/>
+  <text x="1040" y="496" text-anchor="middle" class="small">Request Budget Revision</text>
+
+  <ellipse cx="1040" cy="620" rx="122" ry="28" class="helper-usecase"/>
+  <text x="1040" y="626" text-anchor="middle" class="small">Request Liquidation Revision</text>
+
+  <ellipse cx="1040" cy="830" rx="112" ry="28" class="helper-usecase"/>
+  <text x="1040" y="836" text-anchor="middle" class="small">Request YPOP Correction</text>
+
+  <ellipse cx="1040" cy="710" rx="108" ry="28" class="helper-usecase"/>
+  <text x="1040" y="716" text-anchor="middle" class="small">Flag Budget Discrepancy</text>
+
+  <ellipse cx="1035" cy="1005" rx="110" ry="28" class="helper-usecase"/>
+  <text x="1035" y="1011" text-anchor="middle" class="small">Archive Published Post</text>
+
+  <ellipse cx="660" cy="980" rx="100" ry="28" class="helper-usecase"/>
+  <text x="660" y="986" text-anchor="middle" class="small">View Attached Remarks</text>
 
   <!-- Solid actor associations -->
-  <path d="M145 390 C220 290, 280 235, 300 220" class="assoc"/>
-  <path d="M145 390 C220 345, 275 330, 245 320" class="assoc"/>
-  <path d="M145 390 C220 415, 275 430, 230 440" class="assoc"/>
-  <path d="M145 390 C220 495, 275 545, 240 560" class="assoc"/>
-  <path d="M145 390 C220 575, 275 665, 235 680" class="assoc"/>
-  <path d="M145 390 C220 670, 275 785, 245 800" class="assoc"/>
+  <path d="M145 510 C235 280, 300 200, 315 188" class="assoc"/>
+  <path d="M145 510 C230 400, 300 305, 285 290" class="assoc"/>
+  <path d="M145 510 C235 470, 300 408, 275 400" class="assoc"/>
+  <path d="M145 510 C235 560, 300 540, 290 550" class="assoc"/>
+  <path d="M145 510 C235 660, 300 660, 285 680" class="assoc"/>
+  <path d="M145 510 C235 760, 300 795, 290 800" class="assoc"/>
+  <path d="M145 510 C235 875, 300 930, 260 940" class="assoc"/>
+  <path d="M145 510 C235 980, 300 1045, 250 1050" class="assoc"/>
+  <path d="M145 510 C235 1085, 300 1152, 285 1160" class="assoc"/>
 
-  <path d="M1445 390 C1380 280, 1340 230, 1300 220" class="assoc"/>
-  <path d="M1445 390 C1380 345, 1340 330, 1325 330" class="assoc"/>
-  <path d="M1445 390 C1380 430, 1340 445, 1310 450" class="assoc"/>
-  <path d="M1445 390 C1380 535, 1340 565, 1310 570" class="assoc"/>
-  <path d="M1445 390 C1380 640, 1340 680, 1320 690" class="assoc"/>
-  <path d="M1445 390 C1380 760, 1340 800, 1320 810" class="assoc"/>
+  <path d="M1545 510 C1465 320, 1400 210, 1385 188" class="assoc"/>
+  <path d="M1545 510 C1470 350, 1405 300, 1410 300" class="assoc"/>
+  <path d="M1545 510 C1470 415, 1405 410, 1410 410" class="assoc"/>
+  <path d="M1545 510 C1470 505, 1405 520, 1400 520" class="assoc"/>
+  <path d="M1545 510 C1470 585, 1405 620, 1400 630" class="assoc"/>
+  <path d="M1545 510 C1470 690, 1405 730, 1410 740" class="assoc"/>
+  <path d="M1545 510 C1470 820, 1405 845, 1415 850" class="assoc"/>
+  <path d="M1545 510 C1470 930, 1405 955, 1415 960" class="assoc"/>
+  <path d="M1545 510 C1470 1045, 1405 1065, 1420 1070" class="assoc"/>
+  <path d="M1545 510 C1470 1160, 1405 1178, 1370 1180" class="assoc"/>
 
-  <!-- Left dependency arrows -->
-  <path d="M485 210 H600 V160 H645" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="154" class="small">&lt;&lt;include&gt;&gt;</text>
+  <!-- Include relationships -->
+  <path d="M550 180 H710 H735" class="include" marker-end="url(#arrow-black)"/>
+  <text x="620" y="170" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M485 228 H620 V245 H640" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="570" y="238" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M1090 180 H960 H965 H735" class="include" marker-end="url(#arrow-black)"/>
+  <text x="980" y="170" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M545 320 H585 V348 H535" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="312" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M592 390 H720 H715" class="include" marker-end="url(#arrow-black)"/>
+  <text x="640" y="380" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M555 430 H600 V382 H545" class="include" marker-end="url(#arrow-black)"/>
-  <text x="575" y="398" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M590 500 H700 H712" class="include" marker-end="url(#arrow-black)"/>
+  <text x="635" y="490" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M558 448 H610 V480 H548" class="include" marker-end="url(#arrow-black)"/>
-  <text x="585" y="472" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M575 610 H710 H710" class="include" marker-end="url(#arrow-black)"/>
+  <text x="635" y="600" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M548 560 H610 V506 H548" class="include" marker-end="url(#arrow-black)"/>
-  <text x="585" y="528" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M585 720 H705 H708" class="include" marker-end="url(#arrow-black)"/>
+  <text x="640" y="710" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M548 578 H700 V610 H675" class="include" marker-end="url(#arrow-black)"/>
-  <text x="620" y="602" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1075 300 H955 V790 H982" class="include" marker-end="url(#arrow-black)"/>
+  <text x="960" y="420" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M550 680 H720 V636 H675" class="include" marker-end="url(#arrow-black)"/>
-  <text x="630" y="652" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1080 410 H965 V790 H982" class="include" marker-end="url(#arrow-black)"/>
+  <text x="970" y="520" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M550 698 H585 V740 H535" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="560" y="724" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M1090 520 H960 V930 H730" class="include" marker-end="url(#arrow-black)"/>
+  <text x="965" y="700" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M545 800 H625 V514 H548" class="include" marker-end="url(#arrow-black)"/>
-  <text x="605" y="612" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1080 630 H975 V930 H730" class="include" marker-end="url(#arrow-black)"/>
+  <text x="980" y="795" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M545 818 H735 V644 H720" class="include" marker-end="url(#arrow-black)"/>
-  <text x="665" y="702" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1057 850 H975 V930 H730" class="include" marker-end="url(#arrow-black)"/>
+  <text x="980" y="885" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <path d="M545 785 H600 V480 H548" class="include" marker-end="url(#arrow-black)"/>
-  <text x="565" y="632" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1070 1070 H960 V1080 H738" class="include" marker-end="url(#arrow-black)"/>
+  <text x="965" y="1060" class="small">&lt;&lt;include&gt;&gt;</text>
 
-  <!-- Right dependency arrows -->
-  <path d="M1035 210 H940 V480 H812" class="include" marker-end="url(#arrow-black)"/>
-  <text x="945" y="236" class="small">&lt;&lt;include&gt;&gt;</text>
+  <!-- Extend relationships -->
+  <path d="M1140 250 H1185 V272" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1148" y="242" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1028 330 H955 V610 H1005" class="include" marker-end="url(#arrow-black)"/>
-  <text x="960" y="356" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1158 380 H1200 V382" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1162" y="370" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1028 348 H920 V740 H825" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="925" y="458" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M1152 490 H1195 V498" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1156" y="480" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1000 450 H930 V610 H1005" class="include" marker-end="url(#arrow-black)"/>
-  <text x="935" y="474" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1162 620 H1195 V620" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1166" y="610" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1010 570 H950 V480 H812" class="include" marker-end="url(#arrow-black)"/>
-  <text x="955" y="520" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1152 830 H1195 V830" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1156" y="820" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1010 588 H930 V610 H1005" class="include" marker-end="url(#arrow-black)"/>
-  <text x="935" y="604" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M1148 710 H1188 V722" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1152" y="700" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1025 690 H955 V740 H825" class="extend" marker-end="url(#arrow-blue)"/>
-  <text x="960" y="716" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
+  <path d="M1145 1005 H1198 V988" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="1148" y="995" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 
-  <path d="M1025 810 H930 V610 H1005" class="include" marker-end="url(#arrow-black)"/>
-  <text x="935" y="786" class="small">&lt;&lt;include&gt;&gt;</text>
+  <path d="M760 980 H510 V958" class="extend" marker-end="url(#arrow-blue)"/>
+  <text x="600" y="970" class="small" fill="#2563eb">&lt;&lt;extend&gt;&gt;</text>
 </svg>
