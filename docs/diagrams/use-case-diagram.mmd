@@ -1,0 +1,95 @@
+flowchart LR
+  org[Organization User]
+  admin[LYDO Admin]
+
+  subgraph system[LYDO Connect System]
+    direction LR
+
+    subgraph left_col[ ]
+      direction TB
+      uc_login([Log in to Account])
+      uc_profile([Manage Organization Profile])
+      uc_registration([Submit Registration Requirements])
+      uc_compliance([Upload Compliance Documents])
+      uc_budget([Submit Budget Request])
+      uc_liquidation([Submit Liquidation Report])
+      uc_ypop([Manage YPOP Entries])
+      uc_status([View Request Status and Remarks])
+      uc_news([View News and Transparency Posts])
+      uc_notify_user([Receive Notifications])
+    end
+
+    subgraph mid_col[ ]
+      direction TB
+      inc_auth([Authenticate User])
+      inc_upload([Upload Required Documents])
+      inc_update([Update Request Status])
+      inc_notify([Notify Organization User])
+    end
+
+    subgraph right_col[ ]
+      direction TB
+      ad_login([Log in to Admin Account])
+      ad_registration([Review Organization Registration])
+      ad_compliance([Review Compliance Documents])
+      ad_budget([Review Budget Requests])
+      ad_liquidation([Review Liquidation Reports])
+      ad_monitor([Monitor Budget Allocation and Utilization])
+      ad_ypop([Validate YPOP and YORR Records])
+      ad_post([Post News and Transparency Updates])
+      ad_notify([Send Remarks and Notifications])
+      ad_audit([View Audit Logs])
+    end
+
+    ext_revision([Request Revision])
+    ext_resubmit([Request Document Resubmission])
+    ext_discrepancy([Flag Budget Discrepancy])
+    ext_remarks([View Attached Remarks])
+  end
+
+  org --- uc_login
+  org --- uc_profile
+  org --- uc_registration
+  org --- uc_compliance
+  org --- uc_budget
+  org --- uc_liquidation
+  org --- uc_ypop
+  org --- uc_status
+  org --- uc_news
+  org --- uc_notify_user
+
+  admin --- ad_login
+  admin --- ad_registration
+  admin --- ad_compliance
+  admin --- ad_budget
+  admin --- ad_liquidation
+  admin --- ad_monitor
+  admin --- ad_ypop
+  admin --- ad_post
+  admin --- ad_notify
+  admin --- ad_audit
+
+  uc_login -. "<<include>>" .-> inc_auth
+  ad_login -. "<<include>>" .-> inc_auth
+  uc_registration -. "<<include>>" .-> inc_upload
+  uc_compliance -. "<<include>>" .-> inc_upload
+  uc_budget -. "<<include>>" .-> inc_upload
+  uc_liquidation -. "<<include>>" .-> inc_upload
+  ad_registration -. "<<include>>" .-> inc_update
+  ad_compliance -. "<<include>>" .-> inc_update
+  ad_budget -. "<<include>>" .-> inc_update
+  ad_liquidation -. "<<include>>" .-> inc_update
+  ad_ypop -. "<<include>>" .-> inc_update
+  ad_notify -. "<<include>>" .-> inc_notify
+
+  ext_revision -. "<<extend>>" .-> ad_registration
+  ext_resubmit -. "<<extend>>" .-> ad_compliance
+  ext_discrepancy -. "<<extend>>" .-> ad_monitor
+  ext_remarks -. "<<extend>>" .-> uc_status
+
+  classDef actor fill:#ffffff,stroke:#111827,stroke-width:0px,color:#111827;
+  classDef main fill:#7dd3fc,stroke:#111827,stroke-width:2px,color:#111827;
+  classDef helper fill:#ffffff,stroke:#111827,stroke-width:2px,color:#111827;
+  class org,admin actor;
+  class uc_login,uc_profile,uc_registration,uc_compliance,uc_budget,uc_liquidation,uc_ypop,uc_status,uc_news,uc_notify_user,ad_login,ad_registration,ad_compliance,ad_budget,ad_liquidation,ad_monitor,ad_ypop,ad_post,ad_notify,ad_audit main;
+  class inc_auth,inc_upload,inc_update,inc_notify,ext_revision,ext_resubmit,ext_discrepancy,ext_remarks helper;

@@ -1,0 +1,92 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #7dd3fc
+  BorderColor #111827
+  ArrowColor #111827
+}
+skinparam actor {
+  BorderColor #111827
+  FontColor #111827
+}
+
+actor "Organization User" as Org
+actor "LYDO Admin" as Admin
+
+rectangle "LYDO Connect System" {
+  (Log in to Account) as UC_Login
+  (Manage Organization Profile) as UC_Profile
+  (Submit Registration Requirements) as UC_Registration
+  (Upload Compliance Documents) as UC_Compliance
+  (Submit Budget Request) as UC_Budget
+  (Submit Liquidation Report) as UC_Liquidation
+  (Manage YPOP Entries) as UC_Ypop
+  (View Request Status and Remarks) as UC_Status
+  (View News and Transparency Posts) as UC_News
+  (Receive Notifications) as UC_OrgNotify
+
+  (Log in to Admin Account) as AD_Login
+  (Review Organization Registration) as AD_Registration
+  (Review Compliance Documents) as AD_Compliance
+  (Review Budget Requests) as AD_Budget
+  (Review Liquidation Reports) as AD_Liquidation
+  (Monitor Budget Allocation and Utilization) as AD_Monitor
+  (Validate YPOP and YORR Records) as AD_Ypop
+  (Post News and Transparency Updates) as AD_Post
+  (Send Remarks and Notifications) as AD_Notify
+  (View Audit Logs) as AD_Audit
+
+  (Authenticate User) as INC_Auth
+  (Upload Required Documents) as INC_Upload
+  (Update Request Status) as INC_Update
+  (Notify Organization User) as INC_Notify
+
+  (Request Revision) as EXT_Revision
+  (Request Document Resubmission) as EXT_Resubmit
+  (Flag Budget Discrepancy) as EXT_Discrepancy
+  (View Attached Remarks) as EXT_Remarks
+}
+
+Org --> UC_Login
+Org --> UC_Profile
+Org --> UC_Registration
+Org --> UC_Compliance
+Org --> UC_Budget
+Org --> UC_Liquidation
+Org --> UC_Ypop
+Org --> UC_Status
+Org --> UC_News
+Org --> UC_OrgNotify
+
+Admin --> AD_Login
+Admin --> AD_Registration
+Admin --> AD_Compliance
+Admin --> AD_Budget
+Admin --> AD_Liquidation
+Admin --> AD_Monitor
+Admin --> AD_Ypop
+Admin --> AD_Post
+Admin --> AD_Notify
+Admin --> AD_Audit
+
+UC_Login ..> INC_Auth : <<include>>
+AD_Login ..> INC_Auth : <<include>>
+UC_Registration ..> INC_Upload : <<include>>
+UC_Compliance ..> INC_Upload : <<include>>
+UC_Budget ..> INC_Upload : <<include>>
+UC_Liquidation ..> INC_Upload : <<include>>
+AD_Registration ..> INC_Update : <<include>>
+AD_Compliance ..> INC_Update : <<include>>
+AD_Budget ..> INC_Update : <<include>>
+AD_Liquidation ..> INC_Update : <<include>>
+AD_Ypop ..> INC_Update : <<include>>
+AD_Notify ..> INC_Notify : <<include>>
+
+EXT_Revision ..> AD_Registration : <<extend>>
+EXT_Resubmit ..> AD_Compliance : <<extend>>
+EXT_Discrepancy ..> AD_Monitor : <<extend>>
+EXT_Remarks ..> UC_Status : <<extend>>
+
+@enduml
