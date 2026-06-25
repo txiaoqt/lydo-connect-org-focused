@@ -437,6 +437,66 @@ const calculateColumnWidth = (values: string[], minWidth: number, maxWidth: numb
   return Math.min(Math.max(longest + 2, minWidth), maxWidth);
 };
 
+type ExcelJsModuleShape = {
+  Workbook?: new () => {
+    creator?: string;
+    created?: Date;
+    addWorksheet: (name: string) => ExcelWorksheetShape;
+    xlsx: { writeBuffer: () => Promise<ArrayBuffer> };
+  };
+  default?: ExcelJsModuleShape;
+};
+
+type ExcelWorksheetShape = {
+  mergeCells: (range: string) => void;
+  getCell: (reference: string) => ExcelCellShape;
+  getRow: (index: number) => ExcelRowShape;
+  columns: Array<{ width?: number }>;
+  autoFilter?: { from: string; to: string };
+  views?: Array<{ state: string; ySplit: number }>;
+  pageSetup?: {
+    orientation: "portrait" | "landscape";
+    fitToPage: boolean;
+    fitToWidth: number;
+    fitToHeight: number;
+    printArea: string;
+    printTitlesRow: string;
+    margins: {
+      left: number;
+      right: number;
+      top: number;
+      bottom: number;
+      header: number;
+      footer: number;
+    };
+  };
+};
+
+type ExcelRowShape = {
+  height?: number;
+  getCell: (index: number) => ExcelCellShape;
+};
+
+type ExcelCellShape = {
+  value: unknown;
+  font?: Record<string, unknown>;
+  alignment?: Record<string, unknown>;
+  fill?: Record<string, unknown>;
+  border?: Record<string, unknown>;
+  numFmt?: string;
+};
+
+const resolveExcelJsWorkbook = async () => {
+  const excelJsModule = (await import("exceljs")) as ExcelJsModuleShape;
+  const workbookCtor = excelJsModule.Workbook ?? excelJsModule.default?.Workbook;
+
+  if (!workbookCtor) {
+    throw new Error("ExcelJS workbook constructor is unavailable.");
+  }
+
+  return workbookCtor;
+};
+
 const getWorksheetCellValue = <Row,>(column: ReportColumn<Row>, row: Row, index: number) => {
   const rawValue = (column.xlsxValue ?? column.value)(row, index);
   if (column.xlsxType === "currency" || column.xlsxType === "integer" || column.xlsxType === "decimal") {
@@ -466,8 +526,8 @@ const estimateRowHeight = (values: unknown[]) => {
 };
 
 export const exportReportAsXlsx = async <Row,>(options: ReportExportOptions<Row>) => {
-  const ExcelJS = await import("exceljs");
-  const workbook = new ExcelJS.Workbook();
+  const Workbook = await resolveExcelJsWorkbook();
+  const workbook = new Workbook();
   workbook.creator = "OpenAI Codex";
   workbook.created = new Date();
 
