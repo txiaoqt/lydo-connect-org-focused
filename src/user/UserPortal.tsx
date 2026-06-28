@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import JSZip from "jszip";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -128,6 +129,7 @@ import {
   upsertOrganizationProfileInSupabase,
   removeOrganizationDocumentFromSupabase,
   submitOrganizationDocumentToSupabase,
+  submitOrganizationDocumentsBatchToSupabase,
   updateLiquidationReportInSupabase,
   createYpopEntryInSupabase,
   createYpopOrgActivityInSupabase,
@@ -196,6 +198,19 @@ const isApprovedSubmissionFile = (file?: Pick<SubmissionFile, "adminStatus"> | n
   file?.adminStatus === "approved" || file?.adminStatus === "approved_green";
 const isApprovedDocumentSubmission = (submission?: { status?: string } | null) =>
   submission?.status === "approved" || submission?.status === "approved_green";
+const deriveOverallDocumentSubmissionStatus = (
+  files: SubmissionFile[],
+): "not_started" | "draft" | "under_admin_review" | "needs_revision" | "approved_green" => {
+  if (!files.length) return "not_started";
+  const statuses = files.map((file) => file.adminStatus);
+  if (statuses.includes("needs_revision") || statuses.includes("rejected_red")) return "needs_revision";
+  if (statuses.every((status) => status === "approved_green" || status === "approved")) return "approved_green";
+  if (statuses.some((status) => status === "under_admin_review" || status === "submitted" || status === "ready_for_review")) {
+    return "under_admin_review";
+  }
+  if (statuses.some((status) => status === "draft")) return "draft";
+  return "under_admin_review";
+};
 const formatCompactDateLabel = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -260,6 +275,25 @@ const liquidationUnlockedBudgetStatuses = new Set<BudgetRequest["status"]>(["bud
 const ADMIN_RECIPIENT_ID = "admin-demo";
 const createNotificationId = () => `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createOcrEntityId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const createBatchUploadDraftId = () => `batch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+type BatchDroppedDocumentFile = {
+  id: string;
+  file: File;
+  mappedDocumentTypeId: string;
+};
+
+type BatchUploadResultSummary = {
+  submitMode: "draft" | "review";
+  successCount: number;
+  failureCount: number;
+  results: Array<{
+    documentTypeName: string;
+    fileName: string;
+    success: boolean;
+    error?: string;
+  }>;
+};
 const getOrganizationProfileCompletionCount = (profile?: OrganizationProfile | null) =>
   [
     profile?.organizationName?.trim(),
@@ -567,6 +601,13 @@ export default function UserPortal({ section }: { section: string }) {
     file: File;
     result: DocumentOcrScanResult | null;
   } | null>(null);
+  const [batchUploadOpen, setBatchUploadOpen] = useState(false);
+  const [batchUploadConfirmOpen, setBatchUploadConfirmOpen] = useState(false);
+  const [batchUploadSubmitting, setBatchUploadSubmitting] = useState(false);
+  const [downloadingAllTemplates, setDownloadingAllTemplates] = useState(false);
+  const [batchUploadSubmitMode, setBatchUploadSubmitMode] = useState<"draft" | "review">("review");
+  const [batchDroppedFiles, setBatchDroppedFiles] = useState<BatchDroppedDocumentFile[]>([]);
+  const [batchUploadResult, setBatchUploadResult] = useState<BatchUploadResultSummary | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
   useEffect(() => {
     if (!currentProfile) return;
@@ -815,6 +856,18 @@ export default function UserPortal({ section }: { section: string }) {
   const docFiles = state.documentSubmissionFiles.filter(
     (file) => file.submissionId === submissionId && validDocumentTypeIds.has(file.documentTypeId),
   );
+  const uploadableTemplateDocuments = useMemo(
+    () =>
+      templateDocuments.filter((documentType) => {
+        const file = docFiles.find((entry) => entry.documentTypeId === documentType.id);
+        return !isApprovedSubmissionFile(file);
+      }),
+    [docFiles, templateDocuments],
+  );
+  const documentFilesByTypeId = useMemo(
+    () => new Map(docFiles.map((file) => [file.documentTypeId, file])),
+    [docFiles],
+  );
   const ocrSchema = pendingDocumentScan ? getDocumentSchemaForSlot(pendingDocumentScan.documentTypeName) : null;
   const selectedEditableOcrField = editableOcrFields.find((field) => field.id === selectedOcrFieldId) ?? null;
   const activeOcrPageResult = pendingDocumentScan?.result?.pages.find((page) => page.pageNumber === activeOcrPage) ?? pendingDocumentScan?.result?.pages[0] ?? null;
@@ -936,6 +989,19 @@ export default function UserPortal({ section }: { section: string }) {
   const documentsPercent = getReadiness(completedDocs, templateDocuments.length);
   const budgetPercent = latestBudget ? getReadiness(approvedBudgetStatuses.has(latestBudget.status) ? 1 : 0, 1) : 0;
   const liquidationPercent = latestLiquidation ? getReadiness(latestLiquidation.status === "completed_liquidated" ? 1 : 0, 1) : 0;
+  const documentsAwaitingUploadCount = Math.max(templateDocuments.length - docFiles.length, 0);
+  const revisionRequiredFiles = docFiles.filter((file) => file.adminStatus === "needs_revision" || file.adminStatus === "rejected_red");
+  const batchSelectedItems = useMemo(() => {
+    const droppedSelections = batchDroppedFiles
+      .map((entry) => {
+        const documentType = templateDocuments.find((template) => template.id === entry.mappedDocumentTypeId);
+        if (!documentType || !entry.file) return null;
+        return { documentType, file: entry.file, source: "drop" as const, id: entry.id };
+      })
+      .filter((entry): entry is { documentType: (typeof templateDocuments)[number]; file: File; source: "drop"; id: string } => Boolean(entry));
+
+    return droppedSelections;
+  }, [batchDroppedFiles, templateDocuments]);
   const profileActivityLogEntries = useMemo(
     () =>
       state.activityLogs
@@ -993,6 +1059,98 @@ export default function UserPortal({ section }: { section: string }) {
         description: error instanceof Error ? error.message : "The file could not be opened right now.",
         variant: "destructive",
       });
+    }
+  };
+
+  const downloadResolvedFile = async (fileUrl: string, downloadName: string) => {
+    const resolvedUrl = await resolveSupabaseFileUrl(fileUrl);
+    if (!resolvedUrl) {
+      throw new Error("No file is available yet.");
+    }
+
+    const response = await fetch(resolvedUrl);
+    if (!response.ok) {
+      throw new Error(`Unable to download ${downloadName}.`);
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = downloadName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  const handleDownloadTemplate = async (template: (typeof templateDocuments)[number]) => {
+    if (!template.templateFileUrl) {
+      toast({
+        title: "Template currently unavailable",
+        description: `${template.name} does not have a downloadable template file yet.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await downloadResolvedFile(template.templateFileUrl, template.templateFileName || template.name);
+    } catch (error) {
+      toast({
+        title: "Unable to download template",
+        description: error instanceof Error ? error.message : "The template could not be downloaded right now.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadAllTemplates = async () => {
+    const missingTemplates = templateDocuments.filter((template) => !template.templateFileUrl);
+    if (missingTemplates.length) {
+      toast({
+        title: "Unable to prepare all templates",
+        description: `Missing template: ${missingTemplates[0].name}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingAllTemplates(true);
+    try {
+      const zip = new JSZip();
+      await Promise.all(
+        templateDocuments.map(async (template) => {
+          const resolvedUrl = await resolveSupabaseFileUrl(template.templateFileUrl);
+          if (!resolvedUrl) {
+            throw new Error(`Missing template: ${template.name}`);
+          }
+          const response = await fetch(resolvedUrl);
+          if (!response.ok) {
+            throw new Error(`Missing template: ${template.name}`);
+          }
+          const blob = await response.blob();
+          zip.file(template.templateFileName || `${template.name}.pdf`, blob);
+        }),
+      );
+
+      const archive = await zip.generateAsync({ type: "blob" });
+      const objectUrl = URL.createObjectURL(archive);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "Y-TRACE-Required-Templates.zip";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      toast({
+        title: "Unable to prepare all templates",
+        description: error instanceof Error ? error.message : "The ZIP archive could not be generated.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingAllTemplates(false);
     }
   };
 
@@ -1127,6 +1285,208 @@ export default function UserPortal({ section }: { section: string }) {
     return false;
   };
 
+  const getDocumentUploadValidationError = (
+    documentTypeId: string,
+    file: File | null,
+    options?: { ignoreExistingApprovedFile?: boolean },
+  ) => {
+    if (!file) return "No file was selected.";
+    if (isDocumentSubmissionApproved) {
+      return "Approved submitted documents can no longer be changed or replaced.";
+    }
+
+    const existingFile = documentFilesByTypeId.get(documentTypeId);
+    if (!options?.ignoreExistingApprovedFile && isApprovedSubmissionFile(existingFile)) {
+      return "This approved document can no longer be changed or removed.";
+    }
+
+    const isMembersList = documentTypeId === "yorp-members";
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const isSpreadsheet = /\.(xlsx|xls)$/i.test(file.name);
+    if (!isPdf && !(isMembersList && isSpreadsheet)) {
+      return isMembersList
+        ? "Please upload a PDF or XLSX file for the members list document slot."
+        : "Please upload a PDF file for document submission.";
+    }
+
+    return null;
+  };
+
+  const suggestDocumentTypeIdForFile = (fileName: string) => {
+    const normalized = fileName.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+    const matchedTemplate = uploadableTemplateDocuments.find((documentType) => {
+      const templateName = documentType.name.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+      return normalized.includes(templateName);
+    });
+    return matchedTemplate?.id ?? "";
+  };
+
+  const resetBatchUploadState = () => {
+    setBatchUploadConfirmOpen(false);
+    setBatchUploadSubmitting(false);
+    setBatchUploadSubmitMode("review");
+    setBatchDroppedFiles([]);
+  };
+
+  const getBatchUploadIssues = () => {
+    const issues: string[] = [];
+    const mappedDocumentTypeIds = new Set<string>();
+
+    batchSelectedItems.forEach((entry) => {
+      const validationError = getDocumentUploadValidationError(entry.documentType.id, entry.file);
+      if (validationError) {
+        issues.push(`${entry.documentType.name}: ${validationError}`);
+      }
+      if (mappedDocumentTypeIds.has(entry.documentType.id)) {
+        issues.push(`${entry.documentType.name}: This document type is already assigned in the current batch.`);
+      }
+      mappedDocumentTypeIds.add(entry.documentType.id);
+    });
+
+    batchDroppedFiles
+      .filter((entry) => !entry.mappedDocumentTypeId)
+      .forEach((entry) => {
+        issues.push(`${entry.file.name}: Select a document type before continuing.`);
+      });
+
+    return issues;
+  };
+
+  const batchAssignmentCounts = useMemo(() => {
+    const rawCount = batchDroppedFiles.length;
+    const assignedCount = batchDroppedFiles.filter((entry) => entry.mappedDocumentTypeId).length;
+    const duplicateTypeCount = batchDroppedFiles.reduce((count, entry, index, array) => {
+      if (!entry.mappedDocumentTypeId) return count;
+      return array.findIndex((item) => item.mappedDocumentTypeId === entry.mappedDocumentTypeId) !== index ? count + 1 : count;
+    }, 0);
+    const validReadyCount = batchDroppedFiles.filter((entry) => {
+      if (!entry.mappedDocumentTypeId) return false;
+      const validationError = getDocumentUploadValidationError(entry.mappedDocumentTypeId, entry.file);
+      const hasDuplicate = batchDroppedFiles.some(
+        (other) => other.id !== entry.id && other.mappedDocumentTypeId && other.mappedDocumentTypeId === entry.mappedDocumentTypeId,
+      );
+      return !validationError && !hasDuplicate;
+    }).length;
+    return {
+      rawCount,
+      assignedCount,
+      validReadyCount,
+      unassignedCount: rawCount - assignedCount,
+      duplicateTypeCount,
+    };
+  }, [batchDroppedFiles]);
+
+  const openBatchUploadWorkspace = () => {
+    if (!ensureCompletedOrganizationProfile()) return;
+    if (isDocumentSubmissionApproved) {
+      toast({
+        title: "Submission locked",
+        description: "Approved submitted documents can no longer be changed or replaced.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBatchUploadResult(null);
+    setBatchUploadOpen(true);
+  };
+
+  const handleBatchDroppedFiles = (files: FileList | File[] | null | undefined) => {
+    const normalizedFiles = Array.from(files ?? []).filter(Boolean);
+    if (!normalizedFiles.length) return;
+
+    setBatchDroppedFiles((current) => [
+      ...current,
+      ...normalizedFiles.map((file) => ({
+        id: createBatchUploadDraftId(),
+        file,
+        mappedDocumentTypeId: suggestDocumentTypeIdForFile(file.name),
+      })),
+    ]);
+  };
+
+  const handleSubmitBatchUpload = async (submitMode: "draft" | "review") => {
+    if (!batchSelectedItems.length) {
+      toast({
+        title: "No files selected",
+        description: "Select at least one required document before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const issues = getBatchUploadIssues();
+    if (issues.length) {
+      toast({
+        title: "Fix the batch selection first",
+        description: issues[0],
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBatchUploadSubmitMode(submitMode);
+    setBatchUploadConfirmOpen(true);
+  };
+
+  const confirmBatchUpload = async () => {
+    if (!batchSelectedItems.length) return;
+
+    setBatchUploadSubmitting(true);
+    try {
+      const result = await submitOrganizationDocumentsBatchToSupabase({
+        submitMode: batchUploadSubmitMode,
+        documents: batchSelectedItems.map((entry) => ({
+          documentTypeId: entry.documentType.id,
+          documentTypeName: entry.documentType.name,
+          file: entry.file,
+          validationStatus: "correct",
+          adminRemarks: batchUploadSubmitMode === "draft" ? "Saved as draft." : "Awaiting admin review.",
+        })),
+      });
+
+      const remoteSnapshot = await loadLydoConnectSupabaseState();
+      if (remoteSnapshot) {
+        mergeRemoteState(remoteSnapshot);
+      }
+
+      if (result.successCount > 0 && batchUploadSubmitMode === "review") {
+        notifyAdmin({
+          title: "Batch document submission",
+          message: `${result.successCount} document${result.successCount === 1 ? "" : "s"} were submitted by ${profile.organizationName || "an organization"}.`,
+          relatedType: "document_submission",
+          relatedId: submission?.id ?? result.results.find((entry) => entry.submissionId)?.submissionId ?? "",
+          organizationId: profile.id,
+        });
+      }
+
+      setBatchUploadResult({
+        submitMode: batchUploadSubmitMode,
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+        results: result.results.map((entry) => ({
+          documentTypeName: entry.documentTypeName,
+          fileName: entry.fileName,
+          success: entry.success,
+          error: entry.error,
+        })),
+      });
+
+      setBatchUploadConfirmOpen(false);
+      setBatchUploadOpen(false);
+      if (result.successCount > 0) {
+        resetBatchUploadState();
+      }
+    } catch (error) {
+      toast({
+        title: "Batch upload failed",
+        description: error instanceof Error ? error.message : "The selected documents could not be processed.",
+        variant: "destructive",
+      });
+    } finally {
+      setBatchUploadSubmitting(false);
+    }
+  };
+
   const handleMarkNotificationRead = async (notificationId: string) => {
     const targetNotification = userNotifications.find((notification) => notification.id === notificationId);
     if (!targetNotification || targetNotification.isRead) return;
@@ -1192,15 +1552,13 @@ export default function UserPortal({ section }: { section: string }) {
       return;
     }
 
-    const isMembersList = localDocumentType.id === "yorp-members";
-    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    const isSpreadsheet = /\.(xlsx|xls)$/i.test(file.name);
-    if (!isPdf && !(isMembersList && isSpreadsheet)) {
+    const validationError = getDocumentUploadValidationError(localDocumentType.id, file, {
+      ignoreExistingApprovedFile: true,
+    });
+    if (validationError) {
       toast({
         title: "Unsupported file type",
-        description: isMembersList
-          ? "Please upload a PDF or XLSX file for the members list document slot."
-          : "Please upload a PDF file for document submission.",
+        description: validationError,
         variant: "destructive",
       });
       return;
@@ -2239,7 +2597,7 @@ export default function UserPortal({ section }: { section: string }) {
           });
         }
         return (
-          <div className="mx-auto max-w-5xl space-y-4 lg:max-w-7xl lg:space-y-[18px]">
+          <div className="user-dashboard-page mx-auto max-w-5xl space-y-4 lg:max-w-7xl lg:space-y-[18px]">
             {!isVerified ? null : !verifiedBannerDismissed ? (
               <Card className="border-green-500/20 bg-green-500/5">
                 <CardContent className="flex items-start justify-between gap-4 p-5 sm:p-6">
@@ -2340,7 +2698,7 @@ export default function UserPortal({ section }: { section: string }) {
             <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)] lg:gap-[18px] lg:space-y-0 lg:items-start">
               <div className="space-y-4 lg:grid lg:gap-[18px] lg:space-y-0">
                 <DashboardSection title="Overview" className="overview-section p-3.5 sm:p-4 lg:p-5" titleClassName="overview-section-title" contentClassName="mt-3 sm:mt-4">
-                  <div className="overview-grid grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-4 lg:gap-3">
+                  <div className="overview-grid grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
                     <DashboardOverviewCard
                       label="Profile"
                       value={`${profilePercent}%`}
@@ -2563,18 +2921,25 @@ export default function UserPortal({ section }: { section: string }) {
       }
       case "templates":
         return (
-          <PortalSection
-            title="Templates"
-            description="Download the shared template files that the admin has published for your organization."
-          >
-            {otherTemplates.length === 0 ? (
-              <PortalEmptyState
-                title="No templates available"
-                description="Other reference templates will appear here once the admin uploads them."
-              />
-            ) : (
+          <div className="space-y-6">
+            <PortalSection
+              title="Required Document Templates"
+              description="Download the required document templates here before preparing your bulk document submission."
+              action={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full sm:w-auto"
+                  disabled={downloadingAllTemplates}
+                  onClick={() => void handleDownloadAllTemplates()}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  {downloadingAllTemplates ? "Preparing ZIP..." : "Download All Templates"}
+                </Button>
+              }
+            >
               <div className="grid gap-4 lg:grid-cols-2">
-                {otherTemplates.map((template) => (
+                {templateDocuments.map((template) => (
                   <Card key={template.id} className="border-border/70 shadow-sm">
                     <CardContent className="space-y-4 p-5">
                       <div className="space-y-1">
@@ -2583,7 +2948,9 @@ export default function UserPortal({ section }: { section: string }) {
                             <PortalIconBadge icon={FileText} tone="red" />
                             <div className="min-w-0">
                               <p className="break-words text-base font-semibold text-foreground">{template.name}</p>
-                              <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {template.templateFileUrl ? template.description : "Template currently unavailable"}
+                              </p>
                             </div>
                           </div>
                           <PortalStatusBadge status={template.templateFileUrl ? "approved_green" : "draft"} />
@@ -2604,7 +2971,7 @@ export default function UserPortal({ section }: { section: string }) {
                           type="button"
                           className="w-full sm:flex-1"
                           disabled={!template.templateFileUrl}
-                          onClick={() => void openFile(template.templateFileUrl, template.templateFileName || template.name)}
+                          onClick={() => void handleDownloadTemplate(template)}
                         >
                           <Download className="mr-2 h-4 w-4" />
                           Download
@@ -2614,8 +2981,62 @@ export default function UserPortal({ section }: { section: string }) {
                   </Card>
                 ))}
               </div>
-            )}
-          </PortalSection>
+            </PortalSection>
+
+            <PortalSection
+              title="Other Templates"
+              description="Download the shared template files that the admin has published for your organization."
+            >
+              {otherTemplates.length === 0 ? (
+                <PortalEmptyState
+                  title="No other templates available"
+                  description="Other reference templates will appear here once the admin uploads them."
+                />
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {otherTemplates.map((template) => (
+                    <Card key={template.id} className="border-border/70 shadow-sm">
+                      <CardContent className="space-y-4 p-5">
+                        <div className="space-y-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start gap-3">
+                              <PortalIconBadge icon={FileText} tone="red" />
+                              <div className="min-w-0">
+                                <p className="break-words text-base font-semibold text-foreground">{template.name}</p>
+                                <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
+                              </div>
+                            </div>
+                            <PortalStatusBadge status={template.templateFileUrl ? "approved_green" : "draft"} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full sm:flex-1"
+                            disabled={!template.templateFileUrl}
+                            onClick={() => void openPreview(template.templateFileUrl, template.templateFileName || template.name)}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Template
+                          </Button>
+                          <Button
+                            type="button"
+                            className="w-full sm:flex-1"
+                            disabled={!template.templateFileUrl}
+                            onClick={() => void openFile(template.templateFileUrl, template.templateFileName || template.name)}
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </PortalSection>
+          </div>
         );
       case "organization-profile": {
         const profileStatus = currentProfile?.profileStatus ?? profileDraft.profileStatus;
@@ -3410,7 +3831,7 @@ export default function UserPortal({ section }: { section: string }) {
         const detailHasAdminFeedback =
           detailFile?.adminStatus === "needs_revision" || detailFile?.adminStatus === "rejected_red";
         const detailFileBadgeStatus = detailFile
-          ? detailFile.adminStatus && detailFile.adminStatus !== "draft"
+          ? detailFile.adminStatus
             ? detailFile.adminStatus
             : detailFile.validationStatus === "correct"
               ? "ready_for_review"
@@ -3420,7 +3841,7 @@ export default function UserPortal({ section }: { section: string }) {
         const detailFileTimeline: FileTimelineEntry[] = detailFile
           ? [
               ...(detailFile.uploadedAt
-                ? [{ date: detailFile.uploadedAt, message: "Document uploaded for review." }]
+                ? [{ date: detailFile.uploadedAt, message: detailFile.adminStatus === "draft" ? "Document saved as draft." : "Document uploaded for review." }]
                 : []),
               ...(detailFile.reviewedAt
                 ? (() => {
@@ -3434,7 +3855,7 @@ export default function UserPortal({ section }: { section: string }) {
                         message: remark ? `Admin requested revision: "${remark}"` : "Admin requested revision.",
                       }];
                     }
-                    if (s === "submitted" || s === "ready_for_review")
+                    if (s === "submitted" || s === "ready_for_review" || s === "under_admin_review")
                       return [{ date: detailFile.reviewedAt, message: "Document received and queued for review." }];
                     return [];
                   })()
@@ -3567,60 +3988,65 @@ export default function UserPortal({ section }: { section: string }) {
                       </div>
                     ) : null}
 
-                    <div className="border-t border-border/40 pt-4">
-                      <input
-                        ref={attachedDocumentInputRef}
-                        type="file"
-                        accept={getDocumentUploadAcceptValue(attachedDocumentEditor.file.documentTypeId)}
-                        className="hidden"
-                        onChange={(event) => {
-                          const nextFile = event.target.files?.[0] ?? null;
-                          setAttachedDocumentReplacementFile(nextFile);
-                          setAttachedDocumentMarkedForRemoval(false);
-                        }}
-                      />
-                      <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-10"
-                          onClick={() => attachedDocumentInputRef.current?.click()}
-                          disabled={Boolean(savingAttachedDocument) || detailFileLocked}
-                        >
-                          <FileUp className="mr-2 h-4 w-4" />
-                          Change File
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={attachedDocumentMarkedForRemoval ? "secondary" : "destructive"}
-                          className="h-10"
-                          onClick={() => {
-                            setAttachedDocumentMarkedForRemoval((current) => !current);
-                            setAttachedDocumentReplacementFile(null);
-                            if (attachedDocumentInputRef.current) {
-                              attachedDocumentInputRef.current.value = "";
-                            }
+                    {detailHasAdminFeedback && !detailFileLocked ? (
+                      <div className="border-t border-border/40 pt-4">
+                        <input
+                          ref={attachedDocumentInputRef}
+                          type="file"
+                          accept={getDocumentUploadAcceptValue(attachedDocumentEditor.file.documentTypeId)}
+                          className="hidden"
+                          onChange={(event) => {
+                            const nextFile = event.target.files?.[0] ?? null;
+                            setAttachedDocumentReplacementFile(nextFile);
+                            setAttachedDocumentMarkedForRemoval(false);
                           }}
-                          disabled={Boolean(savingAttachedDocument) || detailFileLocked}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          {attachedDocumentMarkedForRemoval ? "Undo Remove" : "Remove"}
-                        </Button>
+                        />
+                        <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10"
+                            onClick={() => attachedDocumentInputRef.current?.click()}
+                            disabled={Boolean(savingAttachedDocument)}
+                          >
+                            <FileUp className="mr-2 h-4 w-4" />
+                            Change File
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={attachedDocumentMarkedForRemoval ? "secondary" : "destructive"}
+                            className="h-10"
+                            onClick={() => {
+                              setAttachedDocumentMarkedForRemoval((current) => !current);
+                              setAttachedDocumentReplacementFile(null);
+                              if (attachedDocumentInputRef.current) {
+                                attachedDocumentInputRef.current.value = "";
+                              }
+                            }}
+                            disabled={Boolean(savingAttachedDocument)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {attachedDocumentMarkedForRemoval ? "Undo Remove" : "Remove Document"}
+                          </Button>
+                        </div>
+                        {attachedDocumentReplacementFile ? (
+                          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                            Replacement: <span className="font-medium text-foreground">{attachedDocumentReplacementFile.name}</span>
+                          </p>
+                        ) : null}
+                        {attachedDocumentMarkedForRemoval ? (
+                          <p className="mt-2 text-xs text-destructive">This file will be removed when you save.</p>
+                        ) : null}
                       </div>
-                      {attachedDocumentReplacementFile ? (
-                        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                          Replacement: <span className="font-medium text-foreground">{attachedDocumentReplacementFile.name}</span>
-                        </p>
-                      ) : null}
-                      {attachedDocumentMarkedForRemoval ? (
-                        <p className="mt-2 text-xs text-destructive">This file will be removed when you save.</p>
-                      ) : null}
-                      {detailFileLocked ? (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          This approved document is locked and can no longer be changed or removed.
-                        </p>
-                      ) : null}
-                    </div>
+                    ) : (
+                      <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
+                        {detailHasAdminFeedback
+                          ? "This document is currently locked."
+                          : detailFileLocked
+                            ? "This approved document is locked and can no longer be changed through the normal submission flow."
+                            : "Use Upload Multiple Documents from the main page whenever you need to add or revise eligible documents."}
+                      </div>
+                    )}
 
                     <div className="border-t border-border/40 pt-4">
                       <RecentActivityPreview
@@ -3654,14 +4080,18 @@ export default function UserPortal({ section }: { section: string }) {
 
                     <div className="border-t border-border/40 pt-4">
                       <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          type="button"
-                          className="h-10"
-                          onClick={() => void saveAttachedDocumentChanges()}
-                          disabled={Boolean(savingAttachedDocument)}
-                        >
-                          {savingAttachedDocument ? "Saving..." : "Save Changes"}
-                        </Button>
+                        {detailHasAdminFeedback && !detailFileLocked ? (
+                          <Button
+                            type="button"
+                            className="h-10"
+                            onClick={() => void saveAttachedDocumentChanges()}
+                            disabled={Boolean(savingAttachedDocument)}
+                          >
+                            {savingAttachedDocument ? "Saving..." : "Save Changes"}
+                          </Button>
+                        ) : (
+                          <div />
+                        )}
                         <Button
                           type="button"
                           variant="outline"
@@ -3669,7 +4099,7 @@ export default function UserPortal({ section }: { section: string }) {
                           onClick={closeAttachedDocumentEditor}
                           disabled={Boolean(savingAttachedDocument)}
                         >
-                          Cancel
+                          Back to Documents
                         </Button>
                       </div>
                     </div>
@@ -3684,7 +4114,7 @@ export default function UserPortal({ section }: { section: string }) {
           const file = docFiles.find((entry) => entry.documentTypeId === documentType.id);
           const template = templatesById[documentType.id];
           const badgeStatus =
-            file?.adminStatus && file.adminStatus !== "draft"
+            file?.adminStatus
               ? file.adminStatus
               : file
                 ? file.validationStatus === "correct"
@@ -3705,7 +4135,8 @@ export default function UserPortal({ section }: { section: string }) {
         ).length;
         const totalDocumentCount = templateDocuments.length;
         const documentCompletionPercent = totalDocumentCount > 0 ? Math.round((approvedDocumentCount / totalDocumentCount) * 100) : 0;
-        const overallDocumentStatusLabel = submission ? formatStatusLabel(submission.status) : "Incomplete";
+        const overallDocumentStatus = deriveOverallDocumentSubmissionStatus(docFiles);
+        const overallDocumentStatusLabel = formatStatusLabel(overallDocumentStatus);
         const summarySupportMessage =
           totalDocumentCount === 0
             ? "No required document slots are configured yet."
@@ -3723,16 +4154,41 @@ export default function UserPortal({ section }: { section: string }) {
               title="Document Submissions"
               description="Upload each required file and submit for admin review. You will be notified when documents are approved or require changes."
               action={
-                submission ? (
-                  <PortalStatusBadge status={submission.status} />
-                ) : (
-                  <span className="inline-flex rounded-full border border-border/70 bg-muted/20 px-3 py-1 text-xs font-medium text-muted-foreground">
-                    {overallDocumentStatusLabel}
-                  </span>
-                )
+                <PortalStatusBadge status={overallDocumentStatus} />
               }
             >
               <div className="space-y-4">
+                <Card className="border-border/70 bg-card/95 shadow-sm">
+                  <CardContent className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-foreground">Upload Multiple Documents</p>
+                      <p className="text-sm text-muted-foreground">
+                        Select and prepare several required documents before submitting them together.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        type="button"
+                        className="h-10 w-full sm:w-auto"
+                        onClick={openBatchUploadWorkspace}
+                      >
+                        <FileUp className="mr-2 h-4 w-4" />
+                        Upload Multiple Documents
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-10 w-full sm:w-auto"
+                        disabled={downloadingAllTemplates}
+                        onClick={() => void handleDownloadAllTemplates()}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        {downloadingAllTemplates ? "Preparing ZIP..." : "Download All Templates"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="border-border/70 bg-card/95 shadow-sm">
                   <CardContent className="p-4 sm:p-5">
                     <div className="grid gap-4 lg:gap-5">
@@ -3788,6 +4244,46 @@ export default function UserPortal({ section }: { section: string }) {
                   </CardContent>
                 </Card>
 
+                {revisionRequiredFiles.length ? (
+                  <Card className="border-amber-200/70 bg-amber-50/40 shadow-sm">
+                    <CardContent className="space-y-3 p-4 sm:p-5">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">Documents Requiring Action</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Replace only the files that were returned for revision.
+                        </p>
+                      </div>
+                      <div className="space-y-3">
+                        {revisionRequiredFiles.map((file) => {
+                          const documentType = templateDocuments.find((entry) => entry.id === file.documentTypeId);
+                          if (!documentType) return null;
+                          return (
+                            <div key={file.id} className="rounded-xl border border-amber-200/70 bg-background px-4 py-3">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-foreground">{documentType.name}</p>
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    Admin remark: {file.adminRemarks?.trim() || "Please review and replace this file."}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-10 w-full sm:w-auto"
+                                  onClick={openBatchUploadWorkspace}
+                                >
+                                  <FileUp className="mr-2 h-4 w-4" />
+                                  Upload Multiple Documents
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
+
                 {templateDocuments.length === 0 ? (
                   <PortalEmptyState
                     title="No document requirements yet"
@@ -3819,13 +4315,15 @@ export default function UserPortal({ section }: { section: string }) {
                               : "";
                           const statusMessage = isRejected && file?.adminRemarks?.trim()
                             ? `Admin: ${file.adminRemarks.trim()}`
+                            : file?.adminStatus === "draft"
+                              ? (file.adminRemarks?.trim() || "This document is saved as a draft and has not been submitted yet.")
                             : isUnderReview
                               ? (file?.adminRemarks?.trim() || "This document is currently under admin review.")
-                              : isApproved
-                                ? "This document has been approved."
+                                : isApproved
+                                  ? "This document has been approved."
                                 : file
                                   ? "Attached file is available for viewing."
-                                  : "Upload the required document file to begin review.";
+                                  : "No file uploaded yet. Use Upload Multiple Documents above to submit this requirement.";
 
                           return (
                             <div
@@ -3881,71 +4379,23 @@ export default function UserPortal({ section }: { section: string }) {
                                   <Eye className="mr-2 h-4 w-4" />
                                   View Template
                                 </Button>
-
-                                <label
-                                  className="w-full sm:w-auto"
-                                  onClick={(event) => {
-                                    if (file) return;
-                                    if (isDocumentSubmissionApproved) {
-                                      event.preventDefault();
-                                      toast({
-                                        title: "Submission locked",
-                                        description: "Approved submitted documents can no longer be changed or replaced.",
-                                        variant: "destructive",
-                                      });
-                                      return;
-                                    }
-                                    if (ensureCompletedOrganizationProfile()) return;
-                                    event.preventDefault();
-                                  }}
-                                >
-                                  <input
-                                    type="file"
-                                    accept={getDocumentUploadAcceptValue(documentType.id)}
-                                    className="sr-only"
-                                    disabled={isDocumentSubmissionApproved}
-                                    onChange={(event) => {
-                                      void handleDocumentUpload(documentType.name, event.target.files?.[0] ?? null);
-                                      event.currentTarget.value = "";
-                                    }}
-                                  />
+                                {file ? (
                                   <Button
                                     type="button"
-                                    variant={file ? "default" : "secondary"}
+                                    variant="default"
                                     size="sm"
-                                    asChild
-                                    disabled={
-                                      scanningDocumentId === documentType.id ||
-                                      submittingDocumentId === documentType.id ||
-                                      (!file && isDocumentSubmissionApproved) ||
-                                      (Boolean(file) && isApproved)
-                                    }
-                                    className="h-10 w-full cursor-pointer sm:w-auto lg:min-w-[8.75rem]"
-                                    onClick={(event) => {
-                                      if (file) {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        setDocumentDetailMode(true);
-                                        window.scrollTo({ top: 0, behavior: "smooth" });
-                                        void openAttachedDocumentEditor(file, documentType.name);
-                                      }
+                                    className="h-10 w-full sm:w-auto lg:min-w-[8.75rem]"
+                                    disabled={isApproved}
+                                    onClick={() => {
+                                      setDocumentDetailMode(true);
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                      void openAttachedDocumentEditor(file, documentType.name);
                                     }}
                                   >
-                                    <span>
-                                      {file ? (
-                                        <>
-                                          <Eye className="mr-2 h-4 w-4" />
-                                          View Attached
-                                        </>
-                                      ) : (
-                                        <>
-                                          <FileUp className="mr-2 h-4 w-4" />
-                                          {scanningDocumentId === documentType.id ? "Preparing..." : "Upload Document"}
-                                        </>
-                                      )}
-                                    </span>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Attached
                                   </Button>
-                                </label>
+                                ) : null}
                               </div>
                             </div>
                           );
@@ -3958,15 +4408,15 @@ export default function UserPortal({ section }: { section: string }) {
             </PortalSection>
 
             <PortalSection title="Recent Activity" description="Admin review actions on your document submission.">
-              <RecentActivityPreview
+              <RecentActivityList
                 activities={submissionLogs.map((log) => ({
                   id: log.id,
                   message: log.description,
                   timestamp: log.createdAt,
                   timestampLabel: formatDateTimeLabel(log.createdAt),
                 }))}
+                maxItems={3}
                 emptyDescription="Review activity will appear here once your submission has been processed."
-                className="border-border/70 bg-card/95 shadow-sm lg:max-w-3xl"
               />
             </PortalSection>
           </div>
@@ -9099,6 +9549,270 @@ Validated {validatedDate}</p>
           </div>
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={batchUploadOpen}
+        onOpenChange={(open) => {
+          setBatchUploadOpen(open);
+          if (!open) {
+            resetBatchUploadState();
+          }
+        }}
+      >
+        <DialogContent className="grid w-[calc(100vw-24px)] max-w-[520px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-2xl p-0 sm:max-w-4xl lg:max-w-3xl max-h-[calc(100dvh-24px)]">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-4 py-4 sm:px-5">
+            <DialogTitle>Upload Required Documents</DialogTitle>
+            <DialogDescription>
+              Select files, assign each type, then submit when ready.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 overflow-y-auto px-4 py-4 overscroll-contain sm:px-5">
+            <div className="grid gap-4 pb-6">
+            <div
+              className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5 text-center"
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "copy";
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                handleBatchDroppedFiles(event.dataTransfer.files);
+              }}
+            >
+              <p className="text-sm font-medium text-foreground">Drag and drop PDF files here</p>
+              <p className="mt-1 text-sm text-muted-foreground">or browse files and map them to the correct required document.</p>
+              <label className="mt-4 inline-flex cursor-pointer">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  className="sr-only"
+                  onChange={(event) => {
+                    handleBatchDroppedFiles(event.target.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <span className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground">
+                  Browse Files
+                </span>
+              </label>
+            </div>
+
+            {batchDroppedFiles.length ? (
+              <div className="space-y-3 rounded-2xl border border-border/70 bg-background p-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Dropped Files</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Confirm which required document each dropped file belongs to.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {batchDroppedFiles.map((entry) => {
+                    const duplicateAssignment = Boolean(
+                      entry.mappedDocumentTypeId &&
+                      batchDroppedFiles.some(
+                        (other) => other.id !== entry.id && other.mappedDocumentTypeId === entry.mappedDocumentTypeId,
+                      ),
+                    );
+                    const validationError = entry.mappedDocumentTypeId
+                      ? getDocumentUploadValidationError(entry.mappedDocumentTypeId, entry.file)
+                      : null;
+                    return (
+                      <div key={entry.id} className="grid gap-3 rounded-xl border border-border/60 p-3">
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-medium text-foreground" title={entry.file.name}>{entry.file.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{Math.max(1, Math.round(entry.file.size / 1024))} KB</p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">Document type</p>
+                          <Select
+                            value={entry.mappedDocumentTypeId || "__unassigned__"}
+                            onValueChange={(value) =>
+                              setBatchDroppedFiles((current) =>
+                                current.map((item) =>
+                                  item.id === entry.id
+                                    ? { ...item, mappedDocumentTypeId: value === "__unassigned__" ? "" : value }
+                                    : item,
+                                ),
+                              )
+                            }
+                          >
+                            <SelectTrigger className="h-10 w-full">
+                              <SelectValue placeholder="Select document type" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[260px]">
+                              <SelectItem value="__unassigned__">Select document type</SelectItem>
+                              {templateDocuments.map((documentType) => {
+                                const existingFile = documentFilesByTypeId.get(documentType.id);
+                                const isApproved = isApprovedSubmissionFile(existingFile);
+                                const assignedToOther = batchDroppedFiles.some(
+                                  (other) =>
+                                    other.id !== entry.id &&
+                                    other.mappedDocumentTypeId &&
+                                    other.mappedDocumentTypeId === documentType.id,
+                                );
+                                return (
+                                  <SelectItem
+                                    key={documentType.id}
+                                    value={documentType.id}
+                                    disabled={isApproved || assignedToOther}
+                                  >
+                                    {isApproved ? `${documentType.name} — Approved` : documentType.name}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {duplicateAssignment ? (
+                          <p className="text-xs text-destructive">This document type has already been assigned to another file.</p>
+                        ) : null}
+                        {validationError ? (
+                          <p className="text-xs text-destructive">{validationError}</p>
+                        ) : null}
+                        <div className="flex justify-start">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 px-3"
+                            onClick={() => setBatchDroppedFiles((current) => current.filter((item) => item.id !== entry.id))}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+          </div>
+          </div>
+          <DialogFooter className="shrink-0 border-t border-border/70 bg-background px-4 py-3 sm:px-5">
+            <div className="flex w-full flex-col gap-3 sm:gap-2">
+              <div className="text-sm text-muted-foreground">
+                <p>{batchAssignmentCounts.validReadyCount} file{batchAssignmentCounts.validReadyCount === 1 ? "" : "s"} ready</p>
+                {(batchAssignmentCounts.unassignedCount > 0 || batchAssignmentCounts.duplicateTypeCount > 0) ? (
+                  <p className="mt-1">
+                    {batchAssignmentCounts.unassignedCount} file{batchAssignmentCounts.unassignedCount === 1 ? "" : "s"} still need a document type
+                    {batchAssignmentCounts.duplicateTypeCount > 0 ? ` · ${batchAssignmentCounts.duplicateTypeCount} duplicate assignment${batchAssignmentCounts.duplicateTypeCount === 1 ? "" : "s"}` : ""}
+                  </p>
+                ) : null}
+              </div>
+              <div className="grid w-full gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-full"
+                disabled={!batchDroppedFiles.length}
+                onClick={() => void handleSubmitBatchUpload("draft")}
+              >
+                Save as Draft
+              </Button>
+              <Button
+                type="button"
+                className="h-10 w-full"
+                disabled={!batchDroppedFiles.length || getBatchUploadIssues().length > 0}
+                onClick={() => void handleSubmitBatchUpload("review")}
+              >
+                Submit Selected for Review
+              </Button>
+            </div>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={batchUploadConfirmOpen} onOpenChange={setBatchUploadConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {batchUploadSubmitMode === "draft" ? "Save selected documents as draft?" : `Submit ${batchSelectedItems.length} documents for admin review?`}
+            </DialogTitle>
+            <DialogDescription>
+              {batchUploadSubmitMode === "draft"
+                ? "The selected files will be saved now and can still be reviewed or replaced later."
+                : "Documents submitted for review cannot be changed while locked unless the admin requests a revision."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <ul className="space-y-2">
+              {batchSelectedItems.map((entry) => (
+                <li key={`${entry.documentType.id}-${entry.file.name}`} className="flex items-start gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span>{entry.documentType.name}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setBatchUploadConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              disabled={batchUploadSubmitting}
+              onClick={() => void confirmBatchUpload()}
+            >
+              {batchUploadSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : batchUploadSubmitMode === "draft" ? (
+                "Save Draft"
+              ) : (
+                `Submit ${batchSelectedItems.length} Document${batchSelectedItems.length === 1 ? "" : "s"}`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(batchUploadResult)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBatchUploadResult(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{batchUploadResult?.submitMode === "draft" ? "Draft Saved" : "Batch Upload Result"}</DialogTitle>
+            <DialogDescription>
+              {batchUploadResult
+                ? `${batchUploadResult.successCount} document${batchUploadResult.successCount === 1 ? "" : "s"} processed successfully.`
+                : "Review the result of your batch upload."}
+            </DialogDescription>
+          </DialogHeader>
+          {batchUploadResult ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                {batchUploadResult.failureCount > 0
+                  ? `${batchUploadResult.failureCount} document${batchUploadResult.failureCount === 1 ? "" : "s"} still need attention.`
+                  : "All selected documents were processed successfully."}
+              </div>
+              <div className="space-y-2">
+                {batchUploadResult.results.map((entry) => (
+                  <div key={`${entry.documentTypeName}-${entry.fileName}`} className="rounded-xl border border-border/60 px-3 py-3 text-sm">
+                    <p className="font-medium text-foreground">{entry.documentTypeName}</p>
+                    <p className="mt-1 text-muted-foreground">{entry.fileName}</p>
+                    <p className={cn("mt-1 text-xs", entry.success ? "text-emerald-700" : "text-destructive")}>
+                      {entry.success ? "Processed successfully" : entry.error || "Unable to process this file."}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" className="w-full sm:w-auto" onClick={() => setBatchUploadResult(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={confirmSubmitOpen && Boolean(pendingDocumentScan)} onOpenChange={setConfirmSubmitOpen}>
         <DialogContent>
           <DialogHeader>
@@ -9179,7 +9893,7 @@ Validated {validatedDate}</p>
             <DialogDescription className="text-sm">
               {isApprovedSubmissionFile(attachedDocumentEditor?.file)
                 ? "This approved file is now locked. You can review or open it, but you can no longer change or remove it."
-                : "Review the uploaded file, change it if needed, or remove it before saving."}
+                : "Review the uploaded file here. Use Upload Multiple Documents from the main page for any future eligible replacements."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)] lg:items-start">
@@ -9254,76 +9968,99 @@ Validated {validatedDate}</p>
                 </p>
               </div>
               <div className="h-px bg-border/40" />
-              <input
-                ref={attachedDocumentInputRef}
-                type="file"
-                accept={
-                  attachedDocumentEditor
-                    ? getDocumentUploadAcceptValue(attachedDocumentEditor.file.documentTypeId)
-                    : ".pdf,application/pdf"
-                }
-                className="hidden"
-                onChange={(event) => {
-                  const nextFile = event.target.files?.[0] ?? null;
-                  setAttachedDocumentReplacementFile(nextFile);
-                  setAttachedDocumentMarkedForRemoval(false);
-                }}
-              />
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => attachedDocumentInputRef.current?.click()}
-                  disabled={Boolean(savingAttachedDocument) || isDocumentSubmissionApproved || isApprovedSubmissionFile(attachedDocumentEditor?.file)}
-                >
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Change File
-                </Button>
-                {attachedDocumentReplacementFile ? (
-                  <p className="text-xs text-muted-foreground">
-                    Replacement: <span className="font-medium text-foreground">{attachedDocumentReplacementFile.name}</span>
-                  </p>
-                ) : null}
-                <Button
-                  type="button"
-                  variant={attachedDocumentMarkedForRemoval ? "secondary" : "destructive"}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setAttachedDocumentMarkedForRemoval((current) => !current);
-                    setAttachedDocumentReplacementFile(null);
-                    if (attachedDocumentInputRef.current) {
-                      attachedDocumentInputRef.current.value = "";
+              {attachedDocumentEditor?.file &&
+              (attachedDocumentEditor.file.adminStatus === "needs_revision" || attachedDocumentEditor.file.adminStatus === "rejected_red") &&
+              !isDocumentSubmissionApproved &&
+              !isApprovedSubmissionFile(attachedDocumentEditor.file) ? (
+                <>
+                  <input
+                    ref={attachedDocumentInputRef}
+                    type="file"
+                    accept={
+                      attachedDocumentEditor
+                        ? getDocumentUploadAcceptValue(attachedDocumentEditor.file.documentTypeId)
+                        : ".pdf,application/pdf"
                     }
-                  }}
-                  disabled={Boolean(savingAttachedDocument) || isDocumentSubmissionApproved || isApprovedSubmissionFile(attachedDocumentEditor?.file)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {attachedDocumentMarkedForRemoval ? "Undo Remove" : "Remove Document"}
-                </Button>
-                {attachedDocumentMarkedForRemoval ? (
-                  <p className="text-xs text-destructive">This file will be removed when you save.</p>
-                ) : null}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button
-                  type="button"
-                  className="flex-1"
-                  onClick={() => void saveAttachedDocumentChanges()}
-                  disabled={Boolean(savingAttachedDocument) || isDocumentSubmissionApproved || isApprovedSubmissionFile(attachedDocumentEditor?.file)}
-                >
-                  {savingAttachedDocument ? "Saving..." : "Save Changes"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={closeAttachedDocumentEditor}
-                  disabled={Boolean(savingAttachedDocument)}
-                >
-                  Cancel
-                </Button>
-              </div>
+                    className="hidden"
+                    onChange={(event) => {
+                      const nextFile = event.target.files?.[0] ?? null;
+                      setAttachedDocumentReplacementFile(nextFile);
+                      setAttachedDocumentMarkedForRemoval(false);
+                    }}
+                  />
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => attachedDocumentInputRef.current?.click()}
+                      disabled={Boolean(savingAttachedDocument)}
+                    >
+                      <FileUp className="mr-2 h-4 w-4" />
+                      Change File
+                    </Button>
+                    {attachedDocumentReplacementFile ? (
+                      <p className="text-xs text-muted-foreground">
+                        Replacement: <span className="font-medium text-foreground">{attachedDocumentReplacementFile.name}</span>
+                      </p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant={attachedDocumentMarkedForRemoval ? "secondary" : "destructive"}
+                      className="w-full justify-start"
+                      onClick={() => {
+                        setAttachedDocumentMarkedForRemoval((current) => !current);
+                        setAttachedDocumentReplacementFile(null);
+                        if (attachedDocumentInputRef.current) {
+                          attachedDocumentInputRef.current.value = "";
+                        }
+                      }}
+                      disabled={Boolean(savingAttachedDocument)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {attachedDocumentMarkedForRemoval ? "Undo Remove" : "Remove Document"}
+                    </Button>
+                    {attachedDocumentMarkedForRemoval ? (
+                      <p className="text-xs text-destructive">This file will be removed when you save.</p>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      className="flex-1"
+                      onClick={() => void saveAttachedDocumentChanges()}
+                      disabled={Boolean(savingAttachedDocument)}
+                    >
+                      {savingAttachedDocument ? "Saving..." : "Save Changes"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={closeAttachedDocumentEditor}
+                      disabled={Boolean(savingAttachedDocument)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
+                    Return to the main Document Submissions page and use Upload Multiple Documents for normal submissions.
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={closeAttachedDocumentEditor}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -9844,19 +10581,31 @@ function DashboardSection({
 function DashboardIconBox({
   icon: Icon,
   tone,
+  soft = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   tone: "primary" | "emerald" | "amber" | "red" | "violet" | "sky" | "orange";
+  soft?: boolean;
 }) {
-  const toneClassName = {
-    primary: "border-primary/15 bg-primary/10 text-primary",
-    sky: "border-sky-500/15 bg-sky-500/10 text-sky-600",
-    emerald: "border-emerald-500/15 bg-emerald-500/10 text-emerald-600",
-    amber: "border-amber-500/15 bg-amber-500/10 text-amber-600",
-    orange: "border-orange-500/15 bg-orange-500/10 text-orange-600",
-    red: "border-red-500/15 bg-red-500/10 text-red-600",
-    violet: "border-violet-500/15 bg-violet-500/10 text-violet-600",
-  }[tone];
+  const toneClassName = soft
+    ? {
+        primary: "border-primary/10 bg-primary/5 text-primary/80",
+        sky: "border-sky-500/10 bg-sky-500/5 text-sky-600/80",
+        emerald: "border-emerald-500/10 bg-emerald-500/5 text-emerald-600/80",
+        amber: "border-amber-500/10 bg-amber-500/5 text-amber-600/80",
+        orange: "border-orange-500/10 bg-orange-500/5 text-orange-600/80",
+        red: "border-red-500/10 bg-red-500/5 text-red-600/80",
+        violet: "border-violet-500/10 bg-violet-500/5 text-violet-600/80",
+      }[tone]
+    : {
+        primary: "border-primary/15 bg-primary/10 text-primary",
+        sky: "border-sky-500/15 bg-sky-500/10 text-sky-600",
+        emerald: "border-emerald-500/15 bg-emerald-500/10 text-emerald-600",
+        amber: "border-amber-500/15 bg-amber-500/10 text-amber-600",
+        orange: "border-orange-500/15 bg-orange-500/10 text-orange-600",
+        red: "border-red-500/15 bg-red-500/10 text-red-600",
+        violet: "border-violet-500/15 bg-violet-500/10 text-violet-600",
+      }[tone];
 
   return (
     <div className={cn("overview-card-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border lg:h-10 lg:w-10 lg:rounded-xl", toneClassName)}>
@@ -9884,14 +10633,29 @@ function DashboardOverviewCard({
     <button
       type="button"
       onClick={onClick}
-      className="overview-card grid min-w-0 min-h-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5 rounded-[1.05rem] border border-border/70 bg-background p-3 text-left shadow-sm transition-colors hover:bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-3.5 lg:flex lg:flex-col lg:items-start lg:gap-2.5 lg:p-[0.875rem]"
+      className="overview-card flex min-h-[132px] min-w-0 flex-col rounded-xl border border-border/70 bg-background p-3 text-left shadow-sm transition-colors hover:bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:min-h-0 lg:rounded-[1.05rem] lg:flex-col lg:items-start lg:gap-2.5 lg:p-[0.875rem]"
     >
-      <DashboardIconBox icon={icon} tone={tone} />
-      <div className="min-w-0">
-        <p className="overview-label overview-card-label text-[0.84rem] font-semibold leading-tight text-foreground lg:text-[0.92rem]">{label}</p>
+      <div className="overview-metric-header flex w-full min-w-0 items-start justify-between gap-2 lg:hidden">
+        <p className="overview-label overview-card-label min-w-0 pt-0.5 text-[0.68rem] font-medium uppercase leading-tight tracking-[0.08em] text-muted-foreground">
+          {label}
+        </p>
+        <DashboardIconBox icon={icon} tone={tone} soft />
+      </div>
+      <p className="overview-metric-value overview-value mt-3.5 whitespace-nowrap text-[clamp(1.65rem,7vw,2rem)] font-semibold leading-none tracking-[-0.02em] text-foreground lg:hidden">
+        {value}
+      </p>
+      <p className="overview-status overview-card-status mt-auto pt-2 text-[0.78rem] leading-[1.35] text-muted-foreground lg:hidden">
+        {helper}
+      </p>
+
+      <div className="hidden lg:block">
+        <DashboardIconBox icon={icon} tone={tone} />
+      </div>
+      <div className="hidden min-w-0 lg:block">
+        <p className="overview-label overview-card-label text-[0.92rem] font-semibold leading-tight text-foreground">{label}</p>
         <p
           className={cn(
-            "overview-value mt-0.5 whitespace-nowrap text-[clamp(1.5rem,6vw,1.75rem)] font-semibold leading-none tracking-[-0.02em] lg:mt-1 lg:text-[clamp(1.8rem,2vw,2.25rem)] lg:tracking-normal",
+            "overview-value mt-1 whitespace-nowrap text-[clamp(1.8rem,2vw,2.25rem)] font-semibold leading-none",
             tone === "emerald"
               ? "text-emerald-600"
               : tone === "amber"
@@ -9903,7 +10667,7 @@ function DashboardOverviewCard({
         >
           {value}
         </p>
-        <p className="overview-status overview-card-status mt-1 text-[0.78rem] leading-snug text-muted-foreground lg:mt-2 lg:text-sm">{helper}</p>
+        <p className="overview-status overview-card-status mt-2 text-sm leading-snug text-muted-foreground">{helper}</p>
       </div>
     </button>
   );

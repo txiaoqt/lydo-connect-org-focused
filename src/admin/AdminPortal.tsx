@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { YorpRegistryPage } from "./pages/YorpRegistry";
-import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Bell, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, CircleDollarSign, CircleHelp, ClipboardList, Clock3, Download, Eye, FileText, FolderOpen, Mail, MapPin, Medal, MoreHorizontal, Pencil, Plus, Save, Trash2, Trophy, UserRound, Users, Wallet, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Bell, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, CircleDollarSign, CircleHelp, ClipboardList, Clock3, Download, Eye, FileText, FolderOpen, Mail, MapPin, Medal, MoreHorizontal, Pencil, Plus, Save, Trash2, Trophy, UserRound, Users, Wallet, X } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,7 @@ import { PortalShell } from "@/components/portal/PortalShell";
 import { ExportReportDialog } from "@/components/reports/ExportReportDialog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { adminNavigationGroups as baseAdminNavigationGroups, buildPublicRecordCode, computeYpopScore, DEFAULT_ORG_LED_TIERS, getApprovedYpopOrgActivityCount, getYpopCityLedPoints, normalizeYpopCityLedPoints, resolveYpopCityLedCategory, templateScopeLabelMap, YPOP_BASE_TOTAL_POINTS, YPOP_CITY_LED_CATEGORY_LABELS, YPOP_CITY_LED_MAX_POINTS, YPOP_SCORE_THRESHOLD, type InquiryRecord, type NewsRelease, type TransparencyPost, type YPOPCityActivity, type YPOPCityActivityCategory, type YPOPEntry, type YPOPEventFile, type YPOPEventParticipation, type YPOPFile, type YPOPOrgActivity, type YPOPOrgActivityFile, type YPOPOrgLedTier, type YPOPPeriod, type YPOPPeriodStatus, type YPOPStatus } from "@/lib/lydo-connect-data";
 import { statusLabelMap } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
@@ -70,6 +71,7 @@ import {
   loadAdminPortalSupabaseState,
   loadLydoConnectSupabaseState,
   resolveSupabaseFileUrl,
+  submitDocumentReviewBatchToSupabase,
   updateDocumentSubmissionFileReviewInSupabase,
   updateTransparencyPostInSupabase,
   updateLiquidationReportInSupabase,
@@ -290,6 +292,31 @@ type PendingAdminConfirmation =
       currentAdminRemarks: string;
     };
 
+type RegistrationReviewDecision = "approve" | "needs_revision" | "reject" | "unreviewed";
+
+type RegistrationReviewDraft = {
+  decision: RegistrationReviewDecision;
+  remark: string;
+  expectedUpdatedAt: string;
+};
+
+const registrationReviewDecisionLabel: Record<RegistrationReviewDecision, string> = {
+  approve: "Approve",
+  needs_revision: "Needs Revision",
+  reject: "Reject",
+  unreviewed: "Unreviewed",
+};
+
+const registrationReviewPendingTone: Record<RegistrationReviewDecision, string> = {
+  approve: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  needs_revision: "border-amber-200 bg-amber-50 text-amber-700",
+  reject: "border-rose-200 bg-rose-50 text-rose-700",
+  unreviewed: "border-border/70 bg-muted/20 text-muted-foreground",
+};
+
+const registrationDecisionRequiresRemark = (decision: RegistrationReviewDecision) =>
+  decision === "needs_revision" || decision === "reject";
+
 type PendingDeleteConfirmation =
   | {
       kind: "news_release";
@@ -442,6 +469,15 @@ export default function AdminPortal({ section }: { section: string }) {
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
   const [expandedDocumentFileIds, setExpandedDocumentFileIds] = useState<string[]>([]);
   const [documentReviewRemarksByFileId, setDocumentReviewRemarksByFileId] = useState<Record<string, string>>({});
+  const [registrationReviewDraftsByFileId, setRegistrationReviewDraftsByFileId] = useState<Record<string, RegistrationReviewDraft>>({});
+  const [selectedRegistrationReviewFileIds, setSelectedRegistrationReviewFileIds] = useState<string[]>([]);
+  const [activeRegistrationReviewFileId, setActiveRegistrationReviewFileId] = useState<string | null>(null);
+  const [registrationInfoCollapsed, setRegistrationInfoCollapsed] = useState(false);
+  const [registrationBulkDecision, setRegistrationBulkDecision] = useState<Exclude<RegistrationReviewDecision, "unreviewed">>("approve");
+  const [registrationBulkRemark, setRegistrationBulkRemark] = useState("");
+  const [registrationMobileInfoExpanded, setRegistrationMobileInfoExpanded] = useState(false);
+  const [registrationMobileBulkOpen, setRegistrationMobileBulkOpen] = useState(false);
+  const [registrationReviewSubmitting, setRegistrationReviewSubmitting] = useState(false);
   const [selectedBudgetRequestId, setSelectedBudgetRequestId] = useState<string | null>(null);
   const [selectedBudgetFileId, setSelectedBudgetFileId] = useState<string | null>(null);
   const [budgetPreviewUrl, setBudgetPreviewUrl] = useState("");
@@ -527,6 +563,26 @@ export default function AdminPortal({ section }: { section: string }) {
   const otherTemplates = useMemo(
     () => activeTemplates.filter((template) => template.templateScope === "other"),
     [activeTemplates],
+  );
+  const selectedRegistrationProfile = useMemo(
+    () => state.organizationProfiles.find((profile) => profile.id === selectedRegistrationId) ?? null,
+    [selectedRegistrationId, state.organizationProfiles],
+  );
+  const selectedRegistrationSubmission = useMemo(
+    () =>
+      selectedRegistrationProfile
+        ? state.documentSubmissions.find((submission) => submission.organizationId === selectedRegistrationProfile.id) ?? null
+        : null,
+    [selectedRegistrationProfile, state.documentSubmissions],
+  );
+  const selectedRegistrationFiles = useMemo(
+    () =>
+      selectedRegistrationSubmission
+        ? state.documentSubmissionFiles
+            .filter((file) => file.submissionId === selectedRegistrationSubmission.id)
+            .sort((left, right) => left.documentTypeId.localeCompare(right.documentTypeId))
+        : [],
+    [selectedRegistrationSubmission, state.documentSubmissionFiles],
   );
   const newsReleases = useMemo(
     () =>
@@ -645,7 +701,7 @@ export default function AdminPortal({ section }: { section: string }) {
   }, [selectedBudgetRequest]);
   const liquidationRecentActivities = useMemo<RecentActivityEntry[]>(() => {
     if (!selectedLiquidationReport) return [];
-    const historyEntries = selectedLiquidationReport.revisionHistory.map((entry, idx) => {
+    const historyEntries = (selectedLiquidationReport.revisionHistory ?? []).map((entry, idx) => {
       const dotClassName =
         entry.action === "overdue" || entry.action === "rejected_red"
           ? "bg-rose-500"
@@ -682,14 +738,16 @@ export default function AdminPortal({ section }: { section: string }) {
       ...historyEntries,
     ];
   }, [selectedLiquidationReport]);
-  const formatStatusLabel = (status: string) => statusLabelMap[status] ?? status.replaceAll("_", " ");
-  const formatShortDate = (value?: string | null) => {
+  function formatStatusLabel(status: string) {
+    return statusLabelMap[status] ?? status.replaceAll("_", " ");
+  }
+  function formatShortDate(value?: string | null) {
     if (!value) return "Pending";
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return "Pending";
     return new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(parsed);
-  };
-  const formatDateTimeLabel = (value?: string | null) => {
+  }
+  function formatDateTimeLabel(value?: string | null) {
     if (!value) return "Pending";
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return "Pending";
@@ -700,7 +758,7 @@ export default function AdminPortal({ section }: { section: string }) {
       hour: "numeric",
       minute: "2-digit",
     }).format(parsed);
-  };
+  }
   const formatCompactDateParts = (value?: string | null) => {
     if (!value) {
       return { date: "Pending", time: "" };
@@ -1367,6 +1425,43 @@ export default function AdminPortal({ section }: { section: string }) {
   }, [documentPreviewUrls, state.documentSubmissionFiles]);
 
   useEffect(() => {
+    const firstReviewableFile = templateDocuments
+      .map((documentType) => selectedRegistrationFiles.find((file) => file.documentTypeId === documentType.id))
+      .find((file): file is NonNullable<typeof file> => Boolean(file)) ?? null;
+
+    setActiveRegistrationReviewFileId((current) => {
+      if (current && selectedRegistrationFiles.some((file) => file.id === current)) {
+        return current;
+      }
+      return firstReviewableFile?.id ?? null;
+    });
+  }, [selectedRegistrationFiles, templateDocuments]);
+
+  useEffect(() => {
+    setSelectedRegistrationReviewFileIds([]);
+    setRegistrationReviewDraftsByFileId({});
+    setRegistrationBulkDecision("approve");
+    setRegistrationBulkRemark("");
+    setRegistrationMobileInfoExpanded(false);
+    setRegistrationMobileBulkOpen(false);
+  }, [selectedRegistrationId]);
+
+  useEffect(() => {
+    const hasStagedRegistrationReviewChanges = Object.values(registrationReviewDraftsByFileId).some(
+      (draft) => draft.decision !== "unreviewed",
+    );
+    if (!hasStagedRegistrationReviewChanges) return undefined;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [registrationReviewDraftsByFileId]);
+
+  useEffect(() => {
     let isActive = true;
 
     if (!selectedBudgetRequestFile) {
@@ -1575,6 +1670,255 @@ export default function AdminPortal({ section }: { section: string }) {
       isRead: false,
       createdAt: new Date().toISOString(),
     });
+  };
+
+  const getRegistrationReviewDraft = (fileId: string, fallbackRemark = "", expectedUpdatedAt = "") =>
+    registrationReviewDraftsByFileId[fileId] ?? {
+      decision: "unreviewed" as const,
+      remark: fallbackRemark,
+      expectedUpdatedAt,
+    };
+
+  const setRegistrationReviewDraft = (
+    fileId: string,
+    nextValue: Partial<RegistrationReviewDraft> & Pick<RegistrationReviewDraft, "expectedUpdatedAt">,
+  ) => {
+    setRegistrationReviewDraftsByFileId((current) => ({
+      ...current,
+      [fileId]: {
+        decision: current[fileId]?.decision ?? "unreviewed",
+        remark: current[fileId]?.remark ?? "",
+        expectedUpdatedAt: current[fileId]?.expectedUpdatedAt ?? nextValue.expectedUpdatedAt,
+        ...current[fileId],
+        ...nextValue,
+      },
+    }));
+  };
+
+  const clearRegistrationReviewDraft = (fileId: string) => {
+    setRegistrationReviewDraftsByFileId((current) => {
+      if (!current[fileId]) return current;
+      const next = { ...current };
+      delete next[fileId];
+      return next;
+    });
+  };
+
+  const applyRegistrationBulkDecision = (
+    fileIds: string[],
+    decision: Exclude<RegistrationReviewDecision, "unreviewed">,
+  ) => {
+    if (!fileIds.length) {
+      toast({
+        title: "No documents selected",
+        description: "Select at least one submitted document first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRegistrationReviewDraftsByFileId((current) => {
+      const next = { ...current };
+      fileIds.forEach((fileId) => {
+        const existingFile = selectedRegistrationFiles.find((file) => file.id === fileId);
+        if (!existingFile || existingFile.adminStatus === "approved_green") return;
+        next[fileId] = {
+          decision,
+          remark:
+            decision === "approve"
+              ? ""
+              : current[fileId]?.remark?.trim() || registrationBulkRemark.trim() || existingFile.adminRemarks || "",
+          expectedUpdatedAt: current[fileId]?.expectedUpdatedAt || existingFile.updatedAt,
+        };
+      });
+      return next;
+    });
+  };
+
+  const hasStagedRegistrationReviewChanges = Object.values(registrationReviewDraftsByFileId).some(
+    (draft) => draft.decision !== "unreviewed",
+  );
+
+  const confirmDiscardRegistrationReviewChanges = () =>
+    !hasStagedRegistrationReviewChanges ||
+    window.confirm("You have unsaved review decisions.\n\nLeave this page and discard them?");
+
+  const handleRegistrationSelectionChange = (nextRegistrationId: string | null) => {
+    if (nextRegistrationId === selectedRegistrationId) return;
+    if (!confirmDiscardRegistrationReviewChanges()) return;
+    setSelectedRegistrationId(nextRegistrationId);
+  };
+
+  const handleAdminSectionNavigate = (id: string) => {
+    const nextRoute = routeMap[id] ?? routeMap.overview;
+    const currentRoute = routeMap[section] ?? routeMap.overview;
+    if (nextRoute === currentRoute) return;
+    if (!confirmDiscardRegistrationReviewChanges()) return;
+    navigate(nextRoute);
+  };
+
+  const stageBulkRegistrationDecision = (
+    fileIds: string[],
+    decision: Exclude<RegistrationReviewDecision, "unreviewed">,
+  ) => {
+    if (!fileIds.length) {
+      toast({
+        title: "No documents selected",
+        description: "Select at least one submitted document first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const shouldConfirm = decision !== "approve" || fileIds.length > 1;
+    if (shouldConfirm) {
+      const confirmCopy = [
+        `${registrationReviewDecisionLabel[decision]} ${fileIds.length} selected document${fileIds.length === 1 ? "" : "s"}?`,
+        decision === "approve"
+          ? "This will only stage approval decisions until you submit the review batch."
+          : `Shared remark: ${registrationBulkRemark.trim() || "No shared remark provided."}`,
+      ].join("\n\n");
+      if (!window.confirm(confirmCopy)) return;
+    }
+
+    applyRegistrationBulkDecision(fileIds, decision);
+  };
+
+  const stageApproveAllUnreviewedDocuments = (fileIds: string[]) => {
+    if (!fileIds.length) {
+      toast({
+        title: "No eligible documents",
+        description: "All reviewable documents already have a final status or staged decision.",
+      });
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Approve all ${fileIds.length} eligible unreviewed document${fileIds.length === 1 ? "" : "s"}?\n\nThis will add approval decisions to the review summary.\nNothing will be submitted until you click Submit Review Decisions.`,
+      )
+    ) {
+      return;
+    }
+
+    applyRegistrationBulkDecision(fileIds, "approve");
+  };
+
+  const submitRegistrationReviewDecisions = async () => {
+    if (!selectedRegistrationProfile || !selectedRegistrationSubmission) return;
+
+    const decisionEntries = selectedRegistrationFiles
+      .map((file) => ({ file, draft: registrationReviewDraftsByFileId[file.id] }))
+      .filter((entry): entry is { file: (typeof selectedRegistrationFiles)[number]; draft: RegistrationReviewDraft } => Boolean(entry.draft))
+      .filter((entry) => entry.draft.decision !== "unreviewed");
+
+    if (!decisionEntries.length) {
+      toast({
+        title: "No review decisions yet",
+        description: "Assign at least one decision before submitting the batch review.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const missingRemarkEntry = decisionEntries.find(
+      ({ draft }) => (draft.decision === "needs_revision" || draft.decision === "reject") && !draft.remark.trim(),
+    );
+    if (missingRemarkEntry) {
+      toast({
+        title: "Comment required",
+        description: "Add a remark for every Needs Revision or Reject decision before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRegistrationReviewSubmitting(true);
+    try {
+      const result = await submitDocumentReviewBatchToSupabase({
+        decisions: decisionEntries.map(({ file, draft }) => ({
+          fileId: file.id,
+          status:
+            draft.decision === "approve"
+              ? "approved_green"
+              : draft.decision === "needs_revision"
+                ? "needs_revision"
+                : "rejected_red",
+          adminRemarks: draft.decision === "approve" ? undefined : draft.remark.trim(),
+          expectedUpdatedAt: draft.expectedUpdatedAt,
+        })),
+      });
+
+      await refreshAdminState();
+
+      for (const entry of decisionEntries) {
+        if (entry.draft.decision === "approve") {
+          await appendAuditLog(
+            "Approved document submission",
+            "document_submission_file",
+            entry.file.id,
+            `Approved ${entry.file.fileName} from the registration detail batch review.`,
+            selectedRegistrationProfile.id,
+          );
+        } else if (entry.draft.decision === "needs_revision") {
+          await appendAuditLog(
+            "Document revision requested",
+            "document_submission_file",
+            entry.file.id,
+            `Requested revisions for ${entry.file.fileName} from the registration detail batch review.`,
+            selectedRegistrationProfile.id,
+          );
+        } else {
+          await appendAuditLog(
+            "Rejected document submission",
+            "document_submission_file",
+            entry.file.id,
+            `Rejected ${entry.file.fileName} from the registration detail batch review.`,
+            selectedRegistrationProfile.id,
+          );
+        }
+      }
+
+      await appendAuditLog(
+        "Submitted batch document review",
+        "document_submission",
+        selectedRegistrationSubmission.id,
+        `Submitted ${result.successCount} document review decision${result.successCount === 1 ? "" : "s"} for ${selectedRegistrationProfile.organizationName}.`,
+        selectedRegistrationProfile.id,
+      );
+
+      notifyOrganizationUser({
+        userId: selectedRegistrationProfile.userId,
+        organizationId: selectedRegistrationProfile.id,
+        title: "Document review updated",
+        message: `The admin submitted ${result.successCount} document review decision${result.successCount === 1 ? "" : "s"} for your registration files.`,
+        type: "document_review_update",
+        relatedType: "document_submission",
+        relatedId: selectedRegistrationSubmission.id,
+      });
+
+      const successfulFileIds = new Set(
+        result.results.filter((item) => item.success).map((item) => item.fileId),
+      );
+      setRegistrationReviewDraftsByFileId((current) =>
+        Object.fromEntries(Object.entries(current).filter(([fileId]) => !successfulFileIds.has(fileId))),
+      );
+      setSelectedRegistrationReviewFileIds([]);
+      setRegistrationBulkRemark("");
+
+      toast({
+        title: "Review completed",
+        description: `${result.successCount} document${result.successCount === 1 ? "" : "s"} were updated successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Unable to submit review decisions",
+        description: error instanceof Error ? error.message : "The selected review decisions could not be saved.",
+        variant: "destructive",
+      });
+    } finally {
+      setRegistrationReviewSubmitting(false);
+    }
   };
 
   const openAdminConfirmation = (params: PendingAdminConfirmation) => {
@@ -3367,18 +3711,27 @@ export default function AdminPortal({ section }: { section: string }) {
           { count: overviewStats.pendingInquiries,    label: "inquiry(s) awaiting response",          route: routeMap.inquiries,                 critical: false },
           { count: overviewStats.nonCompliant,       label: "organization(s) with compliance issues", route: routeMap.users,                    critical: true  },
         ].filter((item) => item.count > 0);
+        const totalPendingTaskItems = taskItems.reduce((sum, item) => sum + item.count, 0);
+        const dashboardRecentActivities = state.activityLogs.map((log) => ({
+          id: log.id,
+          message: formatActionName(log.action),
+          note: log.description,
+          timestamp: log.createdAt,
+          timestampLabel: formatDateTimeLabel(log.createdAt),
+        }));
 
         return (
-          <div className="space-y-5">
+          <div className="admin-dashboard-page space-y-3 lg:space-y-5">
             {/* Summary stats */}
-            <PortalSection title="Summary" description="Current compliance and budget status across all organizations.">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <PortalSection title="Summary" description="Current compliance and budget status across all organizations." headerClassName="gap-1.5 sm:gap-4">
+              <div className="summary-grid grid grid-cols-2 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
                 <PortalMetricCard
                   label="Registered Organizations"
                   value={overviewStats.organizations}
                   helper="Total organizations on the portal."
                   icon={Users}
                   iconTone="primary"
+                  className="summary-card"
                   onClick={() => navigate(routeMap.registrations)}
                 />
                 <PortalMetricCard
@@ -3387,6 +3740,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   helper="Fully validated document sets."
                   icon={CheckCircle2}
                   iconTone="emerald"
+                  className="summary-card"
                   onClick={() => navigate(routeMap.registrations)}
                 />
                 <PortalMetricCard
@@ -3395,6 +3749,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   helper="Funds confirmed released to organizations."
                   icon={Banknote}
                   iconTone="violet"
+                  className="summary-card"
                   onClick={() => navigate(routeMap["budget-utilization"])}
                 />
                 <PortalMetricCard
@@ -3403,6 +3758,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   helper="User submissions waiting for admin review."
                   icon={Mail}
                   iconTone="sky"
+                  className="summary-card"
                   onClick={() => navigate(routeMap.inquiries)}
                 />
               </div>
@@ -3414,10 +3770,12 @@ export default function AdminPortal({ section }: { section: string }) {
               action={
                 taskItems.length > 0 ? (
                   <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                    {taskItems.length} pending
+                    <span className="lg:hidden">{totalPendingTaskItems} pending items</span>
+                    <span className="hidden lg:inline">{taskItems.length} pending</span>
                   </span>
                 ) : null
               }
+              headerClassName="gap-1.5 sm:gap-4"
             >
               {taskItems.length === 0 ? (
                 <div className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
@@ -3425,13 +3783,13 @@ export default function AdminPortal({ section }: { section: string }) {
                   All clear — no pending tasks right now.
                 </div>
               ) : (
-                <div className="divide-y divide-border/60">
+                <div className="task-list divide-y divide-border/60">
                   {taskItems.map((item, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => navigate(item.route)}
-                      className="flex w-full items-center gap-3 py-3 text-left text-sm transition-colors hover:bg-muted/40 first:pt-0 last:pb-0 px-1 rounded-lg"
+                      className="task-row grid w-full grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg px-1 py-3 text-left text-sm transition-colors hover:bg-muted/40"
                     >
                       <AlertTriangle className={`h-4 w-4 shrink-0 ${item.critical ? "text-destructive" : "text-amber-500"}`} />
                       <span className={`inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-md px-1.5 text-xs font-semibold tabular-nums ${
@@ -3441,7 +3799,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       }`}>
                         {item.count}
                       </span>
-                      <span className="flex-1 text-foreground">{item.label}</span>
+                      <span className="min-w-0 text-foreground">{item.label}</span>
                       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
                     </button>
                   ))}
@@ -3450,7 +3808,7 @@ export default function AdminPortal({ section }: { section: string }) {
             </PortalSection>
 
             {/* Recent Activity — two separate cards */}
-            <div className="grid gap-5 xl:grid-cols-2">
+            <div className="hidden gap-5 xl:grid-cols-2 lg:grid">
               <PortalSection title="Notifications">
                 <div className="space-y-2">
                   {state.notifications.slice(0, 4).length > 0 ? state.notifications.slice(0, 4).map((notification) => (
@@ -3510,6 +3868,37 @@ export default function AdminPortal({ section }: { section: string }) {
                 />
               </PortalSection>
             </div>
+
+            <PortalSection title="Recent Activity" headerClassName="gap-1.5 sm:gap-4 lg:hidden">
+              <div className="recent-activity-card">
+                <RecentActivityList
+                  activities={dashboardRecentActivities}
+                  maxItems={3}
+                  emptyMessage="No recent activity yet."
+                />
+                {dashboardRecentActivities.length > 3 ? (
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex text-sm font-medium text-primary transition-colors hover:text-primary/80 hover:underline"
+                    onClick={() => {
+                      setRecentActivityDialogTitle("Recent Activity");
+                      setRecentActivityDialogEntries(
+                        state.activityLogs.map((log) => ({
+                          key: log.id,
+                          title: formatActionName(log.action),
+                          note: log.description,
+                          timestamp: formatDateTimeLabel(log.createdAt),
+                          dotClassName: "bg-primary",
+                        })),
+                      );
+                      setRecentActivityDialogOpen(true);
+                    }}
+                  >
+                    View full activity log
+                  </button>
+                ) : null}
+              </div>
+            </PortalSection>
           </div>
         );
       }
@@ -3637,45 +4026,135 @@ export default function AdminPortal({ section }: { section: string }) {
         );
       }
       case "registrations": {
-        const selectedOrg =
-          state.organizationProfiles.find((org) => org.id === selectedRegistrationId) ?? null;
-        const selectedSubmission = selectedOrg
-          ? state.documentSubmissions.find((item) => item.organizationId === selectedOrg.id) ?? null
-          : null;
-        const selectedFiles = selectedSubmission
-          ? state.documentSubmissionFiles.filter(
-              (file) => file.submissionId === selectedSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
-            )
-          : [];
+        const selectedOrg = selectedRegistrationProfile;
+        const selectedSubmission = selectedRegistrationSubmission;
+        const selectedFiles = selectedRegistrationFiles.filter(
+          (file) => validDocumentTypeIds.has(file.documentTypeId) && file.adminStatus !== "draft",
+        );
         const approvedDocumentCount = selectedFiles.filter((file) => file.adminStatus === "approved_green").length;
         const allRequiredDocumentsApproved = selectedFiles.length === templateDocuments.length && approvedDocumentCount === templateDocuments.length;
         const canVerifyWithoutDocuments =
           Boolean(selectedOrg?.isExistingOrganization) && Boolean(selectedOrg?.organizationIdentifierNumber?.trim());
+        const submittedDocumentCount = selectedFiles.length;
+        const reviewedDocumentCount = selectedFiles.filter((file) => file.adminStatus !== "submitted" && file.adminStatus !== "under_admin_review").length;
+        const needsRevisionCount = selectedFiles.filter((file) => file.adminStatus === "needs_revision").length;
+        const rejectedCount = selectedFiles.filter((file) => file.adminStatus === "rejected_red").length;
+        const unreviewedCount = selectedFiles.filter((file) => file.adminStatus === "submitted" || file.adminStatus === "under_admin_review").length;
+        const orderedSubmittedFiles = templateDocuments
+          .map((documentType) => {
+            const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
+            if (!file) return null;
+            return { documentType, file };
+          })
+          .filter((entry): entry is { documentType: (typeof templateDocuments)[number]; file: (typeof selectedFiles)[number] } => Boolean(entry));
+        const filteredQueueEntries = orderedSubmittedFiles;
+        const activeReviewEntry =
+          filteredQueueEntries.find((entry) => entry.file.id === activeRegistrationReviewFileId) ??
+          filteredQueueEntries[0] ??
+          orderedSubmittedFiles.find((entry) => entry.file.id === activeRegistrationReviewFileId) ??
+          orderedSubmittedFiles[0] ??
+          null;
+        const activeReviewIndex = activeReviewEntry
+          ? filteredQueueEntries.findIndex((entry) => entry.file.id === activeReviewEntry.file.id)
+          : -1;
+        const activeReviewDraft = activeReviewEntry
+          ? getRegistrationReviewDraft(
+              activeReviewEntry.file.id,
+              activeReviewEntry.file.adminStatus === "needs_revision" || activeReviewEntry.file.adminStatus === "rejected_red"
+                ? activeReviewEntry.file.adminRemarks
+                : "",
+              activeReviewEntry.file.updatedAt,
+            )
+          : null;
+        const selectedBulkFiles = orderedSubmittedFiles.filter((entry) => selectedRegistrationReviewFileIds.includes(entry.file.id));
+        const eligibleUnreviewedFileIds = orderedSubmittedFiles
+          .filter(
+            (entry) =>
+              entry.file.adminStatus !== "approved_green" &&
+              (entry.file.adminStatus === "submitted" || entry.file.adminStatus === "under_admin_review") &&
+              getRegistrationReviewDraft(entry.file.id, "", entry.file.updatedAt).decision === "unreviewed",
+          )
+          .map((entry) => entry.file.id);
+        const activeReviewHistory = activeReviewEntry
+          ? [
+              {
+                id: `${activeReviewEntry.file.id}-submitted`,
+                message: "Submitted",
+                timestamp: activeReviewEntry.file.uploadedAt,
+                timestampLabel: activeReviewEntry.file.uploadedAt ? formatDateTimeLabel(activeReviewEntry.file.uploadedAt) : undefined,
+              },
+              ...(activeReviewEntry.file.reviewedAt
+                ? [{
+                    id: `${activeReviewEntry.file.id}-reviewed`,
+                    message: statusLabelMap[activeReviewEntry.file.adminStatus] ?? activeReviewEntry.file.adminStatus.replaceAll("_", " "),
+                    note: activeReviewEntry.file.adminRemarks ? `"${activeReviewEntry.file.adminRemarks}"` : undefined,
+                    timestamp: activeReviewEntry.file.reviewedAt,
+                    timestampLabel: activeReviewEntry.file.reviewedAt ? formatDateTimeLabel(activeReviewEntry.file.reviewedAt) : undefined,
+                  }]
+                : []),
+              ...(activeReviewEntry.file.userRemarks
+                ? [{
+                    id: `${activeReviewEntry.file.id}-user-note`,
+                    message: "Note from org",
+                    note: `"${activeReviewEntry.file.userRemarks}"`,
+                  }]
+                : []),
+            ]
+          : [];
+        const bulkDecisionSummary = Object.values(registrationReviewDraftsByFileId).reduce(
+          (summary, draft) => {
+            if (draft.decision === "approve") summary.approve += 1;
+            if (draft.decision === "needs_revision") summary.needsRevision += 1;
+            if (draft.decision === "reject") summary.reject += 1;
+            if (draft.decision === "unreviewed") summary.unreviewed += 1;
+            return summary;
+          },
+          { approve: 0, needsRevision: 0, reject: 0, unreviewed: 0 },
+        );
+        const stagedDecisionCount = bulkDecisionSummary.approve + bulkDecisionSummary.needsRevision + bulkDecisionSummary.reject;
+        const reviewableUnreviewedCount = orderedSubmittedFiles.filter((entry) => {
+          if (entry.file.adminStatus === "approved_green") return false;
+          return getRegistrationReviewDraft(entry.file.id, "", entry.file.updatedAt).decision === "unreviewed";
+        }).length;
+        const hasMissingDecisionRemark = orderedSubmittedFiles.some((entry) => {
+          const draft = registrationReviewDraftsByFileId[entry.file.id];
+          return Boolean(draft && registrationDecisionRequiresRemark(draft.decision) && !draft.remark.trim());
+        });
+        const isActiveDocumentLocked = activeReviewEntry?.file.adminStatus === "approved_green";
+        const missingDocumentCount = Math.max(templateDocuments.length - submittedDocumentCount, 0);
+        const selectableBulkFileCount = orderedSubmittedFiles.filter((entry) => entry.file.adminStatus !== "approved_green").length;
+        const shouldShowMobileBulkReview = selectedBulkFiles.length > 0 && selectableBulkFileCount > 1;
+        const activeDocumentPreviewUrl = activeReviewEntry ? documentPreviewUrls[activeReviewEntry.file.id] : null;
 
         if (selectedOrg) {
           return (
-            <div className="space-y-6">
-              {/* Action bar */}
-              <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <Button size="sm" variant="ghost" className="-ml-1.5 shrink-0" onClick={() => setSelectedRegistrationId(null)}>
-                      <ArrowLeft className="mr-2 h-4 w-4" />
+            <div className="space-y-5">
+              <div className="rounded-xl border border-border/70 bg-card px-4 py-3 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 space-y-2">
+                    <Button size="sm" variant="ghost" className="-ml-2 h-8 px-2 text-muted-foreground" onClick={() => handleRegistrationSelectionChange(null)}>
+                      <ArrowLeft className="mr-1.5 h-4 w-4" />
                       Back
                     </Button>
-                    <span className="h-5 w-px shrink-0 bg-border/60" />
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-foreground">{selectedOrg.organizationName}</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
+                      <h1 className="truncate text-2xl font-semibold text-foreground">{selectedOrg.organizationName}</h1>
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {selectedOrg.profileStatus === "verified" && selectedOrg.verifiedAt
-                          ? `Verified on ${new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(selectedOrg.verifiedAt))}`
+                          ? `Verified on ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(selectedOrg.verifiedAt))}`
                           : selectedOrg.profileStatus === "needs_update"
                           ? "Needs update"
                           : "Pending verification"}
                       </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${selectedOrg.isExistingOrganization ? "border-sky-200 bg-sky-50 text-sky-700" : "border-violet-200 bg-violet-50 text-violet-700"}`}>
+                          {selectedOrg.isExistingOrganization ? "Existing organization" : "New organization"}
+                        </span>
+                        <span>&middot;</span>
+                        <span>{approvedDocumentCount}/{templateDocuments.length} documents approved</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                     <PortalStatusBadge status={selectedOrg.profileStatus} />
                     {selectedOrg.profileStatus !== "verified" ? (
                       <Button
@@ -3712,93 +4191,173 @@ export default function AdminPortal({ section }: { section: string }) {
                     </Button>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${selectedOrg.isExistingOrganization ? "border-sky-200 bg-sky-50 text-sky-700" : "border-violet-200 bg-violet-50 text-violet-700"}`}>
-                    {selectedOrg.isExistingOrganization ? "Existing organization" : "New organization"}
-                  </span>
-                  {selectedOrg.isExistingOrganization && selectedOrg.organizationIdentifierNumber ? (
-                    <>
-                      <span className="h-3 w-px bg-border" />
-                      <span>{selectedOrg.organizationIdentifierNumber}</span>
-                    </>
-                  ) : null}
-                  <span className="h-3 w-px bg-border" />
-                  <span>{approvedDocumentCount}/{templateDocuments.length} documents approved</span>
-                </div>
               </div>
 
-              {/* Profile detail */}
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
-                <div className="space-y-5">
-                  <PortalSection title="Organization Contact">
-                    <div className="divide-y divide-border/50">
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Email</p>
-                        <p className="break-all text-sm font-medium">{selectedOrg.organizationEmail}</p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Contact</p>
-                        <p className="text-sm font-medium">{selectedOrg.contactNumber || "N/A"}</p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Barangay</p>
-                        <p className="text-sm font-medium">{selectedOrg.barangay || "N/A"}</p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Facebook</p>
+              <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm lg:hidden">
+                <button
+                  type="button"
+                  className="flex w-full items-start justify-between gap-3 text-left"
+                  aria-expanded={registrationMobileInfoExpanded}
+                  onClick={() => setRegistrationMobileInfoExpanded((current) => !current)}
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">Organization Information</p>
+                    <p className="mt-1 text-sm font-medium text-foreground">{selectedOrg.organizationEmail}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {[selectedOrg.barangay, selectedOrg.district].filter(Boolean).join(" · ") || "No location provided"}
+                    </p>
+                  </div>
+                  {registrationMobileInfoExpanded ? (
+                    <ChevronUp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+
+                {registrationMobileInfoExpanded ? (
+                  <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">Contact &amp; Location</p>
+                      <div className="space-y-2 text-sm">
+                        <p className="break-all text-foreground">{selectedOrg.organizationEmail}</p>
+                        <p className="text-muted-foreground">{selectedOrg.contactNumber || "No contact number"}</p>
+                        <p className="text-muted-foreground">{selectedOrg.address || "No address provided"}</p>
                         {selectedOrg.facebookPageUrl ? (
-                          <a href={selectedOrg.facebookPageUrl} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-primary underline-offset-4 hover:underline">
+                          <a
+                            href={selectedOrg.facebookPageUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="break-all text-primary underline-offset-4 hover:underline"
+                          >
                             {selectedOrg.facebookPageUrl}
                           </a>
-                        ) : (
-                          <p className="text-sm font-medium text-muted-foreground">N/A</p>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Address</p>
-                        <p className="break-words text-sm font-medium">{selectedOrg.address || "N/A"}</p>
+                        ) : null}
                       </div>
                     </div>
-                  </PortalSection>
 
-                  <PortalSection title="Classification">
-                    <div className="divide-y divide-border/50">
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Major</p>
-                        <p className="text-sm font-medium">{selectedOrg.majorClassification || "N/A"}</p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Sub</p>
-                        <p className="text-sm font-medium">{selectedOrg.subClassification || "N/A"}</p>
-                      </div>
-                      <div className="grid grid-cols-1 gap-1.5 py-3 first:pt-0 last:pb-0 sm:grid-cols-[9rem_1fr] sm:gap-3">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Date Created</p>
-                        <p className="text-sm font-medium">
-                          {selectedOrg.verifiedAt ? formatVerifiedDateLabel(selectedOrg.verifiedAt) : "Pending verification"}
-                        </p>
+                    <div className="space-y-2 border-t border-border/60 pt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">Leadership</p>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>Representative: <span className="font-medium text-foreground">{selectedOrg.representativeName || "N/A"}</span></p>
+                        <p>Adviser: <span className="font-medium text-foreground">{selectedOrg.adviserName || "N/A"}</span></p>
                       </div>
                     </div>
-                  </PortalSection>
-                </div>
 
-                <div className="space-y-5">
-                  <PortalSection title="Leadership">
-                    <div className="divide-y divide-border/50">
-                      <div className="grid grid-cols-[9rem_1fr] gap-3 py-3 first:pt-0 last:pb-0">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Representative</p>
-                        <p className="text-sm font-medium">{selectedOrg.representativeName || "N/A"}</p>
-                      </div>
-                      <div className="grid grid-cols-[9rem_1fr] gap-3 py-3 first:pt-0 last:pb-0">
-                        <p className="pt-0.5 text-xs uppercase tracking-[0.14em] text-muted-foreground/75">Adviser</p>
-                        <p className="text-sm font-medium">{selectedOrg.adviserName || "N/A"}</p>
+                    <div className="space-y-2 border-t border-border/60 pt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">Classification</p>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p>Major: <span className="font-medium text-foreground">{selectedOrg.majorClassification || "N/A"}</span></p>
+                        <p>Sub: <span className="font-medium text-foreground">{selectedOrg.subClassification || "N/A"}</span></p>
+                        <p>Created: <span className="font-medium text-foreground">{selectedOrg.verifiedAt ? formatVerifiedDateLabel(selectedOrg.verifiedAt) : "Pending verification"}</span></p>
                       </div>
                     </div>
-                  </PortalSection>
 
-                  <PortalSection title="Advocacies">
-                    {renderAdvocacyChips(selectedOrg.advocacies)}
-                  </PortalSection>
-                </div>
+                    <div className="space-y-2 border-t border-border/60 pt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/75">Advocacies</p>
+                      {renderAdvocacyChips(selectedOrg.advocacies)}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="hidden lg:block">
+                <PortalSection
+                  title="Organization Information"
+                  action={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-expanded={!registrationInfoCollapsed}
+                      onClick={() => setRegistrationInfoCollapsed((current) => !current)}
+                    >
+                      {registrationInfoCollapsed ? "Expand" : "Collapse"}
+                    </Button>
+                  }
+                >
+                  {registrationInfoCollapsed ? (
+                    <div className="rounded-xl border border-border/70 bg-muted/15 px-4 py-3 text-sm text-muted-foreground">
+                      <p>
+                        {selectedOrg.majorClassification || "Unclassified"} &middot; {selectedOrg.subClassification || "No sub-classification"} &middot; {selectedOrg.barangay || "No barangay"}
+                      </p>
+                      <p className="mt-1">
+                        Representative: {selectedOrg.representativeName || "N/A"} &middot; Adviser: {selectedOrg.adviserName || "N/A"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <div className="rounded-xl border border-border/70 bg-background p-3.5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Contact &amp; Location</p>
+                        <div className="mt-3 divide-y divide-border/50">
+                          <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Email</p>
+                            <p className="break-all text-sm font-medium">{selectedOrg.organizationEmail}</p>
+                          </div>
+                          <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Contact</p>
+                            <p className="text-sm font-medium">{selectedOrg.contactNumber || "N/A"}</p>
+                          </div>
+                          <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Barangay</p>
+                            <p className="text-sm font-medium">{selectedOrg.barangay || "N/A"}</p>
+                          </div>
+                          <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Facebook</p>
+                            {selectedOrg.facebookPageUrl ? (
+                              <a href={selectedOrg.facebookPageUrl} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-primary underline-offset-4 hover:underline">
+                                {selectedOrg.facebookPageUrl}
+                              </a>
+                            ) : (
+                              <p className="text-sm font-medium text-muted-foreground">N/A</p>
+                            )}
+                          </div>
+                          <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Address</p>
+                            <p className="break-words text-sm font-medium">{selectedOrg.address || "N/A"}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-3">
+                        <div className="rounded-xl border border-border/70 bg-background p-3.5">
+                          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Leadership</p>
+                          <div className="mt-3 divide-y divide-border/50">
+                            <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Representative</p>
+                              <p className="text-sm font-medium">{selectedOrg.representativeName || "N/A"}</p>
+                            </div>
+                            <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[8rem_minmax(0,1fr)] lg:gap-3">
+                              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Adviser</p>
+                              <p className="text-sm font-medium">{selectedOrg.adviserName || "N/A"}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid gap-3 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+                          <div className="rounded-xl border border-border/70 bg-background p-3.5">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Classification</p>
+                            <div className="mt-3 divide-y divide-border/50">
+                              <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[6rem_minmax(0,1fr)] lg:gap-3">
+                                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Major</p>
+                                <p className="text-sm font-medium">{selectedOrg.majorClassification || "N/A"}</p>
+                              </div>
+                              <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[6rem_minmax(0,1fr)] lg:gap-3">
+                                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Sub</p>
+                                <p className="text-sm font-medium">{selectedOrg.subClassification || "N/A"}</p>
+                              </div>
+                              <div className="grid gap-1 py-2 first:pt-0 last:pb-0 lg:grid-cols-[6rem_minmax(0,1fr)] lg:gap-3">
+                                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/75">Created</p>
+                                <p className="text-sm font-medium">{selectedOrg.verifiedAt ? formatVerifiedDateLabel(selectedOrg.verifiedAt) : "Pending verification"}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-border/70 bg-background p-3.5">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Advocacies</p>
+                            <div className="mt-3">{renderAdvocacyChips(selectedOrg.advocacies)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </PortalSection>
               </div>
 
               {/* Documents */}
@@ -3807,173 +4366,800 @@ export default function AdminPortal({ section }: { section: string }) {
                 description={`${selectedFiles.length}/${templateDocuments.length} files submitted from the organization user side.`}
               >
                 {selectedSubmission ? (
-                  <div className="divide-y divide-border/50">
-                    {templateDocuments.map((documentType) => {
-                      const file = selectedFiles.find((entry) => entry.documentTypeId === documentType.id);
-                      const previewUrl = file ? documentPreviewUrls[file.id] ?? "" : "";
-                      const isExpanded = file ? expandedDocumentFileIds.includes(file.id) : false;
-                      return (
-                        <div key={documentType.id} className="py-4 first:pt-0 last:pb-0">
-                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="min-w-0 space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <FileText className="h-4 w-4 shrink-0 text-red-500" />
-                                <p className="text-sm font-medium">{documentType.name}</p>
-                                {file ? <PortalStatusBadge status={file.adminStatus ?? "submitted"} /> : null}
-                              </div>
-                              <p className="pl-6 text-sm text-muted-foreground">{file?.fileName ?? "No file submitted yet."}</p>
-                            </div>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="w-full shrink-0 sm:w-auto lg:w-auto"
-                              disabled={!file}
-                              onClick={() => file && toggleDocumentCard(file.id)}
-                            >
-                              {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-                              {isExpanded ? "Hide" : "Review"}
-                            </Button>
+                  <div className="space-y-4">
+                    {orderedSubmittedFiles.length ? (
+                      <>
+                        <div className="space-y-4 lg:hidden">
+                          <div className="rounded-xl border border-border/70 bg-background p-3.5 shadow-sm">
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Submission Summary</p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {submittedDocumentCount} submitted · {approvedDocumentCount} approved
+                              {missingDocumentCount ? ` · ${missingDocumentCount} missing` : ""}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {orderedSubmittedFiles.length} queued for review
+                            </p>
                           </div>
-                          {isExpanded && file ? (
-                            <div className="mt-4 space-y-4">
-                              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
-                                <div className="space-y-3">
-                                  <div className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
-                                    {previewUrl ? (
-                                      <iframe
-                                        src={previewUrl}
-                                        title={file.fileName}
-                                        className="h-[24rem] w-full sm:h-[28rem] xl:h-[32rem]"
-                                      />
-                                    ) : (
-                                      <div className="grid h-[24rem] place-items-center p-6 text-center text-sm text-muted-foreground sm:h-[28rem] xl:h-[32rem]">
-                                        Preview unavailable. Use the buttons below to open the uploaded file.
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="space-y-3">
-                                  {/* Recent Activity */}
-                                  <RecentActivityPreview
-                                    title="Recent Activity"
-                                    activities={[
-                                      {
-                                        id: `${file.id}-submitted`,
-                                        message: "Submitted",
-                                        timestamp: file.uploadedAt,
-                                        timestampLabel: file.uploadedAt ? formatDateTimeLabel(file.uploadedAt) : undefined,
-                                      },
-                                      ...(file.adminStatus !== "submitted"
-                                        ? [{
-                                            id: `${file.id}-reviewed`,
-                                            message: statusLabelMap[file.adminStatus] ?? file.adminStatus.replaceAll("_", " "),
-                                            note: file.adminRemarks ? `"${file.adminRemarks}"` : undefined,
-                                            timestamp: file.reviewedAt,
-                                            timestampLabel: file.reviewedAt ? formatDateTimeLabel(file.reviewedAt) : undefined,
-                                          }]
-                                        : [{
-                                            id: `${file.id}-pending`,
-                                            message: "Not yet reviewed.",
-                                          }]),
-                                      ...(file.userRemarks
-                                        ? [{
-                                            id: `${file.id}-user-note`,
-                                            message: "Note from org",
-                                            note: `"${file.userRemarks}"`,
-                                          }]
-                                        : []),
-                                    ]}
-                                    className="border-border/70 bg-background p-4 shadow-none"
-                                    headerClassName="mb-3"
-                                  />
 
-                                  {/* Admin Review Action */}
-                                  <div className="rounded-xl border border-border/70 bg-background p-4">
-                                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Admin review action</p>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                      Leave a note when the submission needs revision or is rejected.
-                                    </p>
-                                    <Textarea
-                                      id={`document-admin-comment-${file.id}`}
-                                      name={`documentAdminComment-${file.id}`}
-                                      value={getDocumentReviewCommentDraft(file)}
-                                      onChange={(event) =>
-                                        setDocumentReviewRemarksByFileId((current) => ({
-                                          ...current,
-                                          [file.id]: event.target.value,
-                                        }))
-                                      }
-                                      placeholder="Explain what should be changed, or why the file was rejected."
-                                      className="mt-3 min-h-24"
-                                    />
-                                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                          {activeReviewEntry ? (
+                            <>
+                              <div className="rounded-xl border border-border/70 bg-background p-3.5 shadow-sm">
+                                <div className="space-y-3">
+                                  <div>
+                                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document Selector</p>
+                                    <p className="mt-1 text-sm text-muted-foreground">Switch the active preview and review the current file from here.</p>
+                                  </div>
+                                  <Select
+                                    value={activeReviewEntry.file.id}
+                                    onValueChange={(value) => setActiveRegistrationReviewFileId(value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {orderedSubmittedFiles.map(({ documentType, file }) => (
+                                        <SelectItem key={file.id} value={file.id}>
+                                          {documentType.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={activeReviewIndex <= 0}
+                                      onClick={() => setActiveRegistrationReviewFileId(filteredQueueEntries[Math.max(0, activeReviewIndex - 1)]?.file.id ?? null)}
+                                    >
+                                      <ArrowLeft className="mr-1.5 h-4 w-4" />
+                                      Previous
+                                    </Button>
+                                    <span className="text-xs text-muted-foreground">
+                                      {Math.max(activeReviewIndex + 1, 0)} of {filteredQueueEntries.length || orderedSubmittedFiles.length}
+                                    </span>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={activeReviewIndex < 0 || activeReviewIndex >= filteredQueueEntries.length - 1}
+                                      onClick={() => setActiveRegistrationReviewFileId(filteredQueueEntries[Math.min(filteredQueueEntries.length - 1, activeReviewIndex + 1)]?.file.id ?? null)}
+                                    >
+                                      Next
+                                      <ArrowRight className="ml-1.5 h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  {selectableBulkFileCount > 1 ? (
+                                    <div className="flex flex-wrap gap-2 border-t border-border/60 pt-3">
                                       <Button
+                                        type="button"
                                         size="sm"
-                                        variant="outline"
-                                        className="w-full sm:w-auto"
+                                        variant="ghost"
+                                        className="h-8 px-2 text-xs"
                                         onClick={() =>
-                                          openAdminConfirmation({
-                                            kind: "document",
-                                            action: "approve",
-                                            fileId: file.id,
-                                            submissionId: selectedSubmission.id,
-                                            organizationId: selectedOrg.id,
-                                            organizationName: selectedOrg.organizationName,
-                                            fileName: file.fileName,
-                                            currentAdminRemarks: getDocumentReviewCommentDraft(file),
-                                          })
+                                          setSelectedRegistrationReviewFileIds(
+                                            orderedSubmittedFiles
+                                              .filter((entry) => entry.file.adminStatus !== "approved_green")
+                                              .map((entry) => entry.file.id),
+                                          )
                                         }
                                       >
-                                        Approve
+                                        Select all reviewable
                                       </Button>
                                       <Button
+                                        type="button"
                                         size="sm"
-                                        variant="outline"
-                                        className="w-full sm:w-auto"
+                                        variant="ghost"
+                                        className="h-8 px-2 text-xs"
                                         onClick={() =>
-                                          openAdminConfirmation({
-                                            kind: "document",
-                                            action: "needs_revision",
-                                            fileId: file.id,
-                                            submissionId: selectedSubmission.id,
-                                            organizationId: selectedOrg.id,
-                                            organizationName: selectedOrg.organizationName,
-                                            fileName: file.fileName,
-                                            currentAdminRemarks: getDocumentReviewCommentDraft(file),
-                                          })
+                                          setSelectedRegistrationReviewFileIds(
+                                            orderedSubmittedFiles
+                                              .filter(
+                                                (entry) =>
+                                                  entry.file.adminStatus !== "approved_green" &&
+                                                  (entry.file.adminStatus === "submitted" || entry.file.adminStatus === "under_admin_review"),
+                                              )
+                                              .map((entry) => entry.file.id),
+                                          )
                                         }
                                       >
-                                        Needs Revision
+                                        Select all unreviewed
                                       </Button>
                                       <Button
+                                        type="button"
                                         size="sm"
-                                        variant="outline"
-                                        className="w-full sm:w-auto"
-                                        onClick={() =>
-                                          openAdminConfirmation({
-                                            kind: "document",
-                                            action: "reject",
-                                            fileId: file.id,
-                                            submissionId: selectedSubmission.id,
-                                            organizationId: selectedOrg.id,
-                                            organizationName: selectedOrg.organizationName,
-                                            fileName: file.fileName,
-                                            currentAdminRemarks: getDocumentReviewCommentDraft(file),
-                                          })
-                                        }
+                                        variant="ghost"
+                                        className="h-8 px-2 text-xs text-muted-foreground"
+                                        onClick={() => setSelectedRegistrationReviewFileIds([])}
                                       >
-                                        Reject
+                                        Clear
                                       </Button>
                                     </div>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              <div className="rounded-xl border border-border/70 bg-background p-3.5 shadow-sm">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-base font-semibold text-foreground">{activeReviewEntry.documentType.name}</p>
+                                      <PortalStatusBadge status={activeReviewEntry.file.adminStatus} />
+                                    </div>
+                                    <p className="mt-1 text-sm text-muted-foreground" title={activeReviewEntry.file.fileName}>
+                                      {activeReviewEntry.file.fileName}
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      Current: {statusLabelMap[activeReviewEntry.file.adminStatus] ?? activeReviewEntry.file.adminStatus.replaceAll("_", " ")}
+                                    </p>
+                                  </div>
+                                  <label className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-border"
+                                      checked={selectedRegistrationReviewFileIds.includes(activeReviewEntry.file.id)}
+                                      disabled={isActiveDocumentLocked}
+                                      onChange={(event) =>
+                                        setSelectedRegistrationReviewFileIds((current) =>
+                                          event.target.checked
+                                            ? current.includes(activeReviewEntry.file.id)
+                                              ? current
+                                              : [...current, activeReviewEntry.file.id]
+                                            : current.filter((item) => item !== activeReviewEntry.file.id),
+                                        )
+                                      }
+                                    />
+                                    Select
+                                  </label>
+                                </div>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => void openFile(activeReviewEntry.file.fileUrl, activeReviewEntry.file.fileName)}
+                                  >
+                                    <Eye className="mr-1.5 h-4 w-4" />
+                                    Open File
+                                  </Button>
+                                  {activeReviewDraft?.decision !== "unreviewed" ? (
+                                    <span
+                                      className={cn(
+                                        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium",
+                                        registrationReviewPendingTone[activeReviewDraft.decision],
+                                      )}
+                                    >
+                                      Pending: {registrationReviewDecisionLabel[activeReviewDraft.decision]}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              <div className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm">
+                                {activeDocumentPreviewUrl ? (
+                                  <iframe
+                                    src={activeDocumentPreviewUrl}
+                                    title={activeReviewEntry.file.fileName}
+                                    className="w-full border-0"
+                                    style={{ height: "clamp(420px, 62vh, 620px)" }}
+                                  />
+                                ) : (
+                                  <div
+                                    className="grid place-items-center p-6 text-center text-sm text-muted-foreground"
+                                    style={{ minHeight: "clamp(420px, 62vh, 620px)" }}
+                                  >
+                                    Preview unavailable. Open the file in a new tab if needed.
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="rounded-xl border border-border/70 bg-background p-3.5 shadow-sm">
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Review Decision</p>
+                                    <p className="mt-1 text-sm text-muted-foreground">Stage one decision for the active document.</p>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Review decision">
+                                    {(["approve", "needs_revision", "reject"] as const).map((decision) => {
+                                      const isActive = activeReviewDraft?.decision === decision;
+                                      return (
+                                        <Button
+                                          key={decision}
+                                          type="button"
+                                          variant={isActive ? (decision === "reject" ? "destructive" : "default") : "outline"}
+                                          aria-pressed={isActive}
+                                          className="min-w-0 whitespace-normal px-2 py-2 text-xs leading-tight"
+                                          disabled={isActiveDocumentLocked}
+                                          onClick={() =>
+                                            setRegistrationReviewDraft(activeReviewEntry.file.id, {
+                                              decision,
+                                              remark:
+                                                decision === "approve"
+                                                  ? ""
+                                                  : activeReviewDraft?.remark ?? activeReviewEntry.file.adminRemarks ?? "",
+                                              expectedUpdatedAt: activeReviewEntry.file.updatedAt,
+                                            })
+                                          }
+                                        >
+                                          {registrationReviewDecisionLabel[decision]}
+                                        </Button>
+                                      );
+                                    })}
+                                  </div>
+                                  {activeReviewDraft?.decision !== "unreviewed" ? (
+                                    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+                                      <span className="text-muted-foreground">
+                                        Pending:{" "}
+                                        <span className="font-medium text-foreground">
+                                          {registrationReviewDecisionLabel[activeReviewDraft.decision]}
+                                        </span>
+                                      </span>
+                                      <Button type="button" variant="ghost" size="sm" onClick={() => clearRegistrationReviewDraft(activeReviewEntry.file.id)}>
+                                        Clear
+                                      </Button>
+                                    </div>
+                                  ) : null}
+                                  {isActiveDocumentLocked ? (
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                                      This document is already approved and locked.
+                                    </div>
+                                  ) : null}
+                                  {registrationDecisionRequiresRemark(activeReviewDraft?.decision ?? "unreviewed") ? (
+                                    <div className="space-y-2">
+                                      <p className="text-sm font-medium text-foreground">Admin Remark *</p>
+                                      <Textarea
+                                        className="min-h-24"
+                                        disabled={isActiveDocumentLocked}
+                                        placeholder="Explain what needs to be corrected or why this document is rejected."
+                                        value={activeReviewDraft?.remark ?? ""}
+                                        onChange={(event) =>
+                                          setRegistrationReviewDraft(activeReviewEntry.file.id, {
+                                            decision: activeReviewDraft?.decision ?? "unreviewed",
+                                            remark: event.target.value,
+                                            expectedUpdatedAt: activeReviewEntry.file.updatedAt,
+                                          })
+                                        }
+                                      />
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              {shouldShowMobileBulkReview ? (
+                                <div className="rounded-xl border border-border/70 bg-background p-3.5 shadow-sm">
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center justify-between gap-3 text-left"
+                                    aria-expanded={registrationMobileBulkOpen}
+                                    onClick={() => setRegistrationMobileBulkOpen((current) => !current)}
+                                  >
+                                    <div>
+                                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Bulk Review</p>
+                                      <p className="mt-1 text-sm text-muted-foreground">
+                                        {selectedBulkFiles.length} selected document{selectedBulkFiles.length === 1 ? "" : "s"}
+                                      </p>
+                                    </div>
+                                    {registrationMobileBulkOpen ? (
+                                      <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    )}
+                                  </button>
+                                  {registrationMobileBulkOpen ? (
+                                    <div className="mt-4 grid gap-3 border-t border-border/60 pt-4">
+                                      <div className="grid gap-2">
+                                        <p className="text-sm font-medium text-foreground">Decision</p>
+                                        <Select
+                                          value={registrationBulkDecision}
+                                          onValueChange={(value) => setRegistrationBulkDecision(value as Exclude<RegistrationReviewDecision, "unreviewed">)}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="approve">Approve</SelectItem>
+                                            <SelectItem value="needs_revision">Needs Revision</SelectItem>
+                                            <SelectItem value="reject">Reject</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      {registrationDecisionRequiresRemark(registrationBulkDecision) ? (
+                                        <div className="grid gap-2">
+                                          <p className="text-sm font-medium text-foreground">Shared Remark</p>
+                                          <Textarea
+                                            className="min-h-20"
+                                            placeholder="Used only when a selected document does not already have its own staged remark."
+                                            value={registrationBulkRemark}
+                                            onChange={(event) => setRegistrationBulkRemark(event.target.value)}
+                                          />
+                                        </div>
+                                      ) : null}
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => stageBulkRegistrationDecision(selectedBulkFiles.map((entry) => entry.file.id), registrationBulkDecision)}
+                                      >
+                                        Apply to Selected
+                                      </Button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+
+                              <div className="rounded-xl border border-border/70 bg-background p-3.5 shadow-sm">
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Review Summary</p>
+                                    <p className="mt-1 text-sm text-muted-foreground">Staged decisions stay local until you submit the batch review.</p>
+                                  </div>
+                                  {eligibleUnreviewedFileIds.length ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      className="w-full"
+                                      onClick={() => stageApproveAllUnreviewedDocuments(eligibleUnreviewedFileIds)}
+                                    >
+                                      Approve all {eligibleUnreviewedFileIds.length} unreviewed
+                                    </Button>
+                                  ) : null}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Approve</p>
+                                      <p className="mt-1 text-lg font-semibold text-foreground">{bulkDecisionSummary.approve}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Needs Revision</p>
+                                      <p className="mt-1 text-lg font-semibold text-foreground">{bulkDecisionSummary.needsRevision}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Reject</p>
+                                      <p className="mt-1 text-lg font-semibold text-foreground">{bulkDecisionSummary.reject}</p>
+                                    </div>
+                                    <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Unreviewed</p>
+                                      <p className="mt-1 text-lg font-semibold text-foreground">{reviewableUnreviewedCount}</p>
+                                    </div>
+                                  </div>
+                                  {!stagedDecisionCount ? <p className="text-sm text-muted-foreground">No decisions staged</p> : null}
+                                  <Button
+                                    type="button"
+                                    className="w-full"
+                                    disabled={registrationReviewSubmitting || !stagedDecisionCount || hasMissingDecisionRemark}
+                                    onClick={() => void submitRegistrationReviewDecisions()}
+                                  >
+                                    {registrationReviewSubmitting
+                                      ? "Submitting..."
+                                      : stagedDecisionCount
+                                      ? `Submit ${stagedDecisionCount} Review Decision${stagedDecisionCount === 1 ? "" : "s"}`
+                                      : "Submit Review Decisions"}
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <RecentActivityPreview
+                                title="Recent Activity"
+                                description={`Latest actions for ${activeReviewEntry.documentType.name}.`}
+                                activities={activeReviewHistory}
+                                maxItems={3}
+                                onViewAll={
+                                  activeReviewHistory.length > 3
+                                    ? () => {
+                                        setRecentActivityDialogTitle(`Recent Activity - ${activeReviewEntry.documentType.name}`);
+                                        setRecentActivityDialogEntries(
+                                          activeReviewHistory.map((entry, index) => ({
+                                            key: entry.id,
+                                            title: typeof entry.message === "string" ? entry.message : `Activity ${index + 1}`,
+                                            timestamp:
+                                              typeof entry.timestampLabel === "string"
+                                                ? entry.timestampLabel
+                                                : typeof entry.timestamp === "string"
+                                                ? formatDateTimeLabel(entry.timestamp)
+                                                : undefined,
+                                            note: typeof entry.note === "string" ? entry.note : undefined,
+                                            dotClassName: "bg-primary",
+                                          })),
+                                        );
+                                        setRecentActivityDialogOpen(true);
+                                      }
+                                    : undefined
+                                }
+                                viewAllLabel="View all recent activity"
+                                emptyDescription="Activity entries will appear after reviewers or the organization update this file."
+                                className="border-border/70 bg-background shadow-sm"
+                              />
+                            </>
+                          ) : (
+                            <PortalEmptyState title="No document preview" description="Select a submitted document to begin reviewing it." />
+                          )}
+                        </div>
+
+                        <div className="hidden items-start gap-4 lg:grid lg:grid-cols-[minmax(270px,0.9fr)_minmax(620px,2.2fr)_minmax(300px,0.95fr)]">
+                        <div className="grid min-h-0 gap-4 lg:grid-rows-[minmax(0,1fr)_auto]">
+                          <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-background p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Document Queue</p>
+                                <p className="mt-1 text-sm text-muted-foreground">Review the current organization documents and switch the active preview from here.</p>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Document queue actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setSelectedRegistrationReviewFileIds(
+                                        orderedSubmittedFiles
+                                          .filter((entry) => entry.file.adminStatus !== "approved_green")
+                                          .map((entry) => entry.file.id),
+                                      )
+                                    }
+                                  >
+                                    Select all reviewable
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      setSelectedRegistrationReviewFileIds(
+                                        orderedSubmittedFiles
+                                          .filter(
+                                            (entry) =>
+                                              entry.file.adminStatus !== "approved_green" &&
+                                              (entry.file.adminStatus === "submitted" || entry.file.adminStatus === "under_admin_review"),
+                                          )
+                                          .map((entry) => entry.file.id),
+                                      )
+                                    }
+                                  >
+                                    Select all unreviewed
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    disabled={!eligibleUnreviewedFileIds.length}
+                                    onClick={() => stageApproveAllUnreviewedDocuments(eligibleUnreviewedFileIds)}
+                                  >
+                                    Approve all {eligibleUnreviewedFileIds.length || ""} unreviewed
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => setSelectedRegistrationReviewFileIds([])}>
+                                    Clear selection
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            <div className="mt-4 max-h-[26rem] min-h-0 space-y-2 overflow-y-auto pr-1">
+                              {filteredQueueEntries.length ? filteredQueueEntries.map(({ documentType, file }) => {
+                                const draft = getRegistrationReviewDraft(
+                                  file.id,
+                                  file.adminStatus === "needs_revision" || file.adminStatus === "rejected_red" ? file.adminRemarks : "",
+                                  file.updatedAt,
+                                );
+                                const isSelected = selectedRegistrationReviewFileIds.includes(file.id);
+                                const isActive = activeReviewEntry?.file.id === file.id;
+                                const isLocked = file.adminStatus === "approved_green";
+                                return (
+                                  <div
+                                    key={file.id}
+                                    className={cn(
+                                      "rounded-xl border transition-colors",
+                                      isActive ? "border-primary bg-primary/5" : "border-border/60 bg-card",
+                                    )}
+                                  >
+                                    <div className="flex items-start gap-3 px-3 py-3">
+                                      <input
+                                        type="checkbox"
+                                        className="mt-1 h-4 w-4 rounded border-border"
+                                        checked={isSelected}
+                                        disabled={isLocked}
+                                        onChange={(event) =>
+                                          setSelectedRegistrationReviewFileIds((current) =>
+                                            event.target.checked
+                                              ? [...current, file.id]
+                                              : current.filter((item) => item !== file.id),
+                                          )
+                                        }
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => setActiveRegistrationReviewFileId(file.id)}
+                                        className="min-w-0 flex-1 text-left"
+                                      >
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <p className="min-w-0 flex-1 text-sm font-medium leading-5 text-foreground">{documentType.name}</p>
+                                          <PortalStatusBadge status={file.adminStatus} />
+                                        </div>
+                                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground" title={file.fileName}>
+                                          {file.fileName}
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                                          <span className="text-muted-foreground">
+                                            Current: {statusLabelMap[file.adminStatus] ?? file.adminStatus.replaceAll("_", " ")}
+                                          </span>
+                                          {draft.decision !== "unreviewed" ? (
+                                            <span
+                                              className={cn(
+                                                "inline-flex items-center rounded-full border px-2 py-0.5 font-medium",
+                                                registrationReviewPendingTone[draft.decision],
+                                              )}
+                                            >
+                                              Pending: {registrationReviewDecisionLabel[draft.decision]}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              }) : (
+                                <div className="rounded-xl border border-dashed border-border/70 px-3 py-5 text-sm text-muted-foreground">
+                                  No documents match the current queue filters.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <RecentActivityPreview
+                            title="Recent Activity"
+                            description={activeReviewEntry ? `Latest actions for ${activeReviewEntry.documentType.name}.` : undefined}
+                            activities={activeReviewHistory}
+                            maxItems={3}
+                            onViewAll={
+                              activeReviewHistory.length > 3
+                                ? () => {
+                                    setRecentActivityDialogTitle(`Recent Activity - ${activeReviewEntry?.documentType.name ?? "Document"}`);
+                                    setRecentActivityDialogEntries(
+                                      activeReviewHistory.map((entry, index) => ({
+                                        key: entry.id,
+                                        title: typeof entry.message === "string" ? entry.message : `Activity ${index + 1}`,
+                                        timestamp:
+                                          typeof entry.timestampLabel === "string"
+                                            ? entry.timestampLabel
+                                            : typeof entry.timestamp === "string"
+                                            ? formatDateTimeLabel(entry.timestamp)
+                                            : undefined,
+                                        note: typeof entry.note === "string" ? entry.note : undefined,
+                                        dotClassName: "bg-primary",
+                                      })),
+                                    );
+                                    setRecentActivityDialogOpen(true);
+                                  }
+                                : undefined
+                            }
+                            viewAllLabel="View full activity log"
+                            emptyDescription="Activity entries will appear after reviewers or the organization update this file."
+                            className="border-border/70 bg-background shadow-none"
+                          />
+                        </div>
+
+                        <div className="active-document-panel flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-background p-4 lg:min-h-[calc(100vh-210px)]">
+                          {activeReviewEntry ? (
+                            <div className="flex min-h-0 flex-1 flex-col gap-4">
+                              <div className="flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                  <p className="text-lg font-semibold text-foreground">{activeReviewEntry.documentType.name}</p>
+                                  <p className="mt-1 truncate text-sm text-muted-foreground" title={activeReviewEntry.file.fileName}>
+                                    {activeReviewEntry.file.fileName}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={activeReviewIndex <= 0}
+                                    onClick={() => setActiveRegistrationReviewFileId(filteredQueueEntries[Math.max(0, activeReviewIndex - 1)]?.file.id ?? null)}
+                                  >
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Previous
+                                  </Button>
+                                  <span className="text-xs text-muted-foreground">
+                                    {Math.max(activeReviewIndex + 1, 0)} of {filteredQueueEntries.length || orderedSubmittedFiles.length}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={activeReviewIndex < 0 || activeReviewIndex >= filteredQueueEntries.length - 1}
+                                    onClick={() => setActiveRegistrationReviewFileId(filteredQueueEntries[Math.min(filteredQueueEntries.length - 1, activeReviewIndex + 1)]?.file.id ?? null)}
+                                  >
+                                    Next
+                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+                                {documentPreviewUrls[activeReviewEntry.file.id] ? (
+                                  <iframe
+                                    src={documentPreviewUrls[activeReviewEntry.file.id]}
+                                    title={activeReviewEntry.file.fileName}
+                                    className="h-full min-h-[28rem] w-full xl:min-h-[34rem]"
+                                  />
+                                ) : (
+                                  <div className="grid h-full min-h-[28rem] place-items-center p-6 text-center text-sm text-muted-foreground xl:min-h-[34rem]">
+                                    Preview unavailable. Open the file from the browser storage link if needed.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <PortalEmptyState title="No document preview" description="Select a submitted document to begin reviewing it." />
+                          )}
+                        </div>
+
+                        <div className="review-control-panel min-h-0 overflow-hidden rounded-xl border border-border/70 bg-background lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+                          {activeReviewEntry ? (
+                            <div className="flex h-full flex-col divide-y divide-border/60">
+                              <div className="space-y-4 p-4">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Review Decision</p>
+                                  <p className="mt-1 text-sm text-muted-foreground">Stage one decision for the active document. Nothing is submitted until the final review action.</p>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Review decision">
+                                  {(["approve", "needs_revision", "reject"] as const).map((decision) => {
+                                    const isActive = activeReviewDraft?.decision === decision;
+                                    return (
+                                      <Button
+                                        key={decision}
+                                        type="button"
+                                        variant={isActive ? (decision === "reject" ? "destructive" : "default") : "outline"}
+                                        aria-pressed={isActive}
+                                        className="min-w-0 whitespace-normal px-2 py-2 text-xs leading-tight sm:px-3 sm:text-sm"
+                                        disabled={isActiveDocumentLocked}
+                                        onClick={() =>
+                                          setRegistrationReviewDraft(activeReviewEntry.file.id, {
+                                            decision,
+                                            remark:
+                                              decision === "approve"
+                                                ? ""
+                                                : activeReviewDraft?.remark ?? activeReviewEntry.file.adminRemarks ?? "",
+                                            expectedUpdatedAt: activeReviewEntry.file.updatedAt,
+                                          })
+                                        }
+                                      >
+                                        {registrationReviewDecisionLabel[decision]}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                                {activeReviewDraft?.decision !== "unreviewed" ? (
+                                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+                                    <span className="text-muted-foreground">
+                                      Pending:{" "}
+                                      <span className="font-medium text-foreground">
+                                        {registrationReviewDecisionLabel[activeReviewDraft.decision]}
+                                      </span>
+                                    </span>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => clearRegistrationReviewDraft(activeReviewEntry.file.id)}>
+                                      Clear
+                                    </Button>
+                                  </div>
+                                ) : null}
+                                {isActiveDocumentLocked ? (
+                                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                                    This document is already approved.
+                                  </div>
+                                ) : null}
+                                {registrationDecisionRequiresRemark(activeReviewDraft?.decision ?? "unreviewed") ? (
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium text-foreground">Admin Remark *</p>
+                                    <Textarea
+                                      className="min-h-24"
+                                      disabled={isActiveDocumentLocked}
+                                      placeholder="Explain what needs to be corrected or why this document is rejected."
+                                      value={activeReviewDraft?.remark ?? ""}
+                                      onChange={(event) =>
+                                        setRegistrationReviewDraft(activeReviewEntry.file.id, {
+                                          decision: activeReviewDraft?.decision ?? "unreviewed",
+                                          remark: event.target.value,
+                                          expectedUpdatedAt: activeReviewEntry.file.updatedAt,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              <div className="space-y-4 p-4">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Bulk Review</p>
+                                  <p className="mt-1 text-sm text-muted-foreground">
+                                    Selected: {selectedBulkFiles.length} document{selectedBulkFiles.length === 1 ? "" : "s"}
+                                  </p>
+                                </div>
+                                <div className="grid gap-3">
+                                  <div className="grid gap-2">
+                                    <p className="text-sm font-medium text-foreground">Decision</p>
+                                    <Select value={registrationBulkDecision} onValueChange={(value) => setRegistrationBulkDecision(value as Exclude<RegistrationReviewDecision, "unreviewed">)} disabled={!selectedBulkFiles.length}>
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="approve">Approve</SelectItem>
+                                        <SelectItem value="needs_revision">Needs Revision</SelectItem>
+                                        <SelectItem value="reject">Reject</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  {registrationDecisionRequiresRemark(registrationBulkDecision) ? (
+                                    <div className="grid gap-2">
+                                      <p className="text-sm font-medium text-foreground">Shared Remark</p>
+                                      <Textarea
+                                        className="min-h-20"
+                                        disabled={!selectedBulkFiles.length}
+                                        placeholder="Used only when a selected document does not already have its own staged remark."
+                                        value={registrationBulkRemark}
+                                        onChange={(event) => setRegistrationBulkRemark(event.target.value)}
+                                      />
+                                    </div>
+                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={!selectedBulkFiles.length}
+                                    onClick={() => stageBulkRegistrationDecision(selectedBulkFiles.map((entry) => entry.file.id), registrationBulkDecision)}
+                                  >
+                                    Apply to Selected
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="mt-auto space-y-4 p-4">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Review Summary</p>
+                                  <p className="mt-1 text-sm text-muted-foreground">Staged decisions stay local until you submit the batch review.</p>
+                                </div>
+                                {eligibleUnreviewedFileIds.length ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full"
+                                    onClick={() => stageApproveAllUnreviewedDocuments(eligibleUnreviewedFileIds)}
+                                  >
+                                    Approve all {eligibleUnreviewedFileIds.length} unreviewed
+                                  </Button>
+                                ) : null}
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Approve</p>
+                                    <p className="mt-1 text-lg font-semibold text-foreground">{bulkDecisionSummary.approve}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Needs Revision</p>
+                                    <p className="mt-1 text-lg font-semibold text-foreground">{bulkDecisionSummary.needsRevision}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Reject</p>
+                                    <p className="mt-1 text-lg font-semibold text-foreground">{bulkDecisionSummary.reject}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-border/70 bg-muted/10 px-3 py-2">
+                                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Unreviewed</p>
+                                    <p className="mt-1 text-lg font-semibold text-foreground">{reviewableUnreviewedCount}</p>
                                   </div>
                                 </div>
+                                {!stagedDecisionCount ? <p className="text-sm text-muted-foreground">No decisions staged</p> : null}
+                                <Button
+                                  type="button"
+                                  className="w-full"
+                                  disabled={registrationReviewSubmitting || !stagedDecisionCount || hasMissingDecisionRemark}
+                                  onClick={() => void submitRegistrationReviewDecisions()}
+                                >
+                                  {registrationReviewSubmitting
+                                    ? "Submitting..."
+                                    : `Submit ${stagedDecisionCount} Review Decision${stagedDecisionCount === 1 ? "" : "s"}`}
+                                </Button>
                               </div>
                             </div>
                           ) : null}
                         </div>
-                      );
-                    })}
+                        </div>
+                      </>
+                    ) : (
+                      <PortalEmptyState
+                        title="No submitted files yet"
+                        description="Once the organization uploads documents, they will appear here for batch review."
+                      />
+                    )}
                   </div>
                 ) : (
                   <PortalEmptyState
@@ -3992,16 +5178,17 @@ export default function AdminPortal({ section }: { section: string }) {
             description="Review pending organization profiles and their submitted documents. Open an organization to validate files and verify their registration."
           >
             {state.organizationProfiles.length ? (
-              <div className="space-y-4">
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
+              <div className="registration-review-page space-y-4">
+                <div className="review-filter-grid grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_220px]">
                   <Input
+                    className="review-search"
                     value={registrationSearch}
                     onChange={(event) => setRegistrationSearch(event.target.value)}
-                    placeholder="Search by organization, email, barangay, or district"
+                    placeholder="Search organizations..."
                   />
                   <Select value={registrationStatusFilter} onValueChange={setRegistrationStatusFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
+                      <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
@@ -4014,7 +5201,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   </Select>
                   <Select value={registrationDistrictFilter} onValueChange={setRegistrationDistrictFilter}>
                     <SelectTrigger>
-                      <SelectValue placeholder="All districts" />
+                      <SelectValue placeholder="District" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Districts</SelectItem>
@@ -4027,13 +5214,77 @@ export default function AdminPortal({ section }: { section: string }) {
                   </Select>
                 </div>
 
+                <div className="text-sm text-muted-foreground lg:hidden">
+                  {filteredRegistrations.length} organization{filteredRegistrations.length === 1 ? "" : "s"} - {filteredRegistrations.filter((org) => org.profileStatus === "pending_review").length} pending review
+                </div>
+
                 {filteredRegistrations.length ? (
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <>
+                  <div className="grid gap-3 lg:hidden">
                     {filteredRegistrations.map((org) => {
                       const orgSubmission = state.documentSubmissions.find((item) => item.organizationId === org.id);
                       const submittedCount = orgSubmission
                         ? state.documentSubmissionFiles.filter(
-                            (file) => file.submissionId === orgSubmission.id && validDocumentTypeIds.has(file.documentTypeId),
+                            (file) =>
+                              file.submissionId === orgSubmission.id &&
+                              validDocumentTypeIds.has(file.documentTypeId) &&
+                              file.adminStatus !== "draft",
+                          ).length
+                        : 0;
+                      const completionRate = templateDocuments.length ? Math.round((submittedCount / templateDocuments.length) * 100) : 0;
+                      const statusDotColor =
+                        org.profileStatus === "verified"
+                          ? "bg-emerald-500"
+                          : org.profileStatus === "needs_update" || org.profileStatus === "pending_review"
+                          ? "bg-amber-400"
+                          : "bg-muted-foreground/40";
+                      return (
+                        <Card key={org.id} className="border-border/70 shadow-sm">
+                          <CardContent className="p-3.5">
+                            <div className="organization-review-header grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start">
+                              <div className="flex min-w-0 items-start gap-2.5">
+                                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${statusDotColor}`} />
+                                <div className="min-w-0">
+                                  <p className="organization-review-name line-clamp-2 text-sm font-semibold leading-5 text-foreground">{org.organizationName}</p>
+                                  <p className="organization-review-email mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">{org.organizationEmail}</p>
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
+                                    {[org.barangay, org.district].filter(Boolean).join(" - ") || "No location provided"}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="organization-review-status max-w-[112px] text-right">
+                                <PortalStatusBadge status={org.profileStatus} />
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium text-foreground">{submittedCount} of {templateDocuments.length}</span> documents
+                              </p>
+                              <Button type="button" size="sm" className="h-10 px-3" onClick={() => handleRegistrationSelectionChange(org.id)}>
+                                Review
+                                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-primary/60 transition-[width]"
+                                style={{ width: `${completionRate}%` }}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  <div className="hidden gap-4 lg:grid md:grid-cols-2">
+                    {filteredRegistrations.map((org) => {
+                      const orgSubmission = state.documentSubmissions.find((item) => item.organizationId === org.id);
+                      const submittedCount = orgSubmission
+                        ? state.documentSubmissionFiles.filter(
+                            (file) =>
+                              file.submissionId === orgSubmission.id &&
+                              validDocumentTypeIds.has(file.documentTypeId) &&
+                              file.adminStatus !== "draft",
                           ).length
                         : 0;
                       const statusDotColor =
@@ -4052,7 +5303,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                   <p className="truncate font-semibold text-foreground">{org.organizationName}</p>
                                   <p className="mt-0.5 truncate text-sm text-muted-foreground">{org.organizationEmail}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    {[org.barangay, org.district].filter(Boolean).join(" • ") || "No location provided"}
+                                    {[org.barangay, org.district].filter(Boolean).join(" - ") || "No location provided"}
                                   </p>
                                 </div>
                               </div>
@@ -4074,7 +5325,7 @@ export default function AdminPortal({ section }: { section: string }) {
                               <Button
                                 type="button"
                                 size="sm"
-                                onClick={() => setSelectedRegistrationId(org.id)}
+                                onClick={() => handleRegistrationSelectionChange(org.id)}
                               >
                                 Review
                                 <ArrowRight className="ml-2 h-3.5 w-3.5" />
@@ -4082,9 +5333,10 @@ export default function AdminPortal({ section }: { section: string }) {
                             </div>
                           </CardContent>
                         </Card>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
+                  </>
                 ) : (
                   <PortalEmptyState
                     title="No matching registrations"
@@ -4125,6 +5377,234 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </div>
 
+              <div className="space-y-4 lg:hidden">
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold leading-6 text-foreground">{selectedBudgetRequest.activityTitle}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {selectedBudgetOrganization?.organizationName ?? "Unknown organization"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">Activity Date: {budgetTimelineLabel}</p>
+                      </div>
+                      <PortalStatusBadge status={selectedBudgetRequest.status} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 border-y border-border/60 py-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Requested</p>
+                        <p className="mt-1 text-sm font-medium text-foreground">{formatPesoAmount(selectedBudgetRequest.requestedAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Approved</p>
+                        <p className="mt-1 text-sm font-medium text-emerald-700">{formatPesoAmount(selectedBudgetRequest.approvedAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Released</p>
+                        <p className="mt-1 text-sm font-medium text-foreground">{formatPesoAmount(selectedBudgetRequest.releasedAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Venue</p>
+                        <p className="mt-1 break-words text-sm font-medium text-foreground">{selectedBudgetRequest.venue || "Not specified"}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Purpose Category</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">{selectedBudgetRequest.purposeCategory || "Not specified"}</p>
+                    </div>
+                    {selectedBudgetRequest.remarks ? (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Organization Remarks</p>
+                        <div className="mt-2 rounded-xl border border-border/60 bg-muted/10 p-3 text-sm text-foreground">
+                          {selectedBudgetRequest.remarks}
+                        </div>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent className="space-y-3 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Review Actions</p>
+                    <div className="grid gap-2 min-[430px]:grid-cols-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!approvableBudgetStatuses.has(selectedBudgetRequest.status) || budgetLockedAfterRelease}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "budget",
+                            action: "approve",
+                            budgetRequestId: selectedBudgetRequest.id,
+                            organizationId: selectedBudgetRequest.organizationId,
+                            organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedBudgetRequest.activityTitle,
+                            requestedAmount: selectedBudgetRequest.requestedAmount,
+                            currentStatus: selectedBudgetRequest.status,
+                          })
+                        }
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={selectedBudgetRequest.status !== "approved_for_ftf_green" || budgetLockedAfterRelease}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "budget",
+                            action: "submitted_hardcopy",
+                            budgetRequestId: selectedBudgetRequest.id,
+                            organizationId: selectedBudgetRequest.organizationId,
+                            organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedBudgetRequest.activityTitle,
+                            requestedAmount: selectedBudgetRequest.requestedAmount,
+                            currentStatus: selectedBudgetRequest.status,
+                          })
+                        }
+                      >
+                        Mark Hardcopy Submitted
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={selectedBudgetRequest.status !== "hard_copy_submitted" || budgetLockedAfterRelease}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "budget",
+                            action: "cash_released",
+                            budgetRequestId: selectedBudgetRequest.id,
+                            organizationId: selectedBudgetRequest.organizationId,
+                            organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedBudgetRequest.activityTitle,
+                            requestedAmount: selectedBudgetRequest.requestedAmount,
+                            currentStatus: selectedBudgetRequest.status,
+                          })
+                        }
+                      >
+                        Mark Released
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={budgetLockedAfterRelease}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "budget",
+                            action: "needs_revision",
+                            budgetRequestId: selectedBudgetRequest.id,
+                            organizationId: selectedBudgetRequest.organizationId,
+                            organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedBudgetRequest.activityTitle,
+                            requestedAmount: selectedBudgetRequest.requestedAmount,
+                            currentStatus: selectedBudgetRequest.status,
+                          })
+                        }
+                      >
+                        Needs Revision
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="min-[430px]:col-span-2"
+                        disabled={budgetLockedAfterRelease}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "budget",
+                            action: "reject",
+                            budgetRequestId: selectedBudgetRequest.id,
+                            organizationId: selectedBudgetRequest.organizationId,
+                            organizationName: selectedBudgetOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedBudgetRequest.activityTitle,
+                            requestedAmount: selectedBudgetRequest.requestedAmount,
+                            currentStatus: selectedBudgetRequest.status,
+                          })
+                        }
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                    {selectedBudgetRequest.adminRemarks ? (
+                      <div className="rounded-xl border border-amber-200/70 bg-amber-50/60 p-3">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Latest Admin Feedback</p>
+                        <p className="text-sm text-amber-900">{selectedBudgetRequest.adminRemarks}</p>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent className="space-y-4 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Attached Files</p>
+                    {selectedBudgetRequestFiles.length ? (
+                      <>
+                        <DetailFilePills
+                          items={selectedBudgetRequestFiles.map((file) => ({ id: file.id, fileName: file.fileName }))}
+                          selectedId={selectedBudgetRequestFile?.id}
+                          onSelect={setSelectedBudgetFileId}
+                        />
+                        <div className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+                          {budgetPreviewLoading ? (
+                            <div className="grid place-items-center p-6 text-sm text-muted-foreground" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>Loading preview...</div>
+                          ) : budgetPreviewUrl && budgetPreviewCanInline ? (
+                            isImagePreviewFile(budgetPreviewTitle) || isImagePreviewFile(budgetPreviewUrl) ? (
+                              <div className="flex items-center justify-center overflow-hidden bg-background" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>
+                                <img src={budgetPreviewUrl} alt={budgetPreviewTitle || "Budget request preview"} className="max-h-[460px] w-full object-contain" />
+                              </div>
+                            ) : (
+                              <iframe title={budgetPreviewTitle || "Budget Request Preview"} src={budgetPreviewUrl} className="w-full border-0 bg-background" style={{ height: "clamp(320px, 52vh, 460px)" }} loading="eager" />
+                            )
+                          ) : budgetPreviewUrl ? (
+                            <div className="grid place-items-center p-6 text-center text-sm text-muted-foreground" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>
+                              <div className="space-y-3">
+                                <p>This uploaded file cannot be shown inline.</p>
+                                <Button type="button" variant="outline" onClick={() => window.open(budgetPreviewUrl, "_blank", "noopener,noreferrer")}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Open File
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid place-items-center border border-dashed border-border/60 bg-muted/10 p-6 text-center text-sm text-muted-foreground" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>
+                              {budgetPreviewEmptyMessage || "No attached budget request file was uploaded."}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-sm text-muted-foreground">
+                        No attached budget request files were submitted.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <RecentActivityPreview
+                  title="Recent Activity"
+                  activities={budgetRecentActivities.map((entry) => ({
+                    id: entry.key,
+                    message: entry.title,
+                    note: entry.note || undefined,
+                    timestamp: entry.timestamp,
+                    timestampLabel: entry.timestamp,
+                  }))}
+                  onViewAll={
+                    budgetRecentActivities.length > 3
+                      ? () => {
+                          setRecentActivityDialogTitle("Budget Request Activity");
+                          setRecentActivityDialogEntries(budgetRecentActivities);
+                          setRecentActivityDialogOpen(true);
+                        }
+                      : undefined
+                  }
+                  className="border-border/70 bg-background shadow-sm"
+                  headerClassName="mb-2"
+                  emptyMessage="No recent activity yet."
+                  emptyDescription="Budget review activity will appear here once the request is processed."
+                />
+              </div>
+
+              <div className="hidden lg:block">
               <DetailInfoCard
                 title="Budget Request"
                 icon={<CircleDollarSign className="h-5 w-5" />}
@@ -4408,6 +5888,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   </DetailSectionBlock>
                 </DetailInfoCard>
               </div>
+              </div>
             </div>
           );
         }
@@ -4415,7 +5896,7 @@ export default function AdminPortal({ section }: { section: string }) {
           <PortalSection title="Budget Requests" description="Review budget requests submitted by organizations. Approve requests to issue a go-signal, request revisions, or reject.">
             {state.budgetRequests.length ? (
               <div className="space-y-3">
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                   <Input
                     value={budgetRequestsSearch}
                     onChange={(event) => setBudgetRequestsSearch(event.target.value)}
@@ -4437,111 +5918,60 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
                 {filteredAdminBudgetRequests.length ? (
                   <>
-                    <div className="space-y-3 md:hidden">
+                    <div className="space-y-3 lg:hidden">
                       {filteredAdminBudgetRequests.map((request) => {
                         const requestOrganization = state.organizationProfiles.find((org) => org.id === request.organizationId) ?? null;
-                        const primaryFile =
-                          [...state.budgetRequestFiles]
-                            .filter((file) => file.budgetRequestId === request.id)
-                            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0] ?? null;
-                        const latestActivity = (request.revisionHistory ?? []).at(-1) ?? null;
+                        const requestCode = buildPublicRecordCode("BR", request, state.budgetRequests);
+                        const requestedAmount = formatPesoAmount(request.requestedAmount);
                         return (
                           <Card key={request.id} className="border-border/70 shadow-sm">
-                            <CardContent className="space-y-3 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 space-y-1">
-                                  <div className="flex flex-wrap items-center gap-1.5">
-                                    <p className="font-semibold text-foreground">{request.activityTitle}</p>
-                                    {request.budgetRequestType === "ypop_incentive" ? (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                                        <Trophy className="h-2.5 w-2.5 text-amber-600" />
-                                        YPOP Incentive
-                                      </span>
-                                    ) : null}
+                            <CardContent className="grid gap-3 p-[14px] sm:p-4">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <p className="overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                        {request.activityTitle || "Untitled request"}
+                                      </p>
+                                      {request.budgetRequestType === "ypop_incentive" ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                          <Trophy className="h-2.5 w-2.5 text-amber-600" />
+                                          YPOP
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      {requestOrganization?.organizationName ?? "Unknown organization"}
+                                    </p>
                                   </div>
-                                  <p className="text-xs text-primary">Request ID: {buildPublicRecordCode("BR", request, state.budgetRequests)}</p>
-                                  <p className="text-xs text-muted-foreground">{requestOrganization?.organizationName ?? "Unknown organization"}</p>
-                                  <p className="text-xs text-muted-foreground">Created {formatShortDate(request.createdAt)}</p>
+                                  <PortalStatusBadge status={request.status} />
                                 </div>
-                                <PortalStatusBadge status={request.status} />
                               </div>
 
-                              <div className="grid gap-3 rounded-xl border border-border/50 bg-muted/10 p-3 sm:grid-cols-2">
-                                <div>
+                              <p className="min-w-0 break-words text-[0.82rem] leading-5 text-muted-foreground">
+                                <span>{requestCode}</span> · <span className="font-medium text-emerald-600">{requestedAmount}</span>
+                              </p>
+
+                              <div className="grid grid-cols-2 gap-3 border-y border-border/60 py-3">
+                                <div className="min-w-0">
                                   <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Proposed Date</p>
                                   <p className="mt-1 text-sm font-medium text-foreground">{formatShortDate(request.proposedDate)}</p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Venue</p>
-                                  <p className="mt-1 text-sm font-medium text-foreground">{request.venue || "No venue"}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Requested</p>
-                                  <p className="mt-1 text-sm font-medium text-foreground">PHP {Number(request.requestedAmount || 0).toLocaleString()}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Approved</p>
-                                  <p className="mt-1 text-sm font-medium text-emerald-700">PHP {Number(request.approvedAmount || 0).toLocaleString()}</p>
+                                  <p className="mt-1 break-words text-sm font-medium text-foreground">{request.venue || "No venue"}</p>
                                 </div>
                               </div>
 
-                              <div className="space-y-2">
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">File</p>
-                                {primaryFile ? (
-                                  <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background p-3">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
-                                      <FileText className="h-4 w-4" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="line-clamp-2 break-all text-sm font-medium leading-snug text-foreground">{primaryFile.fileName}</p>
-                                      <p className="text-xs text-muted-foreground">{formatFileMetaLabel(primaryFile.fileType, primaryFile.fileSize)}</p>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">No file uploaded yet</p>
-                                )}
-                              </div>
-
-                              <RecentActivityPreview
-                                title="Recent Activity"
-                                activities={
-                                  request.revisionHistory?.length
-                                    ? request.revisionHistory.map((entry, index) => ({
-                                        id: `${request.id}-${entry.action}-${entry.changedAt}-${index}`,
-                                        message: formatStatusLabel(entry.action),
-                                        note: entry.adminRemarks || undefined,
-                                        timestamp: entry.changedAt,
-                                        timestampLabel: formatDateTimeLabel(entry.changedAt),
-                                      }))
-                                    : [{
-                                        id: `${request.id}-status`,
-                                        message: formatStatusLabel(request.status),
-                                        timestamp: request.updatedAt,
-                                        timestampLabel: formatDateTimeLabel(request.updatedAt),
-                                      }]
-                                }
-                                className="border-border/50 bg-muted/10 p-3 shadow-none"
-                                headerClassName="mb-2"
-                              />
-
-                              <div className="flex items-center justify-end gap-2">
-                                <Button type="button" size="sm" variant="outline" onClick={() => openBudgetRequestDetails(request.id)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Review
-                                </Button>
-                                {primaryFile ? (
-                                  <Button type="button" size="sm" onClick={() => void openFile(primaryFile.fileUrl, primaryFile.fileName)}>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Open File
-                                  </Button>
-                                ) : null}
-                              </div>
+                              <Button type="button" variant="outline" className="h-10 w-full" onClick={() => openBudgetRequestDetails(request.id)}>
+                                View Details
+                              </Button>
                             </CardContent>
                           </Card>
                         );
                       })}
                     </div>
-                    <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm md:block">
+                    <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm lg:block">
                 <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/35 hover:bg-muted/35">
@@ -4678,6 +6108,210 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </div>
 
+              <div className="space-y-4 lg:hidden">
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold leading-6 text-foreground">
+                          {selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation Report"}
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {selectedLiquidationOrganization?.organizationName ?? "Unknown organization"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">Deadline: {liquidationDeadlineLabel}</p>
+                      </div>
+                      <PortalStatusBadge status={selectedLiquidationReport.status} />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {buildPublicRecordCode("LR", selectedLiquidationReport, visibleLiquidationReports)} ·{" "}
+                      <span className="font-medium text-emerald-600">
+                        {formatPesoAmount(selectedLiquidationBudgetRequest?.releasedAmount || selectedLiquidationBudgetRequest?.approvedAmount || 0)}
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 border-y border-border/60 py-3">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Go Signal</p>
+                        <p className="mt-1 text-sm font-medium text-foreground">{formatShortDate(selectedLiquidationReport.goSignalAt)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Hardcopy Submitted</p>
+                        <p className="mt-1 text-sm font-medium text-foreground">{formatShortDate(selectedLiquidationReport.hardCopySubmittedAt)}</p>
+                      </div>
+                    </div>
+                    {selectedLiquidationReport.remarks ? (
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Organization Remarks</p>
+                        <div className="mt-2 rounded-xl border border-border/60 bg-muted/10 p-3 text-sm text-foreground">
+                          {selectedLiquidationReport.remarks}
+                        </div>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent className="space-y-3 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Review Actions</p>
+                    <div className="grid gap-2 min-[430px]:grid-cols-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canApproveLiquidation || liquidationLockedAfterHardCopy}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "liquidation",
+                            action: "approve",
+                            liquidationReportId: selectedLiquidationReport.id,
+                            budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                            organizationId: selectedLiquidationReport.organizationId,
+                            organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                            currentStatus: selectedLiquidationReport.status,
+                          })
+                        }
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canMarkLiquidationHardCopySubmitted || liquidationLockedAfterHardCopy}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "liquidation",
+                            action: "submitted_hardcopy",
+                            liquidationReportId: selectedLiquidationReport.id,
+                            budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                            organizationId: selectedLiquidationReport.organizationId,
+                            organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                            currentStatus: selectedLiquidationReport.status,
+                          })
+                        }
+                      >
+                        Mark Hardcopy Submitted
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={liquidationLockedAfterHardCopy}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "liquidation",
+                            action: "needs_revision",
+                            liquidationReportId: selectedLiquidationReport.id,
+                            budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                            organizationId: selectedLiquidationReport.organizationId,
+                            organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                            currentStatus: selectedLiquidationReport.status,
+                          })
+                        }
+                      >
+                        Needs Revision
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={liquidationLockedAfterHardCopy}
+                        onClick={() =>
+                          openAdminConfirmation({
+                            kind: "liquidation",
+                            action: "overdue",
+                            liquidationReportId: selectedLiquidationReport.id,
+                            budgetRequestId: selectedLiquidationReport.budgetRequestId,
+                            organizationId: selectedLiquidationReport.organizationId,
+                            organizationName: selectedLiquidationOrganization?.organizationName ?? "Unknown organization",
+                            activityTitle: selectedLiquidationBudgetRequest?.activityTitle ?? "Liquidation report",
+                            currentStatus: selectedLiquidationReport.status,
+                          })
+                        }
+                      >
+                        Mark Overdue
+                      </Button>
+                    </div>
+                    {selectedLiquidationReport.remarks ? (
+                      <div className="rounded-xl border border-amber-200/70 bg-amber-50/60 p-3">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Latest Admin Feedback</p>
+                        <p className="text-sm text-amber-900">{selectedLiquidationReport.remarks}</p>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/70 shadow-sm">
+                  <CardContent className="space-y-4 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Attached Files</p>
+                    {selectedLiquidationReportFiles.length ? (
+                      <>
+                        <DetailFilePills
+                          items={selectedLiquidationReportFiles.map((file) => ({ id: file.id, fileName: file.fileName }))}
+                          selectedId={selectedLiquidationReportFile?.id}
+                          onSelect={setSelectedLiquidationFileId}
+                        />
+                        <div className="overflow-hidden rounded-2xl border border-border/70 bg-background">
+                          {liquidationPreviewLoading ? (
+                            <div className="grid place-items-center p-6 text-sm text-muted-foreground" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>Loading preview...</div>
+                          ) : liquidationPreviewUrl && liquidationPreviewCanInline ? (
+                            isImagePreviewFile(liquidationPreviewTitle) || isImagePreviewFile(liquidationPreviewUrl) ? (
+                              <div className="flex items-center justify-center overflow-hidden bg-background" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>
+                                <img src={liquidationPreviewUrl} alt={liquidationPreviewTitle || "Liquidation file preview"} className="max-h-[460px] w-full object-contain" />
+                              </div>
+                            ) : (
+                              <iframe title={liquidationPreviewTitle || "Liquidation Preview"} src={liquidationPreviewUrl} className="w-full border-0 bg-background" style={{ height: "clamp(320px, 52vh, 460px)" }} loading="eager" />
+                            )
+                          ) : liquidationPreviewUrl ? (
+                            <div className="grid place-items-center p-6 text-center text-sm text-muted-foreground" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>
+                              <div className="space-y-3">
+                                <p>This uploaded file cannot be shown inline.</p>
+                                <Button type="button" variant="outline" onClick={() => window.open(liquidationPreviewUrl, "_blank", "noopener,noreferrer")}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Open File
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid place-items-center border border-dashed border-border/60 bg-muted/10 p-6 text-center text-sm text-muted-foreground" style={{ minHeight: "clamp(320px, 52vh, 460px)" }}>
+                              {liquidationPreviewEmptyMessage || "No liquidation file was uploaded."}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-sm text-muted-foreground">
+                        No attached liquidation files were submitted.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <RecentActivityPreview
+                  title="Recent Activity"
+                  activities={liquidationRecentActivities.map((entry) => ({
+                    id: entry.key,
+                    message: entry.title,
+                    note: entry.note || undefined,
+                    timestamp: entry.timestamp,
+                    timestampLabel: entry.timestamp,
+                  }))}
+                  onViewAll={
+                    liquidationRecentActivities.length > 3
+                      ? () => {
+                          setRecentActivityDialogTitle("Liquidation Activity");
+                          setRecentActivityDialogEntries(liquidationRecentActivities);
+                          setRecentActivityDialogOpen(true);
+                        }
+                      : undefined
+                  }
+                  className="border-border/70 bg-background shadow-sm"
+                  headerClassName="mb-2"
+                  emptyMessage="No recent activity yet."
+                  emptyDescription="Liquidation review activity will appear here once the report is processed."
+                />
+              </div>
+
+              <div className="hidden lg:block">
               <DetailInfoCard
                 title="Liquidation Record"
                 icon={<FileText className="h-5 w-5" />}
@@ -4934,6 +6568,7 @@ export default function AdminPortal({ section }: { section: string }) {
                   </DetailSectionBlock>
                 </DetailInfoCard>
               </div>
+              </div>
             </div>
           );
         }
@@ -4941,7 +6576,7 @@ export default function AdminPortal({ section }: { section: string }) {
           <PortalSection title="Liquidation Reports" description="Review liquidation reports submitted after funded activities. Approve completed reports, request revisions, or flag overdue ones.">
             {visibleLiquidationReports.length ? (
               <div className="space-y-3">
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                   <Input
                     value={liquidationReportsSearch}
                     onChange={(event) => setLiquidationReportsSearch(event.target.value)}
@@ -4963,97 +6598,51 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
                 {filteredVisibleLiquidationReports.length ? (
                   <>
-                    <div className="space-y-3 md:hidden">
+                    <div className="space-y-3 lg:hidden">
                       {filteredVisibleLiquidationReports.map((record) => {
                         const linkedBudget = state.budgetRequests.find((item) => item.id === record.budgetRequestId) ?? null;
-                        const liquidationOrg = state.organizationProfiles.find((item) => item.id === record.organizationId) ?? null;
-                        const primaryFile =
-                          [...state.liquidationReportFiles]
-                            .filter((file) => file.liquidationReportId === record.id)
-                            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0] ?? null;
-                        const latestActivity = (record.revisionHistory ?? []).at(-1) ?? null;
+                        const reportCode = buildPublicRecordCode("LR", record, visibleLiquidationReports);
+                        const budgetAmount = formatPesoAmount(
+                          linkedBudget?.releasedAmount || linkedBudget?.approvedAmount || 0,
+                        );
                         return (
                           <Card key={record.id} className="border-border/70 shadow-sm">
-                            <CardContent className="space-y-3 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 space-y-1">
-                                  <p className="font-semibold text-foreground">{liquidationOrg?.organizationName ?? "Unknown organization"}</p>
-                                  <p className="text-xs text-primary">Report ID: {buildPublicRecordCode("LR", record, visibleLiquidationReports)}</p>
-                                  <p className="text-xs text-muted-foreground">{linkedBudget?.activityTitle ?? "Liquidation item"}</p>
-                                  <p className="text-xs text-muted-foreground">Created {formatShortDate(record.createdAt)}</p>
+                            <CardContent className="grid gap-3 p-[14px] sm:p-4">
+                              <div className="min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                    {linkedBudget?.activityTitle ?? "Approved budget"}
+                                  </p>
+                                  <PortalStatusBadge status={record.status} />
                                 </div>
-                                <PortalStatusBadge status={record.status} />
                               </div>
 
-                              <div className="grid gap-3 rounded-xl border border-border/50 bg-muted/10 p-3 sm:grid-cols-2">
-                                <div>
+                              <p className="min-w-0 break-words text-[0.82rem] leading-5 text-muted-foreground">
+                                <span>{reportCode}</span> · <span className="font-medium text-emerald-600">{budgetAmount}</span>
+                              </p>
+
+                              <div className="grid grid-cols-2 gap-3 border-y border-border/60 py-3">
+                                <div className="min-w-0">
+                                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Go Signal</p>
+                                  <p className="mt-1 text-sm font-medium text-foreground">
+                                    {formatShortDate(record.goSignalAt || linkedBudget?.goSignalAt)}
+                                  </p>
+                                </div>
+                                <div className="min-w-0">
                                   <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Deadline</p>
                                   <p className="mt-1 text-sm font-medium text-foreground">{formatShortDate(record.deadlineAt)}</p>
                                 </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Linked Budget</p>
-                                  <p className="mt-1 text-sm font-medium text-foreground">{linkedBudget?.activityTitle ?? "No linked budget"}</p>
-                                  <p className="text-xs text-muted-foreground">Go signal {formatShortDate(record.goSignalAt || linkedBudget?.goSignalAt)}</p>
-                                </div>
                               </div>
 
-                              <div className="space-y-2">
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">File</p>
-                                {primaryFile ? (
-                                  <div className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-background p-3">
-                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
-                                      <FileText className="h-4 w-4" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="line-clamp-2 break-all text-sm font-medium leading-snug text-foreground">{primaryFile.fileName}</p>
-                                      <p className="text-xs text-muted-foreground">{formatFileMetaLabel(primaryFile.fileType, primaryFile.fileSize)}</p>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">No file uploaded yet</p>
-                                )}
-                              </div>
-
-                              <RecentActivityPreview
-                                title="Recent Activity"
-                                activities={
-                                  record.revisionHistory?.length
-                                    ? record.revisionHistory.map((entry, index) => ({
-                                        id: `${record.id}-${entry.action}-${entry.changedAt}-${index}`,
-                                        message: formatStatusLabel(entry.action),
-                                        note: entry.adminRemarks || undefined,
-                                        timestamp: entry.changedAt,
-                                        timestampLabel: formatDateTimeLabel(entry.changedAt),
-                                      }))
-                                    : [{
-                                        id: `${record.id}-status`,
-                                        message: formatStatusLabel(record.status),
-                                        timestamp: record.updatedAt,
-                                        timestampLabel: formatDateTimeLabel(record.updatedAt),
-                                      }]
-                                }
-                                className="border-border/50 bg-muted/10 p-3 shadow-none"
-                                headerClassName="mb-2"
-                              />
-
-                              <div className="flex items-center justify-end gap-2">
-                                <Button type="button" size="sm" variant="outline" onClick={() => openLiquidationDetails(record)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Review
-                                </Button>
-                                {primaryFile ? (
-                                  <Button type="button" size="sm" onClick={() => void openFile(primaryFile.fileUrl, primaryFile.fileName)}>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Open File
-                                  </Button>
-                                ) : null}
-                              </div>
+                              <Button type="button" variant="outline" className="h-10 w-full" onClick={() => openLiquidationDetails(record)}>
+                                View Details
+                              </Button>
                             </CardContent>
                           </Card>
                         );
                       })}
                     </div>
-                    <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm md:block">
+                    <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm lg:block">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/35 hover:bg-muted/35">
@@ -5410,7 +6999,7 @@ export default function AdminPortal({ section }: { section: string }) {
           <Tabs
             value={budgetMonitoringTab}
             onValueChange={(value) => setBudgetMonitoringTab(value as typeof budgetMonitoringTab)}
-            className="space-y-5"
+            className="budget-monitoring-page space-y-4 lg:space-y-5"
           >
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -5420,33 +7009,38 @@ export default function AdminPortal({ section }: { section: string }) {
                     Track approved budgets, utilization, and liquidation progress.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="page-actions flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     disabled={!budgetRequestExportRows.length}
                     onClick={() => setActiveReportExport("budget-requests")}
+                    className="min-h-10 flex-1 px-3 text-sm sm:flex-none lg:min-h-[44px] lg:px-4"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Export Report
                   </Button>
-                  <Button type="button" onClick={() => navigate("/admin/budget-utilization")}>
+                  <Button
+                    type="button"
+                    onClick={() => navigate("/admin/budget-utilization")}
+                    className="min-h-10 flex-1 px-3 text-sm sm:flex-none lg:min-h-[44px] lg:px-4"
+                  >
                     <ClipboardList className="mr-2 h-4 w-4" />
                     Review Budget Requests
                   </Button>
                 </div>
               </div>
 
-              <TabsList className="h-auto w-full justify-start gap-6 rounded-none border-b border-border bg-transparent p-0">
+              <TabsList className="monitoring-tabs grid h-auto w-full grid-cols-2 gap-2 rounded-xl bg-muted/30 p-1 lg:flex lg:justify-start lg:gap-6 lg:rounded-none lg:border-b lg:border-border lg:bg-transparent lg:p-0">
                 <TabsTrigger
                   value="overview"
-                  className="relative h-auto rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-0 text-sm font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="relative h-auto rounded-lg border border-transparent px-3 py-2.5 text-center text-sm font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary/20 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm lg:rounded-none lg:border-0 lg:border-b-2 lg:border-transparent lg:bg-transparent lg:px-0 lg:pb-3 lg:pt-0 lg:data-[state=active]:border-primary lg:data-[state=active]:bg-transparent lg:data-[state=active]:shadow-none"
                 >
                   Monitoring Overview
                 </TabsTrigger>
                 <TabsTrigger
                   value="barangay-allocation"
-                  className="relative h-auto rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-0 text-sm font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  className="relative h-auto rounded-lg border border-transparent px-3 py-2.5 text-center text-sm font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary/20 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm lg:rounded-none lg:border-0 lg:border-b-2 lg:border-transparent lg:bg-transparent lg:px-0 lg:pb-3 lg:pt-0 lg:data-[state=active]:border-primary lg:data-[state=active]:bg-transparent lg:data-[state=active]:shadow-none"
                 >
                   Allocation by Barangay
                 </TabsTrigger>
@@ -5455,7 +7049,7 @@ export default function AdminPortal({ section }: { section: string }) {
 
             <TabsContent value="overview" className="mt-0">
               <div className="space-y-4">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="monitoring-summary-grid grid grid-cols-2 gap-3 xl:grid-cols-4">
                   {[
                     {
                       label: "Released Budgets",
@@ -5463,6 +7057,13 @@ export default function AdminPortal({ section }: { section: string }) {
                       helper: "Budget requests already released.",
                       icon: ClipboardList,
                       iconClasses: "bg-primary/10 text-primary",
+                    },
+                    {
+                      label: "Utilization Rate",
+                      value: `${budgetMonitoringAnalysis.utilizationRate}%`,
+                      helper: "Released share of approved funds.",
+                      icon: CheckCircle2,
+                      iconClasses: "bg-amber-400/15 text-amber-700",
                     },
                     {
                       label: "Released Amount",
@@ -5478,25 +7079,26 @@ export default function AdminPortal({ section }: { section: string }) {
                       icon: Wallet,
                       iconClasses: "bg-violet-500/10 text-violet-700",
                     },
-                    {
-                      label: "Utilization Rate",
-                      value: `${budgetMonitoringAnalysis.utilizationRate}%`,
-                      helper: "Released share of approved funds.",
-                      icon: CheckCircle2,
-                      iconClasses: "bg-amber-400/15 text-amber-700",
-                    },
                   ].map((metric) => {
                     const MetricIcon = metric.icon;
                     return (
-                      <Card key={metric.label} className="border-border/70 shadow-sm">
-                        <CardContent className="flex min-h-[136px] items-start gap-4 p-4">
-                          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${metric.iconClasses}`}>
+                      <Card
+                        key={metric.label}
+                        className={cn(
+                          "monitoring-summary-card border-border/70 shadow-sm",
+                          metric.label.includes("Amount") ? "summary-card--currency max-[359px]:col-span-2" : "",
+                        )}
+                      >
+                        <CardContent className="flex items-start gap-3 p-3 lg:min-h-[136px] lg:gap-4 lg:p-4">
+                          <div className={`summary-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl lg:h-11 lg:w-11 ${metric.iconClasses}`}>
                             <MetricIcon className="h-5 w-5" />
                           </div>
-                          <div className="space-y-1.5">
-                            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">{metric.label}</p>
-                            <p className="text-3xl font-semibold tracking-tight text-foreground">{metric.value}</p>
-                            <p className="text-sm text-muted-foreground">{metric.helper}</p>
+                          <div className="min-w-0 space-y-1">
+                            <p className="summary-label text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">{metric.label}</p>
+                            <p className="summary-value overflow-hidden text-[clamp(1.45rem,5.5vw,1.8rem)] font-semibold leading-[1.08] tracking-tight text-foreground lg:text-3xl">
+                              {metric.value}
+                            </p>
+                            <p className="summary-description text-xs leading-5 text-muted-foreground lg:text-sm">{metric.helper}</p>
                           </div>
                         </CardContent>
                       </Card>
@@ -5515,8 +7117,8 @@ export default function AdminPortal({ section }: { section: string }) {
                       </div>
 
                       {budgetMonitoringStatusRows.some((row) => row.count > 0) ? (
-                        <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-center">
-                          <div className="relative mx-auto h-56 w-full max-w-[250px]">
+                        <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-6 lg:items-center">
+                          <div className="relative mx-auto h-44 w-full max-w-[220px] lg:h-56 lg:max-w-[250px]">
                             <ResponsiveContainer width="100%" height="100%">
                               <PieChart>
                                 <Pie
@@ -5535,14 +7137,14 @@ export default function AdminPortal({ section }: { section: string }) {
                               </PieChart>
                             </ResponsiveContainer>
                             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                              <p className="text-3xl font-semibold tracking-tight text-foreground">{budgetMonitoringEntries.length}</p>
+                              <p className="text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">{budgetMonitoringEntries.length}</p>
                               <p className="text-sm text-muted-foreground">Total Budgets</p>
                             </div>
                           </div>
 
-                          <div className="space-y-4">
+                          <div className="space-y-3">
                             {budgetMonitoringStatusRows.map((row) => (
-                              <div key={row.riskLabel} className="space-y-2">
+                              <div key={row.riskLabel} className="space-y-1.5">
                                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                                   <div className="flex items-center gap-2.5">
                                     <span className={`h-2.5 w-2.5 rounded-full ${row.dotClass}`} />
@@ -5552,9 +7154,11 @@ export default function AdminPortal({ section }: { section: string }) {
                                     <span className="font-semibold text-foreground">{row.count}</span> ({row.percentage}%)
                                   </div>
                                 </div>
-                                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                                  <div className={`h-full rounded-full ${row.barClass}`} style={{ width: `${row.percentage}%` }} />
-                                </div>
+                                {row.count > 0 ? (
+                                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                                    <div className={`h-full rounded-full ${row.barClass}`} style={{ width: `${row.percentage}%` }} />
+                                  </div>
+                                ) : null}
                               </div>
                             ))}
                           </div>
@@ -5575,9 +7179,9 @@ export default function AdminPortal({ section }: { section: string }) {
                             <h2 className="text-lg font-semibold text-foreground">Analysis Notes</h2>
                             <p className="mt-1 text-sm text-muted-foreground">Existing monitoring insights based on the current budget data.</p>
                           </div>
-                          <ul className="space-y-2.5">
+                          <ul className="divide-y divide-border/60">
                             {budgetMonitoringAnalysis.insights.map((insight) => (
-                              <li key={insight} className="flex items-start gap-3 rounded-xl bg-muted/10 px-3.5 py-3 text-sm text-foreground">
+                              <li key={insight} className="flex items-start gap-3 py-3 text-sm text-foreground first:pt-0 last:pb-0">
                                 <span className="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                                   <ClipboardList className="h-3 w-3" />
                                 </span>
@@ -5593,11 +7197,11 @@ export default function AdminPortal({ section }: { section: string }) {
 
                 {budgetMonitoringEntries.length ? (
                   <div className="space-y-3">
-                    <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                       <Input
                         value={budgetMonitoringSearch}
                         onChange={(event) => setBudgetMonitoringSearch(event.target.value)}
-                        placeholder="Search by request title, organization, or request ID"
+                        placeholder="Search budgets..."
                       />
                       <Select value={budgetMonitoringRiskFilter} onValueChange={setBudgetMonitoringRiskFilter}>
                         <SelectTrigger>
@@ -5614,7 +7218,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     </div>
                     {filteredBudgetMonitoringEntries.length ? (
                       <>
-                      <div className="space-y-3 md:hidden">
+                      <div className="space-y-3 lg:hidden">
                         {filteredBudgetMonitoringEntries.map((entry) => {
                           const linkedRequest = state.budgetRequests.find((request) => request.id === entry.budgetRequestId) ?? null;
                           const riskClasses =
@@ -5627,14 +7231,14 @@ export default function AdminPortal({ section }: { section: string }) {
                               : "bg-amber-400/15 text-amber-700";
                           return (
                             <Card key={entry.budgetRequestId} className="border-border/70 shadow-sm">
-                              <CardContent className="space-y-3 p-4">
+                              <CardContent className="space-y-3 p-3.5">
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 space-y-1">
                                     <p className="font-semibold text-foreground">{entry.title}</p>
-                                    <p className="text-xs text-primary">Request ID: {buildPublicRecordCode("BR", linkedRequest, state.budgetRequests)}</p>
                                     <p className="text-xs text-muted-foreground">{entry.organizationName}</p>
+                                    <p className="text-xs text-primary">Request ID: {buildPublicRecordCode("BR", linkedRequest, state.budgetRequests)}</p>
                                   </div>
-                                  <div className="flex flex-col items-end gap-1">
+                                  <div className="flex shrink-0 flex-col items-end gap-1">
                                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${riskClasses}`}>{entry.riskLabel}</span>
                                     <PortalStatusBadge status={entry.budgetStatus} />
                                   </div>
@@ -5655,7 +7259,18 @@ export default function AdminPortal({ section }: { section: string }) {
                                   </div>
                                   <div>
                                     <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Deadline</p>
-                                    <p className="mt-1 text-sm font-medium text-foreground">{formatShortDate(entry.deadlineAt)}</p>
+                                    <p
+                                      className={cn(
+                                        "mt-1 text-sm font-medium",
+                                        entry.riskLabel === "Overdue"
+                                          ? "text-destructive"
+                                          : entry.riskLabel === "Needs Attention"
+                                            ? "text-amber-700"
+                                            : "text-foreground",
+                                      )}
+                                    >
+                                      {formatShortDate(entry.deadlineAt)}
+                                    </p>
                                   </div>
                                 </div>
 
@@ -5672,8 +7287,14 @@ export default function AdminPortal({ section }: { section: string }) {
                                   </p>
                                 </div>
 
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button type="button" size="sm" variant="outline" onClick={() => openBudgetRequestDetails(entry.budgetRequestId)}>
+                                <div className={cn("grid gap-2", entry.liquidationReportId ? "grid-cols-2" : "grid-cols-1")}>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="min-h-10"
+                                    onClick={() => openBudgetRequestDetails(entry.budgetRequestId)}
+                                  >
                                     <ClipboardList className="mr-2 h-4 w-4" />
                                     Budget Review
                                   </Button>
@@ -5681,6 +7302,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     <Button
                                       type="button"
                                       size="sm"
+                                      className="min-h-10"
                                       onClick={() => {
                                         const report = state.liquidationReports.find((item) => item.id === entry.liquidationReportId);
                                         if (report) openLiquidationDetails(report);
@@ -5696,7 +7318,7 @@ export default function AdminPortal({ section }: { section: string }) {
                           );
                         })}
                       </div>
-                      <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm md:block">
+                      <div className="hidden overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm lg:block">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/35 hover:bg-muted/35">
@@ -5989,7 +7611,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     </Button>
                   }
                 >
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-3 max-[359px]:grid-cols-1">
                     <div className="space-y-2">
                       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">District</p>
                       <Select
@@ -6030,7 +7652,51 @@ export default function AdminPortal({ section }: { section: string }) {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                  <div className="mt-4 grid gap-2 lg:hidden">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Card className="border-border/70 shadow-sm">
+                        <CardContent className="space-y-1 p-3">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Active Barangays</p>
+                          <p className="text-2xl font-semibold tracking-tight text-foreground">{budgetAllocationSummary.barangayCount.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Barangays with released budgets</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-border/70 shadow-sm">
+                        <CardContent className="space-y-1 p-3">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Utilization</p>
+                          <p className="text-2xl font-semibold tracking-tight text-foreground">{budgetAllocationSummary.utilizationRate}%</p>
+                          <p className="text-xs text-muted-foreground">Released vs. approved</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    <Card className="border-border/70 shadow-sm">
+                      <CardContent className="space-y-1 p-3">
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Released</p>
+                        <p className="text-[clamp(1.45rem,5.5vw,1.8rem)] font-semibold leading-[1.08] tracking-tight text-emerald-700">
+                          PHP {budgetAllocationSummary.totalReleased.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Total cash released</p>
+                      </CardContent>
+                    </Card>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Card className="border-border/70 shadow-sm">
+                        <CardContent className="space-y-1 p-3">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Approved</p>
+                          <p className="text-xl font-semibold tracking-tight text-foreground">PHP {budgetAllocationSummary.totalApproved.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Budget ceiling before release</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-border/70 shadow-sm">
+                        <CardContent className="space-y-1 p-3">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Remaining</p>
+                          <p className="text-xl font-semibold tracking-tight text-foreground">PHP {budgetAllocationSummary.totalRemaining.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Not yet released</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 hidden grid-cols-2 gap-2 sm:grid-cols-3 lg:grid lg:grid-cols-5">
                     <PortalMetricCard
                       label="Active Barangays"
                       value={budgetAllocationSummary.barangayCount.toLocaleString()}
@@ -6086,9 +7752,9 @@ export default function AdminPortal({ section }: { section: string }) {
                               key={`${entry.district}-${entry.barangay}`}
                               type="button"
                               onClick={() => setSelectedBudgetAllocation(entry)}
-                              className="grid w-full gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none lg:grid-cols-[1.8fr_1fr_1fr_1fr_1.2fr_auto] lg:items-center lg:gap-6"
-                            >
-                              <div>
+                            className="grid w-full gap-3 px-4 py-4 text-left transition-colors hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none lg:grid-cols-[1.8fr_1fr_1fr_1fr_1.2fr_auto] lg:items-center lg:gap-6 lg:px-5"
+                          >
+                              <div className="min-w-0">
                                 <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70">{entry.district}</p>
                                 <div className="mt-0.5 flex flex-wrap items-center gap-2">
                                   <p className="font-semibold text-foreground">{entry.barangay}</p>
@@ -6119,7 +7785,11 @@ export default function AdminPortal({ section }: { section: string }) {
                                 </div>
                               </div>
                               <div className="flex items-center justify-end border-t border-border/60 pt-3 lg:border-t-0 lg:pt-0">
-                                <Eye className="h-4 w-4 text-primary" />
+                                <span className="inline-flex items-center gap-2 text-sm font-medium text-primary lg:hidden">
+                                  View details
+                                  <ChevronRight className="h-4 w-4" />
+                                </span>
+                                <Eye className="hidden h-4 w-4 text-primary lg:block" />
                               </div>
                             </button>
                           ))}
@@ -8289,7 +9959,7 @@ export default function AdminPortal({ section }: { section: string }) {
         subtitle="LYDO / PCYDO Admin"
         groups={splitNotificationsGroup}
         activeId={section}
-        onNavigate={(id) => navigate(routeMap[id] ?? routeMap.overview)}
+        onNavigate={handleAdminSectionNavigate}
         onSignOut={() => setSignOutConfirmOpen(true)}
         userProfile={{ name: "Administrator", role: "LYDO / PCYDO Admin" }}
       >

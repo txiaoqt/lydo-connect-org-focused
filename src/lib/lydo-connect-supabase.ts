@@ -1267,6 +1267,57 @@ export const updateDocumentSubmissionFileReviewInSupabase = async (params: {
   return mapDocumentFile(updatedRow as DocumentSubmissionFileRow);
 };
 
+const deriveDocumentSubmissionStatus = (
+  statuses: DocumentSubmission["status"][],
+  submitMode: "draft" | "review" = "review",
+): DocumentSubmission["status"] => {
+  if (!statuses.length) return submitMode === "draft" ? "draft" : "not_started";
+  if (statuses.includes("rejected_red")) return "rejected_red";
+  if (statuses.includes("needs_revision")) return "needs_revision";
+  if (statuses.every((status) => status === "approved_green")) return "approved_green";
+  if (statuses.some((status) => status === "under_admin_review" || status === "submitted" || status === "ready_for_review")) {
+    return "under_admin_review";
+  }
+  if (statuses.some((status) => status === "uploaded")) return "uploaded";
+  if (statuses.some((status) => status === "draft")) return "draft";
+  return submitMode === "draft" ? "draft" : "under_admin_review";
+};
+
+export type BatchOrganizationDocumentUploadInput = {
+  documentTypeId?: string;
+  documentTypeName: string;
+  file: File;
+  ocrText?: string;
+  ocrConfidence?: number;
+  validationStatus?: SubmissionFile["validationStatus"];
+  adminRemarks?: string;
+  ocrMetadata?: Record<string, unknown> | null;
+};
+
+export type BatchOrganizationDocumentUploadResult = {
+  documentTypeId: string;
+  documentTypeName: string;
+  fileName: string;
+  success: boolean;
+  submissionId?: string;
+  file?: SubmissionFile;
+  error?: string;
+};
+
+export type BatchDocumentReviewDecision = {
+  fileId: string;
+  status: DocumentSubmission["status"];
+  adminRemarks?: string;
+  expectedUpdatedAt?: string;
+};
+
+export type BatchDocumentReviewResult = {
+  fileId: string;
+  success: boolean;
+  file?: SubmissionFile;
+  error?: string;
+};
+
 const ensureDocumentSubmission = async (organizationId: string, userId: string) => {
   const existingSubmission = await fetchLatestSubmission(organizationId);
   if (existingSubmission) return existingSubmission;
@@ -1308,6 +1359,7 @@ const resolveTemplateDatabaseId = async (databaseId: string, name?: string) => {
 };
 
 export const submitOrganizationDocumentToSupabase = async (params: {
+  documentTypeId?: string;
   documentTypeName: string;
   file: File;
   ocrText: string;
@@ -1315,6 +1367,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
   validationStatus: SubmissionFile["validationStatus"];
   adminRemarks?: string;
   ocrMetadata?: Record<string, unknown> | null;
+  submitMode?: "draft" | "review";
 }) => {
   if (!supabase) throw new Error("Supabase is not configured.");
 
@@ -1326,7 +1379,21 @@ export const submitOrganizationDocumentToSupabase = async (params: {
 
   const [organizationProfile, documentTypeRow] = await Promise.all([
     fetchOrganizationProfile(session.user.id),
-    fetchRequiredDocumentTypeRowByName(params.documentTypeName),
+    params.documentTypeId
+      ? resolveTemplateDatabaseId(params.documentTypeId, params.documentTypeName).then((resolvedId) =>
+          supabase!
+            .from("required_document_types")
+            .select("id,name,description,template_url,template_description,sort_order,is_required,is_active,template_scope,updated_at")
+            .eq("id", resolvedId)
+            .single()
+            .then(({ data, error }) => {
+              if (error || !data) {
+                throw new Error(error?.message ?? `Required document type not found for ${params.documentTypeName}.`);
+              }
+              return data as RequiredDocumentTypeRow;
+            }),
+        )
+      : fetchRequiredDocumentTypeRowByName(params.documentTypeName),
   ]);
 
   if (!organizationProfile) {
@@ -1344,6 +1411,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
 
   const safeFileName = sanitizeFileName(params.file.name);
   const objectPath = `${organizationProfile.id}/${documentTypeRow.id}/${Date.now()}-${safeFileName}`;
+  const submitMode = params.submitMode ?? "review";
 
   const { error: uploadError } = await supabase.storage
     .from(ORGANIZATION_DOCUMENTS_BUCKET)
@@ -1371,8 +1439,8 @@ export const submitOrganizationDocumentToSupabase = async (params: {
         ocr_status: "completed",
         ocr_confidence: params.ocrConfidence,
         validation_status: params.validationStatus,
-        admin_status: "under_admin_review",
-        admin_remarks: params.adminRemarks?.trim() || "Awaiting admin review.",
+        admin_status: submitMode === "draft" ? "draft" : "under_admin_review",
+        admin_remarks: params.adminRemarks?.trim() || (submitMode === "draft" ? "Saved as draft." : "Awaiting admin review."),
         ocr_metadata: params.ocrMetadata ?? null,
         uploaded_at: submittedAt,
         reviewed_at: null,
@@ -1396,9 +1464,9 @@ export const submitOrganizationDocumentToSupabase = async (params: {
   await supabase
     .from("document_submissions")
     .update({
-      status: "under_admin_review",
-      user_confirmed: true,
-      submitted_at: submittedAt,
+      status: submitMode === "draft" ? "draft" : "under_admin_review",
+      user_confirmed: submitMode === "review",
+      submitted_at: submitMode === "review" ? submittedAt : null,
       updated_at: submittedAt,
     })
     .eq("id", submission.id);
@@ -1409,6 +1477,197 @@ export const submitOrganizationDocumentToSupabase = async (params: {
   return {
     submissionId: submission.id,
     file: mappedFile,
+  };
+};
+
+export const submitOrganizationDocumentsBatchToSupabase = async (params: {
+  documents: BatchOrganizationDocumentUploadInput[];
+  submitMode?: "draft" | "review";
+}) => {
+  const submitMode = params.submitMode ?? "review";
+  const seenDocumentKeys = new Set<string>();
+  const results: BatchOrganizationDocumentUploadResult[] = [];
+
+  for (const document of params.documents) {
+    const dedupeKey = document.documentTypeId?.trim() || document.documentTypeName.trim().toLowerCase();
+    if (!document.file) {
+      results.push({
+        documentTypeId: document.documentTypeId ?? "",
+        documentTypeName: document.documentTypeName,
+        fileName: "",
+        success: false,
+        error: "No file was selected.",
+      });
+      continue;
+    }
+    if (seenDocumentKeys.has(dedupeKey)) {
+      results.push({
+        documentTypeId: document.documentTypeId ?? "",
+        documentTypeName: document.documentTypeName,
+        fileName: document.file.name,
+        success: false,
+        error: "This document type was selected more than once in the same batch.",
+      });
+      continue;
+    }
+    seenDocumentKeys.add(dedupeKey);
+
+    try {
+      const uploadResult = await submitOrganizationDocumentToSupabase({
+        documentTypeId: document.documentTypeId,
+        documentTypeName: document.documentTypeName,
+        file: document.file,
+        ocrText: document.ocrText ?? "",
+        ocrConfidence: document.ocrConfidence ?? 0,
+        validationStatus: document.validationStatus ?? "correct",
+        adminRemarks: document.adminRemarks,
+        ocrMetadata: document.ocrMetadata ?? null,
+        submitMode,
+      });
+
+      results.push({
+        documentTypeId: uploadResult.file.documentTypeId,
+        documentTypeName: document.documentTypeName,
+        fileName: document.file.name,
+        success: true,
+        submissionId: uploadResult.submissionId,
+        file: uploadResult.file,
+      });
+    } catch (error) {
+      results.push({
+        documentTypeId: document.documentTypeId ?? "",
+        documentTypeName: document.documentTypeName,
+        fileName: document.file.name,
+        success: false,
+        error: error instanceof Error ? error.message : "The document could not be uploaded.",
+      });
+    }
+  }
+
+  return {
+    submitMode,
+    results,
+    successCount: results.filter((result) => result.success).length,
+    failureCount: results.filter((result) => !result.success).length,
+  };
+};
+
+export const submitDocumentReviewBatchToSupabase = async (params: {
+  decisions: BatchDocumentReviewDecision[];
+}) => {
+  const adminSession = getAuthenticatedAdminSession();
+  const decisions = params.decisions.filter((decision) => decision.fileId.trim());
+  if (!decisions.length) {
+    return {
+      results: [] as BatchDocumentReviewResult[],
+      successCount: 0,
+      failureCount: 0,
+    };
+  }
+
+  const uniqueFileIds = Array.from(new Set(decisions.map((decision) => decision.fileId)));
+  const { data: existingRows, error: existingRowsError } = await supabase!
+    .from("document_submission_files")
+    .select("id,updated_at,admin_status")
+    .in("id", uniqueFileIds);
+
+  if (existingRowsError) throw new Error(existingRowsError.message);
+
+  const existingById = new Map(
+    ((existingRows as Array<{ id: string; updated_at: string; admin_status: DocumentSubmission["status"] }> | null) ?? []).map((row) => [
+      row.id,
+      row,
+    ]),
+  );
+
+  const results: BatchDocumentReviewResult[] = [];
+  for (const decision of decisions) {
+    const existing = existingById.get(decision.fileId);
+    if (!existing) {
+      results.push({
+        fileId: decision.fileId,
+        success: false,
+        error: "This document file no longer exists. Please refresh the page.",
+      });
+      continue;
+    }
+    if (decision.expectedUpdatedAt && existing.updated_at && decision.expectedUpdatedAt !== existing.updated_at) {
+      results.push({
+        fileId: decision.fileId,
+        success: false,
+        error: "This document was updated by another reviewer. Please refresh before submitting again.",
+      });
+      continue;
+    }
+    try {
+      const updatedFile = await updateDocumentSubmissionFileReviewInSupabase({
+        fileId: decision.fileId,
+        status: decision.status,
+        adminRemarks: decision.adminRemarks,
+      });
+      results.push({
+        fileId: decision.fileId,
+        success: true,
+        file: updatedFile,
+      });
+    } catch (error) {
+      results.push({
+        fileId: decision.fileId,
+        success: false,
+        error: error instanceof Error ? error.message : "The review decision could not be saved.",
+      });
+    }
+  }
+
+  const successfulStatuses = results
+    .filter((result): result is BatchDocumentReviewResult & { file: SubmissionFile } => result.success && Boolean(result.file))
+    .map((result) => result.file.adminStatus);
+
+  if (successfulStatuses.length) {
+    const submissionIds = Array.from(
+      new Set(
+        results
+          .filter((result): result is BatchDocumentReviewResult & { file: SubmissionFile } => result.success && Boolean(result.file))
+          .map((result) => result.file.submissionId),
+      ),
+    );
+
+    for (const submissionId of submissionIds) {
+      const { data: submissionRows, error: submissionRowsError } = await supabase!
+        .from("document_submission_files")
+        .select("admin_status")
+        .eq("submission_id", submissionId);
+
+      if (submissionRowsError) throw new Error(submissionRowsError.message);
+
+      const statuses = ((submissionRows as Array<{ admin_status: DocumentSubmission["status"] }> | null) ?? []).map(
+        (row) => row.admin_status,
+      );
+
+      const nextStatus = deriveDocumentSubmissionStatus(statuses);
+      const updatePayload: Record<string, unknown> = {
+        status: nextStatus,
+        reviewed_by: adminSession.email,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (nextStatus === "approved_green") {
+        updatePayload.user_confirmed = true;
+      }
+
+      const { error: submissionUpdateError } = await supabase!
+        .from("document_submissions")
+        .update(updatePayload)
+        .eq("id", submissionId);
+
+      if (submissionUpdateError) throw new Error(submissionUpdateError.message);
+    }
+  }
+
+  return {
+    results,
+    successCount: results.filter((result) => result.success).length,
+    failureCount: results.filter((result) => !result.success).length,
   };
 };
 
@@ -1446,16 +1705,7 @@ export const removeOrganizationDocumentFromSupabase = async (fileId: string) => 
     (row) => row.admin_status,
   );
 
-  const nextStatus: DocumentSubmission["status"] =
-    !remainingStatuses.length
-      ? "draft"
-      : remainingStatuses.includes("rejected_red")
-        ? "rejected_red"
-        : remainingStatuses.includes("needs_revision")
-          ? "needs_revision"
-          : remainingStatuses.every((status) => status === "approved_green")
-            ? "approved_green"
-            : "under_admin_review";
+  const nextStatus: DocumentSubmission["status"] = deriveDocumentSubmissionStatus(remainingStatuses, "draft");
 
   const submissionUpdatePayload: Record<string, unknown> = {
     status: nextStatus,
