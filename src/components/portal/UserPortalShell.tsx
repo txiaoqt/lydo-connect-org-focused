@@ -97,12 +97,41 @@ export const UserPortalShell = ({
                   <SheetDescription>{subtitle}</SheetDescription>
                 </SheetHeader>
                 {(userDisplayName || userEmail) && (
-                  <div className="mt-3 rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5">
-                    {userDisplayName && <p className="text-sm font-medium">{userDisplayName}</p>}
-                    {userEmail && <p className="text-xs text-muted-foreground mt-0.5">{userEmail}</p>}
-                  </div>
+                  <SheetClose asChild>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate("organization-profile")}
+                      aria-label="Open My Profile"
+                      className="mt-3 w-full rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {userDisplayName && <p className="text-sm font-medium">{userDisplayName}</p>}
+                      {userEmail && <p className="mt-0.5 text-xs text-muted-foreground">{userEmail}</p>}
+                    </button>
+                  </SheetClose>
                 )}
                 <div className="mt-6 space-y-5">
+                  <div>
+                    <p className="px-1 pb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/75">
+                      Account
+                    </p>
+                    <div className="space-y-1">
+                      <SheetClose asChild>
+                        <button
+                          type="button"
+                          onClick={() => onNavigate("organization-profile")}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                            activeId === "organization-profile"
+                              ? "bg-primary/10 text-primary ring-1 ring-primary/10"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          <User className="h-4 w-4 shrink-0" />
+                          <span>My Profile</span>
+                        </button>
+                      </SheetClose>
+                    </div>
+                  </div>
                   {groups.map((group) => (
                     <div key={group.id}>
                       <p className="px-1 pb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/75">
@@ -293,14 +322,14 @@ export const UserPortalShell = ({
       <main className="container mx-auto px-3 py-3 sm:px-4 sm:py-8">
         {!hidePageBanner ? (
           <section className="mb-4 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 sm:mb-6 sm:px-5 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
                   {subtitle}
                 </p>
-                <h1 className="mt-0.5 truncate text-base font-semibold sm:text-lg">{title}</h1>
+                <h1 className="mt-0.5 break-words text-base font-semibold sm:text-lg">{title}</h1>
               </div>
-              <div className="shrink-0 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-medium text-primary sm:text-sm">
+              <div className="w-fit max-w-full shrink-0 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-medium text-primary sm:text-sm">
                 {activeItem?.label ?? title}
               </div>
             </div>

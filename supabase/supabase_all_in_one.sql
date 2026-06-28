@@ -137,6 +137,12 @@ exception
   when duplicate_object then null;
 end $$;
 
+do $$ begin
+  create type public.inquiry_status as enum ('pending_review', 'reviewed', 'closed');
+exception
+  when duplicate_object then null;
+end $$;
+
 -- ============================================================================
 -- Tables
 -- ============================================================================
@@ -363,11 +369,19 @@ create table if not exists public.budget_requests (
   purpose_category text not null default '',
   status public.budget_request_status not null default 'draft',
   remarks text,
+  admin_remarks text not null default '',
   go_signal_at timestamptz,
   hard_copy_submitted_at timestamptz,
+  user_note text not null default '',
+  revision_history jsonb not null default '[]',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists public.budget_requests
+  add column if not exists admin_remarks text not null default '',
+  add column if not exists user_note text not null default '',
+  add column if not exists revision_history jsonb not null default '[]';
 
 create table if not exists public.budget_request_files (
   id uuid primary key default gen_random_uuid(),
@@ -411,6 +425,7 @@ create table if not exists public.news_releases (
   title text not null,
   description text not null default '',
   facebook_post_url text not null,
+  preview_image_url text not null default '',
   date_posted date not null,
   visibility_status public.visibility_status not null default 'draft',
   created_by uuid references auth.users(id) on delete set null,
@@ -469,6 +484,22 @@ create table if not exists public.activity_logs (
   related_id uuid,
   description text not null,
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.inquiries (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organization_profiles(id) on delete cascade,
+  submitted_by uuid not null references auth.users(id) on delete cascade,
+  submitter_name text not null,
+  organization_name text not null,
+  email citext not null,
+  subject text not null,
+  description text not null,
+  status public.inquiry_status not null default 'pending_review',
+  admin_remarks text not null default '',
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 alter table if exists public.activity_logs
@@ -549,6 +580,8 @@ create index if not exists idx_transparency_posts_visibility on public.transpare
 create index if not exists idx_compliance_remarks_org on public.compliance_remarks(organization_id, created_at desc);
 create index if not exists idx_notifications_user_read on public.notifications(user_id, is_read, created_at desc);
 create index if not exists idx_activity_logs_org on public.activity_logs(organization_id, created_at desc);
+create index if not exists idx_inquiries_org on public.inquiries(organization_id, created_at desc);
+create index if not exists idx_inquiries_status on public.inquiries(status, created_at desc);
 
 -- ============================================================================
 -- Functions / Triggers
@@ -826,6 +859,7 @@ begin
 end;
 $$;
 
+drop function if exists public.update_admin_template_file_url(text, uuid, text);
 create or replace function public.update_admin_template_file_url(
   _session_token text,
   _template_id uuid,
@@ -911,6 +945,7 @@ create or replace function public.create_admin_news_release(
   _title text,
   _description text,
   _facebook_post_url text,
+  _preview_image_url text,
   _date_posted date,
   _visibility_status public.visibility_status
 )
@@ -919,6 +954,7 @@ returns table (
   title text,
   description text,
   facebook_post_url text,
+  preview_image_url text,
   date_posted date,
   visibility_status public.visibility_status,
   created_by uuid,
@@ -946,6 +982,7 @@ begin
     title,
     description,
     facebook_post_url,
+    preview_image_url,
     date_posted,
     visibility_status,
     created_by
@@ -954,6 +991,7 @@ begin
     trim(_title),
     coalesce(_description, ''),
     trim(_facebook_post_url),
+    coalesce(trim(_preview_image_url), ''),
     _date_posted,
     coalesce(_visibility_status, 'draft'::public.visibility_status),
     null
@@ -963,6 +1001,7 @@ begin
     news_releases.title,
     news_releases.description,
     news_releases.facebook_post_url,
+    news_releases.preview_image_url,
     news_releases.date_posted,
     news_releases.visibility_status,
     news_releases.created_by,
@@ -977,6 +1016,7 @@ create or replace function public.update_admin_news_release(
   _title text,
   _description text,
   _facebook_post_url text,
+  _preview_image_url text,
   _date_posted date,
   _visibility_status public.visibility_status
 )
@@ -985,6 +1025,7 @@ returns table (
   title text,
   description text,
   facebook_post_url text,
+  preview_image_url text,
   date_posted date,
   visibility_status public.visibility_status,
   created_by uuid,
@@ -1013,6 +1054,7 @@ begin
     title = coalesce(trim(_title), news_releases.title),
     description = coalesce(_description, news_releases.description),
     facebook_post_url = coalesce(trim(_facebook_post_url), news_releases.facebook_post_url),
+    preview_image_url = coalesce(trim(_preview_image_url), news_releases.preview_image_url),
     date_posted = coalesce(_date_posted, news_releases.date_posted),
     visibility_status = coalesce(_visibility_status, news_releases.visibility_status),
     updated_at = now()
@@ -1022,6 +1064,7 @@ begin
     news_releases.title,
     news_releases.description,
     news_releases.facebook_post_url,
+    news_releases.preview_image_url,
     news_releases.date_posted,
     news_releases.visibility_status,
     news_releases.created_by,
@@ -1532,6 +1575,33 @@ begin
 end;
 $$;
 
+drop function if exists public.update_admin_budget_request(
+  text,
+  uuid,
+  public.budget_request_status,
+  numeric,
+  numeric,
+  date,
+  text,
+  timestamptz,
+  timestamptz
+);
+
+drop function if exists public.update_admin_budget_request(
+  text,
+  uuid,
+  public.budget_request_status,
+  numeric,
+  numeric,
+  date,
+  text,
+  text,
+  timestamptz,
+  timestamptz,
+  text,
+  jsonb
+);
+
 create or replace function public.update_admin_budget_request(
   _session_token text,
   _budget_request_id uuid,
@@ -1540,8 +1610,11 @@ create or replace function public.update_admin_budget_request(
   _released_amount numeric(14,2) default null,
   _release_date date default null,
   _remarks text default null,
+  _admin_remarks text default null,
   _go_signal_at timestamptz default null,
-  _hard_copy_submitted_at timestamptz default null
+  _hard_copy_submitted_at timestamptz default null,
+  _user_note text default null,
+  _revision_history jsonb default null
 )
 returns table (
   id uuid,
@@ -1558,8 +1631,11 @@ returns table (
   purpose_category text,
   status public.budget_request_status,
   remarks text,
+  admin_remarks text,
   go_signal_at timestamptz,
   hard_copy_submitted_at timestamptz,
+  user_note text,
+  revision_history jsonb,
   created_at timestamptz,
   updated_at timestamptz
 )
@@ -1587,8 +1663,11 @@ begin
     released_amount = coalesce(_released_amount, budget_requests.released_amount),
     release_date = coalesce(_release_date, budget_requests.release_date),
     remarks = coalesce(_remarks, budget_requests.remarks),
+    admin_remarks = coalesce(_admin_remarks, budget_requests.admin_remarks),
     go_signal_at = coalesce(_go_signal_at, budget_requests.go_signal_at),
     hard_copy_submitted_at = coalesce(_hard_copy_submitted_at, budget_requests.hard_copy_submitted_at),
+    user_note = coalesce(_user_note, budget_requests.user_note),
+    revision_history = coalesce(_revision_history, budget_requests.revision_history),
     updated_at = now()
   where budget_requests.id = _budget_request_id
   returning
@@ -1606,8 +1685,11 @@ begin
     budget_requests.purpose_category,
     budget_requests.status,
     budget_requests.remarks,
+    budget_requests.admin_remarks,
     budget_requests.go_signal_at,
     budget_requests.hard_copy_submitted_at,
+    budget_requests.user_note,
+    budget_requests.revision_history,
     budget_requests.created_at,
     budget_requests.updated_at;
 end;
@@ -1810,6 +1892,14 @@ begin
       ),
       '[]'::jsonb
     ),
+    'inquiries',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(i) order by i.created_at desc)
+        from public.inquiries i
+      ),
+      '[]'::jsonb
+    ),
     'activity_logs',
     coalesce(
       (
@@ -1828,6 +1918,59 @@ begin
       '[]'::jsonb
     )
   );
+end;
+$$;
+
+drop function if exists public.get_admin_inquiries(text);
+create or replace function public.get_admin_inquiries(_session_token text)
+returns table (
+  id uuid,
+  organization_id uuid,
+  submitted_by uuid,
+  submitter_name text,
+  organization_name text,
+  email citext,
+  subject text,
+  description text,
+  status public.inquiry_status,
+  admin_remarks text,
+  reviewed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  select
+    i.id,
+    i.organization_id,
+    i.submitted_by,
+    i.submitter_name,
+    i.organization_name,
+    i.email,
+    i.subject,
+    i.description,
+    i.status,
+    i.admin_remarks,
+    i.reviewed_at,
+    i.created_at,
+    i.updated_at
+  from public.inquiries i
+  order by i.created_at desc;
 end;
 $$;
 
@@ -1893,15 +2036,15 @@ begin
   if new.status = 'needs_revision' then
     notif_type := 'document_revision';
     notif_title := 'Document revision requested';
-    notif_message := 'Admin requested corrections for your document submission.';
+    notif_message := 'Your document submission has been marked needs revision.';
   elsif new.status = 'approved_green' then
     notif_type := 'document_green';
     notif_title := 'Document submission approved';
-    notif_message := 'Your document has been marked approved.';
+    notif_message := 'Your document submission has been marked approved.';
   elsif new.status = 'rejected_red' then
     notif_type := 'document_red';
     notif_title := 'Document submission rejected';
-    notif_message := 'Your document has been marked rejected.';
+    notif_message := 'Your document submission has been marked rejected.';
   else
     return new;
   end if;
@@ -1983,10 +2126,10 @@ begin
     values (org_user_id, new.organization_id, notif_title, notif_message, notif_type, 'budget_request', new.id);
   elsif new.status = 'needs_revision' then
     insert into public.notifications (user_id, organization_id, title, message, type, related_type, related_id)
-    values (org_user_id, new.organization_id, 'Budget revision requested', 'Admin requested corrections for your budget request.', 'budget_revision', 'budget_request', new.id);
+    values (org_user_id, new.organization_id, 'Budget revision requested', 'Your budget request has been marked needs revision.', 'budget_revision', 'budget_request', new.id);
   elsif new.status = 'rejected_red' then
     insert into public.notifications (user_id, organization_id, title, message, type, related_type, related_id)
-    values (org_user_id, new.organization_id, 'Budget request rejected', 'Your budget request was marked red.', 'document_red', 'budget_request', new.id);
+    values (org_user_id, new.organization_id, 'Budget request rejected', 'Your budget request has been marked rejected.', 'document_red', 'budget_request', new.id);
   end if;
 
   insert into public.activity_logs (actor_user_id, organization_id, action, related_type, related_id, description)
@@ -2146,6 +2289,7 @@ alter table public.transparency_posts enable row level security;
 alter table public.compliance_remarks enable row level security;
 alter table public.notifications enable row level security;
 alter table public.activity_logs enable row level security;
+alter table public.inquiries enable row level security;
 alter table public.organizations enable row level security;
 alter table public.programs enable row level security;
 alter table public.events enable row level security;
@@ -2363,6 +2507,24 @@ drop policy if exists notifications_self_or_admin on public.notifications;
 create policy notifications_self_or_admin on public.notifications
 for all using (public.current_user_is_admin() or user_id = auth.uid()) with check (public.current_user_is_admin() or user_id = auth.uid());
 
+drop policy if exists inquiries_self_or_admin on public.inquiries;
+create policy inquiries_self_or_admin on public.inquiries
+for all using (
+  public.current_user_is_admin()
+  or submitted_by = auth.uid()
+  or exists (
+    select 1 from public.organization_profiles op
+    where op.id = inquiries.organization_id and op.user_id = auth.uid()
+  )
+) with check (
+  public.current_user_is_admin()
+  or submitted_by = auth.uid()
+  or exists (
+    select 1 from public.organization_profiles op
+    where op.id = inquiries.organization_id and op.user_id = auth.uid()
+  )
+);
+
 drop policy if exists activity_logs_admin_only on public.activity_logs;
 create policy activity_logs_admin_only on public.activity_logs
 for all using (public.current_user_is_admin()) with check (public.current_user_is_admin());
@@ -2410,6 +2572,7 @@ values
   ('budget-request-files', 'budget-request-files', false),
   ('liquidation-report-files', 'liquidation-report-files', false),
   ('template-files', 'template-files', false),
+  ('news-release-images', 'news-release-images', true),
   ('transparency-attachments', 'transparency-attachments', true)
 on conflict (id) do update set public = excluded.public;
 
@@ -2463,6 +2626,11 @@ drop policy if exists template_files_admin_manage on storage.objects;
 create policy template_files_admin_manage on storage.objects
 for all using (bucket_id = 'template-files')
 with check (bucket_id = 'template-files');
+
+drop policy if exists news_release_images_admin_manage on storage.objects;
+create policy news_release_images_admin_manage on storage.objects
+for all using (bucket_id = 'news-release-images')
+with check (bucket_id = 'news-release-images');
 
 drop policy if exists transparency_attachments_read_public on storage.objects;
 create policy transparency_attachments_read_public on storage.objects
@@ -2575,6 +2743,16 @@ do $$ begin
 exception when duplicate_object then null;
 end $$;
 
+do $$ begin
+  create type public.ypop_event_participation_status as enum (
+    'pending_verification',
+    'verified',
+    'needs_revision',
+    'rejected'
+  );
+exception when duplicate_object then null;
+end $$;
+
 -- ─── Tables ───────────────────────────────────────────────────
 
 create table if not exists public.ypop_periods (
@@ -2631,6 +2809,36 @@ create table if not exists public.ypop_files (
   uploaded_at     timestamptz not null default now()
 );
 
+create table if not exists public.ypop_event_participations (
+  id                 uuid primary key default gen_random_uuid(),
+  organization_id    uuid not null references public.organization_profiles(id) on delete cascade,
+  submitted_by       uuid references auth.users(id),
+  activity_id        uuid not null references public.ypop_city_activities(id) on delete cascade,
+  activity_name      text not null,
+  activity_date      text,
+  venue              text,
+  status             public.ypop_event_participation_status not null default 'pending_verification',
+  admin_remarks      text not null default '',
+  joined_at          timestamptz not null default now(),
+  proof_submitted_at timestamptz,
+  verified_at        timestamptz,
+  revision_history   jsonb not null default '[]',
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now(),
+  constraint ypop_event_participations_org_activity_unique unique (organization_id, activity_id)
+);
+
+create table if not exists public.ypop_event_files (
+  id               uuid primary key default gen_random_uuid(),
+  participation_id uuid not null references public.ypop_event_participations(id) on delete cascade,
+  organization_id  uuid not null references public.organization_profiles(id) on delete cascade,
+  file_name        text not null,
+  file_url         text not null default '',
+  file_type        text not null default '',
+  file_size        bigint,
+  uploaded_at      timestamptz not null default now()
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────
 
 create index if not exists idx_ypop_city_activities_semester_key on public.ypop_city_activities(semester_key);
@@ -2638,6 +2846,11 @@ create index if not exists idx_ypop_entries_organization_id on public.ypop_entri
 create index if not exists idx_ypop_entries_semester on public.ypop_entries(semester);
 create index if not exists idx_ypop_files_ypop_entry_id on public.ypop_files(ypop_entry_id);
 create index if not exists idx_ypop_files_organization_id on public.ypop_files(organization_id);
+create index if not exists idx_ypop_event_participations_organization_id on public.ypop_event_participations(organization_id);
+create index if not exists idx_ypop_event_participations_activity_id on public.ypop_event_participations(activity_id);
+create index if not exists idx_ypop_event_participations_status on public.ypop_event_participations(status);
+create index if not exists idx_ypop_event_files_participation_id on public.ypop_event_files(participation_id);
+create index if not exists idx_ypop_event_files_organization_id on public.ypop_event_files(organization_id);
 
 -- ─── Row Level Security ───────────────────────────────────────
 
@@ -2705,6 +2918,52 @@ create policy ypop_files_self_or_admin on public.ypop_files
     or exists (
       select 1 from public.organization_profiles op
       where op.id = ypop_files.organization_id
+        and op.user_id = auth.uid()
+    )
+  );
+
+-- ---
+
+alter table public.ypop_event_participations enable row level security;
+
+drop policy if exists ypop_event_participations_self_or_admin on public.ypop_event_participations;
+create policy ypop_event_participations_self_or_admin on public.ypop_event_participations
+  for all using (
+    public.current_user_is_admin()
+    or submitted_by = auth.uid()
+    or exists (
+      select 1 from public.organization_profiles op
+      where op.id = ypop_event_participations.organization_id
+        and op.user_id = auth.uid()
+    )
+  ) with check (
+    public.current_user_is_admin()
+    or submitted_by = auth.uid()
+    or exists (
+      select 1 from public.organization_profiles op
+      where op.id = ypop_event_participations.organization_id
+        and op.user_id = auth.uid()
+    )
+  );
+
+-- ---
+
+alter table public.ypop_event_files enable row level security;
+
+drop policy if exists ypop_event_files_self_or_admin on public.ypop_event_files;
+create policy ypop_event_files_self_or_admin on public.ypop_event_files
+  for all using (
+    public.current_user_is_admin()
+    or exists (
+      select 1 from public.organization_profiles op
+      where op.id = ypop_event_files.organization_id
+        and op.user_id = auth.uid()
+    )
+  ) with check (
+    public.current_user_is_admin()
+    or exists (
+      select 1 from public.organization_profiles op
+      where op.id = ypop_event_files.organization_id
         and op.user_id = auth.uid()
     )
   );
@@ -2919,6 +3178,45 @@ begin
 end;
 $$;
 
+-- 8. admin_update_ypop_event_participation
+create or replace function public.admin_update_ypop_event_participation(
+  _session_token      text,
+  _participation_id   uuid,
+  _status             public.ypop_event_participation_status,
+  _admin_remarks      text,
+  _proof_submitted_at timestamptz,
+  _verified_at        timestamptz,
+  _revision_history   jsonb
+)
+returns setof public.ypop_event_participations
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id into _admin_id
+  from public.validate_admin_session_token(_session_token) vat limit 1;
+  if _admin_id is null then raise exception 'Admin account is not authorized.'; end if;
+
+  update public.ypop_event_participations set
+    status             = coalesce(_status, status),
+    admin_remarks      = coalesce(_admin_remarks, admin_remarks),
+    proof_submitted_at = coalesce(_proof_submitted_at, proof_submitted_at),
+    verified_at        = case
+                           when coalesce(_status, status) = 'verified'::public.ypop_event_participation_status
+                             then coalesce(_verified_at, now())
+                           else _verified_at
+                         end,
+    revision_history   = coalesce(_revision_history, revision_history),
+    updated_at         = now()
+  where id = _participation_id;
+
+  return query select * from public.ypop_event_participations where id = _participation_id;
+end;
+$$;
+
 -- ─── Extend get_admin_portal_snapshot ────────────────────────
 -- Replace the existing function to include YPOP data.
 -- Copy the entire original function and add 4 new keys at the end.
@@ -2989,7 +3287,11 @@ begin
     'ypop_entries',
     coalesce((select jsonb_agg(to_jsonb(ye) order by ye.created_at desc) from public.ypop_entries ye), '[]'::jsonb),
     'ypop_files',
-    coalesce((select jsonb_agg(to_jsonb(yf) order by yf.uploaded_at desc) from public.ypop_files yf), '[]'::jsonb)
+    coalesce((select jsonb_agg(to_jsonb(yf) order by yf.uploaded_at desc) from public.ypop_files yf), '[]'::jsonb),
+    'ypop_event_participations',
+    coalesce((select jsonb_agg(to_jsonb(yep) order by yep.created_at desc) from public.ypop_event_participations yep), '[]'::jsonb),
+    'ypop_event_files',
+    coalesce((select jsonb_agg(to_jsonb(yef) order by yef.uploaded_at desc) from public.ypop_event_files yef), '[]'::jsonb)
   );
 end;
 $$;

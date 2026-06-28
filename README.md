@@ -1,4 +1,4 @@
-# LYDO Connect — Youth Engagement Management System
+# Y-TRACE — Youth Engagement Management System
 
 A modern web application for Local Youth Development Offices in Metro Manila to centralize youth programs, events, verified Pasig-based organization information, and transparency workflows.
 

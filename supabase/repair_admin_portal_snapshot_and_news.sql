@@ -139,6 +139,14 @@ begin
       ),
       '[]'::jsonb
     ),
+    'inquiries',
+    coalesce(
+      (
+        select jsonb_agg(to_jsonb(i) order by i.created_at desc)
+        from public.inquiries i
+      ),
+      '[]'::jsonb
+    ),
     'activity_logs',
     coalesce(
       (
@@ -157,6 +165,59 @@ begin
       '[]'::jsonb
     )
   );
+end;
+$$;
+
+drop function if exists public.get_admin_inquiries(text);
+create or replace function public.get_admin_inquiries(_session_token text)
+returns table (
+  id uuid,
+  organization_id uuid,
+  submitted_by uuid,
+  submitter_name text,
+  organization_name text,
+  email citext,
+  subject text,
+  description text,
+  status public.inquiry_status,
+  admin_remarks text,
+  reviewed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id
+  into _admin_id
+  from public.validate_admin_session_token(_session_token) vat
+  limit 1;
+
+  if _admin_id is null then
+    raise exception 'Admin account is not authorized.';
+  end if;
+
+  return query
+  select
+    i.id,
+    i.organization_id,
+    i.submitted_by,
+    i.submitter_name,
+    i.organization_name,
+    i.email,
+    i.subject,
+    i.description,
+    i.status,
+    i.admin_remarks,
+    i.reviewed_at,
+    i.created_at,
+    i.updated_at
+  from public.inquiries i
+  order by i.created_at desc;
 end;
 $$;
 

@@ -111,17 +111,20 @@ export const PortalSection = ({
   description,
   children,
   action,
+  headerClassName,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  headerClassName?: string;
 }) => (
   <Card className="border-border/70 bg-card/90 shadow-sm">
     <CardHeader
       className={cn(
         "gap-2 px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6 sm:gap-4",
         action ? "flex flex-col sm:flex-row sm:items-start sm:justify-between" : "block",
+        headerClassName,
       )}
     >
       <div className="min-w-0">
