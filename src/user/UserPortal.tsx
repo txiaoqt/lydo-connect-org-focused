@@ -77,6 +77,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { RecentActivityList, RecentActivityPreview, type RecentActivityItem } from "@/components/activity/RecentActivityPreview";
 import { PortalEmptyState, PortalIconBadge, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
+import { UserFeatureIcon } from "@/components/portal/UserFeatureIcon";
 import { UserPortalShell } from "@/components/portal/UserPortalShell";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
@@ -2681,9 +2682,7 @@ export default function UserPortal({ section }: { section: string }) {
 
             <div className="organization-summary-card rounded-[1.15rem] border border-border/70 bg-card/95 p-3.5 shadow-sm sm:p-4 lg:p-5">
               <div className="mobile-organization-summary flex min-w-0 items-center gap-3">
-                <div className="organization-summary-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-200/70 bg-violet-100/70 text-violet-600 lg:h-14 lg:w-14">
-                  <Building2 className="h-6 w-6" />
-                </div>
+                <UserFeatureIcon icon={Building2} className="organization-summary-icon" />
                 <div className="organization-summary-content min-w-0">
                   <p className="organization-summary-name truncate text-[1.25rem] font-semibold leading-tight text-foreground lg:text-[1.55rem] lg:leading-none">
                     {profile.organizationName || currentProfile?.organizationName || "Organization"}
@@ -2757,7 +2756,16 @@ export default function UserPortal({ section }: { section: string }) {
                             ) : null
                           }
                         >
-                          <DashboardIconBox icon={TaskIcon} tone={resolveDashboardTone(task.tone)} />
+                          {TaskIcon === AlertTriangle ? (
+                            <span
+                              aria-hidden="true"
+                              className="inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-600"
+                            >
+                              <TaskIcon aria-hidden="true" className="h-5 w-5" />
+                            </span>
+                          ) : (
+                            <UserFeatureIcon icon={TaskIcon} />
+                          )}
                         </DashboardActionRow>
                       );
                     })}
@@ -2945,7 +2953,7 @@ export default function UserPortal({ section }: { section: string }) {
                       <div className="space-y-1">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-start gap-3">
-                            <PortalIconBadge icon={FileText} tone="red" />
+                            <UserFeatureIcon icon={FileText} />
                             <div className="min-w-0">
                               <p className="break-words text-base font-semibold text-foreground">{template.name}</p>
                               <p className="mt-1 text-sm text-muted-foreground">
@@ -3000,7 +3008,7 @@ export default function UserPortal({ section }: { section: string }) {
                         <div className="space-y-1">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 items-start gap-3">
-                              <PortalIconBadge icon={FileText} tone="red" />
+                              <UserFeatureIcon icon={FileText} />
                               <div className="min-w-0">
                                 <p className="break-words text-base font-semibold text-foreground">{template.name}</p>
                                 <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
@@ -6590,17 +6598,17 @@ export default function UserPortal({ section }: { section: string }) {
             : d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
         };
 
-        type IconConfig = { icon: React.ElementType; bg: string; text: string };
+        type IconConfig = { icon: typeof Bell; semanticWarning?: boolean };
         const relatedTypeIconMap: Record<string, IconConfig> = {
-          document_submission:  { icon: FileText,      bg: "bg-blue-100",   text: "text-blue-600" },
-          budget_request:       { icon: ClipboardList, bg: "bg-emerald-100", text: "text-emerald-600" },
-          liquidation_report:   { icon: Receipt,       bg: "bg-violet-100",  text: "text-violet-600" },
-          organization_profile: { icon: User,          bg: "bg-slate-100",   text: "text-slate-500" },
+          document_submission: { icon: FileText },
+          budget_request: { icon: ClipboardList },
+          liquidation_report: { icon: Receipt },
+          organization_profile: { icon: User },
         };
         const getIconConfig = (n: NotificationRecord): IconConfig =>
           n.type === "warning"
-            ? { icon: AlertTriangle, bg: "bg-amber-100", text: "text-amber-600" }
-            : (relatedTypeIconMap[n.relatedType] ?? { icon: Bell, bg: "bg-muted", text: "text-muted-foreground" });
+            ? { icon: AlertTriangle, semanticWarning: true }
+            : (relatedTypeIconMap[n.relatedType] ?? { icon: Bell });
 
         const filterLabel = (f: "all" | "unread" | "read") => {
           if (f === "all")    return `All${userNotifications.length ? ` · ${userNotifications.length}` : ""}`;
@@ -6658,7 +6666,7 @@ export default function UserPortal({ section }: { section: string }) {
                 ) : (
                   <div className="space-y-2">
                     {filtered.map((notification) => {
-                      const { icon: Icon, bg, text } = getIconConfig(notification);
+                      const { icon: Icon, semanticWarning } = getIconConfig(notification);
                       return (
                         <button
                           key={notification.id}
@@ -6671,9 +6679,16 @@ export default function UserPortal({ section }: { section: string }) {
                           onClick={() => void handleMarkNotificationRead(notification.id)}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${bg}`}>
-                              <Icon className={`h-4 w-4 ${text}`} />
-                            </div>
+                            {semanticWarning ? (
+                              <span
+                                aria-hidden="true"
+                                className="mt-0.5 inline-grid h-8 w-8 shrink-0 place-items-center rounded-[10px] border border-amber-500/20 bg-amber-500/10 text-amber-600"
+                              >
+                                <Icon aria-hidden="true" className="h-4 w-4" />
+                              </span>
+                            ) : (
+                              <UserFeatureIcon icon={Icon} size="compact" className="mt-0.5" />
+                            )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-2">
@@ -10537,16 +10552,6 @@ Validated {validatedDate}</p>
   );
 }
 
-function resolveDashboardTone(tone: string): "primary" | "emerald" | "amber" | "red" | "violet" | "sky" | "orange" {
-  if (tone.includes("amber")) return "amber";
-  if (tone.includes("orange")) return "orange";
-  if (tone.includes("emerald")) return "emerald";
-  if (tone.includes("violet")) return "violet";
-  if (tone.includes("sky")) return "sky";
-  if (tone.includes("red")) return "red";
-  return "primary";
-}
-
 function DashboardSection({
   title,
   description,
@@ -10578,42 +10583,6 @@ function DashboardSection({
   );
 }
 
-function DashboardIconBox({
-  icon: Icon,
-  tone,
-  soft = false,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  tone: "primary" | "emerald" | "amber" | "red" | "violet" | "sky" | "orange";
-  soft?: boolean;
-}) {
-  const toneClassName = soft
-    ? {
-        primary: "border-primary/10 bg-primary/5 text-primary/80",
-        sky: "border-sky-500/10 bg-sky-500/5 text-sky-600/80",
-        emerald: "border-emerald-500/10 bg-emerald-500/5 text-emerald-600/80",
-        amber: "border-amber-500/10 bg-amber-500/5 text-amber-600/80",
-        orange: "border-orange-500/10 bg-orange-500/5 text-orange-600/80",
-        red: "border-red-500/10 bg-red-500/5 text-red-600/80",
-        violet: "border-violet-500/10 bg-violet-500/5 text-violet-600/80",
-      }[tone]
-    : {
-        primary: "border-primary/15 bg-primary/10 text-primary",
-        sky: "border-sky-500/15 bg-sky-500/10 text-sky-600",
-        emerald: "border-emerald-500/15 bg-emerald-500/10 text-emerald-600",
-        amber: "border-amber-500/15 bg-amber-500/10 text-amber-600",
-        orange: "border-orange-500/15 bg-orange-500/10 text-orange-600",
-        red: "border-red-500/15 bg-red-500/10 text-red-600",
-        violet: "border-violet-500/15 bg-violet-500/10 text-violet-600",
-      }[tone];
-
-  return (
-    <div className={cn("overview-card-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border lg:h-10 lg:w-10 lg:rounded-xl", toneClassName)}>
-      <Icon className="h-4.5 w-4.5 lg:h-4.5 lg:w-4.5" />
-    </div>
-  );
-}
-
 function DashboardOverviewCard({
   label,
   value,
@@ -10625,7 +10594,7 @@ function DashboardOverviewCard({
   label: string;
   value: string;
   helper: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: typeof User;
   tone: "primary" | "emerald" | "amber" | "red";
   onClick?: () => void;
 }) {
@@ -10639,7 +10608,7 @@ function DashboardOverviewCard({
         <p className="overview-label overview-card-label min-w-0 pt-0.5 text-[0.68rem] font-medium uppercase leading-tight tracking-[0.08em] text-muted-foreground">
           {label}
         </p>
-        <DashboardIconBox icon={icon} tone={tone} soft />
+        <UserFeatureIcon icon={icon} />
       </div>
       <p className="overview-metric-value overview-value mt-3.5 whitespace-nowrap text-[clamp(1.65rem,7vw,2rem)] font-semibold leading-none tracking-[-0.02em] text-foreground lg:hidden">
         {value}
@@ -10649,7 +10618,7 @@ function DashboardOverviewCard({
       </p>
 
       <div className="hidden lg:block">
-        <DashboardIconBox icon={icon} tone={tone} />
+        <UserFeatureIcon icon={icon} />
       </div>
       <div className="hidden min-w-0 lg:block">
         <p className="overview-label overview-card-label text-[0.92rem] font-semibold leading-tight text-foreground">{label}</p>

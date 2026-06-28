@@ -22,7 +22,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { RecentActivityList, RecentActivityPreview, type RecentActivityItem } from "@/components/activity/RecentActivityPreview";
-import { PortalEmptyState, PortalIconBadge, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
+import { PortalEmptyState, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
+import { UserFeatureIcon } from "@/components/portal/UserFeatureIcon";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
@@ -421,7 +422,7 @@ export function MoveUserPage() {
           <CardContent className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
             <div className="rounded-2xl border border-border/60 bg-muted/15 p-3.5">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <PortalIconBadge icon={PlaneTakeoff} tone="primary" size="sm" />
+                <UserFeatureIcon icon={PlaneTakeoff} size="compact" />
                 <span className="text-xs font-semibold uppercase tracking-[0.18em]">Applications</span>
               </div>
               <p className="mt-2.5 text-2xl font-semibold text-foreground">{applications.length}</p>
@@ -429,7 +430,7 @@ export function MoveUserPage() {
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/15 p-3.5">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <PortalIconBadge icon={Wallet} tone="emerald" size="sm" />
+                <UserFeatureIcon icon={Wallet} size="compact" />
                 <span className="text-xs font-semibold uppercase tracking-[0.18em]">Contact Email</span>
               </div>
               <p className="mt-2.5 text-sm font-semibold break-all text-foreground">{currentProfile?.organizationEmail || "Not set yet"}</p>
@@ -437,7 +438,7 @@ export function MoveUserPage() {
             </div>
             <div className="rounded-2xl border border-border/60 bg-muted/15 p-3.5">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <PortalIconBadge icon={CheckCircle2} tone="amber" size="sm" />
+                <UserFeatureIcon icon={CheckCircle2} size="compact" />
                 <span className="text-xs font-semibold uppercase tracking-[0.18em]">Yearly Availment</span>
               </div>
               <p className="mt-2.5 text-2xl font-semibold text-foreground">{yearAvailmentCount} / 2</p>
@@ -519,7 +520,7 @@ export function MoveUserPage() {
                       <CardContent className="flex flex-1 flex-col gap-3 pt-0">
                         <div className="rounded-xl border border-border/60 bg-muted/15 p-3.5">
                           <div className="flex items-start gap-3">
-                            <PortalIconBadge icon={FileText} tone="red" />
+                            <UserFeatureIcon icon={FileText} />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-foreground">{primaryMoveTemplate?.name || "MOVE Application Template"}</p>
                               <p className="mt-1 text-xs text-muted-foreground">
@@ -612,7 +613,7 @@ export function MoveUserPage() {
                       <CardContent className="flex flex-1 flex-col gap-3 pt-0">
                         <div className="rounded-xl border border-border/60 bg-muted/15 p-3.5">
                           <div className="flex items-start gap-3">
-                            <PortalIconBadge icon={Wallet} tone="emerald" />
+                            <UserFeatureIcon icon={Wallet} />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-foreground">Required contact email</p>
                               <p className="mt-1 text-sm font-medium break-all text-foreground">
@@ -627,7 +628,7 @@ export function MoveUserPage() {
 
                         <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/60 p-3.5">
                           <div className="flex min-w-0 items-start gap-3">
-                            <PortalIconBadge icon={FileUp} tone="red" />
+                            <UserFeatureIcon icon={FileUp} />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-foreground">Soft copy / scanned PDF</p>
                               <p className="mt-1 text-xs text-muted-foreground">

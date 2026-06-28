@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import { resolveSupabaseFileUrl } from "@/lib/lydo-connect-supabase";
 import { toast } from "@/hooks/use-toast";
+import { UserFeatureIcon } from "@/components/portal/UserFeatureIcon";
 
 type PublicTemplatesCatalogProps = {
   compactHeader?: boolean;
@@ -51,24 +52,16 @@ const PublicTemplatesCatalog = ({ compactHeader = false }: PublicTemplatesCatalo
     tone: "blue" | "emerald",
     fallbackDescription: string,
   ) => {
-    const iconTone =
-      tone === "blue"
-        ? "bg-blue-100 text-blue-600"
-        : "bg-emerald-100 text-emerald-600";
-
     return (
       <div
         key={template.id}
         className="template-item flex h-full flex-col rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm transition-shadow hover:shadow-md lg:p-5"
       >
         <div className="template-item-main grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 lg:flex lg:min-h-[88px]">
-          <div className={`template-item-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTone} lg:h-11 lg:w-11`}>
-            {tone === "blue" ? (
-              <FileText className="h-5 w-5" />
-            ) : (
-              <ClipboardList className="h-5 w-5" />
-            )}
-          </div>
+          <UserFeatureIcon
+            icon={tone === "blue" ? FileText : ClipboardList}
+            className="template-item-icon"
+          />
           <div className="template-item-content min-w-0 flex-1">
             <p className="text-[0.98rem] font-semibold leading-snug text-foreground lg:line-clamp-2 lg:text-[1.05rem]">
               {template.name}
@@ -143,9 +136,7 @@ const PublicTemplatesCatalog = ({ compactHeader = false }: PublicTemplatesCatalo
       <div className="space-y-8 lg:space-y-8">
         <div className="space-y-4">
           <div className="template-category-header grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 lg:flex lg:items-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 lg:h-10 lg:w-10">
-              <FileText className="h-5 w-5 text-blue-600" />
-            </div>
+            <UserFeatureIcon icon={FileText} />
             <div className="template-category-header-content min-w-0">
               <h3 className="font-heading text-lg font-bold text-foreground lg:text-xl">Document Submission Templates</h3>
               <p className="text-sm text-muted-foreground">Official forms and compliance documents published by the admin.</p>
@@ -166,9 +157,7 @@ const PublicTemplatesCatalog = ({ compactHeader = false }: PublicTemplatesCatalo
 
         <div className="space-y-4">
           <div className="template-category-header grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 lg:flex lg:items-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 lg:h-10 lg:w-10">
-              <ClipboardList className="h-5 w-5 text-emerald-600" />
-            </div>
+            <UserFeatureIcon icon={ClipboardList} />
             <div className="template-category-header-content min-w-0">
               <h3 className="font-heading text-lg font-bold text-foreground lg:text-xl">Other Templates</h3>
               <p className="text-sm text-muted-foreground">Additional downloadable references that the admin has made available to organizations.</p>

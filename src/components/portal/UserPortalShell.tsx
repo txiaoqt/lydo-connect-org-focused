@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { PortalNavGroup } from "./PortalShell";
+import { UserFeatureIcon } from "./UserFeatureIcon";
 
 type NotificationItem = {
   id: string;
@@ -126,7 +127,7 @@ export const UserPortalShell = ({
                               : "text-muted-foreground hover:bg-muted hover:text-foreground",
                           )}
                         >
-                          <User className="h-4 w-4 shrink-0" />
+                          <UserFeatureIcon icon={User} size="compact" />
                           <span>My Profile</span>
                         </button>
                       </SheetClose>
@@ -153,7 +154,7 @@ export const UserPortalShell = ({
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                                 )}
                               >
-                                <Icon className="h-4 w-4 shrink-0" />
+                                <UserFeatureIcon icon={Icon} size="compact" />
                                 <span>{item.label}</span>
                               </button>
                             </SheetClose>
