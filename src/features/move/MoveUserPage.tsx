@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { RecentActivityList, RecentActivityPreview, type RecentActivityItem } from "@/components/activity/RecentActivityPreview";
 import { PortalEmptyState, PortalIconBadge, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -112,6 +114,7 @@ export function MoveUserPage() {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(applications[0]?.id ?? null);
   const [savingApplication, setSavingApplication] = useState(false);
   const [uploadingMoveForm, setUploadingMoveForm] = useState(false);
+  const [moveRecentActivityModalOpen, setMoveRecentActivityModalOpen] = useState(false);
 
   useEffect(() => {
     if (!applications.length) {
@@ -130,6 +133,27 @@ export function MoveUserPage() {
   const selectedFiles = selectedApplication
     ? files.filter((file) => file.applicationId === selectedApplication.id && file.requirementKey === "move_form")
     : [];
+  const selectedRecentActivities = useMemo<RecentActivityItem[]>(
+    () =>
+      selectedApplication
+        ? [
+            ...(selectedApplication.revisionHistory ?? []).map((entry) => ({
+              id: `${entry.changedAt}-${entry.action}`,
+              message: statusLabelMap[entry.action] ?? entry.action,
+              note: entry.adminRemarks || undefined,
+              timestamp: entry.changedAt,
+              timestampLabel: formatCompactDateLabel(entry.changedAt),
+            })),
+            ...selectedFiles.map((file) => ({
+              id: file.id,
+              message: `MOVE form attached — ${file.fileName}`,
+              timestamp: file.uploadedAt,
+              timestampLabel: formatCompactDateLabel(file.uploadedAt),
+            })),
+          ].sort((left, right) => new Date(right.timestamp ?? 0).getTime() - new Date(left.timestamp ?? 0).getTime())
+        : [],
+    [selectedApplication, selectedFiles],
+  );
 
   const selectedYear = selectedApplication?.createdAt ? new Date(selectedApplication.createdAt).getFullYear() : new Date().getFullYear();
   const yearAvailmentCount = applications.filter(
@@ -381,17 +405,18 @@ export function MoveUserPage() {
   }
 
   return (
-    <PortalSection
-      title="MOVE"
-      description="Download the official MOVE application form, upload the accomplished PDF, and wait for follow-up through your registered email."
-      action={
-        <Button type="button" size="sm" onClick={() => void handleCreateApplication()} disabled={savingApplication}>
-          {savingApplication ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
-          New MOVE Application
-        </Button>
-      }
-    >
-      <div className="space-y-4">
+    <>
+      <PortalSection
+        title="MOVE"
+        description="Download the official MOVE application form, upload the accomplished PDF, and wait for follow-up through your registered email."
+        action={
+          <Button type="button" size="sm" onClick={() => void handleCreateApplication()} disabled={savingApplication}>
+            {savingApplication ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
+            New MOVE Application
+          </Button>
+        }
+      >
+        <div className="space-y-4">
         <Card className="border-border/70">
           <CardContent className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
             <div className="rounded-2xl border border-border/60 bg-muted/15 p-3.5">
@@ -673,40 +698,11 @@ export function MoveUserPage() {
                     />
                   </div>
 
-                  <Card className="border-border/60">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-semibold">Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <ul className="space-y-3">
-                        {[
-                          ...(selectedApplication.revisionHistory ?? []).map((entry) => ({
-                            id: `${entry.changedAt}-${entry.action}`,
-                            label: statusLabelMap[entry.action] ?? entry.action,
-                            note: entry.adminRemarks,
-                            at: entry.changedAt,
-                          })),
-                          ...selectedFiles.map((file) => ({
-                            id: file.id,
-                            label: `MOVE form attached — ${file.fileName}`,
-                            note: "",
-                            at: file.uploadedAt,
-                          })),
-                        ]
-                          .sort((left, right) => right.at.localeCompare(left.at))
-                          .map((entry) => (
-                            <li key={entry.id} className="flex items-start gap-3 text-sm">
-                              <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary/60" />
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-foreground">{entry.label}</p>
-                                {entry.note ? <p className="text-muted-foreground">{entry.note}</p> : null}
-                                <p className="text-xs text-muted-foreground">{formatCompactDateLabel(entry.at)}</p>
-                              </div>
-                            </li>
-                          ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
+                  <RecentActivityPreview
+                    activities={selectedRecentActivities}
+                    onViewAll={selectedRecentActivities.length > 3 ? () => setMoveRecentActivityModalOpen(true) : undefined}
+                    className="border-border/60 shadow-none"
+                  />
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4">
                     <Button
@@ -783,7 +779,22 @@ export function MoveUserPage() {
             </div>
           </div>
         ) : null}
-      </div>
-    </PortalSection>
+        </div>
+      </PortalSection>
+      <Dialog open={moveRecentActivityModalOpen} onOpenChange={setMoveRecentActivityModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>MOVE Application Activity</DialogTitle>
+            <DialogDescription>
+              Full activity history for this MOVE application.
+            </DialogDescription>
+          </DialogHeader>
+          <RecentActivityList
+            activities={selectedRecentActivities}
+            emptyDescription="MOVE application updates will appear here once activity is recorded."
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -74,6 +74,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { RecentActivityList, RecentActivityPreview, type RecentActivityItem } from "@/components/activity/RecentActivityPreview";
 import { PortalEmptyState, PortalIconBadge, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { UserPortalShell } from "@/components/portal/UserPortalShell";
 import { useAuth } from "@/hooks/use-auth";
@@ -479,6 +480,16 @@ export default function UserPortal({ section }: { section: string }) {
     title: string;
     entries: Array<{ action: string; adminRemarks: string; changedAt: string }>;
   } | null>(null);
+  const [documentRecentActivityModal, setDocumentRecentActivityModal] = useState<{
+    title: string;
+    description?: string;
+    activities: RecentActivityItem[];
+  } | null>(null);
+  const [ypopRecentActivityModal, setYpopRecentActivityModal] = useState<{
+    title: string;
+    description?: string;
+    activities: RecentActivityItem[];
+  } | null>(null);
 
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [submissionSuccessOpen, setSubmissionSuccessOpen] = useState(false);
@@ -494,7 +505,6 @@ export default function UserPortal({ section }: { section: string }) {
   const [attachedDocumentPreviewCanInline, setAttachedDocumentPreviewCanInline] = useState(false);
   const [attachedDocumentReplacementFile, setAttachedDocumentReplacementFile] = useState<File | null>(null);
   const [attachedDocumentMarkedForRemoval, setAttachedDocumentMarkedForRemoval] = useState(false);
-  const [detailFileTimelineExpanded, setDetailFileTimelineExpanded] = useState(false);
   const [savingAttachedDocument, setSavingAttachedDocument] = useState(false);
   const [documentDetailMode, setDocumentDetailMode] = useState(false);
   const [pendingDocumentRemoval, setPendingDocumentRemoval] = useState<{
@@ -933,7 +943,6 @@ export default function UserPortal({ section }: { section: string }) {
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
     [currentProfile?.id, state.activityLogs],
   );
-  const profileRecentActivity = profileActivityLogEntries.slice(0, 5);
   const profileRecentYpopEvents = ypopEventParticipations.slice(0, 4);
   const focusProfileTabSection = (
     tab:
@@ -1060,7 +1069,6 @@ export default function UserPortal({ section }: { section: string }) {
     setAttachedDocumentPreviewCanInline(false);
     setAttachedDocumentReplacementFile(null);
     setAttachedDocumentMarkedForRemoval(false);
-    setDetailFileTimelineExpanded(false);
     setSavingAttachedDocument(false);
     if (attachedDocumentInputRef.current) {
       attachedDocumentInputRef.current.value = "";
@@ -2313,15 +2321,17 @@ export default function UserPortal({ section }: { section: string }) {
               </Card>
             )}
 
-            <div className="rounded-[1.15rem] border border-border/70 bg-card/95 p-4 shadow-sm sm:p-5 lg:p-5">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-violet-200/70 bg-violet-100/70 text-violet-600">
+            <div className="organization-summary-card rounded-[1.15rem] border border-border/70 bg-card/95 p-3.5 shadow-sm sm:p-4 lg:p-5">
+              <div className="mobile-organization-summary flex min-w-0 items-center gap-3">
+                <div className="organization-summary-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-200/70 bg-violet-100/70 text-violet-600 lg:h-14 lg:w-14">
                   <Building2 className="h-6 w-6" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">Organization User</p>
-                  <p className="truncate text-[1.55rem] font-semibold leading-none text-foreground">
+                <div className="organization-summary-content min-w-0">
+                  <p className="organization-summary-name truncate text-[1.25rem] font-semibold leading-tight text-foreground lg:text-[1.55rem] lg:leading-none">
                     {profile.organizationName || currentProfile?.organizationName || "Organization"}
+                  </p>
+                  <p className="organization-summary-role mt-0.5 text-[0.82rem] text-muted-foreground lg:mt-1 lg:text-sm">
+                    Organization User
                   </p>
                 </div>
               </div>
@@ -2329,8 +2339,8 @@ export default function UserPortal({ section }: { section: string }) {
 
             <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)] lg:gap-[18px] lg:space-y-0 lg:items-start">
               <div className="space-y-4 lg:grid lg:gap-[18px] lg:space-y-0">
-                <DashboardSection title="Overview">
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-3">
+                <DashboardSection title="Overview" className="overview-section p-3.5 sm:p-4 lg:p-5" titleClassName="overview-section-title" contentClassName="mt-3 sm:mt-4">
+                  <div className="overview-grid grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-4 lg:gap-3">
                     <DashboardOverviewCard
                       label="Profile"
                       value={`${profilePercent}%`}
@@ -2417,37 +2427,18 @@ export default function UserPortal({ section }: { section: string }) {
                   </div>
                 </DashboardSection>
 
-                <DashboardSection
+                <RecentActivityPreview
                   title="Recent Activity"
-                  action={
-                    profileRecentActivity.length > 3 ? (
-                      <button
-                        type="button"
-                        className="text-sm font-semibold text-primary hover:underline"
-                        onClick={() => setProfileActivityModalOpen(true)}
-                      >
-                        View all
-                      </button>
-                    ) : null
-                  }
-                >
-                  {profileRecentActivity.length ? (
-                    <div className="divide-y divide-border/70">
-                      {profileRecentActivity.slice(0, 3).map((log) => (
-                        <DashboardActivityItem
-                          key={log.id}
-                          description={log.description}
-                          timestamp={formatDateTimeLabel(log.createdAt)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <PortalEmptyState
-                      title="No recent activity yet"
-                      description="Your profile changes and admin review updates will appear here."
-                    />
-                  )}
-                </DashboardSection>
+                  activities={profileActivityLogEntries.map((log) => ({
+                    id: log.id,
+                    message: log.description,
+                    timestamp: log.createdAt,
+                    timestampLabel: formatDateTimeLabel(log.createdAt),
+                  }))}
+                  onViewAll={profileActivityLogEntries.length > 3 ? () => setProfileActivityModalOpen(true) : undefined}
+                  emptyDescription="Your profile changes and admin review updates will appear here."
+                  className="rounded-[1.15rem] border-border/70 bg-card/95 shadow-sm"
+                />
               </div>
 
               <div className="space-y-4 lg:grid lg:gap-[18px] lg:space-y-0">
@@ -3316,35 +3307,20 @@ export default function UserPortal({ section }: { section: string }) {
 
                   {activeProfileTab === "overview" ? (
                     <Card ref={profileActivityRef} className="border-border/70 bg-card/95 shadow-sm lg:hidden">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 pt-0">
-                        {profileRecentActivity.length ? (
-                          <div className="profile-activity-list space-y-0 divide-y divide-border/60">
-                            {profileRecentActivity.slice(0, 5).map((log) => (
-                              <div key={log.id} className="profile-activity-item flex gap-3 py-2.5">
-                                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/80" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium leading-5 text-foreground">{log.description}</p>
-                                  <p className="mt-1 text-xs text-muted-foreground">{formatDateTimeLabel(log.createdAt)}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <PortalEmptyState
-                            title="No activity yet"
-                            description="Profile changes and admin review actions will show up here with full date and time."
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setProfileActivityModalOpen(true)}
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          View full activity log
-                        </button>
+                      <CardContent className="pt-4">
+                        <RecentActivityPreview
+                          title="Recent Activity"
+                          activities={profileActivityLogEntries.map((log) => ({
+                            id: log.id,
+                            message: log.description,
+                            timestamp: log.createdAt,
+                            timestampLabel: formatDateTimeLabel(log.createdAt),
+                          }))}
+                          onViewAll={profileActivityLogEntries.length > 3 ? () => setProfileActivityModalOpen(true) : undefined}
+                          emptyDescription="Profile changes and admin review actions will show up here with full date and time."
+                          className="border-0 bg-transparent p-0 shadow-none"
+                          headerClassName="mb-3"
+                        />
                       </CardContent>
                     </Card>
                   ) : null}
@@ -3391,35 +3367,20 @@ export default function UserPortal({ section }: { section: string }) {
                     </Card>
 
                     <Card ref={profileActivityRef} className="border-border/70 bg-card/95 shadow-sm">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4 pt-0">
-                        {profileRecentActivity.length ? (
-                          <div className="space-y-3">
-                            {profileRecentActivity.slice(0, 5).map((log) => (
-                              <div key={log.id} className="flex gap-3">
-                                <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/80" />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium leading-6 text-foreground">{log.description}</p>
-                                  <p className="text-sm text-muted-foreground">{formatDateTimeLabel(log.createdAt)}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <PortalEmptyState
-                            title="No activity yet"
-                            description="Profile changes and admin review actions will show up here with full date and time."
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setProfileActivityModalOpen(true)}
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          View full activity log
-                        </button>
+                      <CardContent className="pt-4">
+                        <RecentActivityPreview
+                          title="Recent Activity"
+                          activities={profileActivityLogEntries.map((log) => ({
+                            id: log.id,
+                            message: log.description,
+                            timestamp: log.createdAt,
+                            timestampLabel: formatDateTimeLabel(log.createdAt),
+                          }))}
+                          onViewAll={profileActivityLogEntries.length > 3 ? () => setProfileActivityModalOpen(true) : undefined}
+                          emptyDescription="Profile changes and admin review actions will show up here with full date and time."
+                          className="border-0 bg-transparent p-0 shadow-none"
+                          headerClassName="mb-3"
+                        />
                       </CardContent>
                     </Card>
                   </div>
@@ -3483,7 +3444,6 @@ export default function UserPortal({ section }: { section: string }) {
 
         // Document detail sub-view
         if (documentDetailMode && attachedDocumentEditor && detailDocumentType && detailFile) {
-          const detailTimelineVisible = detailFileTimelineExpanded ? detailFileTimeline : detailFileTimeline.slice(0, 3);
           const detailFileLocked = isDocumentSubmissionApproved || isApprovedSubmissionFile(detailFile);
           return (
             <div className="space-y-4">
@@ -3663,32 +3623,33 @@ export default function UserPortal({ section }: { section: string }) {
                     </div>
 
                     <div className="border-t border-border/40 pt-4">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">Recent Activity</p>
-                        {detailFileTimeline.length > 3 ? (
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-primary hover:underline"
-                            onClick={() => setDetailFileTimelineExpanded((current) => !current)}
-                          >
-                            {detailFileTimelineExpanded ? "Show less" : "Show all"}
-                          </button>
-                        ) : null}
-                      </div>
-                      {detailFileTimeline.length === 0 ? (
-                        <p className="text-xs leading-snug text-muted-foreground">No activity yet.</p>
-                      ) : (
-                        <div className="space-y-0">
-                          {detailTimelineVisible.map((entry, i) => (
-                            <SubmissionTimelineItem
-                              key={`${entry.date}-${i}`}
-                              description={entry.message}
-                              timestamp={formatDateTimeLabel(entry.date)}
-                              isLast={i === detailTimelineVisible.length - 1}
-                            />
-                          ))}
-                        </div>
-                      )}
+                      <RecentActivityPreview
+                        title="Recent Activity"
+                        activities={detailFileTimeline.map((entry, index) => ({
+                          id: `${entry.date}-${index}`,
+                          message: entry.message,
+                          timestamp: entry.date,
+                          timestampLabel: formatDateTimeLabel(entry.date),
+                        }))}
+                        onViewAll={
+                          detailFileTimeline.length > 3
+                            ? () =>
+                                setDocumentRecentActivityModal({
+                                  title: attachedDocumentEditor?.documentTypeName || "Recent Activity",
+                                  description: "Full activity history for this attached document.",
+                                  activities: detailFileTimeline.map((entry, index) => ({
+                                    id: `${entry.date}-${index}`,
+                                    message: entry.message,
+                                    timestamp: entry.date,
+                                    timestampLabel: formatDateTimeLabel(entry.date),
+                                  })),
+                                })
+                            : undefined
+                        }
+                        emptyDescription="Document review updates will appear here once the file has been processed."
+                        className="border-0 bg-transparent p-0 shadow-none"
+                        headerClassName="mb-2"
+                      />
                     </div>
 
                     <div className="border-t border-border/40 pt-4">
@@ -3997,27 +3958,16 @@ export default function UserPortal({ section }: { section: string }) {
             </PortalSection>
 
             <PortalSection title="Recent Activity" description="Admin review actions on your document submission.">
-              {submissionLogs.length === 0 ? (
-                <PortalEmptyState
-                  title="No activity yet"
-                  description="Review activity will appear here once your submission has been processed."
-                />
-              ) : (
-                <Card className="border-border/70 bg-card/95 shadow-sm lg:max-w-3xl">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="space-y-0">
-                      {submissionLogs.slice(0, 5).map((log, i) => (
-                        <SubmissionTimelineItem
-                          key={log.id}
-                          description={log.description}
-                          timestamp={formatDateTimeLabel(log.createdAt)}
-                          isLast={i === Math.min(submissionLogs.length, 5) - 1}
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <RecentActivityPreview
+                activities={submissionLogs.map((log) => ({
+                  id: log.id,
+                  message: log.description,
+                  timestamp: log.createdAt,
+                  timestampLabel: formatDateTimeLabel(log.createdAt),
+                }))}
+                emptyDescription="Review activity will appear here once your submission has been processed."
+                className="border-border/70 bg-card/95 shadow-sm lg:max-w-3xl"
+              />
             </PortalSection>
           </div>
         );
@@ -4125,8 +4075,11 @@ export default function UserPortal({ section }: { section: string }) {
                         )}
                         <div className="grid gap-4 lg:grid-cols-2">
                           <section className="budget-form-section grid gap-3 lg:contents">
-                            <div className="budget-form-section-header mb-3 border-b border-border/60 pb-2 lg:hidden">
-                              <h3 className="text-sm font-semibold text-foreground">Activity Information</h3>
+                            <div className="budget-form-section-header mb-3.5 flex items-center gap-3 lg:hidden">
+                              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                                Activity Information
+                              </h3>
+                              <span className="h-px flex-1 bg-border" aria-hidden="true" />
                             </div>
                             <div className="budget-form-section-fields grid gap-4 lg:contents">
                               <div className="budget-form-field space-y-1.5 lg:space-y-2 lg:col-span-2">
@@ -4184,8 +4137,11 @@ export default function UserPortal({ section }: { section: string }) {
                             </div>
                           </section>
                           <section className="budget-form-section mt-1 grid gap-3 lg:contents">
-                            <div className="budget-form-section-header mb-3 border-b border-border/60 pb-2 lg:hidden">
-                              <h3 className="text-sm font-semibold text-foreground">Budget Information</h3>
+                            <div className="budget-form-section-header mb-3.5 flex items-center gap-3 lg:hidden">
+                              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                                Budget Information
+                              </h3>
+                              <span className="h-px flex-1 bg-border" aria-hidden="true" />
                             </div>
                             <div className="budget-form-section-fields grid gap-4 lg:contents">
                               <div className="budget-form-two-column grid gap-4 min-[600px]:grid-cols-2 lg:contents">
@@ -4228,8 +4184,11 @@ export default function UserPortal({ section }: { section: string }) {
                             </div>
                           </section>
                           <section className="budget-form-section mt-1 grid gap-3 lg:contents">
-                            <div className="budget-form-section-header mb-3 border-b border-border/60 pb-2 lg:hidden">
-                              <h3 className="text-sm font-semibold text-foreground">Supporting Details</h3>
+                            <div className="budget-form-section-header mb-3.5 flex items-center gap-3 lg:hidden">
+                              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
+                                Supporting Details
+                              </h3>
+                              <span className="h-px flex-1 bg-border" aria-hidden="true" />
                             </div>
                             <div className="budget-form-section-fields grid gap-4 lg:contents">
                               <div className="budget-form-field space-y-1.5 lg:space-y-2 lg:col-span-2">
@@ -4456,7 +4415,7 @@ export default function UserPortal({ section }: { section: string }) {
                         const selectedLatestActivity = selectedMobileBudgetRequest.revisionHistory?.length
                           ? selectedMobileBudgetRequest.revisionHistory[selectedMobileBudgetRequest.revisionHistory.length - 1]
                           : null;
-                        const selectedAdditionalActivities = Math.max((selectedMobileBudgetRequest.revisionHistory?.length ?? 0) - 1, 0);
+                        const selectedAdditionalActivities = Math.max((selectedMobileBudgetRequest.revisionHistory?.length ?? 0) - 3, 0);
                         const selectedSecondaryStatus =
                           budgetStatusSecondaryMap[selectedMobileBudgetRequest.status] ?? formatStatusLabel(selectedMobileBudgetRequest.status);
                         const canEditOrDelete = !approvedBudgetStatuses.has(selectedMobileBudgetRequest.status);
@@ -4560,23 +4519,35 @@ export default function UserPortal({ section }: { section: string }) {
                                   )}
                                 </div>
 
-                                <div className="space-y-2 border-t border-border/50 pt-4">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Latest Activity</p>
-                                  <p className="text-sm text-foreground">
-                                    {selectedLatestActivity ? (budgetActionLabels[selectedLatestActivity.action] ?? selectedLatestActivity.action) : selectedSecondaryStatus}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {selectedLatestActivity ? formatDateTimeLabel(selectedLatestActivity.changedAt) : formatDateTimeLabel(selectedMobileBudgetRequest.updatedAt)}
-                                  </p>
-                                  {selectedAdditionalActivities > 0 ? (
-                                    <button
-                                      type="button"
-                                      className="text-xs font-medium text-primary transition hover:underline"
-                                      onClick={() => openBudgetRecentActivityModal(selectedMobileBudgetRequest)}
-                                    >
-                                      View all recent activity
-                                    </button>
-                                  ) : null}
+                                <div className="border-t border-border/50 pt-4">
+                                  <RecentActivityPreview
+                                    title="Recent Activity"
+                                    activities={
+                                      selectedMobileBudgetRequest.revisionHistory?.length
+                                        ? selectedMobileBudgetRequest.revisionHistory.map((entry, index) => ({
+                                            id: `${entry.action}-${entry.changedAt}-${index}`,
+                                            message: budgetActionLabels[entry.action] ?? entry.action,
+                                            note: entry.adminRemarks?.trim() || undefined,
+                                            timestamp: entry.changedAt,
+                                            timestampLabel: formatDateTimeLabel(entry.changedAt),
+                                          }))
+                                        : [
+                                            {
+                                              id: `${selectedMobileBudgetRequest.id}-status`,
+                                              message: selectedSecondaryStatus,
+                                              timestamp: selectedMobileBudgetRequest.updatedAt,
+                                              timestampLabel: formatDateTimeLabel(selectedMobileBudgetRequest.updatedAt),
+                                            },
+                                          ]
+                                    }
+                                    onViewAll={
+                                      selectedAdditionalActivities > 0
+                                        ? () => openBudgetRecentActivityModal(selectedMobileBudgetRequest)
+                                        : undefined
+                                    }
+                                    className="border-0 bg-transparent p-0 shadow-none"
+                                    headerClassName="mb-2"
+                                  />
                                 </div>
 
                                 <div className="space-y-3 border-t border-border/50 pt-4">
@@ -5234,7 +5205,7 @@ export default function UserPortal({ section }: { section: string }) {
                     const selectedLatestActivity = selectedMobileReport.revisionHistory?.length
                       ? selectedMobileReport.revisionHistory[selectedMobileReport.revisionHistory.length - 1]
                       : null;
-                    const selectedAdditionalActivities = Math.max((selectedMobileReport.revisionHistory?.length ?? 0) - 1, 0);
+                    const selectedAdditionalActivities = Math.max((selectedMobileReport.revisionHistory?.length ?? 0) - 3, 0);
                     const selectedSecondaryStatus =
                       liquidationStatusSecondaryMap[selectedMobileReport.status] ?? formatStatusLabel(selectedMobileReport.status);
                     const selectedHasAdminNote =
@@ -5355,27 +5326,35 @@ export default function UserPortal({ section }: { section: string }) {
                               )}
                             </div>
 
-                            <div className="space-y-2 border-t border-border/50 pt-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Latest Activity</p>
-                              <p className="text-sm text-foreground">
-                                {selectedLatestActivity
-                                  ? (liquidationActionLabels[selectedLatestActivity.action] ?? selectedLatestActivity.action)
-                                  : selectedSecondaryStatus}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {selectedLatestActivity
-                                  ? formatDateTimeLabel(selectedLatestActivity.changedAt)
-                                  : formatDateTimeLabel(selectedMobileReport.updatedAt)}
-                              </p>
-                              {selectedAdditionalActivities > 0 ? (
-                                <button
-                                  type="button"
-                                  className="text-xs font-medium text-primary transition hover:underline"
-                                  onClick={() => openLiquidationRecentActivityModal(selectedMobileReport)}
-                                >
-                                  View all recent activity
-                                </button>
-                              ) : null}
+                            <div className="border-t border-border/50 pt-4">
+                              <RecentActivityPreview
+                                title="Recent Activity"
+                                activities={
+                                  selectedMobileReport.revisionHistory?.length
+                                    ? selectedMobileReport.revisionHistory.map((entry, index) => ({
+                                        id: `${entry.action}-${entry.changedAt}-${index}`,
+                                        message: liquidationActionLabels[entry.action] ?? entry.action,
+                                        note: entry.adminRemarks?.trim() || undefined,
+                                        timestamp: entry.changedAt,
+                                        timestampLabel: formatDateTimeLabel(entry.changedAt),
+                                      }))
+                                    : [
+                                        {
+                                          id: `${selectedMobileReport.id}-status`,
+                                          message: selectedSecondaryStatus,
+                                          timestamp: selectedMobileReport.updatedAt,
+                                          timestampLabel: formatDateTimeLabel(selectedMobileReport.updatedAt),
+                                        },
+                                      ]
+                                }
+                                onViewAll={
+                                  selectedAdditionalActivities > 0
+                                    ? () => openLiquidationRecentActivityModal(selectedMobileReport)
+                                    : undefined
+                                }
+                                className="border-0 bg-transparent p-0 shadow-none"
+                                headerClassName="mb-2"
+                              />
                             </div>
 
                             <div className="space-y-3 border-t border-border/50 pt-4">
@@ -7400,8 +7379,6 @@ Validated {validatedDate}</p>
           ].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime());
           const isMobileYpopDetail = !isDesktopViewport;
           const showScoringExplanation = ypopScoringExplanationOpenById[activeEntry.id] ?? false;
-          const showFullActivityLog = ypopHistoryOpenById[activeEntry.id] ?? false;
-          const visibleActivityLog = isMobileYpopDetail && !showFullActivityLog ? activityLog.slice(0, 2) : activityLog;
 
           const renderSemesterEventsCard = (mobile: boolean) => (
             <Card className={cn("border-border/70", mobile ? "order-2 lg:hidden" : "hidden lg:block")}>
@@ -7958,39 +7935,42 @@ Validated {validatedDate}</p>
                     {renderSemesterEventsCard(true)}
 
                     {/* Activity Log */}
-                    <div className="section-recent-activity order-[6] space-y-2.5 lg:order-none">
-                      <p className="font-medium">Recent Activity</p>
-                      <ul className="recent-activity-list space-y-2 pl-1">
-                        {visibleActivityLog.map((item, i) => (
-                          <li key={i} className="recent-activity-item flex items-start gap-2.5 text-sm">
-                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
-                            <span className="flex-1">
-                              <span className="block leading-snug">
-                                <span className="font-medium capitalize">{item.label}</span>
-                                {item.note && <span className="ml-1 text-muted-foreground">- {item.note}</span>}
-                              </span>
-                              <span className="recent-activity-meta mt-0.5 block text-xs text-muted-foreground/70 lg:mt-0 lg:inline lg:ml-1.5">
-                                {formatDateTimeLabel(item.date)}
-                              </span>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                      {!isDesktopViewport && activityLog.length > 2 && (
-                        <button
-                          type="button"
-                          className="recent-activity-link text-sm font-medium text-primary transition-colors hover:text-primary/80"
-                          aria-expanded={showFullActivityLog}
-                          onClick={() =>
-                            setYpopHistoryOpenById((prev) => ({
-                              ...prev,
-                              [activeEntry.id]: !showFullActivityLog,
-                            }))
-                          }
-                        >
-                          {showFullActivityLog ? "Show fewer" : "View all activity"}
-                        </button>
-                      )}
+                    <div className="section-recent-activity order-[6] lg:order-none">
+                      <RecentActivityPreview
+                        activities={activityLog.map((item, index) => ({
+                          id: `${item.label}-${item.date}-${index}`,
+                          message: (
+                            <>
+                              <span className="font-medium">{item.label}</span>
+                              {item.note ? <span className="text-muted-foreground"> — {item.note}</span> : null}
+                            </>
+                          ),
+                          timestamp: item.date,
+                          timestampLabel: formatDateTimeLabel(item.date),
+                        }))}
+                        onViewAll={
+                          activityLog.length > 3
+                            ? () =>
+                                setYpopRecentActivityModal({
+                                  title: `${activeEntry.semesterLabel} Activity`,
+                                  description: "Full activity history for this YPOP submission.",
+                                  activities: activityLog.map((item, index) => ({
+                                    id: `${item.label}-${item.date}-${index}`,
+                                    message: (
+                                      <>
+                                        <span className="font-medium">{item.label}</span>
+                                        {item.note ? <span className="text-muted-foreground"> — {item.note}</span> : null}
+                                      </>
+                                    ),
+                                    timestamp: item.date,
+                                    timestampLabel: formatDateTimeLabel(item.date),
+                                  })),
+                                })
+                            : undefined
+                        }
+                        className="border-0 bg-transparent p-0 shadow-none"
+                        headerClassName="mb-2"
+                      />
                     </div>
 
                     {renderOrganizationInitiatedCard(true)}
@@ -9502,21 +9482,15 @@ Validated {validatedDate}</p>
               All profile-related actions are listed here with date and time for transparency.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            {profileActivityLogEntries.length ? (
-              profileActivityLogEntries.map((log) => (
-                <div key={log.id} className="rounded-2xl border border-border/70 bg-muted/20 p-3.5">
-                  <p className="text-sm font-medium leading-snug">{log.description}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{formatDateTimeLabel(log.createdAt)}</p>
-                </div>
-              ))
-            ) : (
-              <PortalEmptyState
-                title="No activity yet"
-                description="Profile changes and admin review actions will appear here."
-              />
-            )}
-          </div>
+          <RecentActivityList
+            activities={profileActivityLogEntries.map((log) => ({
+              id: log.id,
+              message: log.description,
+              timestamp: log.createdAt,
+              timestampLabel: formatDateTimeLabel(log.createdAt),
+            }))}
+            emptyDescription="Profile changes and admin review actions will appear here."
+          />
         </DialogContent>
       </Dialog>
       <Dialog
@@ -9559,26 +9533,18 @@ Validated {validatedDate}</p>
               Full activity history for this budget request.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {budgetRecentActivityModal?.entries.length ? (
-              budgetRecentActivityModal.entries.map((entry, index) => (
-                <div key={`${entry.action}-${entry.changedAt}-${index}`} className="rounded-xl border border-border/70 bg-muted/15 p-3.5">
-                  <p className="text-sm font-medium text-foreground">
-                    {budgetActionLabels[entry.action] ?? formatStatusLabel(entry.action)}
-                  </p>
-                  {entry.adminRemarks?.trim() ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{entry.adminRemarks.trim()}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-muted-foreground">{formatDateTimeLabel(entry.changedAt)}</p>
-                </div>
-              ))
-            ) : (
-              <PortalEmptyState
-                title="No recent activity yet"
-                description="Budget request updates will appear here once the request has been processed."
-              />
-            )}
-          </div>
+          <RecentActivityList
+            activities={
+              budgetRecentActivityModal?.entries.map((entry, index) => ({
+                id: `${entry.action}-${entry.changedAt}-${index}`,
+                message: budgetActionLabels[entry.action] ?? formatStatusLabel(entry.action),
+                note: entry.adminRemarks?.trim() || undefined,
+                timestamp: entry.changedAt,
+                timestampLabel: formatDateTimeLabel(entry.changedAt),
+              })) ?? []
+            }
+            emptyDescription="Budget request updates will appear here once the request has been processed."
+          />
           <DialogFooter>
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setBudgetRecentActivityModal(null)}>
               Close
@@ -9599,28 +9565,68 @@ Validated {validatedDate}</p>
               Full activity history for this liquidation report.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {liquidationRecentActivityModal?.entries.length ? (
-              liquidationRecentActivityModal.entries.map((entry, index) => (
-                <div key={`${entry.action}-${entry.changedAt}-${index}`} className="rounded-xl border border-border/70 bg-muted/15 p-3.5">
-                  <p className="text-sm font-medium text-foreground">
-                    {liquidationActionLabels[entry.action] ?? formatStatusLabel(entry.action)}
-                  </p>
-                  {entry.adminRemarks?.trim() ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{entry.adminRemarks.trim()}</p>
-                  ) : null}
-                  <p className="mt-1 text-xs text-muted-foreground">{formatDateTimeLabel(entry.changedAt)}</p>
-                </div>
-              ))
-            ) : (
-              <PortalEmptyState
-                title="No recent activity yet"
-                description="Liquidation report updates will appear here once the report has been processed."
-              />
-            )}
-          </div>
+          <RecentActivityList
+            activities={
+              liquidationRecentActivityModal?.entries.map((entry, index) => ({
+                id: `${entry.action}-${entry.changedAt}-${index}`,
+                message: liquidationActionLabels[entry.action] ?? formatStatusLabel(entry.action),
+                note: entry.adminRemarks?.trim() || undefined,
+                timestamp: entry.changedAt,
+                timestampLabel: formatDateTimeLabel(entry.changedAt),
+              })) ?? []
+            }
+            emptyDescription="Liquidation report updates will appear here once the report has been processed."
+          />
           <DialogFooter>
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setLiquidationRecentActivityModal(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(documentRecentActivityModal)}
+        onOpenChange={(open) => {
+          if (!open) setDocumentRecentActivityModal(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{documentRecentActivityModal?.title || "Recent Activity"}</DialogTitle>
+            <DialogDescription>
+              {documentRecentActivityModal?.description || "Full activity history for this record."}
+            </DialogDescription>
+          </DialogHeader>
+          <RecentActivityList
+            activities={documentRecentActivityModal?.activities ?? []}
+            emptyDescription="Document review updates will appear here once the file has been processed."
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setDocumentRecentActivityModal(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(ypopRecentActivityModal)}
+        onOpenChange={(open) => {
+          if (!open) setYpopRecentActivityModal(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{ypopRecentActivityModal?.title || "Recent Activity"}</DialogTitle>
+            <DialogDescription>
+              {ypopRecentActivityModal?.description || "Full activity history for this record."}
+            </DialogDescription>
+          </DialogHeader>
+          <RecentActivityList
+            activities={ypopRecentActivityModal?.activities ?? []}
+            emptyDescription="YPOP submission updates will appear here once activity is recorded."
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setYpopRecentActivityModal(null)}>
               Close
             </Button>
           </DialogFooter>
@@ -9808,23 +9814,29 @@ function DashboardSection({
   title,
   description,
   action,
+  className,
+  titleClassName,
+  contentClassName,
   children,
 }: {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  className?: string;
+  titleClassName?: string;
+  contentClassName?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[1.15rem] border border-border/70 bg-card/95 p-4 shadow-sm sm:p-5 lg:p-5">
+    <section className={cn("rounded-[1.15rem] border border-border/70 bg-card/95 p-4 shadow-sm sm:p-5 lg:p-5", className)}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-[1.05rem] font-semibold text-foreground">{title}</h2>
+          <h2 className={cn("text-[1.05rem] font-semibold text-foreground", titleClassName)}>{title}</h2>
           {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
         </div>
         {action ? <div className="w-full sm:w-auto">{action}</div> : null}
       </div>
-      <div className="mt-4">{children}</div>
+      <div className={cn("mt-4", contentClassName)}>{children}</div>
     </section>
   );
 }
@@ -9847,8 +9859,8 @@ function DashboardIconBox({
   }[tone];
 
   return (
-    <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border lg:h-10 lg:w-10 lg:rounded-xl", toneClassName)}>
-      <Icon className="h-5 w-5 lg:h-4.5 lg:w-4.5" />
+    <div className={cn("overview-card-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border lg:h-10 lg:w-10 lg:rounded-xl", toneClassName)}>
+      <Icon className="h-4.5 w-4.5 lg:h-4.5 lg:w-4.5" />
     </div>
   );
 }
@@ -9872,28 +9884,26 @@ function DashboardOverviewCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-w-0 min-h-[10.5rem] flex-col rounded-[1.05rem] border border-border/70 bg-background p-3.5 text-left shadow-sm transition-colors hover:bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-[11rem] sm:p-4 lg:min-h-0 lg:p-[0.875rem]"
+      className="overview-card grid min-w-0 min-h-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-0.5 rounded-[1.05rem] border border-border/70 bg-background p-3 text-left shadow-sm transition-colors hover:bg-muted/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:p-3.5 lg:flex lg:flex-col lg:items-start lg:gap-2.5 lg:p-[0.875rem]"
     >
-      <div className="flex min-w-0 flex-col items-start gap-3 lg:gap-2.5">
-        <DashboardIconBox icon={icon} tone={tone} />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold leading-tight text-foreground">{label}</p>
-          <p
-            className={cn(
-              "mt-1 whitespace-nowrap text-[clamp(1.75rem,8vw,2.25rem)] font-semibold leading-none lg:text-[clamp(1.8rem,2vw,2.25rem)]",
-              tone === "emerald"
-                ? "text-emerald-600"
-                : tone === "amber"
-                  ? "text-amber-600"
-                  : tone === "red"
-                    ? "text-red-500"
-                    : "text-primary",
-            )}
-          >
-            {value}
-          </p>
-          <p className="mt-2 text-sm leading-snug text-muted-foreground">{helper}</p>
-        </div>
+      <DashboardIconBox icon={icon} tone={tone} />
+      <div className="min-w-0">
+        <p className="overview-label overview-card-label text-[0.84rem] font-semibold leading-tight text-foreground lg:text-[0.92rem]">{label}</p>
+        <p
+          className={cn(
+            "overview-value mt-0.5 whitespace-nowrap text-[clamp(1.5rem,6vw,1.75rem)] font-semibold leading-none tracking-[-0.02em] lg:mt-1 lg:text-[clamp(1.8rem,2vw,2.25rem)] lg:tracking-normal",
+            tone === "emerald"
+              ? "text-emerald-600"
+              : tone === "amber"
+                ? "text-amber-600"
+                : tone === "red"
+                  ? "text-red-500"
+                  : "text-primary",
+          )}
+        >
+          {value}
+        </p>
+        <p className="overview-status overview-card-status mt-1 text-[0.78rem] leading-snug text-muted-foreground lg:mt-2 lg:text-sm">{helper}</p>
       </div>
     </button>
   );
@@ -9922,24 +9932,6 @@ function DashboardActionRow({
         </div>
       </div>
       {action ? <div className="w-full sm:w-auto sm:shrink-0 lg:w-auto">{action}</div> : null}
-    </div>
-  );
-}
-
-function DashboardActivityItem({
-  description,
-  timestamp,
-}: {
-  description: string;
-  timestamp: string;
-}) {
-  return (
-    <div className="flex gap-3 py-3 first:pt-0 last:pb-0">
-      <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-primary/85" />
-      <div className="min-w-0">
-        <p className="text-sm leading-6 text-foreground lg:leading-5.5">{description}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{timestamp}</p>
-      </div>
     </div>
   );
 }
@@ -9992,29 +9984,6 @@ function SubmissionStatCard({
       <div className="min-w-0">
         <p className="text-lg font-semibold leading-none text-foreground">{value}</p>
         <p className="mt-1 text-xs leading-snug text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function SubmissionTimelineItem({
-  description,
-  timestamp,
-  isLast = false,
-}: {
-  description: string;
-  timestamp: string;
-  isLast?: boolean;
-}) {
-  return (
-    <div className="flex gap-3 py-2.5 first:pt-0 last:pb-0">
-      <div className="flex flex-col items-center pt-1">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-primary/70" />
-        {!isLast ? <span className="mt-1 w-px flex-1 bg-border/50" style={{ minHeight: "1.1rem" }} /> : null}
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm leading-snug text-foreground">{description}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{timestamp}</p>
       </div>
     </div>
   );

@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { RecentActivityList, RecentActivityPreview } from "@/components/activity/RecentActivityPreview";
 import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ExportReportDialog } from "@/components/reports/ExportReportDialog";
@@ -3477,17 +3478,36 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </PortalSection>
               <PortalSection title="Recent Activity">
-                <div className="space-y-2">
-                  {state.activityLogs.slice(0, 4).length > 0 ? state.activityLogs.slice(0, 4).map((log) => (
-                    <div key={log.id} className="rounded-xl border border-border/70 bg-background p-3.5 text-sm">
-                      <p className="font-medium leading-snug">{formatActionName(log.action)}</p>
-                      <p className="mt-1 text-muted-foreground">{log.description}</p>
-                      <p className="mt-1.5 text-xs text-muted-foreground/75">{formatDateTimeLabel(log.createdAt)}</p>
-                    </div>
-                  )) : (
-                    <p className="text-sm text-muted-foreground">No recent activity.</p>
-                  )}
-                </div>
+                <RecentActivityPreview
+                  title="Recent Activity"
+                  activities={state.activityLogs.map((log) => ({
+                    id: log.id,
+                    message: formatActionName(log.action),
+                    note: log.description,
+                    timestamp: log.createdAt,
+                    timestampLabel: formatDateTimeLabel(log.createdAt),
+                  }))}
+                  onViewAll={
+                    state.activityLogs.length > 3
+                      ? () => {
+                          setRecentActivityDialogTitle("Recent Activity");
+                          setRecentActivityDialogEntries(
+                            state.activityLogs.map((log) => ({
+                              key: log.id,
+                              title: formatActionName(log.action),
+                              note: log.description,
+                              timestamp: formatDateTimeLabel(log.createdAt),
+                              dotClassName: "bg-primary",
+                            })),
+                          );
+                          setRecentActivityDialogOpen(true);
+                        }
+                      : undefined
+                  }
+                  className="border-0 bg-transparent p-0 shadow-none"
+                  headerClassName="mb-3"
+                  emptyMessage="No recent activity yet."
+                />
               </PortalSection>
             </div>
           </div>
@@ -3835,52 +3855,38 @@ export default function AdminPortal({ section }: { section: string }) {
                                 </div>
                                 <div className="space-y-3">
                                   {/* Recent Activity */}
-                                  <div className="rounded-xl border border-border/70 bg-background p-4">
-                                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground/75">Recent Activity</p>
-                                    <div className="mt-3 space-y-3">
-                                      <div className="flex items-start gap-3">
-                                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
-                                        <div>
-                                          <p className="text-sm font-medium">Submitted</p>
-                                          {file.uploadedAt ? (
-                                            <p className="text-xs text-muted-foreground">
-                                              {formatDateTimeLabel(file.uploadedAt)}
-                                            </p>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                      {file.adminStatus !== "submitted" ? (
-                                        <div className="flex items-start gap-3">
-                                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${file.adminStatus === "approved_green" ? "bg-emerald-500" : file.adminStatus === "needs_revision" ? "bg-amber-400" : file.adminStatus === "rejected_red" ? "bg-destructive" : "bg-muted-foreground/40"}`} />
-                                          <div className="min-w-0">
-                                            <p className="text-sm font-medium">{statusLabelMap[file.adminStatus] ?? file.adminStatus.replaceAll("_", " ")}</p>
-                                            {file.reviewedAt ? (
-                                              <p className="text-xs text-muted-foreground">
-                                                {formatDateTimeLabel(file.reviewedAt)}
-                                              </p>
-                                            ) : null}
-                                            {file.adminRemarks ? (
-                                              <p className="mt-1 break-words text-sm text-muted-foreground">"{file.adminRemarks}"</p>
-                                            ) : null}
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-start gap-3">
-                                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/20" />
-                                          <p className="text-sm text-muted-foreground">Not yet reviewed.</p>
-                                        </div>
-                                      )}
-                                      {file.userRemarks ? (
-                                        <div className="flex items-start gap-3">
-                                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/60" />
-                                          <div className="min-w-0">
-                                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Note from org</p>
-                                            <p className="mt-0.5 break-words text-sm text-muted-foreground">"{file.userRemarks}"</p>
-                                          </div>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  </div>
+                                  <RecentActivityPreview
+                                    title="Recent Activity"
+                                    activities={[
+                                      {
+                                        id: `${file.id}-submitted`,
+                                        message: "Submitted",
+                                        timestamp: file.uploadedAt,
+                                        timestampLabel: file.uploadedAt ? formatDateTimeLabel(file.uploadedAt) : undefined,
+                                      },
+                                      ...(file.adminStatus !== "submitted"
+                                        ? [{
+                                            id: `${file.id}-reviewed`,
+                                            message: statusLabelMap[file.adminStatus] ?? file.adminStatus.replaceAll("_", " "),
+                                            note: file.adminRemarks ? `"${file.adminRemarks}"` : undefined,
+                                            timestamp: file.reviewedAt,
+                                            timestampLabel: file.reviewedAt ? formatDateTimeLabel(file.reviewedAt) : undefined,
+                                          }]
+                                        : [{
+                                            id: `${file.id}-pending`,
+                                            message: "Not yet reviewed.",
+                                          }]),
+                                      ...(file.userRemarks
+                                        ? [{
+                                            id: `${file.id}-user-note`,
+                                            message: "Note from org",
+                                            note: `"${file.userRemarks}"`,
+                                          }]
+                                        : []),
+                                    ]}
+                                    className="border-border/70 bg-background p-4 shadow-none"
+                                    headerClassName="mb-3"
+                                  />
 
                                   {/* Admin Review Action */}
                                   <div className="rounded-xl border border-border/70 bg-background p-4">
@@ -4210,39 +4216,28 @@ export default function AdminPortal({ section }: { section: string }) {
                   <SectionDivider />
 
                   <DetailSectionBlock label="Recent Activity">
-                    {budgetRecentActivities.length ? (
-                      <div className="space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3">
-                        {budgetRecentActivities.slice(0, 3).map((entry) => (
-                          <div key={entry.key} className="flex items-start gap-2.5">
-                            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${entry.dotClassName}`} />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium">{entry.title}</p>
-                              {entry.timestamp ? <p className="mt-0.5 text-xs text-muted-foreground">{entry.timestamp}</p> : null}
-                              {entry.note ? <p className="mt-1 text-xs italic text-muted-foreground">{entry.note}</p> : null}
-                            </div>
-                          </div>
-                        ))}
-                        {budgetRecentActivities.length > 3 ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto px-0 text-sm text-primary hover:bg-transparent hover:text-primary/80"
-                            onClick={() => {
+                    <RecentActivityPreview
+                      activities={budgetRecentActivities.map((entry) => ({
+                        id: entry.key,
+                        message: entry.title,
+                        note: entry.note || undefined,
+                        timestamp: entry.timestamp,
+                        timestampLabel: entry.timestamp,
+                      }))}
+                      onViewAll={
+                        budgetRecentActivities.length > 3
+                          ? () => {
                               setRecentActivityDialogTitle("Budget Request Activity");
                               setRecentActivityDialogEntries(budgetRecentActivities);
                               setRecentActivityDialogOpen(true);
-                            }}
-                          >
-                            View all recent activities
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
-                        No review activity yet.
-                      </div>
-                    )}
+                            }
+                          : undefined
+                      }
+                      className="border-0 bg-transparent p-0 shadow-none"
+                      headerClassName="mb-2"
+                      emptyMessage="No recent activity yet."
+                      emptyDescription="Budget review activity will appear here once the request is processed."
+                    />
                   </DetailSectionBlock>
                 </DetailInfoCard>
 
@@ -4507,12 +4502,27 @@ export default function AdminPortal({ section }: { section: string }) {
                                 )}
                               </div>
 
-                              <div className="space-y-1 rounded-xl border border-border/50 bg-muted/10 p-3">
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Recent Activity</p>
-                                <p className="text-sm text-foreground">{latestActivity ? formatStatusLabel(latestActivity.action) : formatStatusLabel(request.status)}</p>
-                                <p className="text-xs text-muted-foreground">{formatDateTimeLabel(latestActivity?.changedAt ?? request.updatedAt)}</p>
-                                {latestActivity?.adminRemarks ? <p className="text-xs text-muted-foreground">{latestActivity.adminRemarks}</p> : null}
-                              </div>
+                              <RecentActivityPreview
+                                title="Recent Activity"
+                                activities={
+                                  request.revisionHistory?.length
+                                    ? request.revisionHistory.map((entry, index) => ({
+                                        id: `${request.id}-${entry.action}-${entry.changedAt}-${index}`,
+                                        message: formatStatusLabel(entry.action),
+                                        note: entry.adminRemarks || undefined,
+                                        timestamp: entry.changedAt,
+                                        timestampLabel: formatDateTimeLabel(entry.changedAt),
+                                      }))
+                                    : [{
+                                        id: `${request.id}-status`,
+                                        message: formatStatusLabel(request.status),
+                                        timestamp: request.updatedAt,
+                                        timestampLabel: formatDateTimeLabel(request.updatedAt),
+                                      }]
+                                }
+                                className="border-border/50 bg-muted/10 p-3 shadow-none"
+                                headerClassName="mb-2"
+                              />
 
                               <div className="flex items-center justify-end gap-2">
                                 <Button type="button" size="sm" variant="outline" onClick={() => openBudgetRequestDetails(request.id)}>
@@ -4751,39 +4761,28 @@ export default function AdminPortal({ section }: { section: string }) {
                   <SectionDivider />
 
                   <DetailSectionBlock label="Recent Activity">
-                    {liquidationRecentActivities.length ? (
-                      <div className="space-y-3 rounded-xl border border-border/60 bg-muted/10 p-3">
-                        {liquidationRecentActivities.slice(0, 3).map((entry) => (
-                          <div key={entry.key} className="flex items-start gap-2.5">
-                            <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${entry.dotClassName}`} />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium">{entry.title}</p>
-                              {entry.timestamp ? <p className="mt-0.5 text-xs text-muted-foreground">{entry.timestamp}</p> : null}
-                              {entry.note ? <p className="mt-1 text-xs italic text-muted-foreground">{entry.note}</p> : null}
-                            </div>
-                          </div>
-                        ))}
-                        {liquidationRecentActivities.length > 3 ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto px-0 text-sm text-primary hover:bg-transparent hover:text-primary/80"
-                            onClick={() => {
+                    <RecentActivityPreview
+                      activities={liquidationRecentActivities.map((entry) => ({
+                        id: entry.key,
+                        message: entry.title,
+                        note: entry.note || undefined,
+                        timestamp: entry.timestamp,
+                        timestampLabel: entry.timestamp,
+                      }))}
+                      onViewAll={
+                        liquidationRecentActivities.length > 3
+                          ? () => {
                               setRecentActivityDialogTitle("Liquidation Activity");
                               setRecentActivityDialogEntries(liquidationRecentActivities);
                               setRecentActivityDialogOpen(true);
-                            }}
-                          >
-                            View all recent activities
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
-                        No review activity yet.
-                      </div>
-                    )}
+                            }
+                          : undefined
+                      }
+                      className="border-0 bg-transparent p-0 shadow-none"
+                      headerClassName="mb-2"
+                      emptyMessage="No recent activity yet."
+                      emptyDescription="Liquidation review activity will appear here once the report is processed."
+                    />
                   </DetailSectionBlock>
                 </DetailInfoCard>
 
@@ -5015,12 +5014,27 @@ export default function AdminPortal({ section }: { section: string }) {
                                 )}
                               </div>
 
-                              <div className="space-y-1 rounded-xl border border-border/50 bg-muted/10 p-3">
-                                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Recent Activity</p>
-                                <p className="text-sm text-foreground">{latestActivity ? formatStatusLabel(latestActivity.action) : formatStatusLabel(record.status)}</p>
-                                <p className="text-xs text-muted-foreground">{formatDateTimeLabel(latestActivity?.changedAt ?? record.updatedAt)}</p>
-                                {latestActivity?.adminRemarks ? <p className="text-xs text-muted-foreground">{latestActivity.adminRemarks}</p> : null}
-                              </div>
+                              <RecentActivityPreview
+                                title="Recent Activity"
+                                activities={
+                                  record.revisionHistory?.length
+                                    ? record.revisionHistory.map((entry, index) => ({
+                                        id: `${record.id}-${entry.action}-${entry.changedAt}-${index}`,
+                                        message: formatStatusLabel(entry.action),
+                                        note: entry.adminRemarks || undefined,
+                                        timestamp: entry.changedAt,
+                                        timestampLabel: formatDateTimeLabel(entry.changedAt),
+                                      }))
+                                    : [{
+                                        id: `${record.id}-status`,
+                                        message: formatStatusLabel(record.status),
+                                        timestamp: record.updatedAt,
+                                        timestampLabel: formatDateTimeLabel(record.updatedAt),
+                                      }]
+                                }
+                                className="border-border/50 bg-muted/10 p-3 shadow-none"
+                                headerClassName="mb-2"
+                              />
 
                               <div className="flex items-center justify-end gap-2">
                                 <Button type="button" size="sm" variant="outline" onClick={() => openLiquidationDetails(record)}>
@@ -8289,23 +8303,16 @@ export default function AdminPortal({ section }: { section: string }) {
               Full activity history for this record.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
-            {recentActivityDialogEntries.length ? (
-              recentActivityDialogEntries.map((entry) => (
-                <div key={entry.key} className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/10 p-3">
-                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${entry.dotClassName}`} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{entry.title}</p>
-                    {entry.timestamp ? <p className="mt-0.5 text-xs text-muted-foreground">{entry.timestamp}</p> : null}
-                    {entry.note ? <p className="mt-1 text-xs italic text-muted-foreground">{entry.note}</p> : null}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-xl border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
-                No recent activity yet.
-              </div>
-            )}
+          <div className="max-h-[70vh] overflow-y-auto pr-1">
+            <RecentActivityList
+              activities={recentActivityDialogEntries.map((entry) => ({
+                id: entry.key,
+                message: entry.title,
+                note: entry.note || undefined,
+                timestamp: entry.timestamp,
+                timestampLabel: entry.timestamp,
+              }))}
+            />
           </div>
         </DialogContent>
       </Dialog>
