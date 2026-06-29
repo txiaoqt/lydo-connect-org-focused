@@ -8329,11 +8329,6 @@ Validated {validatedDate}</p>
             approvedOrgActivityCount,
             semesterPeriod?.orgLedTiers,
           );
-          const hasValidatedResult = isQualified || isNotQualified;
-          const displayedFinalScore = hasValidatedResult ? activeEntry.pointsEarned : scoreBreakdown.totalScore;
-          const displayedOrgBonus = hasValidatedResult
-            ? Math.max(0, displayedFinalScore - scoreBreakdown.cityLedPercent)
-            : scoreBreakdown.orgLedBonus;
 
           const revHistoryForLog = revHistory.filter(
             (r) => !(r.action === "submitted" && activeEntry.submittedAt)
@@ -8805,7 +8800,7 @@ Validated {validatedDate}</p>
                             </div>
                             <div className="flex items-center justify-between gap-3">
                               <dt className="text-muted-foreground">Organization Bonus</dt>
-                              <dd className="font-semibold tabular-nums text-foreground">+{displayedOrgBonus}%</dd>
+                              <dd className="font-semibold tabular-nums text-foreground">+{scoreBreakdown.orgLedBonus}%</dd>
                             </div>
                             <div className="flex items-end justify-between gap-3 border-t border-border/60 pt-2">
                               <dt className="font-medium text-foreground">Final Score</dt>
@@ -8815,7 +8810,7 @@ Validated {validatedDate}</p>
                                   isQualified ? "text-green-700" : isNotQualified ? "text-destructive" : "text-foreground",
                                 )}
                               >
-                                {displayedFinalScore}%
+                                {scoreBreakdown.totalScore}%
                               </dd>
                             </div>
                             <div className="flex items-center justify-between gap-3">
@@ -8829,7 +8824,7 @@ Validated {validatedDate}</p>
                                 "h-full rounded-full transition-all",
                                 isQualified ? "bg-green-500" : isNotQualified ? "bg-destructive" : "bg-primary/70",
                               )}
-                              style={{ width: `${Math.min(displayedFinalScore, 100)}%` }}
+                              style={{ width: `${Math.min(scoreBreakdown.totalScore, 100)}%` }}
                             />
                             <div
                               className="absolute top-0 h-full w-0.5 bg-foreground/40"
@@ -8919,7 +8914,7 @@ Validated {validatedDate}</p>
                         <div className="grid grid-cols-3 gap-2.5">
                           {[
                             { label: "City-Led", value: `${scoreBreakdown.cityLedPercent}%` },
-                            { label: "Bonus", value: `+${displayedOrgBonus}%` },
+                            { label: "Bonus", value: `+${scoreBreakdown.orgLedBonus}%` },
                             { label: "Threshold", value: `${activeEntry.pointsRequired}%` },
                           ].map((metric) => (
                             <div key={metric.label} className="min-w-0 rounded-lg border border-border/60 bg-muted/20 p-3">
