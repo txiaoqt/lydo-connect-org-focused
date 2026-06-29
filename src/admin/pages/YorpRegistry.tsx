@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Building2, ClipboardCheck, Download, Eye, RefreshCw, Search } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  ClipboardCheck,
+  Download,
+  Eye,
+  MapPin,
+  RefreshCw,
+  Search,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import "./yorp-registry.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExportReportDialog } from "@/components/reports/ExportReportDialog";
@@ -35,6 +48,58 @@ const isYorpRenewed = (org: OrganizationProfile) =>
 
 const renderOrFallback = (value?: string | null) =>
   value && value.trim().length ? value : "Not available";
+
+function MobileYorpOrganizationCard({
+  organization,
+  index,
+  onViewDetails,
+}: {
+  organization: OrganizationProfile;
+  index: number;
+  onViewDetails: () => void;
+}) {
+  const location = [organization.barangay, organization.district].filter(Boolean);
+  return (
+    <article className="mobile-yorp-card">
+      <div className="mobile-yorp-card-header">
+        <div className="mobile-yorp-heading">
+          <span className="mobile-yorp-index">#{index}</span>
+          <h3>
+            {organization.organizationName || <span className="italic text-muted-foreground">Unnamed</span>}
+          </h3>
+        </div>
+        <PortalStatusBadge status={organization.profileStatus} />
+      </div>
+
+      <div className="mobile-yorp-summary">
+        <p>
+          {location.length ? (
+            <>
+              {location[0]}
+              {location[1] ? ` \u00b7 ${location[1]}` : ""}
+            </>
+          ) : (
+            "Not available"
+          )}
+        </p>
+        <p>{renderOrFallback(organization.majorClassification)}</p>
+        <p className="mobile-yorp-email">
+          {renderOrFallback(organization.organizationEmail || organization.contactNumber)}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        className="mobile-yorp-details-action"
+        onClick={onViewDetails}
+        aria-label={`View details for ${organization.organizationName || "organization"}`}
+      >
+        <span>View organization details</span>
+        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+      </button>
+    </article>
+  );
+}
 
 export function YorpRegistryPage() {
   const { state } = useLydoConnect();
@@ -134,7 +199,7 @@ export function YorpRegistryPage() {
   };
 
   return (
-    <div className="yorp-registry-page space-y-4 sm:space-y-6">
+    <div className="yorp-registry-page admin-yorp-registry-page space-y-4 sm:space-y-6">
       <div className="registry-summary-grid grid grid-cols-3 gap-2 lg:hidden">
         {[
           { label: "Total Organizations", value: stats.total, icon: Building2 },
@@ -170,11 +235,12 @@ export function YorpRegistryPage() {
             onClick={() => setExportDialogOpen(true)}
           >
             <Download className="mr-2 h-4 w-4" />
-            Export
+            <span className="lg:hidden">Export Registry</span>
+            <span className="hidden lg:inline">Export</span>
           </Button>
         }
       >
-        <div className="registry-filter-grid mb-4 grid grid-cols-2 gap-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.8fr))]">
+        <div className="registry-filter-grid mobile-filter-grid mb-4 grid grid-cols-2 gap-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.8fr))]">
           <div className="registry-search relative col-span-2 min-w-0 xl:col-span-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
             <Input
@@ -248,43 +314,17 @@ export function YorpRegistryPage() {
           />
         ) : (
           <>
-            <div className="space-y-3 lg:hidden">
+            <p className="mobile-yorp-result-count lg:hidden">
+              {filtered.length} {filtered.length === 1 ? "organization" : "organizations"}
+            </p>
+            <div className="mobile-yorp-list lg:hidden">
               {filtered.slice(0, mobileVisibleCount).map((org, idx) => (
-                <div key={org.id} className="rounded-xl border border-border/70 bg-background p-4 shadow-sm">
-                  <div className="registry-card-header grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">#{idx + 1}</p>
-                      <p className="registry-name mt-1 break-words text-base font-semibold leading-6 text-foreground">
-                        {org.organizationName || <span className="italic text-muted-foreground">Unnamed</span>}
-                      </p>
-                    </div>
-                    <div className="registry-status max-w-[110px] text-right">
-                      <PortalStatusBadge status={org.profileStatus} />
-                    </div>
-                  </div>
-
-                  <div className="mt-2 space-y-1.5">
-                    <p className="text-sm text-muted-foreground">
-                      {[org.barangay, org.district].filter(Boolean).join(" · ") || "Not available"}
-                    </p>
-                    <p className="text-sm text-foreground">{renderOrFallback(org.majorClassification)}</p>
-                    <p className="registry-card-email min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground">
-                      {renderOrFallback(org.organizationEmail || org.contactNumber)}
-                    </p>
-                  </div>
-
-                  <div className="mt-4">
-                    <Button
-                      variant="ghost"
-                      className="h-10 px-0 text-sm font-medium text-primary hover:text-primary"
-                      title="View details"
-                      onClick={() => setSelectedOrg(org)}
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      View details
-                    </Button>
-                  </div>
-                </div>
+                <MobileYorpOrganizationCard
+                  key={org.id}
+                  organization={org}
+                  index={idx + 1}
+                  onViewDetails={() => setSelectedOrg(org)}
+                />
               ))}
               <p className="px-1 text-xs text-muted-foreground">
                 Showing {Math.min(mobileVisibleCount, filtered.length)} of {filtered.length} organizations
@@ -353,11 +393,12 @@ export function YorpRegistryPage() {
       </PortalSection>
 
       <Dialog open={selectedOrg !== null} onOpenChange={(open) => { if (!open) setSelectedOrg(null); }}>
-        <DialogContent className="yorp-registry-details max-w-2xl max-lg:grid max-lg:w-[calc(100vw-24px)] max-lg:max-w-[520px] max-lg:grid-rows-[auto_minmax(0,1fr)] max-lg:max-h-[calc(100dvh-24px)] max-lg:overflow-hidden max-lg:rounded-2xl max-lg:p-0 max-lg:[&>button]:right-3 max-lg:[&>button]:top-3 max-lg:[&>button]:z-20 max-lg:[&>button]:h-10 max-lg:[&>button]:w-10 max-lg:[&>button]:rounded-full max-lg:[&>button]:border max-lg:[&>button]:border-border/60 max-lg:[&>button]:bg-background">
+        <DialogContent className="yorp-registry-details mobile-yorp-details-modal max-w-2xl">
           {selectedOrg ? (
             <>
+              <DialogTitle className="sr-only">{selectedOrg.organizationName || "Organization"} details</DialogTitle>
               <DialogHeader className="hidden lg:block">
-                <DialogTitle>{selectedOrg.organizationName || "Organization"}</DialogTitle>
+                <h2 className="text-lg font-semibold leading-none tracking-tight">{selectedOrg.organizationName || "Organization"}</h2>
                 {(selectedOrg.barangay || selectedOrg.majorClassification) && (
                   <p className="text-sm text-muted-foreground">
                     {[selectedOrg.barangay, selectedOrg.majorClassification].filter(Boolean).join(" · ")}
@@ -455,6 +496,94 @@ export function YorpRegistryPage() {
                 <Field label="Registered">
                   {new Date(selectedOrg.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
                 </Field>
+              </div>
+
+              <header className="mobile-yorp-modal-header lg:hidden">
+                <div className="organization-identity">
+                  <h2>{selectedOrg.organizationName || "Organization"}</h2>
+                  <p className="organization-location">
+                    {[selectedOrg.barangay, selectedOrg.district].filter(Boolean).join(" · ") || "—"}
+                  </p>
+                  <div className="organization-meta-row">
+                    <PortalStatusBadge status={selectedOrg.profileStatus} />
+                    {selectedOrg.majorClassification || selectedOrg.subClassification ? (
+                      <span className="organization-classification">
+                        {[selectedOrg.majorClassification, selectedOrg.subClassification].filter(Boolean).join(" · ")}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </header>
+
+              <div className="mobile-yorp-details-scroll lg:hidden">
+                <div className="mobile-yorp-details-body">
+                  <MobileDetailsSection title="Registration" icon={ClipboardCheck}>
+                    <div className="mobile-yorp-registration-grid">
+                      <MobileField label="Registration No.">
+                        <span className="font-mono">{selectedOrg.organizationIdentifierNumber || "—"}</span>
+                      </MobileField>
+                      <MobileField label="YORP Registration Year">
+                        {selectedOrg.yorpRegisteredYear != null ? selectedOrg.yorpRegisteredYear : "—"}
+                      </MobileField>
+                      <MobileField label="YORP Renewed Year">
+                        {selectedOrg.yorpRenewedYear != null ? selectedOrg.yorpRenewedYear : "—"}
+                      </MobileField>
+                    </div>
+                  </MobileDetailsSection>
+
+                  <MobileDetailsSection title="Contact & Location" icon={MapPin}>
+                    <div className="mobile-yorp-detail-grid contact-detail-grid">
+                      <MobileField label="Contact Number">{selectedOrg.contactNumber || "—"}</MobileField>
+                      <MobileField label="District">{selectedOrg.district || "—"}</MobileField>
+                      <MobileField className="details-field--full" label="Email">{selectedOrg.organizationEmail || "—"}</MobileField>
+                      <MobileField className="details-field--full" label="Address">{selectedOrg.address || "—"}</MobileField>
+                      <MobileField className="details-field--full" label="Facebook">
+                        {selectedOrg.facebookPageUrl ? (
+                          <a href={selectedOrg.facebookPageUrl} target="_blank" rel="noreferrer" title={selectedOrg.facebookPageUrl}>
+                            {selectedOrg.facebookPageUrl}
+                          </a>
+                        ) : "—"}
+                      </MobileField>
+                    </div>
+                  </MobileDetailsSection>
+
+                  <MobileDetailsSection title="Leadership" icon={Users}>
+                    <div className="mobile-yorp-detail-grid leadership-detail-grid">
+                      <MobileField label="Representative">{selectedOrg.representativeName || "—"}</MobileField>
+                      <MobileField label="Adviser">{selectedOrg.adviserName || "—"}</MobileField>
+                    </div>
+                  </MobileDetailsSection>
+
+                  <MobileDetailsSection title="Classification & Advocacies" icon={Building2}>
+                    <div className="mobile-yorp-detail-grid classification-detail-grid">
+                      <MobileField label="Major">{selectedOrg.majorClassification || "—"}</MobileField>
+                      <MobileField label="Sub-classification">{selectedOrg.subClassification || "—"}</MobileField>
+                    </div>
+                    <div className="mobile-yorp-advocacies">
+                      <p className="mobile-yorp-detail-label">Advocacies</p>
+                      {selectedOrg.advocacies.length > 0 ? (
+                        <div className="advocacy-tags">
+                          {selectedOrg.advocacies.map((advocacy) => (
+                            <span key={advocacy} className="advocacy-tag">{advocacy}</span>
+                          ))}
+                        </div>
+                      ) : <p className="mobile-yorp-detail-value">—</p>}
+                    </div>
+                  </MobileDetailsSection>
+
+                  <MobileDetailsSection title="Record Information" icon={CalendarDays}>
+                    <div className="mobile-yorp-detail-grid record-detail-grid">
+                      {selectedOrg.verifiedAt ? (
+                        <MobileField label="Verified">
+                          {new Date(selectedOrg.verifiedAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+                        </MobileField>
+                      ) : null}
+                      <MobileField label="Registered">
+                        {new Date(selectedOrg.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+                      </MobileField>
+                    </div>
+                  </MobileDetailsSection>
+                </div>
               </div>
 
               <div className="yorp-registry-details__body min-h-0 overflow-y-auto overscroll-contain lg:hidden">
@@ -591,13 +720,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function MobileDetailsSection({ title, children }: { title: string; children: React.ReactNode }) {
+function MobileDetailsSection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon?: LucideIcon;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="border-t border-border/60 pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">
-        {title}
-      </h3>
-      <div className="mt-3">{children}</div>
+    <section className="mobile-yorp-section">
+      <div className="mobile-modal-section-heading">
+        {Icon ? <Icon aria-hidden="true" /> : null}
+        <h3>{title}</h3>
+      </div>
+      <div className="mobile-yorp-section-content">{children}</div>
     </section>
   );
 }
@@ -612,9 +750,9 @@ function MobileField({
   className?: string;
 }) {
   return (
-    <div className={className}>
-      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground/75">{label}</p>
-      <div className="mt-1 text-[0.9rem] font-medium leading-6 text-foreground">{children}</div>
+    <div className={`mobile-yorp-detail-field ${className}`}>
+      <p className="mobile-yorp-detail-label">{label}</p>
+      <div className="mobile-yorp-detail-value">{children}</div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ begin
   ) then
     alter table public.required_document_types
       add constraint required_document_types_template_scope_check
-      check (template_scope in ('document_submission', 'move', 'other'));
+      check (template_scope in ('document_submission', 'other'));
   end if;
 end
 $$;
@@ -23,7 +23,7 @@ $$;
 update public.required_document_types
 set template_scope = 'document_submission'
 where template_scope is null
-   or template_scope not in ('document_submission', 'move', 'other');
+   or template_scope not in ('document_submission', 'other');
 
 drop function if exists public.create_admin_template_document(text, text, text, text);
 create or replace function public.create_admin_template_document(
@@ -64,7 +64,7 @@ begin
   end if;
 
   _resolved_scope := case
-    when _template_scope in ('document_submission', 'move', 'other') then _template_scope
+    when _template_scope in ('document_submission', 'other') then _template_scope
     else 'document_submission'
   end;
 
@@ -148,7 +148,7 @@ begin
   end if;
 
   _resolved_scope := case
-    when _template_scope in ('document_submission', 'move', 'other') then _template_scope
+    when _template_scope in ('document_submission', 'other') then _template_scope
     else 'document_submission'
   end;
 

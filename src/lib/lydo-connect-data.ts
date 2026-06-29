@@ -267,109 +267,6 @@ export type YPOPPeriod = {
   updatedAt: string;
 };
 
-export type MOVEApplicationStatus =
-  | "draft"
-  | "submitted"
-  | "under_review"
-  | "needs_revision"
-  | "approved_for_ftf_green"
-  | "rejected_red"
-  | "completed";
-
-export type MOVEOpportunityType =
-  | "international_delegation"
-  | "national_delegation"
-  | "seminar_internship_sports"
-  | "academic_research"
-  | "cultural_exchange";
-
-export type MOVERequirementPhase = "pre_application" | "post_program";
-
-export type MOVERequirementKey =
-  | "move_form"
-  | "valid_id"
-  | "parent_consent"
-  | "expected_expenditures"
-  | "barangay_residency"
-  | "invitation_letter"
-  | "acceptance_letter"
-  | "endorsement_letter"
-  | "good_moral"
-  | "kk_profiling"
-  | "post_delegation_report";
-
-export type MOVERequirementDefinition = {
-  key: MOVERequirementKey;
-  label: string;
-  description: string;
-  required: boolean;
-  phase: MOVERequirementPhase;
-};
-
-export type MOVEApplication = {
-  id: string;
-  organizationId: string;
-  submittedBy: string;
-  programTitle: string;
-  opportunityType: MOVEOpportunityType;
-  organizerName: string;
-  location: string;
-  invitationSource: string;
-  startDate: string;
-  endDate: string;
-  expectedExpenseTotal: number;
-  approvedAssistancePercent: number | null;
-  status: MOVEApplicationStatus;
-  adminRemarks: string;
-  applicantNote: string;
-  submittedAt: string;
-  reviewedAt: string;
-  completedAt: string;
-  revisionHistory?: Array<{ action: string; adminRemarks: string; changedAt: string }>;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type MOVEFile = {
-  id: string;
-  applicationId: string;
-  organizationId: string;
-  requirementKey: MOVERequirementKey;
-  requirementPhase: MOVERequirementPhase;
-  fileName: string;
-  fileUrl: string;
-  fileType: string;
-  uploadedAt: string;
-};
-
-export const MOVE_OPPORTUNITY_LABELS: Record<MOVEOpportunityType, string> = {
-  international_delegation: "International Delegation",
-  national_delegation: "National Delegation / NCR",
-  seminar_internship_sports: "Seminar / Internship / Sports Representative",
-  academic_research: "Academic / Research Work",
-  cultural_exchange: "Cultural Exchange Delegation",
-};
-
-export const MOVE_REQUIREMENTS: MOVERequirementDefinition[] = [
-  {
-    key: "move_form",
-    label: "Accomplished MOVE Application Form (PDF)",
-    description: "Download the official MOVE form, accomplish it, then upload the scanned or soft-copy PDF here.",
-    required: true,
-    phase: "pre_application",
-  },
-];
-
-export const computeMoveAssistanceBracket = (expectedExpenseTotal: number) => {
-  if (expectedExpenseTotal >= 500001) {
-    return { label: "10%", minPercent: 10, maxPercent: 10 };
-  }
-  if (expectedExpenseTotal >= 100001) {
-    return { label: "10% - 20%", minPercent: 10, maxPercent: 20 };
-  }
-  return { label: "20% - 30%", minPercent: 20, maxPercent: 30 };
-};
-
 export type BudgetRequestType = "regular" | "ypop_incentive";
 
 export type RequiredDocumentType = {
@@ -380,12 +277,11 @@ export type RequiredDocumentType = {
   sortOrder: number;
   isRequired: boolean;
   isActive: boolean;
-  templateScope: "document_submission" | "move" | "other";
+  templateScope: "document_submission" | "other";
 };
 
 export const templateScopeLabelMap: Record<RequiredDocumentType["templateScope"], string> = {
   document_submission: "Document Submissions",
-  move: "MOVE Template",
   other: "Other Templates",
 };
 
@@ -898,8 +794,6 @@ export type LydoSeedState = {
   ypopOrgActivityFiles: YPOPOrgActivityFile[];
   ypopCityActivities: YPOPCityActivity[];
   ypopPeriods: YPOPPeriod[];
-  moveApplications: MOVEApplication[];
-  moveFiles: MOVEFile[];
 };
 
 const nowIso = new Date().toISOString();
@@ -1780,8 +1674,6 @@ export const seedState: LydoSeedState = {
       updatedAt: "2026-05-01T00:00:00.000Z",
     },
   ],
-  moveApplications: [],
-  moveFiles: [],
   inquiries: [],
 };
 
@@ -1850,10 +1742,39 @@ export const statusLabelMap: Record<string, string> = {
   qualified: "Qualified",
   not_qualified: "Not Qualified",
   pending_verification: "Pending Verification",
+  confirmed: "Participation Confirmed",
   approved: "Approved",
   rejected: "Rejected",
   reviewed: "Reviewed",
   closed: "Closed",
+  open: "Open",
+  upcoming: "Upcoming",
+  ongoing: "Ongoing",
+  past: "Past",
+  archived: "Archived",
+  postponed: "Postponed",
+  cancelled: "Cancelled",
+  active: "Active",
+  partner: "Partner",
+  pending: "Pending",
+  inactive: "Inactive",
+  registered: "Registered",
+  attended: "Attended",
+  partial: "Partial",
+  issue: "Issue",
+  late: "Late",
+  missing: "Missing",
+  compliant: "Compliant",
+  failed: "Failed",
+  needs_reupload: "Needs Re-upload",
+  mismatch: "Mismatch",
+  received: "Received",
+  in_progress: "In Progress",
+  resolved: "Resolved",
+  finalized: "Finalized",
+  due_soon: "Due Soon",
+  enabled: "Enabled",
+  disabled: "Disabled",
 };
 
 export const complianceSummaryHighlights = [

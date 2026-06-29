@@ -232,11 +232,7 @@ begin
     'ypop_org_activities',
     coalesce((select jsonb_agg(to_jsonb(yoa) order by yoa.created_at desc) from public.ypop_org_activities yoa), '[]'::jsonb),
     'ypop_org_activity_files',
-    coalesce((select jsonb_agg(to_jsonb(yoaf) order by yoaf.uploaded_at desc) from public.ypop_org_activity_files yoaf), '[]'::jsonb),
-    'move_applications',
-    coalesce((select jsonb_agg(to_jsonb(ma) order by ma.created_at desc) from public.move_applications ma), '[]'::jsonb),
-    'move_files',
-    coalesce((select jsonb_agg(to_jsonb(mf) order by mf.uploaded_at desc) from public.move_files mf), '[]'::jsonb)
+    coalesce((select jsonb_agg(to_jsonb(yoaf) order by yoaf.uploaded_at desc) from public.ypop_org_activity_files yoaf), '[]'::jsonb)
   );
 end;
 $$;

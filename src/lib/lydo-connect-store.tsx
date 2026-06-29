@@ -13,8 +13,6 @@ import {
   type LiquidationReport,
   type LiquidationReportFile,
   type LydoSeedState,
-  type MOVEApplication,
-  type MOVEFile,
   type NewsRelease,
   type NotificationRecord,
   type InquiryRecord,
@@ -141,11 +139,6 @@ type LydoConnectContextValue = {
   createYPOPPeriod: (period: YPOPPeriod) => void;
   updateYPOPPeriod: (id: string, patch: UpdatePatch<YPOPPeriod>) => void;
   deleteYPOPPeriod: (id: string) => void;
-  createMoveApplication: (application: MOVEApplication) => void;
-  updateMoveApplication: (id: string, patch: UpdatePatch<MOVEApplication>) => void;
-  deleteMoveApplication: (id: string) => void;
-  createMoveFile: (file: MOVEFile) => void;
-  deleteMoveFile: (id: string) => void;
 };
 
 const LydoConnectContext = createContext<LydoConnectContextValue | undefined>(undefined);
@@ -272,12 +265,6 @@ const readState = (): LydoConnectState => {
         const storedIds = new Set(stored.map((p) => p.id));
         return [...stored, ...seedState.ypopPeriods.filter((p) => !storedIds.has(p.id) && !legacySeedIds.has(p.id))];
       })(),
-      moveApplications: (() => {
-        const stored = ((parsed.moveApplications ?? []) as MOVEApplication[]).filter((application) => !legacySeedIds.has(application.id));
-        const storedIds = new Set(stored.map((application) => application.id));
-        return [...stored, ...seedState.moveApplications.filter((application) => !storedIds.has(application.id) && !legacySeedIds.has(application.id))];
-      })(),
-      moveFiles: ((parsed.moveFiles ?? seedState.moveFiles) as MOVEFile[]).filter((file) => !legacySeedIds.has(file.id)),
     };
   } catch {
     return seedState;
@@ -385,10 +372,6 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
           ypopEventFiles: snapshot.ypopEventFiles ? mergeById(current.ypopEventFiles, snapshot.ypopEventFiles) : current.ypopEventFiles,
           ypopOrgActivities: snapshot.ypopOrgActivities ? mergeById(current.ypopOrgActivities, snapshot.ypopOrgActivities) : current.ypopOrgActivities,
           ypopOrgActivityFiles: snapshot.ypopOrgActivityFiles ? mergeById(current.ypopOrgActivityFiles, snapshot.ypopOrgActivityFiles) : current.ypopOrgActivityFiles,
-          moveApplications: snapshot.moveApplications
-            ? mergeById(current.moveApplications, snapshot.moveApplications)
-            : current.moveApplications,
-          moveFiles: snapshot.moveFiles ? mergeById(current.moveFiles, snapshot.moveFiles) : current.moveFiles,
         }));
       } catch (error) {
         console.error("Failed to sync Y-TRACE state from Supabase:", error);
@@ -446,12 +429,6 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
           const mergedYpopOrgActivityFiles = snapshot.ypopOrgActivityFiles
             ? mergeById(current.ypopOrgActivityFiles, snapshot.ypopOrgActivityFiles)
             : current.ypopOrgActivityFiles;
-          const mergedMoveApplications = snapshot.moveApplications
-            ? mergeById(current.moveApplications, snapshot.moveApplications)
-            : current.moveApplications;
-          const mergedMoveFiles = snapshot.moveFiles
-            ? mergeById(current.moveFiles, snapshot.moveFiles)
-            : current.moveFiles;
           const mergedInquiries = snapshot.inquiries ? mergeById(current.inquiries, snapshot.inquiries) : current.inquiries;
 
           return {
@@ -462,8 +439,6 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
             ypopEventFiles: mergedYpopEventFiles,
             ypopOrgActivities: mergedYpopOrgActivities,
             ypopOrgActivityFiles: mergedYpopOrgActivityFiles,
-            moveApplications: mergedMoveApplications,
-            moveFiles: mergedMoveFiles,
             inquiries: mergedInquiries,
           };
         }),
@@ -845,35 +820,6 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
               : current.ypopCityActivities,
           };
         }),
-      createMoveApplication: (application) =>
-        setState((current) => ({
-          ...current,
-          moveApplications: [application, ...current.moveApplications],
-        })),
-      updateMoveApplication: (id, patch) =>
-        setState((current) => ({
-          ...current,
-          moveApplications: applyPatch(current.moveApplications, id, patch).map((application) => ({
-            ...application,
-            updatedAt: application.id === id ? new Date().toISOString() : application.updatedAt,
-          })),
-        })),
-      deleteMoveApplication: (id) =>
-        setState((current) => ({
-          ...current,
-          moveApplications: removeById(current.moveApplications, id),
-          moveFiles: current.moveFiles.filter((file) => file.applicationId !== id),
-        })),
-      createMoveFile: (file) =>
-        setState((current) => ({
-          ...current,
-          moveFiles: [file, ...current.moveFiles],
-        })),
-      deleteMoveFile: (id) =>
-        setState((current) => ({
-          ...current,
-          moveFiles: removeById(current.moveFiles, id),
-        })),
     }),
     [state],
   );

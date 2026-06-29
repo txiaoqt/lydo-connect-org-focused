@@ -6,8 +6,6 @@ import type {
   LiquidationReport,
   LiquidationReportFile,
   LydoSeedState,
-  MOVEApplication,
-  MOVEFile,
   InquiryRecord,
   OrganizationProfile,
   NewsRelease,
@@ -33,7 +31,6 @@ const TEMPLATE_FILES_BUCKET = "template-files";
 const BUDGET_REQUEST_FILES_BUCKET = "budget-request-files";
 const LIQUIDATION_REPORT_FILES_BUCKET = "liquidation-report-files";
 const YPOP_FILES_BUCKET = "ypop-files";
-const MOVE_FILES_BUCKET = "move-files";
 const NEWS_RELEASE_IMAGES_BUCKET = "news-release-images";
 const STORAGE_URI_PREFIX = "storage://";
 
@@ -46,7 +43,7 @@ type RequiredDocumentTypeRow = {
   sort_order: number | null;
   is_required: boolean | null;
   is_active: boolean | null;
-  template_scope?: "document_submission" | "move" | "other" | null;
+  template_scope?: "document_submission" | "other" | null;
   updated_at?: string | null;
 };
 
@@ -353,43 +350,6 @@ type YpopOrgActivityFileRow = {
   uploaded_at: string;
 };
 
-type MoveApplicationRow = {
-  id: string;
-  organization_id: string;
-  submitted_by: string | null;
-  program_title: string;
-  opportunity_type: string;
-  organizer_name: string | null;
-  location: string | null;
-  invitation_source: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  expected_expense_total: number;
-  approved_assistance_percent: number | null;
-  status: string;
-  admin_remarks: string | null;
-  applicant_note: string | null;
-  submitted_at: string | null;
-  reviewed_at: string | null;
-  completed_at: string | null;
-  revision_history: unknown[] | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type MoveFileRow = {
-  id: string;
-  application_id: string;
-  organization_id: string;
-  requirement_key: string;
-  requirement_phase: string;
-  file_name: string;
-  file_url: string;
-  file_type: string;
-  file_size: number | null;
-  uploaded_at: string;
-};
-
 type InquiryRow = {
   id: string;
   organization_id: string;
@@ -428,8 +388,6 @@ type AdminPortalSnapshot = {
   ypop_event_files?: YpopEventFileRow[];
   ypop_org_activities?: YpopOrgActivityRow[];
   ypop_org_activity_files?: YpopOrgActivityFileRow[];
-  move_applications?: MoveApplicationRow[];
-  move_files?: MoveFileRow[];
   inquiries?: InquiryRow[];
 };
 
@@ -810,42 +768,6 @@ const mapYpopOrgActivityFile = (row: YpopOrgActivityFileRow): YPOPOrgActivityFil
   uploadedAt: row.uploaded_at,
 });
 
-const mapMoveApplication = (row: MoveApplicationRow): MOVEApplication => ({
-  id: row.id,
-  organizationId: row.organization_id,
-  submittedBy: row.submitted_by ?? "",
-  programTitle: row.program_title,
-  opportunityType: row.opportunity_type as MOVEApplication["opportunityType"],
-  organizerName: row.organizer_name ?? "",
-  location: row.location ?? "",
-  invitationSource: row.invitation_source ?? "",
-  startDate: formatDateOnly(row.start_date),
-  endDate: formatDateOnly(row.end_date),
-  expectedExpenseTotal: normalizeNumeric(row.expected_expense_total),
-  approvedAssistancePercent: row.approved_assistance_percent ?? null,
-  status: row.status as MOVEApplication["status"],
-  adminRemarks: row.admin_remarks ?? "",
-  applicantNote: row.applicant_note ?? "",
-  submittedAt: row.submitted_at ?? "",
-  reviewedAt: row.reviewed_at ?? "",
-  completedAt: row.completed_at ?? "",
-  revisionHistory: (row.revision_history ?? []) as MOVEApplication["revisionHistory"],
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
-
-const mapMoveFile = (row: MoveFileRow): MOVEFile => ({
-  id: row.id,
-  applicationId: row.application_id,
-  organizationId: row.organization_id,
-  requirementKey: row.requirement_key as MOVEFile["requirementKey"],
-  requirementPhase: row.requirement_phase as MOVEFile["requirementPhase"],
-  fileName: row.file_name,
-  fileUrl: row.file_url,
-  fileType: row.file_type,
-  uploadedAt: row.uploaded_at,
-});
-
 const fetchOrganizationProfile = async (userId: string) => {
   const { data, error } = await supabase!
     .from("organization_profiles")
@@ -1015,7 +937,7 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
 
   const budgetRequestIds = budgetRows.map((row) => row.id);
   const liquidationReportIds = liquidationRows.map((row) => row.id);
-  const [budgetFileRows, liquidationFileRows, ypopEntryRows, ypopFileRows, ypopEventParticipationRows, ypopEventFileRows, ypopOrgActivityRows, ypopOrgActivityFileRows, moveApplicationRows, moveFileRows, inquiryRows] = await Promise.all([
+  const [budgetFileRows, liquidationFileRows, ypopEntryRows, ypopFileRows, ypopEventParticipationRows, ypopEventFileRows, ypopOrgActivityRows, ypopOrgActivityFileRows, inquiryRows] = await Promise.all([
     fetchBudgetRequestFiles(budgetRequestIds),
     fetchLiquidationReportFiles(liquidationReportIds),
     supabase!.from("ypop_entries").select("*").eq("organization_id", organizationProfile.id).order("created_at", { ascending: false }).then((r) => r.data ?? []),
@@ -1024,8 +946,6 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
     supabase!.from("ypop_event_files").select("*").eq("organization_id", organizationProfile.id).then((r) => r.data ?? []),
     supabase!.from("ypop_org_activities").select("*").eq("organization_id", organizationProfile.id).order("created_at", { ascending: false }).then((r) => r.data ?? []),
     supabase!.from("ypop_org_activity_files").select("*").eq("organization_id", organizationProfile.id).order("uploaded_at", { ascending: false }).then((r) => r.data ?? []),
-    supabase!.from("move_applications").select("*").eq("organization_id", organizationProfile.id).order("created_at", { ascending: false }).then((r) => r.data ?? []),
-    supabase!.from("move_files").select("*").eq("organization_id", organizationProfile.id).order("uploaded_at", { ascending: false }).then((r) => r.data ?? []),
     fetchInquiries(organizationProfile.id),
   ]);
 
@@ -1037,8 +957,6 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
   remoteState.ypopEventFiles = (ypopEventFileRows as YpopEventFileRow[]).map(mapYpopEventFile);
   remoteState.ypopOrgActivities = (ypopOrgActivityRows as YpopOrgActivityRow[]).map(mapYpopOrgActivity);
   remoteState.ypopOrgActivityFiles = (ypopOrgActivityFileRows as YpopOrgActivityFileRow[]).map(mapYpopOrgActivityFile);
-  remoteState.moveApplications = (moveApplicationRows as MoveApplicationRow[]).map(mapMoveApplication);
-  remoteState.moveFiles = (moveFileRows as MoveFileRow[]).map(mapMoveFile);
   remoteState.inquiries = inquiryRows.map(mapInquiry);
 
   remoteState.documentSubmissions = [];
@@ -1158,8 +1076,6 @@ export const loadAdminPortalSupabaseState = async (): Promise<Partial<LydoSeedSt
       ypopEventFiles: (snapshot.ypop_event_files ?? []).map(mapYpopEventFile),
       ypopOrgActivities: (snapshot.ypop_org_activities ?? []).map(mapYpopOrgActivity),
       ypopOrgActivityFiles: (snapshot.ypop_org_activity_files ?? []).map(mapYpopOrgActivityFile),
-      moveApplications: (snapshot.move_applications ?? []).map(mapMoveApplication),
-      moveFiles: (snapshot.move_files ?? []).map(mapMoveFile),
       inquiries: (snapshot.inquiries ?? []).map(mapInquiry),
     };
   }
@@ -2277,7 +2193,7 @@ export const createTemplateRecordInSupabase = async (params: {
   name: string;
   description: string;
   templateDescription: string;
-  templateScope: "document_submission" | "move" | "other";
+  templateScope: "document_submission" | "other";
 }) => {
   if (!supabase) throw new Error("Supabase is not configured.");
   const adminSession = readAdminSession();
@@ -2305,7 +2221,7 @@ export const updateTemplateRecordInSupabase = async (params: {
   name: string;
   description: string;
   templateDescription: string;
-  templateScope: "document_submission" | "move" | "other";
+  templateScope: "document_submission" | "other";
 }) => {
   if (!supabase) throw new Error("Supabase is not configured.");
   const adminSession = readAdminSession();
@@ -2818,141 +2734,6 @@ export const adminUpdateYpopOrgActivityInSupabase = async (
 };
 
 // ─── Org YORP fields (admin) ─────────────────────────────────
-
-export const createMoveApplicationInSupabase = async (
-  params: Omit<MOVEApplication, "id" | "createdAt" | "updatedAt" | "reviewedAt" | "completedAt">,
-): Promise<MOVEApplication> => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-  const { session, organizationProfile } = await getAuthenticatedOrganizationContext();
-
-  const { data, error } = await supabase
-    .from("move_applications")
-    .insert({
-      organization_id: organizationProfile.id,
-      submitted_by: session.user.id,
-      program_title: params.programTitle,
-      opportunity_type: params.opportunityType,
-      organizer_name: params.organizerName || null,
-      location: params.location || null,
-      invitation_source: params.invitationSource || null,
-      start_date: params.startDate || null,
-      end_date: params.endDate || null,
-      expected_expense_total: params.expectedExpenseTotal ?? 0,
-      approved_assistance_percent: params.approvedAssistancePercent ?? null,
-      status: params.status ?? "draft",
-      admin_remarks: params.adminRemarks ?? "",
-      applicant_note: params.applicantNote ?? "",
-      submitted_at: params.submittedAt || null,
-      reviewed_at: null,
-      completed_at: null,
-      revision_history: params.revisionHistory ?? [],
-    })
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return mapMoveApplication(data as MoveApplicationRow);
-};
-
-export const updateMoveApplicationInSupabase = async (
-  applicationId: string,
-  patch: Partial<Omit<MOVEApplication, "id" | "organizationId" | "createdAt" | "updatedAt">>,
-): Promise<MOVEApplication> => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
-  const dbPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (patch.programTitle !== undefined) dbPatch.program_title = patch.programTitle;
-  if (patch.opportunityType !== undefined) dbPatch.opportunity_type = patch.opportunityType;
-  if (patch.organizerName !== undefined) dbPatch.organizer_name = patch.organizerName || null;
-  if (patch.location !== undefined) dbPatch.location = patch.location || null;
-  if (patch.invitationSource !== undefined) dbPatch.invitation_source = patch.invitationSource || null;
-  if (patch.startDate !== undefined) dbPatch.start_date = patch.startDate || null;
-  if (patch.endDate !== undefined) dbPatch.end_date = patch.endDate || null;
-  if (patch.expectedExpenseTotal !== undefined) dbPatch.expected_expense_total = patch.expectedExpenseTotal;
-  if (patch.approvedAssistancePercent !== undefined) dbPatch.approved_assistance_percent = patch.approvedAssistancePercent;
-  if (patch.status !== undefined) dbPatch.status = patch.status;
-  if (patch.adminRemarks !== undefined) dbPatch.admin_remarks = patch.adminRemarks;
-  if (patch.applicantNote !== undefined) dbPatch.applicant_note = patch.applicantNote;
-  if (patch.submittedAt !== undefined) dbPatch.submitted_at = patch.submittedAt || null;
-  if (patch.reviewedAt !== undefined) dbPatch.reviewed_at = patch.reviewedAt || null;
-  if (patch.completedAt !== undefined) dbPatch.completed_at = patch.completedAt || null;
-  if (patch.revisionHistory !== undefined) dbPatch.revision_history = patch.revisionHistory;
-
-  const { data, error } = await supabase
-    .from("move_applications")
-    .update(dbPatch)
-    .eq("id", applicationId)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return mapMoveApplication(data as MoveApplicationRow);
-};
-
-export const deleteMoveApplicationFromSupabase = async (applicationId: string): Promise<void> => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
-  const { error } = await supabase.from("move_applications").delete().eq("id", applicationId);
-  if (error) throw new Error(error.message);
-};
-
-export const uploadMoveFileToSupabase = async (params: {
-  applicationId: string;
-  organizationId: string;
-  requirementKey: MOVEFile["requirementKey"];
-  requirementPhase: MOVEFile["requirementPhase"];
-  file: File;
-}): Promise<MOVEFile> => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
-  const storageUri = await uploadFileToStorage(MOVE_FILES_BUCKET, params.applicationId, params.file);
-  const { data, error } = await supabase
-    .from("move_files")
-    .insert({
-      application_id: params.applicationId,
-      organization_id: params.organizationId,
-      requirement_key: params.requirementKey,
-      requirement_phase: params.requirementPhase,
-      file_name: params.file.name,
-      file_url: storageUri,
-      file_type: params.file.type || "",
-      file_size: params.file.size,
-    })
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return mapMoveFile(data as MoveFileRow);
-};
-
-export const deleteMoveFileFromSupabase = async (fileId: string, fileUrl: string): Promise<void> => {
-  if (!supabase) throw new Error("Supabase is not configured.");
-
-  await removeStorageObjects([fileUrl]);
-  const { error } = await supabase.from("move_files").delete().eq("id", fileId);
-  if (error) throw new Error(error.message);
-};
-
-export const adminUpdateMoveApplicationInSupabase = async (
-  id: string,
-  patch: Partial<MOVEApplication>,
-): Promise<MOVEApplication> => {
-  const adminSession = getAuthenticatedAdminSession();
-  const { data, error } = await supabase!.rpc("admin_update_move_application", {
-    _session_token: adminSession.sessionToken,
-    _application_id: id,
-    _status: patch.status ?? null,
-    _admin_remarks: patch.adminRemarks ?? null,
-    _approved_assistance_percent: patch.approvedAssistancePercent ?? null,
-    _reviewed_at: patch.reviewedAt || null,
-    _completed_at: patch.completedAt || null,
-    _revision_history: patch.revisionHistory ?? null,
-  });
-  if (error) throw new Error(error.message);
-  const row = Array.isArray(data) ? data[0] : null;
-  if (!row) throw new Error("No data returned from admin_update_move_application.");
-  return mapMoveApplication(row as MoveApplicationRow);
-};
 
 export const adminUpdateOrgYorpFieldsInSupabase = async (
   orgId: string,

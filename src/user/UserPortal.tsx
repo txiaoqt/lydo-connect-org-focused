@@ -100,7 +100,6 @@ import {
   type YPOPOrgActivityFile,
   type YPOPPeriod,
   statusLabelMap,
-  statusToneMap,
   formatSubClassificationLabel,
   subClassificationOptions,
   type OrganizationProfile,
@@ -567,9 +566,6 @@ export default function UserPortal({ section }: { section: string }) {
   const [budgetSortOrder, setBudgetSortOrder] = useState<"newest" | "oldest" | "requested_desc" | "requested_asc">("newest");
   const [budgetRowsPerPage, setBudgetRowsPerPage] = useState<10 | 25 | 50>(10);
   const [budgetPage, setBudgetPage] = useState(1);
-  const [budgetFiltersExpanded, setBudgetFiltersExpanded] = useState(false);
-  const [budgetHasFileOnly, setBudgetHasFileOnly] = useState(false);
-  const [budgetYpopOnly, setBudgetYpopOnly] = useState(false);
   const [budgetForm, setBudgetForm] = useState<BudgetRequest>(() =>
     createBlankBudgetRequest(user?.id ?? "", user?.id ?? ""),
   );
@@ -628,9 +624,12 @@ export default function UserPortal({ section }: { section: string }) {
   useEffect(() => {
     if (section === "budget-request") {
       const ypopEntryId = searchParams.get("ypopEntryId");
-      if (ypopEntryId) {
+      const qualifiedYpopEntry = ypopEntryId
+        ? state.ypopEntries.find((entry) => entry.id === ypopEntryId && entry.status === "qualified")
+        : null;
+      if (qualifiedYpopEntry) {
         const blank = createBlankBudgetRequest(currentProfile?.id ?? "", user?.id ?? "");
-        setBudgetForm({ ...blank, budgetRequestType: "ypop_incentive", ypopEntryId });
+        setBudgetForm({ ...blank, budgetRequestType: "ypop_incentive", ypopEntryId: qualifiedYpopEntry.id });
         setBudgetFileDraft(null);
         setShowBudgetForm(true);
       } else {
@@ -642,7 +641,7 @@ export default function UserPortal({ section }: { section: string }) {
 
   useEffect(() => {
     setBudgetPage(1);
-  }, [budgetSearch, budgetStatusFilter, budgetDateRangeFilter, budgetSortOrder, budgetRowsPerPage, budgetHasFileOnly, budgetYpopOnly]);
+  }, [budgetSearch, budgetStatusFilter, budgetDateRangeFilter, budgetSortOrder, budgetRowsPerPage]);
 
   useEffect(() => {
     setLiquidationPage(1);
@@ -2054,6 +2053,17 @@ export default function UserPortal({ section }: { section: string }) {
     }
 
     const existingBudgetRequest = budgetRequests.find((request) => request.id === budgetForm.id) ?? null;
+    const qualifiedYpopEntry = budgetForm.ypopEntryId
+      ? state.ypopEntries.find((entry) => entry.id === budgetForm.ypopEntryId && entry.status === "qualified")
+      : null;
+    if (!existingBudgetRequest && (budgetForm.budgetRequestType !== "ypop_incentive" || !qualifiedYpopEntry)) {
+      toast({
+        title: "YPOP qualification required",
+        description: "New budget requests can only be created from a qualified YPOP incentive.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (existingBudgetRequest && approvedBudgetStatuses.has(existingBudgetRequest.status)) {
       toast({
         title: "Editing locked",
@@ -4762,19 +4772,8 @@ export default function UserPortal({ section }: { section: string }) {
             <div className="user-budget-requests-page space-y-6">
               <PortalSection
                 title="Budget Requests"
-                description="Create, edit, and submit allocation requests for your organization's activities."
+                description="View and manage budget requests created through qualified YPOP incentives."
                 headerClassName={showBudgetForm ? "hidden lg:block" : "max-lg:gap-3 max-lg:px-3.5 max-lg:pb-2 max-lg:pt-3.5 lg:items-center lg:pb-3"}
-                action={!showBudgetForm && !(searchParams.get("budgetRequestId") && !isBudgetDesktopViewport) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-10 w-full sm:w-auto lg:h-9"
-                    onClick={() => { resetBudgetForm(); setShowBudgetForm(true); }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Budget Request
-                  </Button>
-                ) : undefined}
               >
                 {showBudgetForm ? (
                   <div className="new-budget-request-page space-y-4">
@@ -5126,8 +5125,6 @@ export default function UserPortal({ section }: { section: string }) {
                           if (budgetDateRangeFilter === "90d") return diffDays <= 90;
                           return baseDate.getFullYear() === now.getFullYear();
                         })
-                        .filter((request) => (budgetHasFileOnly ? Boolean(budgetRequestFilesByBudgetId.get(request.id)) : true))
-                        .filter((request) => (budgetYpopOnly ? request.budgetRequestType === "ypop_incentive" : true))
                         .sort((left, right) => {
                           if (budgetSortOrder === "oldest") {
                             return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
@@ -5144,9 +5141,7 @@ export default function UserPortal({ section }: { section: string }) {
                       const hasActiveBudgetFilters =
                         Boolean(budgetSearch.trim()) ||
                         budgetStatusFilter !== "all" ||
-                        budgetDateRangeFilter !== "all" ||
-                        budgetHasFileOnly ||
-                        budgetYpopOnly;
+                        budgetDateRangeFilter !== "all";
                       const totalBudgetPages = Math.max(1, Math.ceil(totalFilteredRequests / budgetRowsPerPage));
                       const safeBudgetPage = Math.min(budgetPage, totalBudgetPages);
                       const startIndex = totalFilteredRequests === 0 ? 0 : (safeBudgetPage - 1) * budgetRowsPerPage;
@@ -5473,15 +5468,6 @@ export default function UserPortal({ section }: { section: string }) {
                                     </select>
                                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                   </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setBudgetFiltersExpanded((current) => !current)}
-                                    className="h-10 w-full justify-center px-2 text-sm"
-                                  >
-                                    <SlidersHorizontal className="mr-2 h-4 w-4" />
-                                    More filters
-                                  </Button>
                                   <div className="relative min-w-0">
                                     <select
                                       value={budgetSortOrder}
@@ -5498,7 +5484,7 @@ export default function UserPortal({ section }: { section: string }) {
                                 </div>
                               </div>
 
-                              <div className="budget-toolbar hidden items-center gap-2.5 lg:grid lg:grid-cols-[minmax(220px,1.4fr)_minmax(135px,0.75fr)_minmax(130px,0.65fr)_auto_minmax(0,1fr)_minmax(150px,auto)]">
+                              <div className="budget-toolbar hidden items-center gap-2.5 lg:grid lg:grid-cols-[minmax(220px,1.4fr)_minmax(135px,0.75fr)_minmax(130px,0.65fr)_minmax(0,1fr)_minmax(150px,auto)]">
                                 <div className="relative min-w-0">
                                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                   <Input
@@ -5536,15 +5522,6 @@ export default function UserPortal({ section }: { section: string }) {
                                   </select>
                                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="h-10 px-3"
-                                  onClick={() => setBudgetFiltersExpanded((current) => !current)}
-                                >
-                                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                                  More filters
-                                </Button>
                                 <div aria-hidden="true" />
                                 <div className="relative min-w-0">
                                   <select
@@ -5560,29 +5537,6 @@ export default function UserPortal({ section }: { section: string }) {
                                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 </div>
                               </div>
-
-                              {budgetFiltersExpanded ? (
-                                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/15 px-3 py-3">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={budgetHasFileOnly ? "default" : "outline"}
-                                    onClick={() => setBudgetHasFileOnly((current) => !current)}
-                                  >
-                                    <Filter className="mr-2 h-3.5 w-3.5" />
-                                    Has file only
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={budgetYpopOnly ? "default" : "outline"}
-                                    onClick={() => setBudgetYpopOnly((current) => !current)}
-                                  >
-                                    <Trophy className="mr-2 h-3.5 w-3.5 text-amber-600" />
-                                    YPOP linked only
-                                  </Button>
-                                </div>
-                              ) : null}
 
                               <div className="hidden text-xs text-muted-foreground lg:block">
                                 {totalFilteredRequests} {hasActiveBudgetFilters ? "matching " : ""}
@@ -6142,12 +6096,10 @@ export default function UserPortal({ section }: { section: string }) {
                                 {selectedBudget?.activityTitle || "Approved budget"}
                               </h2>
                               <div className="flex flex-wrap gap-2">
-                                <Badge
-                                  variant={statusToneMap[selectedMobileReport.status] ?? "secondary"}
-                                  className="max-w-full whitespace-normal text-center capitalize leading-4"
-                                >
-                                  {statusLabelMap[selectedMobileReport.status] ?? selectedMobileReport.status.replaceAll("_", " ")}
-                                </Badge>
+                                <PortalStatusBadge
+                                  status={selectedMobileReport.status}
+                                  className="whitespace-normal"
+                                />
                               </div>
                               {selectedBudget?.purposeCategory ? (
                                 <p className="text-sm text-muted-foreground">{selectedBudget.purposeCategory}</p>
@@ -8955,9 +8907,7 @@ Validated {validatedDate}</p>
                                       {normalizeYpopCityLedPoints(activity.points, activity.category)} pts
                                     </span>
                                     {isVerified ? (
-                                      <span className="status-verified rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                        Verified
-                                      </span>
+                                      <PortalStatusBadge status="verified" />
                                     ) : participation ? (
                                       <PortalStatusBadge status={participation.status} />
                                     ) : (
@@ -9138,9 +9088,7 @@ Validated {validatedDate}</p>
                                           Verified
                                         </span>
                                       ) : participation?.status === "verified" && isMobileYpopDetail ? (
-                                        <span className="status-verified rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                          Verified
-                                        </span>
+                                        <PortalStatusBadge status="verified" />
                                       ) : participation ? (
                                         <PortalStatusBadge status={participation.status} />
                                       ) : (

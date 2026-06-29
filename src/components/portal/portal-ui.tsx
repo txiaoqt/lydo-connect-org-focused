@@ -1,7 +1,6 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { statusLabelMap, statusToneMap } from "@/lib/lydo-connect-data";
+import { StatusBadge } from "@/components/portal/StatusBadge";
 
 const portalIconToneMap = {
   primary: "border-primary/15 bg-primary/10 text-primary",
@@ -50,11 +49,7 @@ export const PortalIconBadge = ({
   );
 };
 
-export const PortalStatusBadge = ({ status }: { status: string }) => (
-  <Badge variant={statusToneMap[status] ?? "secondary"} className="capitalize">
-    {statusLabelMap[status] ?? status.replaceAll("_", " ")}
-  </Badge>
-);
+export const PortalStatusBadge = StatusBadge;
 
 export const PortalMetricCard = ({
   label,

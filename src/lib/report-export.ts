@@ -9,6 +9,7 @@ export type ReportColumn<Row> = {
   label: string;
   value: (row: Row, index: number) => ReportCellValue;
   csvValue?: (row: Row, index: number) => ReportCellValue;
+  csvPreserveLineBreaks?: boolean;
   pdfValue?: (row: Row, index: number) => ReportCellValue;
   xlsxValue?: (row: Row, index: number) => ReportCellValue;
   pdfWidth?: number;
@@ -218,7 +219,13 @@ export const buildCsvContent = <Row,>({ config, rows, totalsRow }: ReportExportO
   const headerRow = config.columns.map((column) => toCsvCell(column.label));
   const bodyRows = rows.map((row, index) =>
     config.columns.map((column) => {
-      const joinedValue = normalizeCellParts((column.csvValue ?? column.value)(row, index)).join("; ");
+      const rawValue = (column.csvValue ?? column.value)(row, index);
+      const joinedValue = column.csvPreserveLineBreaks
+        ? (Array.isArray(rawValue) ? rawValue : [rawValue])
+            .filter((part) => part != null)
+            .map((part) => String(part))
+            .join("; ")
+        : normalizeCellParts(rawValue).join("; ");
       return toCsvCell(sanitizeForSpreadsheet(joinedValue, column.preserveSpreadsheetText));
     }),
   );

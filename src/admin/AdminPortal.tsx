@@ -1,4 +1,10 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import "./admin-news-releases.css";
+import "./admin-inquiries.css";
+import "./admin-template-management.css";
+import "./admin-activity-logs.css";
+import "./admin-ypop-validation-review.css";
+import "./admin-budget-monitoring.css";
 import { useNavigate } from "react-router-dom";
 import { YorpRegistryPage } from "./pages/YorpRegistry";
 import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Bell, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, CircleDollarSign, CircleHelp, ClipboardList, Clock3, Download, Eye, FileText, FolderOpen, Mail, MapPin, Medal, MoreHorizontal, Pencil, Plus, Save, Trash2, Trophy, UserRound, Users, Wallet, X } from "lucide-react";
@@ -43,7 +49,7 @@ import { ExportReportDialog } from "@/components/reports/ExportReportDialog";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { adminNavigationGroups as baseAdminNavigationGroups, buildPublicRecordCode, computeYpopScore, DEFAULT_ORG_LED_TIERS, getApprovedYpopOrgActivityCount, getYpopCityLedPoints, normalizeYpopCityLedPoints, resolveYpopCityLedCategory, templateScopeLabelMap, YPOP_BASE_TOTAL_POINTS, YPOP_CITY_LED_CATEGORY_LABELS, YPOP_CITY_LED_MAX_POINTS, YPOP_SCORE_THRESHOLD, type InquiryRecord, type NewsRelease, type TransparencyPost, type YPOPCityActivity, type YPOPCityActivityCategory, type YPOPEntry, type YPOPEventFile, type YPOPEventParticipation, type YPOPFile, type YPOPOrgActivity, type YPOPOrgActivityFile, type YPOPOrgLedTier, type YPOPPeriod, type YPOPPeriodStatus, type YPOPStatus } from "@/lib/lydo-connect-data";
+import { adminNavigationGroups as baseAdminNavigationGroups, buildPublicRecordCode, computeYpopScore, DEFAULT_ORG_LED_TIERS, getApprovedYpopOrgActivityCount, getYpopCityLedPoints, normalizeYpopCityLedPoints, resolveYpopCityLedCategory, templateScopeLabelMap, YPOP_BASE_TOTAL_POINTS, YPOP_CITY_LED_CATEGORY_LABELS, YPOP_CITY_LED_MAX_POINTS, YPOP_SCORE_THRESHOLD, type ActivityLog, type InquiryRecord, type NewsRelease, type TemplateRecord, type TransparencyPost, type YPOPCityActivity, type YPOPCityActivityCategory, type YPOPEntry, type YPOPEventFile, type YPOPEventParticipation, type YPOPFile, type YPOPOrgActivity, type YPOPOrgActivityFile, type YPOPOrgLedTier, type YPOPPeriod, type YPOPPeriodStatus, type YPOPStatus } from "@/lib/lydo-connect-data";
 import { statusLabelMap } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
@@ -59,6 +65,12 @@ import {
   type BudgetRequestExportRow,
 } from "@/lib/report-export-configs";
 import { exportReport, formatCurrencyPdf, type ExportFormat } from "@/lib/report-export";
+import {
+  activityLogExportConfig,
+  getFriendlyAuditAction,
+  getFriendlyAuditCategory,
+  mapAuditLogToExportRow,
+} from "@/lib/activity-log-export";
 import {
   createAdminActivityLogInSupabase,
   createNewsReleaseInSupabase,
@@ -88,7 +100,6 @@ import {
   adminUpdateYpopEntryInSupabase,
   adminUpdateYpopEventParticipationInSupabase,
   adminUpdateYpopOrgActivityInSupabase,
-  adminUpdateMoveApplicationInSupabase,
 } from "@/lib/lydo-connect-supabase";
 
 const routeMap: Record<string, string> = {
@@ -138,6 +149,201 @@ const renderAdvocacyChips = (advocacies: string[]) =>
   ) : (
     <span className="text-sm text-muted-foreground">N/A</span>
   );
+
+function MobileInquiryCard({
+  inquiry,
+  submittedDate,
+  submittedTime,
+  onView,
+}: {
+  inquiry: InquiryRecord;
+  submittedDate: string;
+  submittedTime: string;
+  onView: () => void;
+}) {
+  const senderName = inquiry.organizationName || inquiry.submitterName || "Unnamed submitter";
+
+  return (
+    <article className="mobile-inquiry-card">
+      <div className="mobile-inquiry-header">
+        <h3 className="mobile-inquiry-subject">{inquiry.subject}</h3>
+        <div className="mobile-inquiry-status">
+          <PortalStatusBadge status={inquiry.status} />
+        </div>
+      </div>
+
+      {inquiry.description ? <p className="mobile-inquiry-description">{inquiry.description}</p> : null}
+
+      <div className="mobile-inquiry-metadata">
+        <p className="mobile-inquiry-sender">{senderName}</p>
+        <p className="mobile-inquiry-email">{inquiry.email}</p>
+        <p className="mobile-inquiry-submitted">
+          Submitted {submittedDate}
+          {submittedTime ? ` \u00b7 ${submittedTime}` : ""}
+        </p>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="mobile-inquiry-view-button"
+        aria-label={`View inquiry from ${inquiry.submitterName || inquiry.organizationName || inquiry.email}`}
+        onClick={onView}
+      >
+        <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+        View Inquiry
+      </Button>
+    </article>
+  );
+}
+
+function MobileAdminTemplateCard({
+  template,
+  updatedDate,
+  onPreview,
+  onEdit,
+  onReplace,
+  onDelete,
+}: {
+  template: TemplateRecord;
+  updatedDate: string | null;
+  onPreview: () => void;
+  onEdit: () => void;
+  onReplace: () => void;
+  onDelete: () => void;
+}) {
+  const displayFilename = template.templateFileName.replace(/^\d{13}-/, "");
+
+  return (
+    <article className="mobile-template-card">
+      <div className="mobile-template-card-header">
+        <span className="mobile-template-icon">
+          <FileText className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <div className="mobile-template-heading">
+          <h3 className="mobile-template-title">{template.name}</h3>
+          <p className="mobile-template-category">{templateScopeLabelMap[template.templateScope]}</p>
+        </div>
+      </div>
+
+      {template.description ? <p className="mobile-template-description">{template.description}</p> : null}
+
+      <div className="mobile-template-file-meta">
+        {displayFilename ? (
+          <div className="mobile-template-file-row">
+            <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <p className="mobile-template-filename">{displayFilename}</p>
+          </div>
+        ) : (
+          <p className="mobile-template-filename">No file uploaded yet</p>
+        )}
+        <p className="mobile-template-updated">Updated {updatedDate ?? "Not uploaded"}</p>
+      </div>
+
+      <div className="mobile-template-actions">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!template.templateFileUrl}
+          onClick={onPreview}
+        >
+          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+          Preview
+        </Button>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="mobile-template-more"
+              aria-label={`More actions for ${template.name}`}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={onEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Template
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onReplace}>
+              <FileText className="mr-2 h-4 w-4" />
+              Replace File
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Template
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </article>
+  );
+}
+
+function MobileActivityLogItem({
+  log,
+  actorLabel,
+}: {
+  log: ActivityLog;
+  actorLabel: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+  const descriptionRef = useRef<HTMLParagraphElement | null>(null);
+  const timestamp = new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(log.createdAt));
+
+  useEffect(() => {
+    const measureDescription = () => {
+      const element = descriptionRef.current;
+      if (!element || expanded) return;
+      setCanExpand(element.scrollHeight > element.clientHeight + 1);
+    };
+    measureDescription();
+    window.addEventListener("resize", measureDescription);
+    return () => window.removeEventListener("resize", measureDescription);
+  }, [expanded, log.description]);
+
+  return (
+    <article className="mobile-activity-item">
+      <div className="activity-timeline-marker" aria-hidden="true" />
+      <div className="activity-content">
+        <div className="activity-heading">
+          <h3>{getFriendlyAuditAction(log.action)}</h3>
+          <span>{getFriendlyAuditCategory(log.relatedType)}</span>
+        </div>
+        {log.description ? (
+          <>
+            <p ref={descriptionRef} className={`activity-description ${expanded ? "is-expanded" : ""}`}>{log.description}</p>
+            {canExpand || expanded ? (
+              <button
+                type="button"
+                className="activity-details-toggle"
+                onClick={() => setExpanded((current) => !current)}
+              >
+                {expanded ? "Show less" : "View details"}
+              </button>
+            ) : null}
+          </>
+        ) : null}
+        <div className="activity-metadata">
+          {log.relatedId ? <span className="activity-target">Record: {log.relatedId}</span> : null}
+          <span>{actorLabel}</span>
+          <time dateTime={log.createdAt}>{timestamp}</time>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 const formatVerifiedDateLabel = (value: string) => {
   const date = new Date(value);
@@ -426,7 +632,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [templateNameDraft, setTemplateNameDraft] = useState("");
   const [templateDescriptionDraft, setTemplateDescriptionDraft] = useState("");
-  const [templateScopeDraft, setTemplateScopeDraft] = useState<"document_submission" | "move" | "other">("document_submission");
+  const [templateScopeDraft, setTemplateScopeDraft] = useState<"document_submission" | "other">("document_submission");
   const [templateFileDraft, setTemplateFileDraft] = useState<File | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -446,6 +652,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
   const [activityDateFilter, setActivityDateFilter] = useState<"all" | "7d" | "30d" | "90d">("all");
   const [activityPage, setActivityPage] = useState(0);
+  const [activityExporting, setActivityExporting] = useState<ExportFormat | null>(null);
   const [newsDatePostedDraft, setNewsDatePostedDraft] = useState("");
   const [newsVisibilityDraft, setNewsVisibilityDraft] = useState<NewsRelease["visibilityStatus"]>("draft");
   const [savingNewsRelease, setSavingNewsRelease] = useState(false);
@@ -496,6 +703,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [liquidationPreviewCanInline, setLiquidationPreviewCanInline] = useState(false);
   const [liquidationPreviewLoading, setLiquidationPreviewLoading] = useState(false);
   const [budgetMonitoringTab, setBudgetMonitoringTab] = useState<"overview" | "barangay-allocation">("overview");
+  const [budgetInsightsExpanded, setBudgetInsightsExpanded] = useState(false);
   const [budgetRequestsSearch, setBudgetRequestsSearch] = useState("");
   const [budgetRequestsStatusFilter, setBudgetRequestsStatusFilter] = useState("all");
   const [liquidationReportsSearch, setLiquidationReportsSearch] = useState("");
@@ -507,6 +715,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [registrationDistrictFilter, setRegistrationDistrictFilter] = useState("all");
   const [budgetAllocationDistrictFilter, setBudgetAllocationDistrictFilter] = useState("all");
   const [budgetAllocationBarangayFilter, setBudgetAllocationBarangayFilter] = useState("all");
+  const [budgetAllocationMobilePage, setBudgetAllocationMobilePage] = useState(1);
   const [activeReportExport, setActiveReportExport] = useState<ActiveReportExport>(null);
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<Record<string, string>>({});
   const documentPreviewSourceRef = useRef<Record<string, string>>({});
@@ -554,10 +763,6 @@ export default function AdminPortal({ section }: { section: string }) {
   );
   const templateDocuments = useMemo(
     () => activeTemplates.filter((template) => template.templateScope === "document_submission"),
-    [activeTemplates],
-  );
-  const moveTemplates = useMemo(
-    () => activeTemplates.filter((template) => template.templateScope === "move"),
     [activeTemplates],
   );
   const otherTemplates = useMemo(
@@ -1108,6 +1313,35 @@ export default function AdminPortal({ section }: { section: string }) {
       }),
     [budgetAllocationBarangayFilter, budgetAllocationDistrictFilter, budgetAllocationRows],
   );
+  const budgetAllocationMobilePageSize = 6;
+  const budgetAllocationMobilePageCount = Math.max(
+    1,
+    Math.ceil(filteredBudgetAllocationRows.length / budgetAllocationMobilePageSize),
+  );
+  const pagedBudgetAllocationRows = useMemo(
+    () =>
+      filteredBudgetAllocationRows.slice(
+        (budgetAllocationMobilePage - 1) * budgetAllocationMobilePageSize,
+        budgetAllocationMobilePage * budgetAllocationMobilePageSize,
+      ),
+    [budgetAllocationMobilePage, filteredBudgetAllocationRows],
+  );
+  const groupedPagedBudgetAllocationRows = useMemo(() => {
+    const groups = new Map<string, BarangayAllocationEntry[]>();
+    pagedBudgetAllocationRows.forEach((row) => {
+      const districtRows = groups.get(row.district) ?? [];
+      districtRows.push(row);
+      groups.set(row.district, districtRows);
+    });
+    return [...groups.entries()].map(([district, rows]) => ({
+      district,
+      rows,
+      organizationCount: rows.reduce((sum, row) => sum + row.organizationCount, 0),
+    }));
+  }, [pagedBudgetAllocationRows]);
+  useEffect(() => {
+    setBudgetAllocationMobilePage(1);
+  }, [budgetAllocationBarangayFilter, budgetAllocationDistrictFilter]);
   const selectedBudgetAllocationOrganizationDetails = useMemo<BarangayAllocationOrganizationDetail[]>(() => {
     if (!selectedBudgetAllocation) return [];
 
@@ -3904,34 +4138,68 @@ export default function AdminPortal({ section }: { section: string }) {
       }
       case "inquiries": {
         return (
-          <PortalSection
-            title="Inquiries"
-            description="Submitted inquiries from the user dashboard appear here in a consistent review format."
-          >
-            <div className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-                <Input
-                  value={inquirySearch}
-                  onChange={(event) => setInquirySearch(event.target.value)}
-                  placeholder="Search name, organization, email, subject, or description"
-                  aria-label="Search inquiries"
-                  className="h-11"
-                />
-                <Select value={inquiryStatusFilter} onValueChange={(value) => setInquiryStatusFilter(value as typeof inquiryStatusFilter)}>
-                  <SelectTrigger className="h-11" aria-label="Filter inquiries by status">
-                    <SelectValue placeholder="Filter status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending_review">Pending Review</SelectItem>
-                    <SelectItem value="reviewed">Reviewed</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="admin-inquiries-page">
+            <PortalSection
+              title="Inquiries"
+              description="Submitted inquiries from the user dashboard appear here in a consistent review format."
+            >
+              <div className="space-y-4">
+                <div className="inquiry-filters grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <Input
+                    value={inquirySearch}
+                    onChange={(event) => setInquirySearch(event.target.value)}
+                    placeholder="Search inquiries"
+                    aria-label="Search inquiries"
+                    className="h-11 lg:hidden"
+                  />
+                  <Input
+                    value={inquirySearch}
+                    onChange={(event) => setInquirySearch(event.target.value)}
+                    placeholder="Search name, organization, email, subject, or description"
+                    aria-label="Search inquiries"
+                    className="hidden h-11 lg:flex"
+                  />
+                  <Select value={inquiryStatusFilter} onValueChange={(value) => setInquiryStatusFilter(value as typeof inquiryStatusFilter)}>
+                    <SelectTrigger className="h-11" aria-label="Filter inquiries by status">
+                      <SelectValue placeholder="Filter status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="pending_review">Pending Review</SelectItem>
+                      <SelectItem value="reviewed">Reviewed</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {filteredInquiries.length ? (
-                <div className="overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm">
+                <p className="inquiry-results-count">
+                  {filteredInquiries.length} {filteredInquiries.length === 1 ? "inquiry" : "inquiries"}
+                </p>
+
+                <div className="mobile-inquiries-list">
+                  {filteredInquiries.length ? (
+                    filteredInquiries.map((inquiry) => {
+                      const submittedParts = formatCompactDateParts(inquiry.createdAt);
+                      return (
+                        <MobileInquiryCard
+                          key={inquiry.id}
+                          inquiry={inquiry}
+                          submittedDate={submittedParts.date}
+                          submittedTime={submittedParts.time}
+                          onView={() => setSelectedInquiry(inquiry)}
+                        />
+                      );
+                    })
+                  ) : (
+                    <PortalEmptyState
+                      title="No inquiries found"
+                      description="Try changing your search or status filter."
+                    />
+                  )}
+                </div>
+
+                {filteredInquiries.length ? (
+                  <div className="desktop-inquiries-table overflow-x-auto rounded-xl border border-border/70 bg-card shadow-sm">
                   <Table className="min-w-[940px] table-fixed">
                     <TableHeader>
                       <TableRow className="border-border/70 bg-muted/35 hover:bg-muted/35">
@@ -4014,15 +4282,18 @@ export default function AdminPortal({ section }: { section: string }) {
                       })}
                     </TableBody>
                   </Table>
-                </div>
-              ) : (
-                <PortalEmptyState
-                  title="No inquiries yet"
-                  description="Once a user submits an inquiry from the dashboard, it will appear here."
-                />
-              )}
-            </div>
-          </PortalSection>
+                  </div>
+                ) : (
+                  <div className="desktop-inquiries-table">
+                    <PortalEmptyState
+                      title="No inquiries yet"
+                      description="Once a user submits an inquiry from the dashboard, it will appear here."
+                    />
+                  </div>
+                )}
+              </div>
+            </PortalSection>
+          </div>
         );
       }
       case "registrations": {
@@ -6745,7 +7016,7 @@ export default function AdminPortal({ section }: { section: string }) {
         );
       case "news-releases":
         return (
-          <>
+          <div className="admin-news-releases-page">
             <PortalSection
               title="News Releases"
               description="Create and publish announcements visible to all organizations on the portal's news feed."
@@ -6771,8 +7042,15 @@ export default function AdminPortal({ section }: { section: string }) {
             >
               {newsReleases.length ? (
                 <div className="space-y-3">
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="grid gap-2 lg:gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                     <Input
+                      className="lg:hidden"
+                      value={newsSearch}
+                      onChange={(event) => setNewsSearch(event.target.value)}
+                      placeholder="Search news releases"
+                    />
+                    <Input
+                      className="hidden lg:flex"
                       value={newsSearch}
                       onChange={(event) => setNewsSearch(event.target.value)}
                       placeholder="Search by title, description, or Facebook link"
@@ -6789,8 +7067,11 @@ export default function AdminPortal({ section }: { section: string }) {
                       </SelectContent>
                     </Select>
                   </div>
+                  <p className="news-results-count lg:hidden">
+                    {filteredNewsReleases.length} {filteredNewsReleases.length === 1 ? "news release" : "news releases"}
+                  </p>
                   {filteredNewsReleases.length ? (
-                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                    <div className="news-releases-list grid gap-3 lg:grid-cols-2 lg:gap-4">
                       {filteredNewsReleases.map((news) => {
                         const dotColor =
                           news.visibilityStatus === "published"
@@ -6802,40 +7083,58 @@ export default function AdminPortal({ section }: { section: string }) {
                           ? new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(news.datePosted))
                           : "?";
                         return (
-                          <Card key={news.id} className="flex flex-col border-border/70 shadow-sm">
-                            <CardContent className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-                              <div className="flex items-start justify-between gap-3">
+                          <Card key={news.id} className="news-release-card flex flex-col border-border/70 shadow-sm">
+                            <CardContent className="flex flex-1 flex-col gap-3 p-4 lg:p-5">
+                              <div className="news-card-thumbnail lg:hidden">
+                                {news.previewImageUrl ? (
+                                  <img src={news.previewImageUrl} alt="" />
+                                ) : (
+                                  <div className="news-card-thumbnail-placeholder">No thumbnail</div>
+                                )}
+                              </div>
+                              <div className="news-card-header flex items-start justify-between gap-3">
                                 <div className="flex min-w-0 items-start gap-2">
-                                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                                  <p className="break-words font-semibold leading-snug text-foreground">{news.title}</p>
+                                  <span className={`news-status-dot mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
+                                  <p className="news-card-title break-words font-semibold leading-snug text-foreground">{news.title}</p>
                                 </div>
                                 <div className="shrink-0">
                                   <PortalStatusBadge status={news.visibilityStatus} />
                                 </div>
                               </div>
-                              <p className="line-clamp-3 pl-4 text-sm leading-relaxed text-muted-foreground">{news.description}</p>
-                              <div className="space-y-0.5 pl-4">
-                                <p className="text-xs text-muted-foreground">Posted {formattedDate}</p>
+                              <p className="news-card-description line-clamp-3 pl-4 text-sm leading-relaxed text-muted-foreground">{news.description}</p>
+                              <div className="news-card-metadata space-y-0.5 pl-4">
+                                <p className="hidden text-xs text-muted-foreground lg:block">Posted {formattedDate}</p>
+                                <p className="text-xs text-muted-foreground lg:hidden">
+                                  Posted {formattedDate}
+                                  {news.facebookPostUrl ? (
+                                    <>
+                                      {" · "}
+                                      <a href={news.facebookPostUrl} target="_blank" rel="noopener noreferrer">
+                                        Open Facebook Post ↗
+                                      </a>
+                                    </>
+                                  ) : null}
+                                </p>
                                 {news.facebookPostUrl && (
-                                  <p className="max-w-full break-all text-xs text-muted-foreground/70">{news.facebookPostUrl}</p>
+                                  <p className="hidden max-w-full break-all text-xs text-muted-foreground/70 lg:block">{news.facebookPostUrl}</p>
                                 )}
                                 {news.previewImageUrl ? (
-                                  <p className="max-w-full text-xs text-muted-foreground/70">Thumbnail uploaded and ready for public preview.</p>
+                                  <p className="hidden max-w-full text-xs text-muted-foreground/70 lg:block">Thumbnail uploaded and ready for public preview.</p>
                                 ) : (
-                                  <p className="max-w-full text-xs text-muted-foreground/70">No thumbnail link added yet.</p>
+                                  <p className="hidden max-w-full text-xs text-muted-foreground/70 lg:block">No thumbnail link added yet.</p>
                                 )}
                               </div>
-                              <div className="mt-auto flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                                <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => navigate(`/admin/news-releases/${news.id}`)}>
+                              <div className="news-card-actions mt-auto flex flex-col gap-2 pt-1 lg:flex-row lg:items-center lg:justify-between">
+                                <Button size="sm" variant="outline" className="w-full lg:w-auto" onClick={() => navigate(`/admin/news-releases/${news.id}`)}>
                                   <Eye className="mr-1.5 h-3.5 w-3.5" />
                                   Preview
                                 </Button>
-                                <div className="flex items-center justify-end gap-1.5">
+                                <div className="news-card-secondary-actions flex items-center justify-end gap-1.5">
                                   {news.visibilityStatus === "published" ? (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="flex-1 sm:flex-none"
+                                      className="hidden lg:inline-flex"
                                       onClick={() => openAdminConfirmation({ kind: "news_release", action: "hide", id: news.id, title: news.title })}
                                     >
                                       Hide
@@ -6844,7 +7143,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="flex-1 sm:flex-none"
+                                      className="hidden lg:inline-flex"
                                       onClick={() => openAdminConfirmation({ kind: "news_release", action: "publish", id: news.id, title: news.title })}
                                     >
                                       Publish
@@ -6852,12 +7151,26 @@ export default function AdminPortal({ section }: { section: string }) {
                                   )}
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                      <Button size="sm" variant="ghost" className="news-card-more h-8 w-8 p-0">
                                         <MoreHorizontal className="h-4 w-4" />
                                         <span className="sr-only">More actions</span>
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-36">
+                                      <DropdownMenuItem
+                                        className="lg:hidden"
+                                        onClick={() =>
+                                          openAdminConfirmation({
+                                            kind: "news_release",
+                                            action: news.visibilityStatus === "published" ? "hide" : "publish",
+                                            id: news.id,
+                                            title: news.title,
+                                          })
+                                        }
+                                      >
+                                        {news.visibilityStatus === "published" ? "Hide" : "Publish"}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator className="lg:hidden" />
                                       <DropdownMenuItem onClick={() => startEditingNewsRelease(news.id)}>
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Edit
@@ -6991,7 +7304,7 @@ export default function AdminPortal({ section }: { section: string }) {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </>
+          </div>
         );
       case "budget-monitoring":
       case "public-transparency-posts":
@@ -6999,7 +7312,7 @@ export default function AdminPortal({ section }: { section: string }) {
           <Tabs
             value={budgetMonitoringTab}
             onValueChange={(value) => setBudgetMonitoringTab(value as typeof budgetMonitoringTab)}
-            className="budget-monitoring-page space-y-4 lg:space-y-5"
+            className="budget-monitoring-page admin-budget-monitoring-page space-y-4 lg:space-y-5"
           >
             <div className="space-y-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -7107,7 +7420,7 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,0.8fr)]">
-                  <Card className="border-border/70 shadow-sm">
+                  <Card className="budget-health-snapshot border-border/70 shadow-sm">
                     <CardContent className="space-y-5 p-4 sm:p-5">
                       <div>
                         <h2 className="text-lg font-semibold text-foreground">Budget Health Snapshot</h2>
@@ -7118,7 +7431,7 @@ export default function AdminPortal({ section }: { section: string }) {
 
                       {budgetMonitoringStatusRows.some((row) => row.count > 0) ? (
                         <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-6 lg:items-center">
-                          <div className="relative mx-auto h-44 w-full max-w-[220px] lg:h-56 lg:max-w-[250px]">
+                          <div className="budget-health-chart relative mx-auto h-44 w-full max-w-[220px] lg:h-56 lg:max-w-[250px]">
                             <ResponsiveContainer width="100%" height="100%">
                               <PieChart>
                                 <Pie
@@ -7199,6 +7512,13 @@ export default function AdminPortal({ section }: { section: string }) {
                   <div className="space-y-3">
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
                       <Input
+                        className="lg:hidden"
+                        value={budgetMonitoringSearch}
+                        onChange={(event) => setBudgetMonitoringSearch(event.target.value)}
+                        placeholder="Search by title, organization, or request ID"
+                      />
+                      <Input
+                        className="hidden lg:flex"
                         value={budgetMonitoringSearch}
                         onChange={(event) => setBudgetMonitoringSearch(event.target.value)}
                         placeholder="Search budgets..."
@@ -7216,9 +7536,12 @@ export default function AdminPortal({ section }: { section: string }) {
                         </SelectContent>
                       </Select>
                     </div>
+                    <p className="mobile-budget-result-count lg:hidden">
+                      {filteredBudgetMonitoringEntries.length} monitored {filteredBudgetMonitoringEntries.length === 1 ? "budget" : "budgets"}
+                    </p>
                     {filteredBudgetMonitoringEntries.length ? (
                       <>
-                      <div className="space-y-3 lg:hidden">
+                      <div className="mobile-budget-list space-y-3 lg:hidden">
                         {filteredBudgetMonitoringEntries.map((entry) => {
                           const linkedRequest = state.budgetRequests.find((request) => request.id === entry.budgetRequestId) ?? null;
                           const riskClasses =
@@ -7230,21 +7553,21 @@ export default function AdminPortal({ section }: { section: string }) {
                               ? "bg-primary/15 text-primary"
                               : "bg-amber-400/15 text-amber-700";
                           return (
-                            <Card key={entry.budgetRequestId} className="border-border/70 shadow-sm">
+                            <Card key={entry.budgetRequestId} className="mobile-budget-card border-border/70 shadow-sm">
                               <CardContent className="space-y-3 p-3.5">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0 space-y-1">
+                                <div className="mobile-budget-card-heading">
+                                  <div className="budget-primary-info min-w-0 space-y-1">
                                     <p className="font-semibold text-foreground">{entry.title}</p>
                                     <p className="text-xs text-muted-foreground">{entry.organizationName}</p>
                                     <p className="text-xs text-primary">Request ID: {buildPublicRecordCode("BR", linkedRequest, state.budgetRequests)}</p>
                                   </div>
-                                  <div className="flex shrink-0 flex-col items-end gap-1">
+                                  <div className="budget-status-row">
                                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${riskClasses}`}>{entry.riskLabel}</span>
                                     <PortalStatusBadge status={entry.budgetStatus} />
                                   </div>
                                 </div>
 
-                                <div className="grid gap-3 rounded-xl border border-border/50 bg-muted/10 p-3 sm:grid-cols-2">
+                                <div className="mobile-budget-details grid gap-3 rounded-xl border border-border/50 bg-muted/10 p-3 sm:grid-cols-2">
                                   <div>
                                     <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Approved</p>
                                     <p className="mt-1 text-sm font-medium text-foreground">PHP {entry.approvedAmount.toLocaleString()}</p>
@@ -7274,9 +7597,9 @@ export default function AdminPortal({ section }: { section: string }) {
                                   </div>
                                 </div>
 
-                                <div className="space-y-2 rounded-xl border border-border/50 bg-muted/10 p-3">
+                                <div className="mobile-budget-progress space-y-2 rounded-xl border border-border/50 bg-muted/10 p-3">
                                   <div className="flex items-center justify-between gap-2">
-                                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Progress</p>
+                                    <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Fund Release Progress</p>
                                     <p className="text-sm font-medium text-foreground">{entry.utilizationRate}%</p>
                                   </div>
                                   <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -7287,7 +7610,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                   </p>
                                 </div>
 
-                                <div className={cn("grid gap-2", entry.liquidationReportId ? "grid-cols-2" : "grid-cols-1")}>
+                                <div className={cn("mobile-budget-actions grid gap-2", entry.liquidationReportId ? "grid-cols-2" : "grid-cols-1")}>
                                   <Button
                                     type="button"
                                     size="sm"
@@ -7432,6 +7755,26 @@ export default function AdminPortal({ section }: { section: string }) {
                     description="Approved budget requests automatically appear here once the budget review marks them green."
                   />
                 )}
+                {budgetMonitoringAnalysis.insights.length ? (
+                  <Card className="mobile-monitoring-insights border-border/70 shadow-sm lg:hidden">
+                    <CardContent className="p-4">
+                      <h2 className="text-base font-semibold text-foreground">Monitoring Insights</h2>
+                      <ul>
+                        {(budgetInsightsExpanded ? budgetMonitoringAnalysis.insights : budgetMonitoringAnalysis.insights.slice(0, 2)).map((insight) => (
+                          <li key={insight}>{insight}</li>
+                        ))}
+                      </ul>
+                      {budgetMonitoringAnalysis.insights.length > 2 ? (
+                        <button
+                          type="button"
+                          onClick={() => setBudgetInsightsExpanded((expanded) => !expanded)}
+                        >
+                          {budgetInsightsExpanded ? "Show fewer insights" : "View all insights"}
+                        </button>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                ) : null}
               </div>
             </TabsContent>
 
@@ -7598,20 +7941,26 @@ export default function AdminPortal({ section }: { section: string }) {
               ) : (
                 <PortalSection
                   title="Allocation by Barangay"
-                  description="Released budgets broken down by the organizations' registered barangay."
+                  description={
+                    <>
+                      <span className="lg:hidden">Released budgets grouped by the organizations’ registered barangay.</span>
+                      <span className="hidden lg:inline">Released budgets broken down by the organizations' registered barangay.</span>
+                    </>
+                  }
                   action={
                     <Button
                       type="button"
                       variant="outline"
                       disabled={!allocationByBarangayExportRows.length}
                       onClick={() => setActiveReportExport("allocation-by-barangay")}
+                      className="allocation-filtered-export"
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Export Filtered Report
                     </Button>
                   }
                 >
-                  <div className="grid grid-cols-2 gap-3 max-[359px]:grid-cols-1">
+                  <div className="allocation-mobile-filters grid grid-cols-2 gap-3 max-[359px]:grid-cols-1">
                     <div className="space-y-2">
                       <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/75">District</p>
                       <Select
@@ -7652,16 +8001,16 @@ export default function AdminPortal({ section }: { section: string }) {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 lg:hidden">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Card className="border-border/70 shadow-sm">
+                  <div className="allocation-summary-grid mt-4 grid gap-2 lg:hidden">
+                    <div className="allocation-summary-pair grid grid-cols-2 gap-2">
+                      <Card className="allocation-summary-card border-border/70 shadow-sm">
                         <CardContent className="space-y-1 p-3">
                           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Active Barangays</p>
                           <p className="text-2xl font-semibold tracking-tight text-foreground">{budgetAllocationSummary.barangayCount.toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">Barangays with released budgets</p>
                         </CardContent>
                       </Card>
-                      <Card className="border-border/70 shadow-sm">
+                      <Card className="allocation-summary-card border-border/70 shadow-sm">
                         <CardContent className="space-y-1 p-3">
                           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Utilization</p>
                           <p className="text-2xl font-semibold tracking-tight text-foreground">{budgetAllocationSummary.utilizationRate}%</p>
@@ -7669,24 +8018,24 @@ export default function AdminPortal({ section }: { section: string }) {
                         </CardContent>
                       </Card>
                     </div>
-                    <Card className="border-border/70 shadow-sm">
+                    <Card className="allocation-summary-card is-primary is-currency border-border/70 shadow-sm">
                       <CardContent className="space-y-1 p-3">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Released</p>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Released Amount</p>
                         <p className="text-[clamp(1.45rem,5.5vw,1.8rem)] font-semibold leading-[1.08] tracking-tight text-emerald-700">
                           PHP {budgetAllocationSummary.totalReleased.toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground">Total cash released</p>
                       </CardContent>
                     </Card>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Card className="border-border/70 shadow-sm">
+                    <div className="allocation-summary-pair allocation-currency-pair grid grid-cols-2 gap-2">
+                      <Card className="allocation-summary-card is-currency border-border/70 shadow-sm">
                         <CardContent className="space-y-1 p-3">
                           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Approved</p>
                           <p className="text-xl font-semibold tracking-tight text-foreground">PHP {budgetAllocationSummary.totalApproved.toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground">Budget ceiling before release</p>
                         </CardContent>
                       </Card>
-                      <Card className="border-border/70 shadow-sm">
+                      <Card className="allocation-summary-card is-currency border-border/70 shadow-sm">
                         <CardContent className="space-y-1 p-3">
                           <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/75">Remaining</p>
                           <p className="text-xl font-semibold tracking-tight text-foreground">PHP {budgetAllocationSummary.totalRemaining.toLocaleString()}</p>
@@ -7735,7 +8084,121 @@ export default function AdminPortal({ section }: { section: string }) {
                     />
                   </div>
 
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-border/70 bg-background">
+                  <div className="allocation-by-barangay-mobile mt-4 lg:hidden">
+                    <p className="allocation-result-count">
+                      {filteredBudgetAllocationRows.length} {filteredBudgetAllocationRows.length === 1 ? "barangay" : "barangays"} found
+                      {budgetAllocationDistrictFilter !== "all" ? ` in ${budgetAllocationDistrictFilter}` : ""}
+                    </p>
+
+                    {filteredBudgetAllocationRows.length ? (
+                      <>
+                        <div className="allocation-district-groups">
+                          {groupedPagedBudgetAllocationRows.map((group) => (
+                            <section key={group.district} className="allocation-district-group">
+                              <div className="allocation-district-heading">
+                                <h2>{group.district}</h2>
+                                <p>
+                                  {group.rows.length} {group.rows.length === 1 ? "barangay" : "barangays"} ·{" "}
+                                  {group.organizationCount} {group.organizationCount === 1 ? "organization" : "organizations"}
+                                </p>
+                              </div>
+
+                              <div className="mobile-barangay-list">
+                                {group.rows.map((entry) => (
+                                  <article key={`${entry.district}-${entry.barangay}`} className="mobile-barangay-card">
+                                    <div className="barangay-card-heading">
+                                      <h3>{entry.barangay}</h3>
+                                      <span className="organization-count">
+                                        {entry.organizationCount} org{entry.organizationCount === 1 ? "" : "s"}
+                                      </span>
+                                    </div>
+
+                                    <dl className="barangay-financial-summary">
+                                      <div>
+                                        <dt>Approved</dt>
+                                        <dd>PHP {entry.approvedAmount.toLocaleString()}</dd>
+                                      </div>
+                                      <div>
+                                        <dt>Released</dt>
+                                        <dd className="is-released">PHP {entry.releasedAmount.toLocaleString()}</dd>
+                                      </div>
+                                      <div>
+                                        <dt>Remaining</dt>
+                                        <dd>PHP {entry.remainingAmount.toLocaleString()}</dd>
+                                      </div>
+                                    </dl>
+
+                                    <div className="barangay-utilization">
+                                      <div className="utilization-heading">
+                                        <span>Utilization</span>
+                                        <strong>{entry.utilizationRate}%</strong>
+                                      </div>
+                                      <div className="utilization-track">
+                                        <div
+                                          className="utilization-fill"
+                                          style={{ width: `${Math.min(entry.utilizationRate, 100)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      className="barangay-view-details"
+                                      onClick={() => setSelectedBudgetAllocation(entry)}
+                                    >
+                                      <span>View Details</span>
+                                      <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                  </article>
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+
+                        <div className="allocation-pagination">
+                          <p>
+                            Showing {(budgetAllocationMobilePage - 1) * budgetAllocationMobilePageSize + 1}–
+                            {Math.min(
+                              budgetAllocationMobilePage * budgetAllocationMobilePageSize,
+                              filteredBudgetAllocationRows.length,
+                            )}{" "}
+                            of {filteredBudgetAllocationRows.length} barangays
+                          </p>
+                          <div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={budgetAllocationMobilePage === 1}
+                              onClick={() => setBudgetAllocationMobilePage((page) => Math.max(1, page - 1))}
+                            >
+                              Previous
+                            </Button>
+                            <span>
+                              Page {budgetAllocationMobilePage} of {budgetAllocationMobilePageCount}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={budgetAllocationMobilePage === budgetAllocationMobilePageCount}
+                              onClick={() =>
+                                setBudgetAllocationMobilePage((page) => Math.min(budgetAllocationMobilePageCount, page + 1))
+                              }
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <PortalEmptyState
+                        title="No barangay allocations found"
+                        description="Try another district or barangay filter. Only released budgets are included in this allocation view."
+                      />
+                    )}
+                  </div>
+
+                  <div className="mt-4 hidden overflow-hidden rounded-2xl border border-border/70 bg-background lg:block">
                     {filteredBudgetAllocationRows.length ? (
                       <>
                         <div className="hidden border-b border-border/70 bg-muted/30 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70 lg:grid lg:grid-cols-[1.8fr_1fr_1fr_1fr_1.2fr_auto] lg:items-center lg:gap-6">
@@ -7811,28 +8274,88 @@ export default function AdminPortal({ section }: { section: string }) {
         );
       case "templates":
         return (
-          <PortalSection
-            title="Template Management"
-            description="Manage downloadable templates for document submissions, MOVE, and other user-side reference files."
-            action={
-              <Button
-                type="button"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setTemplateModalMode("create");
-                  setEditingTemplateId(null);
-                  setTemplateNameDraft("");
-                  setTemplateDescriptionDraft("");
-                  setTemplateScopeDraft("document_submission");
-                  setTemplateFileDraft(null);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Template
-              </Button>
-            }
-          >
-            {activeTemplates.length === 0 ? (
+          <div className="admin-template-management-page">
+            <PortalSection
+              title="Template Management"
+              description="Manage downloadable templates for document submissions and other user-side reference files."
+              action={
+                <Button
+                  type="button"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setTemplateModalMode("create");
+                    setEditingTemplateId(null);
+                    setTemplateNameDraft("");
+                    setTemplateDescriptionDraft("");
+                    setTemplateScopeDraft("document_submission");
+                    setTemplateFileDraft(null);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Template
+                </Button>
+              }
+            >
+              <div className="mobile-template-presentation">
+                {[
+                  {
+                    key: "document_submission" as const,
+                    title: "Document Submissions",
+                    description: "These templates appear inside the user document submissions page.",
+                    items: templateDocuments,
+                  },
+                  {
+                    key: "other" as const,
+                    title: "Other Templates",
+                    description: "These templates appear in the user Templates page for download and reference.",
+                    items: otherTemplates,
+                  },
+                ].map((group) => (
+                  <section key={group.key} className="mobile-template-section">
+                    <div className="mobile-template-section-header">
+                      <h2>{group.title}</h2>
+                      <span>{group.items.length} {group.items.length === 1 ? "template" : "templates"}</span>
+                    </div>
+                    <p className="mobile-template-section-description">{group.description}</p>
+                    {group.items.length ? (
+                      <div className="mobile-template-list">
+                        {group.items.map((template) => {
+                          const uploadedDate = template.templateUploadedAt
+                            ? new Intl.DateTimeFormat("en-PH", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              }).format(new Date(template.templateUploadedAt))
+                            : null;
+                          const openEdit = () => startEditingTemplate(template.id);
+                          return (
+                            <MobileAdminTemplateCard
+                              key={template.id}
+                              template={template}
+                              updatedDate={uploadedDate}
+                              onPreview={() => void openPreview(template.templateFileUrl, template.templateFileName || template.name)}
+                              onEdit={openEdit}
+                              onReplace={openEdit}
+                              onDelete={() => {
+                                setEditingTemplateId(template.id);
+                                setTemplateModalMode("delete");
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="mobile-template-empty">
+                        <p>No {group.title.toLowerCase()} yet</p>
+                        <span>Templates assigned to {group.title} will appear here after they are added.</span>
+                      </div>
+                    )}
+                  </section>
+                ))}
+              </div>
+
+              <div className="desktop-template-presentation">
+              {activeTemplates.length === 0 ? (
               <PortalEmptyState
                 title="No templates yet"
                 description="Upload a template file and assign where it should appear in the user portal."
@@ -7845,12 +8368,6 @@ export default function AdminPortal({ section }: { section: string }) {
                     title: "Document Submissions",
                     description: "These templates appear inside the user document submissions page.",
                     items: templateDocuments,
-                  },
-                  {
-                    key: "move" as const,
-                    title: "MOVE Template",
-                    description: "These templates appear inside the user MOVE page.",
-                    items: moveTemplates,
                   },
                   {
                     key: "other" as const,
@@ -7969,7 +8486,8 @@ export default function AdminPortal({ section }: { section: string }) {
                   </div>
                 ))}
               </div>
-            )}
+              )}
+              </div>
             <Dialog open={templateModalMode === "create" || templateModalMode === "edit"} onOpenChange={(open) => (!open ? resetTemplateForm() : undefined)}>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
@@ -7983,13 +8501,12 @@ export default function AdminPortal({ section }: { section: string }) {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label htmlFor="template-document-scope" className="text-sm font-medium">Template Section</label>
-                    <Select value={templateScopeDraft} onValueChange={(value) => setTemplateScopeDraft(value as "document_submission" | "move" | "other")}>
+                    <Select value={templateScopeDraft} onValueChange={(value) => setTemplateScopeDraft(value as "document_submission" | "other")}>
                       <SelectTrigger id="template-document-scope">
                         <SelectValue placeholder="Select where this template should appear" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="document_submission">Document Submissions</SelectItem>
-                        <SelectItem value="move">MOVE Template</SelectItem>
                         <SelectItem value="other">Other Templates</SelectItem>
                       </SelectContent>
                     </Select>
@@ -8126,7 +8643,11 @@ export default function AdminPortal({ section }: { section: string }) {
                               <Eye className="mr-2 h-4 w-4" />
                               Open File
                             </Button>
-                            <Button type="button" onClick={() => void openFile(previewUrl, previewTitle || "uploaded-file")}>
+                            <Button
+                              type="button"
+                              className="admin-template-preview-download"
+                              onClick={() => void openFile(previewUrl, previewTitle || "uploaded-file")}
+                            >
                               <Download className="mr-2 h-4 w-4" />
                               Download File
                             </Button>
@@ -8142,7 +8663,8 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </DialogContent>
             </Dialog>
-          </PortalSection>
+            </PortalSection>
+          </div>
         );
       case "notifications":
         return (
@@ -8216,6 +8738,12 @@ export default function AdminPortal({ section }: { section: string }) {
           liquidation_report:   "Liquidation",
         };
         const filterTypes = ["all", "organization_profile", "budget_request", "document_submission", "news_release", "liquidation_report"];
+        const mobileFilterTypes = [...new Set([
+          ...filterTypes,
+          ...state.activityLogs
+            .map((log) => log.relatedType)
+            .filter((type) => type && !filterTypes.includes(type)),
+        ])];
         const now = Date.now();
         const dateFilterDays: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
         const filteredLogs = state.activityLogs
@@ -8228,9 +8756,122 @@ export default function AdminPortal({ section }: { section: string }) {
         const ACTIVITY_PAGE_SIZE = 20;
         const totalActivityPages = Math.max(1, Math.ceil(filteredLogs.length / ACTIVITY_PAGE_SIZE));
         const pagedLogs = filteredLogs.slice(activityPage * ACTIVITY_PAGE_SIZE, (activityPage + 1) * ACTIVITY_PAGE_SIZE);
+        const handleActivityExport = async (format: ExportFormat) => {
+          if (!filteredLogs.length) {
+            toast({
+              title: "No activity records found",
+              description: "Try changing the selected category or time range.",
+            });
+            return;
+          }
+
+          setActivityExporting(format);
+          try {
+            const rows = filteredLogs.map((log) => {
+              const organizationName =
+                state.organizationProfiles.find((organization) => organization.id === log.organizationId)?.organizationName ?? "";
+              return mapAuditLogToExportRow(log, {
+                actor: log.actorUserId ? "Administrator" : "System",
+                organization: organizationName,
+              });
+            });
+            await exportReport(format, {
+              config: activityLogExportConfig,
+              rows,
+              metadataLines: [
+                "Generated by: Administrator",
+                `Records: ${rows.length}`,
+              ],
+              filterSummaryLines: [
+                `Category: ${activityLogFilter === "all" ? "All" : getFriendlyAuditCategory(activityLogFilter)}`,
+                `Time Range: ${
+                  activityDateFilter === "all"
+                    ? "All time"
+                    : `Last ${activityDateFilter.replace("d", "")} days`
+                }`,
+              ],
+            });
+            toast({
+              title: "Export Ready",
+              description: `The activity log ${format.toUpperCase()} export has been downloaded.`,
+            });
+          } catch (error) {
+            console.error("Unable to export activity logs:", error);
+            toast({
+              title: "Export Failed",
+              description: "Unable to export activity logs. Please try again.",
+              variant: "destructive",
+            });
+          } finally {
+            setActivityExporting(null);
+          }
+        };
         return (
-          <PortalSection title="Recent Activity" description="Audit trail of admin-side edits and review actions.">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="admin-activity-logs-page">
+            <PortalSection title="Recent Activity" description="Audit trail of admin-side edits and review actions.">
+            <div className="mobile-activity-controls">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="activity-export-trigger"
+                    disabled={activityExporting !== null}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {activityExporting ? "Preparing export\u2026" : "Export"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-44">
+                  <DropdownMenuItem onClick={() => void handleActivityExport("pdf")}>
+                    Export as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void handleActivityExport("xlsx")}>
+                    Export as Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => void handleActivityExport("csv")}>
+                    Export as CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="activity-category-filters" aria-label="Filter activity by category">
+                {mobileFilterTypes.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`activity-filter-chip ${activityLogFilter === type ? "is-active" : ""}`}
+                    onClick={() => {
+                      setActivityLogFilter(type);
+                      setActivityPage(0);
+                    }}
+                  >
+                    {type === "all" ? "All" : getFriendlyAuditCategory(type)}
+                  </button>
+                ))}
+              </div>
+
+              <select
+                value={activityDateFilter}
+                onChange={(event) => {
+                  setActivityDateFilter(event.target.value as "all" | "7d" | "30d" | "90d");
+                  setActivityPage(0);
+                }}
+                className="activity-time-filter"
+                aria-label="Filter activity by time range"
+              >
+                <option value="all">All time</option>
+                <option value="90d">Last 90 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="7d">Last 7 days</option>
+              </select>
+              <p className="activity-result-count">
+                {filteredLogs.length} {filteredLogs.length === 1 ? "activity record" : "activity records"}
+              </p>
+            </div>
+
+            <div className="desktop-activity-controls mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
                 {filterTypes.map((type) => (
                   <button
@@ -8259,7 +8900,8 @@ export default function AdminPortal({ section }: { section: string }) {
               </select>
             </div>
             {filteredLogs.length ? (
-              <div className="overflow-hidden rounded-xl border border-border/70">
+              <>
+              <div className="desktop-activity-table overflow-hidden rounded-xl border border-border/70">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -8299,11 +8941,32 @@ export default function AdminPortal({ section }: { section: string }) {
                   </TableBody>
                 </Table>
               </div>
+              <div className="mobile-activity-list">
+                {pagedLogs.map((activity) => (
+                  <MobileActivityLogItem
+                    key={activity.id}
+                    log={activity}
+                    actorLabel={activity.actorUserId ? "Administrator" : "System"}
+                  />
+                ))}
+              </div>
+              </>
             ) : (
-              <PortalEmptyState title="No activity found" description="No logs match the selected filter." />
+              <>
+                <div className="desktop-activity-empty">
+                  <PortalEmptyState title="No activity found" description="No logs match the selected filter." />
+                </div>
+                <div className="mobile-activity-empty">
+                  <PortalEmptyState
+                    title="No activity records found"
+                    description="Try changing the selected category or time range."
+                  />
+                </div>
+              </>
             )}
             {filteredLogs.length > ACTIVITY_PAGE_SIZE && (
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <>
+              <div className="desktop-activity-pagination mt-3 flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   Showing {activityPage * ACTIVITY_PAGE_SIZE + 1}–{Math.min((activityPage + 1) * ACTIVITY_PAGE_SIZE, filteredLogs.length)} of {filteredLogs.length}
                 </span>
@@ -8316,8 +8979,25 @@ export default function AdminPortal({ section }: { section: string }) {
                   </Button>
                 </div>
               </div>
+              <div className="mobile-activity-pagination">
+                <span>
+                  Showing {activityPage * ACTIVITY_PAGE_SIZE + 1}{"\u2013"}
+                  {Math.min((activityPage + 1) * ACTIVITY_PAGE_SIZE, filteredLogs.length)} of {filteredLogs.length}
+                </span>
+                <div className="mobile-activity-pagination-controls">
+                  <Button variant="outline" size="sm" disabled={activityPage === 0} onClick={() => setActivityPage((page) => page - 1)}>
+                    Previous
+                  </Button>
+                  <span>Page {activityPage + 1} of {totalActivityPages}</span>
+                  <Button variant="outline" size="sm" disabled={activityPage >= totalActivityPages - 1} onClick={() => setActivityPage((page) => page + 1)}>
+                    Next
+                  </Button>
+                </div>
+              </div>
+              </>
             )}
-          </PortalSection>
+            </PortalSection>
+          </div>
         );
       }
       case "ypop-validation": {
@@ -8418,9 +9098,9 @@ export default function AdminPortal({ section }: { section: string }) {
           };
 
           return (
-            <div className="space-y-5">
+            <div className="admin-ypop-validation-review-page space-y-5">
               {/* Header bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="desktop-ypop-review-context flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => { setSelectedYpopId(null); setYpopValidationForm(null); setYpopPreviewFileId(null); setYpopAdminView("period-detail"); }}
@@ -8440,13 +9120,400 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </div>
 
-              <div>
+              <div className="desktop-ypop-review-context">
                 <h2 className="text-lg font-semibold">{entryOrg?.organizationName ?? "Unknown org"}</h2>
                 <p className="text-sm text-muted-foreground">{entry.semesterLabel}</p>
               </div>
 
+              <div className="mobile-ypop-validation-review">
+                <section className="mobile-review-context mobile-review-section">
+                  <div className="review-context-top">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedYpopId(null);
+                        setYpopValidationForm(null);
+                        setYpopPreviewFileId(null);
+                        setYpopAdminView("period-detail");
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back to Period
+                    </button>
+                    <PortalStatusBadge status={entry.status} />
+                  </div>
+                  <h1>{entryOrg?.organizationName ?? "Unknown organization"}</h1>
+                  <p>{entry.semesterLabel}</p>
+                  {entryPeriod?.validationDeadline ? (
+                    <small>Validation deadline: {formatShortDate(entryPeriod.validationDeadline)}</small>
+                  ) : null}
+                </section>
+
+                <section className="mobile-validation-summary mobile-review-section">
+                  <div className="summary-heading">
+                    <h2>Validation Summary</h2>
+                    <span className={qualifies ? "qualifies" : "does-not-qualify"}>
+                      {qualifies ? "Qualifies \u2713" : "Does Not Qualify"}
+                    </span>
+                  </div>
+                  <div className="summary-score">
+                    <strong>{totalScore}%</strong>
+                    <span>Total score</span>
+                  </div>
+                  <div className="summary-progress">
+                    <div style={{ width: `${Math.min(totalScore, 100)}%` }} />
+                    <span style={{ left: `${entry.pointsRequired ?? YPOP_SCORE_THRESHOLD}%` }} />
+                  </div>
+                  <div className="summary-metrics">
+                    <div><span>City-Led</span><strong>{cityLedWeightedScore}%</strong></div>
+                    <div><span>Bonus</span><strong>+{orgLedBonus}%</strong></div>
+                    <div><span>Threshold</span><strong>{entry.pointsRequired ?? YPOP_SCORE_THRESHOLD}%</strong></div>
+                  </div>
+                </section>
+
+                <section className="mobile-review-section mobile-activity-validation">
+                  <div className="mobile-section-heading">
+                    <div>
+                      <h2>City-Led Activities</h2>
+                      <p>Select the verified activities that should count toward the score.</p>
+                    </div>
+                    <strong>{cityLedEarned} / {cityLedMax} pts</strong>
+                  </div>
+                  {semesterActivities.length ? (
+                    <div className="mobile-activity-options">
+                      {semesterActivities.map((activity) => {
+                        const checked = effectiveCityLedAttendance.find((attendance) => attendance.activityId === activity.id)?.attended ?? false;
+                        return (
+                          <label key={activity.id} className={`mobile-activity-option ${checked ? "is-selected" : ""} ${isTerminal ? "is-disabled" : ""}`}>
+                            <input type="checkbox" checked={checked} disabled readOnly />
+                            <span className="activity-option-content">
+                              <strong>{activity.name}</strong>
+                              <small>{activity.date}{activity.venue ? ` \u00b7 ${activity.venue}` : ""}</small>
+                            </span>
+                            <span className="points-badge">{normalizeYpopCityLedPoints(activity.points, activity.category)} pts</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mobile-review-empty">No city-led activities configured for this validation period.</p>
+                  )}
+
+                  <div className="mobile-org-activities">
+                    <h2>Organization-Initiated Activities</h2>
+                    <div className="org-activity-summary">
+                      <span>Approved activities</span><strong>{approvedOrgActivityCount}</strong>
+                      <span>Current bonus</span><strong>+{orgLedBonus}%</strong>
+                    </div>
+                    {orgActivities.length ? (
+                      <div className="mobile-org-activity-list">
+                        {orgActivities.map((activity) => {
+                          const files = orgActivityFilesByActivityId.get(activity.id) ?? [];
+                          return (
+                            <div key={activity.id} className="mobile-org-activity-row">
+                              <div className="mobile-row-heading">
+                                <div>
+                                  <strong>{activity.activityName}</strong>
+                                  <small>{activity.activityDate || "Date TBD"}{activity.venue ? ` \u00b7 ${activity.venue}` : ""}</small>
+                                </div>
+                                <PortalStatusBadge status={activity.status} />
+                              </div>
+                              {activity.narrativeReport ? <p>{activity.narrativeReport}</p> : null}
+                              {files.map((file) => (
+                                <button key={file.id} type="button" className="mobile-proof-file" onClick={() => void openFile(file.fileUrl, file.fileName)}>
+                                  <FileText className="h-4 w-4 shrink-0" />
+                                  <span>{file.fileName}</span>
+                                </button>
+                              ))}
+                              <div className="mobile-org-review-controls">
+                                <Textarea
+                                  value={ypopEventReviewRemarksById[activity.id] ?? activity.adminRemarks}
+                                  onChange={(event) => setYpopEventReviewRemarksById((current) => ({ ...current, [activity.id]: event.target.value }))}
+                                  rows={2}
+                                  className="resize-none text-sm"
+                                  placeholder="Feedback for this activity..."
+                                  disabled={isTerminal}
+                                />
+                                {!isTerminal ? (
+                                  <div className="proof-decision-actions">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="verify-action"
+                                      onClick={() => openAdminConfirmation({
+                                        kind: "ypop_org_activity",
+                                        action: "approved",
+                                        orgActivityId: activity.id,
+                                        entryId: entry.id,
+                                        organizationId: activity.organizationId,
+                                        organizationName: entryOrg?.organizationName ?? "Organization",
+                                        activityName: activity.activityName,
+                                        currentAdminRemarks: ypopEventReviewRemarksById[activity.id] ?? activity.adminRemarks,
+                                      })}
+                                    >
+                                      Approve Activity
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openAdminConfirmation({
+                                        kind: "ypop_org_activity",
+                                        action: "needs_revision",
+                                        orgActivityId: activity.id,
+                                        entryId: entry.id,
+                                        organizationId: activity.organizationId,
+                                        organizationName: entryOrg?.organizationName ?? "Organization",
+                                        activityName: activity.activityName,
+                                        currentAdminRemarks: ypopEventReviewRemarksById[activity.id] ?? activity.adminRemarks,
+                                      })}
+                                    >
+                                      Needs Revision
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => openAdminConfirmation({
+                                        kind: "ypop_org_activity",
+                                        action: "rejected",
+                                        orgActivityId: activity.id,
+                                        entryId: entry.id,
+                                        organizationId: activity.organizationId,
+                                        organizationName: entryOrg?.organizationName ?? "Organization",
+                                        activityName: activity.activityName,
+                                        currentAdminRemarks: ypopEventReviewRemarksById[activity.id] ?? activity.adminRemarks,
+                                      })}
+                                    >
+                                      Reject
+                                    </Button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mobile-review-empty">No organization-initiated activities were submitted for this validation period.</p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="mobile-review-section mobile-proof-documents">
+                  <div className="mobile-section-heading">
+                    <h2>Proof Documents</h2>
+                    <strong>{orgEventParticipations.length}</strong>
+                  </div>
+                  {orgEventParticipations.length ? (
+                    <Accordion type="multiple" className="mobile-proof-accordion">
+                      {orgEventParticipations.map((participation) => {
+                        const files = eventFilesByParticipationId.get(participation.id) ?? [];
+                        const remarksDraft = ypopEventReviewRemarksById[participation.id] ?? participation.adminRemarks;
+                        const isSaving = processingAdminConfirmation && pendingAdminConfirmation?.kind === "ypop_event" && pendingAdminConfirmation.participationId === participation.id;
+                        return (
+                          <AccordionItem key={participation.id} value={participation.id} className="proof-accordion-item">
+                            <AccordionTrigger className="proof-accordion-trigger hover:no-underline">
+                              <div className="proof-trigger-content">
+                                <strong>{participation.activityName}</strong>
+                                <small>{participation.activityDate || "Date TBD"}{participation.venue ? ` \u00b7 ${participation.venue}` : ""}</small>
+                                <small>{files.length} proof {files.length === 1 ? "file" : "files"}</small>
+                              </div>
+                              <PortalStatusBadge status={participation.status} />
+                            </AccordionTrigger>
+                            <AccordionContent className="proof-accordion-content">
+                              {participation.status === "verified" && participation.verifiedAt ? (
+                                <p className="proof-status-strip">
+                                  Verified {"\u00b7"} {formatShortDate(participation.verifiedAt)}
+                                </p>
+                              ) : null}
+
+                              <div className="proof-content-group">
+                                <h3>Attached Files</h3>
+                                {files.length ? files.map((file) => (
+                                  <div key={file.id} className="file-row">
+                                    <span>{file.fileName}</span>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => void openFile(file.fileUrl, file.fileName)}>
+                                      Open File
+                                    </Button>
+                                  </div>
+                                )) : <p className="mobile-review-empty">No proof files uploaded yet.</p>}
+                              </div>
+
+                              <div className="proof-content-group">
+                                <label>Event Remarks</label>
+                                <Textarea
+                                  value={remarksDraft}
+                                  onChange={(event) => setYpopEventReviewRemarksById((current) => ({ ...current, [participation.id]: event.target.value }))}
+                                  rows={3}
+                                  className="resize-none text-sm"
+                                  placeholder="Feedback for this event proof..."
+                                />
+                              </div>
+
+                              <div className="proof-content-group">
+                                <h3>Proof Decision</h3>
+                                <div className="proof-decision-actions">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="verify-action"
+                                    disabled={isSaving}
+                                    onClick={() => openAdminConfirmation({
+                                      kind: "ypop_event",
+                                      action: "verified",
+                                      participationId: participation.id,
+                                      entryId: entry.id,
+                                      activityId: participation.activityId,
+                                      organizationId: participation.organizationId,
+                                      organizationName: entryOrg?.organizationName ?? "Organization",
+                                      activityName: participation.activityName,
+                                      currentAdminRemarks: remarksDraft,
+                                    })}
+                                  >
+                                    {isSaving ? "Saving..." : "Verify Proof"}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={isSaving}
+                                    onClick={() => openAdminConfirmation({
+                                      kind: "ypop_event",
+                                      action: "needs_revision",
+                                      participationId: participation.id,
+                                      entryId: entry.id,
+                                      activityId: participation.activityId,
+                                      organizationId: participation.organizationId,
+                                      organizationName: entryOrg?.organizationName ?? "Organization",
+                                      activityName: participation.activityName,
+                                      currentAdminRemarks: remarksDraft,
+                                    })}
+                                  >
+                                    Needs Revision
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    disabled={isSaving}
+                                    onClick={() => openAdminConfirmation({
+                                      kind: "ypop_event",
+                                      action: "rejected",
+                                      participationId: participation.id,
+                                      entryId: entry.id,
+                                      activityId: participation.activityId,
+                                      organizationId: participation.organizationId,
+                                      organizationName: entryOrg?.organizationName ?? "Organization",
+                                      activityName: participation.activityName,
+                                      currentAdminRemarks: remarksDraft,
+                                    })}
+                                  >
+                                    Reject Proof
+                                  </Button>
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                    </Accordion>
+                  ) : (
+                    <p className="mobile-review-empty">No proof documents were submitted for this validation period.</p>
+                  )}
+
+                  {entryFiles.length ? (
+                    <div className="mobile-general-files">
+                      <h3>General Submission Files</h3>
+                      {entryFiles.map((file) => (
+                        <button key={file.id} type="button" className="mobile-proof-file" onClick={() => void openFile(file.fileUrl, file.fileName)}>
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span>{file.fileName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </section>
+
+                <section className="mobile-review-section mobile-final-decision">
+                  <h2>Final Validation Decision</h2>
+                  <div>
+                    <label htmlFor="mobile-ypop-status">Outcome</label>
+                    <Select value={form.status} onValueChange={(value) => setYpopValidationForm({ ...form, status: value as YPOPStatus })} disabled={isTerminal || savingYpopValidation}>
+                      <SelectTrigger id="mobile-ypop-status"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="under_review">Under Review</SelectItem>
+                        <SelectItem value="needs_revision">Needs Revision</SelectItem>
+                        <SelectItem value="qualified">Qualified {"\u2713"}</SelectItem>
+                        <SelectItem value="not_qualified">Not Qualified</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!isTerminal ? <small>Suggested from the current computed score.</small> : null}
+                  </div>
+                  <div>
+                    <label htmlFor="mobile-ypop-remarks">Admin Remarks</label>
+                    <Textarea
+                      id="mobile-ypop-remarks"
+                      value={form.adminRemarks}
+                      onChange={(event) => setYpopValidationForm({ ...form, adminRemarks: event.target.value })}
+                      placeholder="Optional feedback for the organization..."
+                      rows={3}
+                      className="resize-none"
+                      disabled={isTerminal || savingYpopValidation}
+                    />
+                  </div>
+                  {!isTerminal ? (
+                    <Button
+                      type="button"
+                      className="mobile-save-validation"
+                      disabled={savingYpopValidation}
+                      onClick={() => {
+                        setYpopValidationAcknowledged(false);
+                        setConfirmYpopValidationOpen(true);
+                      }}
+                    >
+                      {savingYpopValidation ? "Saving..." : "Save Validation"}
+                    </Button>
+                  ) : null}
+                </section>
+
+                {(entry.revisionHistory?.length ?? 0) > 0 ? (
+                  <section className="mobile-review-section mobile-review-activity">
+                    <h2>Review Activity</h2>
+                    {[...entry.revisionHistory!].slice(-3).reverse().map((revision, index) => (
+                      <div key={`${revision.changedAt}-${index}`} className="mobile-review-activity-row">
+                        <span />
+                        <div>
+                          <strong>{statusLabelMap[revision.action] ?? revision.action.replaceAll("_", " ")}</strong>
+                          <small>{formatDateTimeLabel(revision.changedAt)}</small>
+                          {revision.adminRemarks ? <p>{revision.adminRemarks}</p> : null}
+                        </div>
+                      </div>
+                    ))}
+                    {entry.revisionHistory!.length > 3 ? (
+                      <button
+                        type="button"
+                        className="mobile-full-activity-log"
+                        onClick={() => {
+                          setRecentActivityDialogTitle(`Review Activity - ${entryOrg?.organizationName ?? "Organization"}`);
+                          setRecentActivityDialogEntries(entry.revisionHistory!.map((revision, index) => ({
+                            key: `${revision.changedAt}-${index}`,
+                            title: statusLabelMap[revision.action] ?? revision.action.replaceAll("_", " "),
+                            note: revision.adminRemarks || undefined,
+                            timestamp: revision.changedAt,
+                          })));
+                          setRecentActivityDialogOpen(true);
+                        }}
+                      >
+                        View full activity log
+                      </button>
+                    ) : null}
+                  </section>
+                ) : null}
+              </div>
+
               {/* Two-column layout */}
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+              <div className="desktop-ypop-validation-review grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
                 {/* LEFT: Validation */}
                 <div className="space-y-4">
                   {entry.submissionNote.trim() && (
@@ -9111,11 +10178,6 @@ export default function AdminPortal({ section }: { section: string }) {
             ypopSubmissionFilter === "all"
               ? combinedPeriodEntries
               : combinedPeriodEntries.filter((e) => e.status === ypopSubmissionFilter);
-          const statusBadgeClass =
-            period.status === "open" ? "bg-emerald-100 text-emerald-700"
-            : period.status === "draft" ? "bg-muted text-muted-foreground"
-            : "bg-secondary text-secondary-foreground";
-
           return (
             <div className="space-y-6">
               <button
@@ -9131,9 +10193,7 @@ export default function AdminPortal({ section }: { section: string }) {
                 title={period.semesterLabel}
                 description={`Deadline: ${new Date(period.validationDeadline).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })} · ${periodActivities.length} activit${periodActivities.length !== 1 ? "ies" : "y"} · ${totalCityLedPts} pts total`}
                 action={
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass}`}>
-                    {period.status === "open" ? "Open" : period.status === "draft" ? "Draft" : "Closed"}
-                  </span>
+                  <PortalStatusBadge status={period.status} size="md" />
                 }
               >
                 <div className="space-y-4">
@@ -9700,10 +10760,6 @@ export default function AdminPortal({ section }: { section: string }) {
                 {sortedPeriods.map((period) => {
                   const submissionCount = state.ypopEntries.filter((e) => e.semester === period.semesterKey).length;
                   const activityCount = state.ypopCityActivities.filter((a) => a.semesterKey === period.semesterKey).length;
-                  const statusBadgeClass =
-                    period.status === "open" ? "bg-emerald-100 text-emerald-700"
-                    : period.status === "draft" ? "bg-muted text-muted-foreground"
-                    : "bg-secondary text-secondary-foreground";
                   return (
                     <Card key={period.id} className="border-border/70 shadow-sm">
                       <CardContent className="p-4 sm:p-5">
@@ -9711,9 +10767,7 @@ export default function AdminPortal({ section }: { section: string }) {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="font-semibold text-foreground">{period.semesterLabel}</p>
-                              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusBadgeClass}`}>
-                                {period.status === "open" ? "Open" : period.status === "draft" ? "Draft" : "Closed"}
-                              </span>
+                              <PortalStatusBadge status={period.status} />
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
                               Deadline: {new Date(period.validationDeadline).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}
@@ -9850,7 +10904,6 @@ export default function AdminPortal({ section }: { section: string }) {
     inquirySearch,
     inquiryStatusFilter,
     activeTemplates,
-    moveTemplates,
     otherTemplates,
     selectedTemplate,
     templateDescriptionDraft,
@@ -9947,7 +11000,6 @@ export default function AdminPortal({ section }: { section: string }) {
     adminUpdateYpopEntryInSupabase,
     adminUpdateYpopEventParticipationInSupabase,
     adminUpdateYpopOrgActivityInSupabase,
-    adminUpdateMoveApplicationInSupabase,
   ]);
 
   const adminConfirmationCopy = getAdminConfirmationCopy();
@@ -10215,6 +11267,7 @@ function DetailSectionBlock({
       {children}
     </div>
   );
+
 }
 
 function DetailInfoRow({

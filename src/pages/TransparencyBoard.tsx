@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, ChevronDown, CircleX, FileText } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/portal/StatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { fetchComplianceBoardData, fetchMonthlyComplianceData, type ComplianceBoardRow } from "@/lib/data-api";
@@ -31,17 +31,7 @@ const statusIcon = (state: DocState) => {
 
 const statusBadge = (remarks: string) => {
   const partial = remarks.toLowerCase().includes("partially");
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-        partial
-          ? "bg-warning/15 text-warning border border-warning/40"
-          : "bg-success/12 text-success border border-success/30"
-      }`}
-    >
-      {remarks}
-    </span>
-  );
+  return <StatusBadge status={partial ? "partial" : "compliant"} label={remarks} size="md" />;
 };
 
 const docIcon = (state: SubmissionState) => {
@@ -68,10 +58,7 @@ const computeMonthlyStatus = (item: MonthlyComplianceItem): MonthlyOverallStatus
 };
 
 const monthlyStatusBadge = (status: MonthlyOverallStatus) => {
-  if (status === "Completed") return <Badge className="bg-success text-success-foreground">Completed</Badge>;
-  if (status === "Late") return <Badge variant="outline" className="border-destructive text-destructive">Late</Badge>;
-  if (status === "Due Soon") return <Badge variant="outline" className="border-warning text-warning">Due Soon</Badge>;
-  return <Badge variant="outline" className="border-primary text-primary">Open</Badge>;
+  return <StatusBadge status={status} />;
 };
 
 const completionScore = (submissions: Record<MonthlyDocKey, SubmissionState>) => {
