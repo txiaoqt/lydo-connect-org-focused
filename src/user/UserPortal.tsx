@@ -2932,7 +2932,11 @@ export default function UserPortal({ section }: { section: string }) {
           <div className="space-y-6">
             <PortalSection
               title="Required Document Templates"
-              description="Download the required document templates here before preparing your bulk document submission."
+              description={
+                <span className="hidden lg:inline">
+                  Download the required document templates here before preparing your bulk document submission.
+                </span>
+              }
               action={
                 <Button
                   type="button"
@@ -2956,7 +2960,7 @@ export default function UserPortal({ section }: { section: string }) {
                             <UserFeatureIcon icon={FileText} />
                             <div className="min-w-0">
                               <p className="break-words text-base font-semibold text-foreground">{template.name}</p>
-                              <p className="mt-1 text-sm text-muted-foreground">
+                              <p className="mt-1 hidden text-sm text-muted-foreground lg:block">
                                 {template.templateFileUrl ? template.description : "Template currently unavailable"}
                               </p>
                             </div>
@@ -2993,7 +2997,11 @@ export default function UserPortal({ section }: { section: string }) {
 
             <PortalSection
               title="Other Templates"
-              description="Download the shared template files that the admin has published for your organization."
+              description={
+                <span className="hidden lg:inline">
+                  Download the shared template files that the admin has published for your organization.
+                </span>
+              }
             >
               {otherTemplates.length === 0 ? (
                 <PortalEmptyState
@@ -3011,7 +3019,7 @@ export default function UserPortal({ section }: { section: string }) {
                               <UserFeatureIcon icon={FileText} />
                               <div className="min-w-0">
                                 <p className="break-words text-base font-semibold text-foreground">{template.name}</p>
-                                <p className="mt-1 text-sm text-muted-foreground">{template.description}</p>
+                                <p className="mt-1 hidden text-sm text-muted-foreground lg:block">{template.description}</p>
                               </div>
                             </div>
                             <PortalStatusBadge status={template.templateFileUrl ? "approved_green" : "draft"} />
@@ -3874,8 +3882,287 @@ export default function UserPortal({ section }: { section: string }) {
         // Document detail sub-view
         if (documentDetailMode && attachedDocumentEditor && detailDocumentType && detailFile) {
           const detailFileLocked = isDocumentSubmissionApproved || isApprovedSubmissionFile(detailFile);
+          const detailFileTypeLabel = getDocumentPrimaryFileTypeLabel(detailDocumentType.id);
+          const detailActivityItems = detailFileTimeline.map((entry, index) => ({
+            id: `${entry.date}-${index}`,
+            message: entry.message,
+            timestamp: entry.date,
+            timestampLabel: formatDateTimeLabel(entry.date),
+          }));
+          const detailStatusDescription =
+            detailFileBadgeStatus === "approved" || detailFileBadgeStatus === "approved_green"
+              ? "This document has been approved and is locked."
+              : detailFileBadgeStatus === "needs_revision" || detailFileBadgeStatus === "rejected_red"
+                ? "The admin requested changes before this document can be approved."
+                : detailFileBadgeStatus === "submitted" ||
+                    detailFileBadgeStatus === "ready_for_review" ||
+                    detailFileBadgeStatus === "under_review" ||
+                    detailFileBadgeStatus === "under_admin_review"
+                  ? "The file has been submitted and is awaiting admin review."
+                  : "This document is being prepared for submission.";
+          const openDocumentActivityLog = detailFileTimeline.length > 3
+            ? () =>
+                setDocumentRecentActivityModal({
+                  title: attachedDocumentEditor.documentTypeName || "Recent Activity",
+                  description: "Full activity history for this attached document.",
+                  activities: detailActivityItems,
+                })
+            : undefined;
+          const handleOpenDocumentManager = () => {
+            closeAttachedDocumentEditor();
+            openBatchUploadWorkspace();
+          };
+
           return (
-            <div className="space-y-4">
+            <div className="user-document-attachment-page">
+              <div className="hidden lg:block">
+                <header className="attachment-page-header mb-4">
+                  <button
+                    type="button"
+                    onClick={closeAttachedDocumentEditor}
+                    className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Documents
+                  </button>
+                  <div className="attachment-title-row flex min-w-0 items-start justify-between gap-5">
+                    <div className="min-w-0">
+                      <h2 className="text-xl font-semibold leading-snug">{detailDocumentType.name}</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">{detailDocumentType.description}</p>
+                    </div>
+                    {detailFileBadgeStatus ? (
+                      <div className="shrink-0 pt-0.5">
+                        <PortalStatusBadge status={detailFileBadgeStatus} />
+                      </div>
+                    ) : null}
+                  </div>
+                </header>
+
+                <div className="attachment-workspace grid grid-cols-[minmax(0,3fr)_minmax(290px,1fr)] items-start gap-4">
+                  <section className="document-viewer-card min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+                    <div className="document-viewer-toolbar flex min-h-16 min-w-0 items-center justify-between gap-4 border-b border-border/70 px-4 py-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <UserFeatureIcon icon={FileText} size="compact" className="mt-0.5" />
+                        <div className="min-w-0">
+                          <p
+                            className="line-clamp-2 overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
+                            title={detailFile.fileName}
+                          >
+                            {detailFile.fileName}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {detailFileTypeLabel} · {detailFile.uploadedAt ? `Uploaded ${formatDateTimeLabel(detailFile.uploadedAt)}` : "Uploaded recently"}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 shrink-0"
+                        aria-label={`Open ${detailDocumentType.name} file`}
+                        onClick={() => void openFile(detailFile.fileUrl, detailFile.fileName)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Open File
+                      </Button>
+                    </div>
+
+                    <div className="pdf-viewer-frame h-[clamp(580px,calc(100vh-260px),780px)] w-full overflow-auto bg-background">
+                      {attachedDocumentPreviewUrl && attachedDocumentPreviewCanInline ? (
+                        isImagePreviewFile(attachedDocumentPreviewTitle) || isImagePreviewFile(detailFile.fileUrl) ? (
+                          <div className="flex min-h-full items-center justify-center p-4">
+                            <img
+                              src={attachedDocumentPreviewUrl}
+                              alt={attachedDocumentPreviewTitle || `Preview of ${detailDocumentType.name}`}
+                              className="max-h-[calc(clamp(580px,calc(100vh-260px),780px)-2rem)] w-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <iframe
+                            src={attachedDocumentPreviewUrl}
+                            title={`Preview of ${detailDocumentType.name}`}
+                            className="h-full w-full border-0"
+                          />
+                        )
+                      ) : attachedDocumentPreviewUrl ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                          <div className="space-y-2">
+                            <p className="text-base font-medium text-foreground">Preview not available in the browser</p>
+                            <p className="max-w-md text-sm text-muted-foreground">
+                              This file type cannot be displayed inline. Use the Open File button to view it.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                          <p className="text-sm font-medium text-foreground">No preview available</p>
+                          <p className="max-w-md text-sm text-muted-foreground">
+                            {attachedDocumentPreviewEmptyMessage || "The uploaded file could not be previewed."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  <aside className="attachment-details-panel w-full max-w-[380px] justify-self-end rounded-2xl border border-border/70 bg-card p-4 shadow-sm xl:sticky xl:top-20">
+                    <section>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Document Status</p>
+                      <div className="mt-2">
+                        {detailFileBadgeStatus ? <PortalStatusBadge status={detailFileBadgeStatus} /> : null}
+                      </div>
+                      <p className="mt-2 text-sm leading-5 text-muted-foreground">{detailStatusDescription}</p>
+                    </section>
+
+                    {detailHasAdminFeedback ? (
+                      <section className="mt-3.5 border-t border-border/60 pt-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700">Admin Feedback</p>
+                        </div>
+                        <p className="mt-2 text-sm leading-5 text-amber-800">
+                          {detailFile.adminRemarks?.trim() || "No comment was provided."}
+                        </p>
+                      </section>
+                    ) : null}
+
+                    <section className="mt-3.5 border-t border-border/60 pt-3.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">File Details</p>
+                      <dl className="mt-2.5 space-y-2.5 text-sm">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">File name</dt>
+                          <dd className="mt-0.5 break-words font-medium leading-5 text-foreground" title={detailFile.fileName}>
+                            {detailFile.fileName}
+                          </dd>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <dt className="text-xs text-muted-foreground">File type</dt>
+                            <dd className="mt-0.5 font-medium text-foreground">{detailFileTypeLabel}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">Uploaded</dt>
+                            <dd className="mt-0.5 font-medium tabular-nums text-foreground">
+                              {detailFile.uploadedAt ? formatDateTimeLabel(detailFile.uploadedAt) : "Recently"}
+                            </dd>
+                          </div>
+                        </div>
+                      </dl>
+                    </section>
+
+                    <section className="mt-3.5 border-t border-border/60 pt-3.5">
+                      <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Recent Activity</p>
+                      <RecentActivityPreview
+                        title=""
+                        activities={detailActivityItems}
+                        maxItems={3}
+                        onViewAll={openDocumentActivityLog}
+                        emptyDescription="Document review updates will appear here once the file has been processed."
+                        className="rounded-none border-0 bg-transparent p-0 shadow-none"
+                        headerClassName="mb-0"
+                        itemClassName="py-2.5"
+                      />
+                    </section>
+
+                    <section className="mt-3.5 border-t border-border/60 pt-3.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Manage Document</p>
+                      {detailHasAdminFeedback && !detailFileLocked ? (
+                        <div className="mt-2.5 space-y-3">
+                          <p className="text-sm leading-5 text-muted-foreground">
+                            Update this returned file here, or use the bulk document manager for multiple files.
+                          </p>
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-medium text-foreground/70">
+                              Message with resubmission <span className="font-normal text-muted-foreground">(optional)</span>
+                            </p>
+                            <Textarea
+                              placeholder="Briefly describe what you changed or clarify anything for the admin."
+                              value={userRemarkDraftsByFileId[detailFile.id] ?? detailFile.userRemarks ?? ""}
+                              onChange={(event) => {
+                                setUserRemarkDraftsByFileId((prev) => ({ ...prev, [detailFile.id]: event.target.value }));
+                                updateDocumentFile(detailFile.id, { userRemarks: event.target.value });
+                              }}
+                              className="min-h-[4.5rem] resize-none text-sm"
+                            />
+                          </div>
+                          <input
+                            ref={attachedDocumentInputRef}
+                            type="file"
+                            accept={getDocumentUploadAcceptValue(detailFile.documentTypeId)}
+                            className="hidden"
+                            onChange={(event) => {
+                              const nextFile = event.target.files?.[0] ?? null;
+                              setAttachedDocumentReplacementFile(nextFile);
+                              setAttachedDocumentMarkedForRemoval(false);
+                            }}
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10"
+                              onClick={() => attachedDocumentInputRef.current?.click()}
+                              disabled={Boolean(savingAttachedDocument)}
+                            >
+                              <FileUp className="mr-1.5 h-4 w-4" />
+                              Change File
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={attachedDocumentMarkedForRemoval ? "secondary" : "destructive"}
+                              className="h-10"
+                              onClick={() => {
+                                setAttachedDocumentMarkedForRemoval((current) => !current);
+                                setAttachedDocumentReplacementFile(null);
+                                if (attachedDocumentInputRef.current) attachedDocumentInputRef.current.value = "";
+                              }}
+                              disabled={Boolean(savingAttachedDocument)}
+                            >
+                              <Trash2 className="mr-1.5 h-4 w-4" />
+                              {attachedDocumentMarkedForRemoval ? "Undo" : "Remove"}
+                            </Button>
+                          </div>
+                          {attachedDocumentReplacementFile ? (
+                            <p className="text-xs leading-5 text-muted-foreground">
+                              Replacement: <span className="font-medium text-foreground">{attachedDocumentReplacementFile.name}</span>
+                            </p>
+                          ) : null}
+                          {attachedDocumentMarkedForRemoval ? (
+                            <p className="text-xs text-destructive">This file will be removed when you save.</p>
+                          ) : null}
+                          <Button
+                            type="button"
+                            className="h-10 w-full"
+                            onClick={() => void saveAttachedDocumentChanges()}
+                            disabled={Boolean(savingAttachedDocument)}
+                          >
+                            {savingAttachedDocument ? "Saving..." : "Save Changes"}
+                          </Button>
+                          <Button type="button" variant="ghost" className="h-9 w-full" onClick={handleOpenDocumentManager}>
+                            Manage Multiple Documents
+                          </Button>
+                        </div>
+                      ) : detailFileLocked ? (
+                        <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                          This approved document is locked and can no longer be changed through the normal submission flow.
+                        </p>
+                      ) : (
+                        <div className="mt-2.5 space-y-3">
+                          <p className="text-sm leading-5 text-muted-foreground">
+                            Use the bulk document manager to replace or update eligible files.
+                          </p>
+                          <Button type="button" variant="outline" className="h-10 w-full" onClick={handleOpenDocumentManager}>
+                            <FileUp className="mr-2 h-4 w-4" />
+                            Manage Documents
+                          </Button>
+                        </div>
+                      )}
+                    </section>
+                  </aside>
+                </div>
+              </div>
+
+              <div className="space-y-4 lg:hidden">
               {/* Back button */}
               <button
                 type="button"
@@ -4113,6 +4400,7 @@ export default function UserPortal({ section }: { section: string }) {
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           );
@@ -5102,7 +5390,7 @@ export default function UserPortal({ section }: { section: string }) {
 
                       return (
                         <div className="space-y-4">
-                          <div className="budget-summary-grid grid grid-cols-2 gap-2.5 max-[430px]:mr-3 lg:hidden">
+                          <div className="budget-summary-grid grid grid-cols-2 gap-2.5 lg:hidden">
                             {budgetSummaryItems.map((item) => {
                               const Icon = item.icon;
                               return (
@@ -5144,7 +5432,7 @@ export default function UserPortal({ section }: { section: string }) {
                             })}
                           </div>
 
-                          <Card className="overflow-hidden border-border/70 shadow-sm max-[430px]:mr-3 lg:mr-0">
+                          <Card className="overflow-hidden border-border/70 shadow-sm">
                             <CardContent className="space-y-3 p-3.5 sm:p-4 lg:space-y-4 lg:p-5">
                               <div className="flex flex-col gap-2 lg:hidden">
                                 <div className="budget-filter-grid grid grid-cols-2 gap-2">
@@ -6091,7 +6379,7 @@ export default function UserPortal({ section }: { section: string }) {
 
                   return (
                     <div className="space-y-4">
-                      <div className="liquidation-summary-grid grid grid-cols-2 gap-2.5 max-[430px]:mr-3 lg:hidden">
+                      <div className="liquidation-summary-grid grid grid-cols-2 gap-2.5 lg:hidden">
                         {liquidationSummaryItems.map((item) => {
                           const Icon = item.icon;
                           return (
@@ -6139,7 +6427,7 @@ export default function UserPortal({ section }: { section: string }) {
                         })}
                       </div>
 
-                      <Card className="overflow-hidden border-border/70 shadow-sm max-[430px]:mr-3 lg:mr-0">
+                      <Card className="overflow-hidden border-border/70 shadow-sm">
                         <CardContent className="space-y-3 p-3.5 sm:p-4 lg:space-y-4 lg:p-5">
                           <div className="flex flex-col gap-3 max-lg:gap-2.5 lg:hidden">
                             <div className="grid gap-3 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap max-lg:grid-cols-2 max-lg:gap-2">
@@ -8041,6 +8329,11 @@ Validated {validatedDate}</p>
             approvedOrgActivityCount,
             semesterPeriod?.orgLedTiers,
           );
+          const hasValidatedResult = isQualified || isNotQualified;
+          const displayedFinalScore = hasValidatedResult ? activeEntry.pointsEarned : scoreBreakdown.totalScore;
+          const displayedOrgBonus = hasValidatedResult
+            ? Math.max(0, displayedFinalScore - scoreBreakdown.cityLedPercent)
+            : scoreBreakdown.orgLedBonus;
 
           const revHistoryForLog = revHistory.filter(
             (r) => !(r.action === "submitted" && activeEntry.submittedAt)
@@ -8105,7 +8398,7 @@ Validated {validatedDate}</p>
 
           const renderSemesterEventsCard = (mobile: boolean) => (
             <Card className={cn("border-border/70", mobile ? "order-2 lg:hidden" : "hidden lg:block")}>
-              <CardHeader className={cn("pb-2.5", mobile ? "px-4 pt-4" : "lg:pb-3")}>
+              <CardHeader className={cn("pb-2.5", mobile ? "px-4 pt-4" : "px-[18px] pb-3 pt-[18px]")}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <CardTitle className="text-sm font-semibold">Semester Events</CardTitle>
@@ -8137,7 +8430,7 @@ Validated {validatedDate}</p>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className={cn("pt-0", mobile ? "space-y-4 px-4 pb-4" : "space-y-4 lg:space-y-5")}>
+              <CardContent className={cn("pt-0", mobile ? "space-y-4 px-4 pb-4" : "space-y-4 px-[18px] pb-[18px]")}>
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-foreground">
                     <span className={mobile ? "" : "hidden lg:inline"}>{mobile ? "Available Activities" : "Available City-Led Activities"}</span>
@@ -8149,9 +8442,15 @@ Validated {validatedDate}</p>
                         No {detailEventFilter} joinable city-led activities in this semester.
                       </div>
                     ) : (
-                      <PortalEmptyState
-                        title={`No ${detailEventFilter} joinable city-led activities in this semester`}
-                      />
+                      <div className="flex min-h-[76px] items-center rounded-lg border border-dashed border-border/60 bg-muted/10 p-4">
+                        <div className="flex items-start gap-3">
+                          <UserFeatureIcon icon={CalendarDays} size="compact" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">No {detailEventFilter} joinable activities</p>
+                            <p className="mt-1 text-xs text-muted-foreground">New city-led activities will appear here.</p>
+                          </div>
+                        </div>
+                      </div>
                     )
                   ) : (
                     <div className="space-y-3">
@@ -8172,10 +8471,15 @@ Validated {validatedDate}</p>
                         <p className="text-xs">Proof uploads will appear here.</p>
                       </div>
                     ) : (
-                      <PortalEmptyState
-                        title={`No ${detailEventFilter} joined city-led activities in this semester yet`}
-                        description="Joined activities and their proof-upload cards will appear here."
-                      />
+                      <div className="flex min-h-[76px] items-center rounded-lg border border-dashed border-border/60 bg-muted/10 p-4">
+                        <div className="flex items-start gap-3">
+                          <UserFeatureIcon icon={CheckCircle2} size="compact" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">No {detailEventFilter} joined activities yet</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Joined activities and proof uploads will appear here.</p>
+                          </div>
+                        </div>
+                      </div>
                     )
                   ) : (
                     <div className="space-y-3">
@@ -8189,7 +8493,7 @@ Validated {validatedDate}</p>
 
           const renderOrganizationInitiatedCard = (mobile: boolean) => (
             <Card className={cn("border-border/70", mobile ? "order-[7] lg:hidden" : "hidden lg:block")}>
-              <CardHeader className={cn("pb-2.5", mobile ? "px-4 pt-4" : "lg:pb-3")}>
+              <CardHeader className={cn("pb-2.5", mobile ? "px-4 pt-4" : "px-[18px] pb-3 pt-[18px]")}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <CardTitle className="text-sm font-semibold">Organization-Initiated Activities</CardTitle>
@@ -8212,7 +8516,7 @@ Validated {validatedDate}</p>
                   )}
                 </div>
               </CardHeader>
-              <CardContent className={cn("space-y-3 pt-0", mobile ? "px-4 pb-4" : "")}>
+              <CardContent className={cn("space-y-3 pt-0", mobile ? "px-4 pb-4" : "px-[18px] pb-[18px]")}>
                 {semesterOrgActivities.length === 0 ? (
                   mobile ? (
                     <div className="mobile-empty-state rounded-lg border border-border/50 px-4 py-4 text-sm text-muted-foreground">
@@ -8220,10 +8524,17 @@ Validated {validatedDate}</p>
                       <p className="text-xs">Add PPAs with activity details, narrative, and proof files for admin approval.</p>
                     </div>
                   ) : (
-                    <PortalEmptyState
-                      title="No organization-initiated activities logged yet"
-                      description="Add each PPA with its activity details, narrative, and proof files for admin approval."
-                    />
+                    <div className="flex min-h-[76px] items-center rounded-lg border border-dashed border-border/60 bg-muted/10 p-4">
+                      <div className="flex items-start gap-3">
+                        <UserFeatureIcon icon={ClipboardList} size="compact" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">No organization-initiated activities yet</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Add PPAs with activity details, narrative, and proof files for admin approval.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )
                 ) : (
                   <div className="space-y-3">
@@ -8334,7 +8645,7 @@ Validated {validatedDate}</p>
 
           return (
             <PortalSection title="YPOP Incentive">
-              <div className="ypop-submission-detail-page space-y-4 lg:space-y-5">
+              <div className="user-ypop-submission-details-page ypop-submission-detail-page space-y-4 lg:mx-auto lg:max-w-[1320px] lg:space-y-5">
 
                 {/* Back nav + page header */}
                 <div className="space-y-2 lg:space-y-3">
@@ -8345,7 +8656,7 @@ Validated {validatedDate}</p>
                   >
                     <ArrowLeft className="h-4 w-4" />
                     <span className="lg:hidden">Back to YPOP Incentive</span>
-                    <span className="hidden lg:inline">Back</span>
+                    <span className="hidden lg:inline">Back to YPOP Incentive</span>
                   </button>
                   <div className="flex flex-wrap items-start justify-between gap-2 pr-10 sm:pr-12 lg:pr-0">
                     <div className="min-w-0 flex-1">
@@ -8353,20 +8664,352 @@ Validated {validatedDate}</p>
                       {deadline && (
                         <p className={cn(
                           "mt-0.5 text-xs leading-snug lg:text-sm",
-                          isMobileYpopDetail ? "text-destructive/85" : isDeadlinePast ? "text-destructive" : "text-muted-foreground",
+                          isMobileYpopDetail ? "text-destructive/85" : isDeadlinePast ? "text-destructive/70" : "text-muted-foreground",
                         )}>
-                          Validation {isDeadlinePast ? "closed" : "closes"} {deadline.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                          <span className="lg:hidden">
+                            Validation {isDeadlinePast ? "closed" : "closes"} {deadline.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                          </span>
+                          <span className="hidden lg:inline">
+                            Validation {isDeadlinePast ? "closed" : "closes"} · {deadline.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                          </span>
                         </p>
                       )}
                     </div>
-                    <div className="shrink-0 max-w-full">
+                    <div className="shrink-0 max-w-full lg:hidden">
                       <PortalStatusBadge status={activeEntry.status} />
                     </div>
                   </div>
                 </div>
 
-                {/* Two-column body */}
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+                <div className="ypop-details-grid hidden grid-cols-[minmax(0,1.35fr)_minmax(360px,0.85fr)] items-start gap-5 lg:grid">
+                  <main className="ypop-workflow-column grid min-w-0 content-start gap-4">
+                    {renderSemesterEventsCard(false)}
+                    {renderOrganizationInitiatedCard(false)}
+
+                    <RecentActivityPreview
+                      activities={activityLog.map((item, index) => ({
+                        id: `${item.label}-${item.date}-${index}`,
+                        message: (
+                          <>
+                            <span className="font-medium">{item.label}</span>
+                            {item.note ? <span className="text-muted-foreground"> — {item.note}</span> : null}
+                          </>
+                        ),
+                        timestamp: item.date,
+                        timestampLabel: formatDateTimeLabel(item.date),
+                      }))}
+                      maxItems={3}
+                      onViewAll={
+                        activityLog.length > 3
+                          ? () =>
+                              setYpopRecentActivityModal({
+                                title: `${activeEntry.semesterLabel} Activity`,
+                                description: "Full activity history for this YPOP submission.",
+                                activities: activityLog.map((item, index) => ({
+                                  id: `${item.label}-${item.date}-${index}`,
+                                  message: (
+                                    <>
+                                      <span className="font-medium">{item.label}</span>
+                                      {item.note ? <span className="text-muted-foreground"> — {item.note}</span> : null}
+                                    </>
+                                  ),
+                                  timestamp: item.date,
+                                  timestampLabel: formatDateTimeLabel(item.date),
+                                })),
+                              })
+                          : undefined
+                      }
+                      className="ypop-section-card rounded-[0.875rem] border-border/70 bg-card p-[18px] shadow-sm"
+                    />
+
+                    {detailFiles.length > 0 && (
+                      <Card className="border-border/70">
+                        <CardHeader className="px-[18px] pb-2 pt-[18px]">
+                          <CardTitle className="text-sm font-semibold">Legacy Semester Files</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 px-[18px] pb-[18px] pt-0">
+                          <p className="text-[11px] leading-snug text-muted-foreground">
+                            Older semester-level proof files retained for reference.
+                          </p>
+                          {fileListReadOnly}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {isDraftOrRevision && (
+                      <Card className="border-border/70">
+                        <CardContent className="space-y-3 p-[18px]">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">Message for admin</p>
+                            <p className="text-xs text-muted-foreground">Optional context for the reviewer.</p>
+                          </div>
+                          <Textarea
+                            value={ypopNotesByEntryId[activeEntry.id] ?? ""}
+                            onChange={(event) =>
+                              setYpopNotesByEntryId((previous) => ({
+                                ...previous,
+                                [activeEntry.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Any notes for the admin reviewing your participation records..."
+                            rows={3}
+                            className="resize-none text-sm"
+                            disabled={isSubmitting}
+                          />
+                          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                              onClick={() => setConfirmDeleteYpopEntryId(activeEntry.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Submission
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => void handleSubmitYpop(activeEntry)}
+                              disabled={isSubmitting || totalSubmissionProofCount === 0}
+                            >
+                              {isSubmitting ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Submitting...
+                                </>
+                              ) : activeEntry.status === "needs_revision" ? (
+                                "Resubmit for Validation"
+                              ) : (
+                                "Submit for Validation"
+                              )}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </main>
+
+                  <aside className="ypop-summary-column grid min-w-0 content-start gap-4">
+                    <Card className="ypop-section-card border-border/70">
+                      <CardHeader className="px-[18px] pb-2 pt-[18px]">
+                        <div className="flex items-start justify-between gap-3">
+                          <CardTitle className="text-base font-semibold">Qualification Result</CardTitle>
+                          <PortalStatusBadge status={activeEntry.status} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4 px-[18px] pb-[18px] pt-0">
+                        <div className="space-y-3">
+                          <dl className="space-y-2 text-sm">
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-muted-foreground">City-Led Score</dt>
+                              <dd className="font-semibold tabular-nums text-foreground">{scoreBreakdown.cityLedPercent}%</dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-muted-foreground">Organization Bonus</dt>
+                              <dd className="font-semibold tabular-nums text-foreground">+{displayedOrgBonus}%</dd>
+                            </div>
+                            <div className="flex items-end justify-between gap-3 border-t border-border/60 pt-2">
+                              <dt className="font-medium text-foreground">Final Score</dt>
+                              <dd
+                                className={cn(
+                                  "text-2xl font-semibold tabular-nums",
+                                  isQualified ? "text-green-700" : isNotQualified ? "text-destructive" : "text-foreground",
+                                )}
+                              >
+                                {displayedFinalScore}%
+                              </dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-muted-foreground">Threshold</dt>
+                              <dd className="font-semibold tabular-nums text-foreground">{activeEntry.pointsRequired}%</dd>
+                            </div>
+                          </dl>
+                          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                isQualified ? "bg-green-500" : isNotQualified ? "bg-destructive" : "bg-primary/70",
+                              )}
+                              style={{ width: `${Math.min(displayedFinalScore, 100)}%` }}
+                            />
+                            <div
+                              className="absolute top-0 h-full w-0.5 bg-foreground/40"
+                              style={{ left: `${Math.min(activeEntry.pointsRequired, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {isQualified && (
+                          <div className="rounded-xl border border-green-500/15 bg-green-500/5 p-3.5">
+                            <div className="flex items-start gap-3">
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-green-100 text-green-700" aria-hidden="true">
+                                <Trophy className="h-4 w-4" />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-green-800">You're qualified for a Project Grant!</p>
+                                <p className="mt-1 text-sm leading-snug text-foreground/75">
+                                  Your YPOP score qualifies your organization for a budget incentive.
+                                </p>
+                                <div className="mt-3">
+                                  {hasLinkedBudgetRequest ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-100/60 px-3 py-1 text-xs font-medium text-green-800">
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                      Budget request already submitted
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="bg-green-600 text-white hover:bg-green-700"
+                                      onClick={() =>
+                                        navigate(
+                                          `${userRouteMap["budget-request"]}?ypopEntryId=${activeEntry.id}&semesterLabel=${encodeURIComponent(activeEntry.semesterLabel)}`,
+                                        )
+                                      }
+                                    >
+                                      <Trophy className="mr-2 h-4 w-4" />
+                                      Submit a Budget Request
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {isSubmittedOrReview && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                            Submitted - awaiting admin review.
+                          </div>
+                        )}
+
+                        {activeEntry.adminRemarks.trim() && (
+                          <div className="rounded-lg border border-amber-200/70 bg-amber-50/50 p-3">
+                            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Admin Remarks</p>
+                            <p className="text-sm text-amber-900">{activeEntry.adminRemarks}</p>
+                          </div>
+                        )}
+
+                        {!isDraftOrRevision && activeEntry.submissionNote.trim() && (
+                          <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                            <p className="mb-1 text-xs font-medium text-muted-foreground">Message sent with submission</p>
+                            <p className="text-sm">{activeEntry.submissionNote}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="ypop-section-card border-border/70">
+                      <CardHeader className="px-[18px] pb-3 pt-[18px]">
+                        <div className="flex items-center justify-between gap-3">
+                          <CardTitle className="text-base font-semibold">Scoring Breakdown</CardTitle>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => setYpopScoringHelpOpen(true)}
+                            aria-label="View YPOP scoring guide"
+                          >
+                            <CircleHelp className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4 px-[18px] pb-[18px] pt-0">
+                        <div className="grid grid-cols-3 gap-2.5">
+                          {[
+                            { label: "City-Led", value: `${scoreBreakdown.cityLedPercent}%` },
+                            { label: "Bonus", value: `+${displayedOrgBonus}%` },
+                            { label: "Threshold", value: `${activeEntry.pointsRequired}%` },
+                          ].map((metric) => (
+                            <div key={metric.label} className="min-w-0 rounded-lg border border-border/60 bg-muted/20 p-3">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{metric.label}</p>
+                              <p className="mt-1 text-lg font-semibold leading-none tabular-nums text-foreground">{metric.value}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-1 border-t border-border/50 pt-3">
+                          <p className="pb-1 text-sm font-semibold">City-Led Activities</p>
+                          {semesterActivities.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+                              No city-led activities are configured for this semester yet.
+                            </div>
+                          ) : (
+                            semesterActivities.map((activity) => {
+                              const participation = semesterJoinedEvents.find((item) => item.activityId === activity.id);
+                              const isVerified =
+                                verifiedCityLedIds.has(activity.id) || participation?.status === "verified";
+                              return (
+                                <div
+                                  key={activity.id}
+                                  className="city-led-activity-row grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border/50 py-2.5 last:border-b-0"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="line-clamp-2 text-sm font-medium leading-snug">{activity.name}</p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                      {activity.date ? formatShortPortalDate(activity.date) : "Date TBD"}
+                                      {activity.venue ? ` · ${activity.venue}` : ""}
+                                    </p>
+                                  </div>
+                                  <div className="flex max-w-[190px] flex-wrap items-center justify-end gap-1.5">
+                                    <span className="rounded-full border border-border/60 bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                      {YPOP_CITY_LED_CATEGORY_LABELS[resolveYpopCityLedCategory(activity.category, activity.points)]}
+                                    </span>
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                      {normalizeYpopCityLedPoints(activity.points, activity.category)} pts
+                                    </span>
+                                    {isVerified ? (
+                                      <span className="status-verified rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                        Verified
+                                      </span>
+                                    ) : participation ? (
+                                      <PortalStatusBadge status={participation.status} />
+                                    ) : (
+                                      <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground">
+                                        Not joined
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <div className="space-y-2 border-t border-border/50 pt-3">
+                          <p className="text-sm font-semibold">Organization Bonus</p>
+                          {semesterPeriod?.orgLedTiers?.length ? (
+                            <div>
+                              {[...semesterPeriod.orgLedTiers]
+                                .sort((left, right) => right.minProjects - left.minProjects)
+                                .map((tier) => (
+                                  <div
+                                    key={`${tier.minProjects}-${tier.bonus}`}
+                                    className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/50 py-2.5 text-sm last:border-b-0"
+                                  >
+                                    <span>{`${tier.minProjects}+ activit${tier.minProjects === 1 ? "y" : "ies"}`}</span>
+                                    <span className="font-semibold">+{tier.bonus}%</span>
+                                  </div>
+                                ))}
+                            </div>
+                          ) : (
+                            <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+                              No organization bonus tiers are configured yet.
+                            </div>
+                          )}
+                          <p className="text-[11px] leading-snug text-muted-foreground">
+                            Admin-confirmed organization-initiated activity count: {approvedOrgActivityCount}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                  </aside>
+                </div>
+
+                {/* Mobile and small-tablet body */}
+                <div className="grid gap-6 lg:hidden">
 
                   {/* LEFT â€” metadata + actions */}
                   <div className="flex min-w-0 flex-col gap-4 lg:gap-5">
@@ -10880,18 +11523,7 @@ function DashboardOverviewCard({
       </div>
       <div className="hidden min-w-0 lg:block">
         <p className="overview-label overview-card-label text-[0.92rem] font-semibold leading-tight text-foreground">{label}</p>
-        <p
-          className={cn(
-            "overview-value mt-1 whitespace-nowrap text-[clamp(1.8rem,2vw,2.25rem)] font-semibold leading-none",
-            tone === "emerald"
-              ? "text-emerald-600"
-              : tone === "amber"
-                ? "text-amber-600"
-                : tone === "red"
-                  ? "text-red-500"
-                  : "text-primary",
-          )}
-        >
+        <p className="overview-value mt-1 whitespace-nowrap text-[clamp(1.5rem,1.6vw,1.75rem)] font-semibold leading-none text-foreground">
           {value}
         </p>
         <p className="overview-status overview-card-status mt-2 text-sm leading-snug text-muted-foreground">{helper}</p>
