@@ -33,6 +33,8 @@ export type ReportExportConfig<Row> = {
   footerText?: string;
   xlsxSheetName?: string;
   pdfUseUnicodeFont?: boolean;
+  pdfFontSize?: number;
+  pdfCellPadding?: number;
 };
 
 export type ReportExportOptions<Row> = {
@@ -387,8 +389,8 @@ export const exportReportAsPdf = async <Row,>(options: ReportExportOptions<Row>)
     showFoot: totalsRow ? "lastPage" : "never",
     theme: "grid",
     styles: {
-      fontSize: 9,
-      cellPadding: { top: 5, right: 5, bottom: 5, left: 5 },
+      fontSize: config.pdfFontSize ?? 9,
+      cellPadding: config.pdfCellPadding ?? { top: 5, right: 5, bottom: 5, left: 5 },
       lineColor: [...PDF_COLORS.border],
       lineWidth: 0.6,
       textColor: [...PDF_COLORS.text],

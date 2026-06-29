@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, ChevronDown, LogOut, Menu, User } from "lucide-react";
 import BrandLogo from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,10 @@ export const UserPortalShell = ({
     : "";
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
   const recentNotifications = [...(notifications ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [activeId]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">

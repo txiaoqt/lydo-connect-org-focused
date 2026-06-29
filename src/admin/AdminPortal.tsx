@@ -100,6 +100,7 @@ import {
   adminUpdateYpopEntryInSupabase,
   adminUpdateYpopEventParticipationInSupabase,
   adminUpdateYpopOrgActivityInSupabase,
+  adminUpdateInquiryInSupabase,
 } from "@/lib/lydo-connect-supabase";
 
 const routeMap: Record<string, string> = {
@@ -624,7 +625,7 @@ type RecentActivityEntry = {
 export default function AdminPortal({ section }: { section: string }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { state, mergeRemoteState, createTemplate, removeTemplate, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead, markAllNotificationsRead, updateBudgetRequest, updateLiquidationReport, updateYPOPEntry, updateYPOPEventParticipation, createYPOPOrgActivity, updateYPOPOrgActivity, createYPOPCityActivity, updateYPOPCityActivity, deleteYPOPCityActivity, createYPOPPeriod, updateYPOPPeriod, deleteYPOPPeriod } =
+  const { state, mergeRemoteState, createTemplate, removeTemplate, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead, markAllNotificationsRead, updateBudgetRequest, updateLiquidationReport, updateInquiry, updateYPOPEntry, updateYPOPEventParticipation, createYPOPOrgActivity, updateYPOPOrgActivity, createYPOPCityActivity, updateYPOPCityActivity, deleteYPOPCityActivity, createYPOPPeriod, updateYPOPPeriod, deleteYPOPPeriod } =
     useLydoConnect();
   const [selectedRegistrationId, setSelectedRegistrationId] = useState<string | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<string | null>(null);
@@ -653,6 +654,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [activityDateFilter, setActivityDateFilter] = useState<"all" | "7d" | "30d" | "90d">("all");
   const [activityPage, setActivityPage] = useState(0);
   const [activityExporting, setActivityExporting] = useState<ExportFormat | null>(null);
+  const [activityExportDialogOpen, setActivityExportDialogOpen] = useState(false);
   const [newsDatePostedDraft, setNewsDatePostedDraft] = useState("");
   const [newsVisibilityDraft, setNewsVisibilityDraft] = useState<NewsRelease["visibilityStatus"]>("draft");
   const [savingNewsRelease, setSavingNewsRelease] = useState(false);
@@ -673,6 +675,9 @@ export default function AdminPortal({ section }: { section: string }) {
   const [inquirySearch, setInquirySearch] = useState("");
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<"all" | InquiryRecord["status"]>("all");
   const [selectedInquiry, setSelectedInquiry] = useState<InquiryRecord | null>(null);
+  const [inquiryStatusDraft, setInquiryStatusDraft] = useState<InquiryRecord["status"]>("pending_review");
+  const [inquiryAdminRemarksDraft, setInquiryAdminRemarksDraft] = useState("");
+  const [savingInquiryStatus, setSavingInquiryStatus] = useState(false);
   const [expandedRegistrationIds, setExpandedRegistrationIds] = useState<string[]>([]);
   const [expandedDocumentFileIds, setExpandedDocumentFileIds] = useState<string[]>([]);
   const [documentReviewRemarksByFileId, setDocumentReviewRemarksByFileId] = useState<Record<string, string>>({});
@@ -1207,6 +1212,11 @@ export default function AdminPortal({ section }: { section: string }) {
       })
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }, [inquirySearch, inquiryStatusFilter, state.inquiries]);
+  const openInquiryDetails = (inquiry: InquiryRecord) => {
+    setSelectedInquiry(inquiry);
+    setInquiryStatusDraft(inquiry.status);
+    setInquiryAdminRemarksDraft(inquiry.adminRemarks);
+  };
   const budgetMonitoringAnalysis = useMemo(() => {
     const totalApproved = budgetMonitoringEntries.reduce((sum, entry) => sum + entry.approvedAmount, 0);
     const totalReleased = budgetMonitoringEntries.reduce((sum, entry) => sum + entry.releasedAmount, 0);
@@ -1881,6 +1891,46 @@ export default function AdminPortal({ section }: { section: string }) {
       relatedId,
       description,
     });
+  };
+
+  const handleSaveInquiryStatus = async () => {
+    if (!selectedInquiry || savingInquiryStatus) return;
+
+    setSavingInquiryStatus(true);
+    try {
+      const previousStatus = selectedInquiry.status;
+      const savedInquiry = await adminUpdateInquiryInSupabase(selectedInquiry.id, {
+        status: inquiryStatusDraft,
+        adminRemarks: inquiryAdminRemarksDraft.trim(),
+      });
+
+      updateInquiry(savedInquiry.id, savedInquiry);
+      setSelectedInquiry(savedInquiry);
+      setInquiryStatusDraft(savedInquiry.status);
+      setInquiryAdminRemarksDraft(savedInquiry.adminRemarks);
+
+      void appendAuditLog(
+        "update_inquiry_status",
+        "inquiry",
+        savedInquiry.id,
+        `Changed inquiry status from ${statusLabelMap[previousStatus] ?? previousStatus} to ${statusLabelMap[savedInquiry.status] ?? savedInquiry.status}.`,
+        savedInquiry.organizationId,
+      ).catch((error) => console.error("Unable to record inquiry status activity:", error));
+
+      toast({
+        title: "Inquiry status updated",
+        description: `The inquiry is now ${statusLabelMap[savedInquiry.status] ?? savedInquiry.status}.`,
+      });
+    } catch (error) {
+      console.error("Unable to update inquiry status:", error);
+      toast({
+        title: "Status update failed",
+        description: error instanceof Error ? error.message : "The inquiry status could not be updated.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingInquiryStatus(false);
+    }
   };
 
   const notifyOrganizationUser = (params: {
@@ -4186,7 +4236,7 @@ export default function AdminPortal({ section }: { section: string }) {
                           inquiry={inquiry}
                           submittedDate={submittedParts.date}
                           submittedTime={submittedParts.time}
-                          onView={() => setSelectedInquiry(inquiry)}
+                          onView={() => openInquiryDetails(inquiry)}
                         />
                       );
                     })
@@ -4271,7 +4321,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                 size="sm"
                                 className="h-8 px-2.5 text-xs font-medium"
                                 aria-label={`View inquiry from ${inquiry.submitterName || inquiry.organizationName || inquiry.email}`}
-                                onClick={() => setSelectedInquiry(inquiry)}
+                                onClick={() => openInquiryDetails(inquiry)}
                               >
                                 <Eye className="mr-1.5 h-3.5 w-3.5" />
                                 View
@@ -8810,31 +8860,16 @@ export default function AdminPortal({ section }: { section: string }) {
           <div className="admin-activity-logs-page">
             <PortalSection title="Recent Activity" description="Audit trail of admin-side edits and review actions.">
             <div className="mobile-activity-controls">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="activity-export-trigger"
-                    disabled={activityExporting !== null}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    {activityExporting ? "Preparing export\u2026" : "Export"}
-                    <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-44">
-                  <DropdownMenuItem onClick={() => void handleActivityExport("pdf")}>
-                    Export as PDF
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void handleActivityExport("xlsx")}>
-                    Export as Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void handleActivityExport("csv")}>
-                    Export as CSV
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                type="button"
+                variant="outline"
+                className="activity-export-trigger"
+                disabled={!filteredLogs.length || activityExporting !== null}
+                onClick={() => setActivityExportDialogOpen(true)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
 
               <div className="activity-category-filters" aria-label="Filter activity by category">
                 {mobileFilterTypes.map((type) => (
@@ -8888,16 +8923,29 @@ export default function AdminPortal({ section }: { section: string }) {
                   </button>
                 ))}
               </div>
-              <select
-                value={activityDateFilter}
-                onChange={(e) => { setActivityDateFilter(e.target.value as "all" | "7d" | "30d" | "90d"); setActivityPage(0); }}
-                className="rounded-full border border-border/60 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground focus:outline-none"
-              >
-                <option value="all">All time</option>
-                <option value="90d">Last 90 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="7d">Last 7 days</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={activityDateFilter}
+                  onChange={(e) => { setActivityDateFilter(e.target.value as "all" | "7d" | "30d" | "90d"); setActivityPage(0); }}
+                  className="rounded-full border border-border/60 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground focus:outline-none"
+                  aria-label="Filter activity by time range"
+                >
+                  <option value="all">All time</option>
+                  <option value="90d">Last 90 days</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="7d">Last 7 days</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!filteredLogs.length || activityExporting !== null}
+                  onClick={() => setActivityExportDialogOpen(true)}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </div>
             </div>
             {filteredLogs.length ? (
               <>
@@ -8997,6 +9045,13 @@ export default function AdminPortal({ section }: { section: string }) {
               </>
             )}
             </PortalSection>
+            <ExportReportDialog
+              open={activityExportDialogOpen}
+              onOpenChange={setActivityExportDialogOpen}
+              reportTitle="Activity Logs"
+              description="Export all activity records matching the current category and time-range filters."
+              onExport={handleActivityExport}
+            />
           </div>
         );
       }
@@ -10853,6 +10908,9 @@ export default function AdminPortal({ section }: { section: string }) {
   }, [
     activityLogFilter,
     activityDateFilter,
+    activityExportDialogOpen,
+    activityExporting,
+    activityPage,
     createNotification,
     selectedBudgetRequestId,
     selectedLiquidationReportSnapshot,
@@ -11038,7 +11096,10 @@ export default function AdminPortal({ section }: { section: string }) {
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog open={Boolean(selectedInquiry)} onOpenChange={(open) => (!open ? setSelectedInquiry(null) : undefined)}>
+      <Dialog
+        open={Boolean(selectedInquiry)}
+        onOpenChange={(open) => (!open && !savingInquiryStatus ? setSelectedInquiry(null) : undefined)}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{selectedInquiry?.subject || "Inquiry details"}</DialogTitle>
@@ -11077,14 +11138,64 @@ export default function AdminPortal({ section }: { section: string }) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Description</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{selectedInquiry.description}</p>
               </div>
-              {selectedInquiry.adminRemarks ? (
-                <div className="rounded-xl border border-primary/15 bg-primary/5 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">Admin Remarks</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-foreground">{selectedInquiry.adminRemarks}</p>
+              <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+                <div className="space-y-2">
+                  <label htmlFor="inquiry-status" className="text-sm font-medium text-foreground">
+                    Change Status
+                  </label>
+                  <Select
+                    value={inquiryStatusDraft}
+                    onValueChange={(value) => setInquiryStatusDraft(value as InquiryRecord["status"])}
+                    disabled={savingInquiryStatus}
+                  >
+                    <SelectTrigger id="inquiry-status">
+                      <SelectValue placeholder="Select inquiry status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending_review">Pending Review</SelectItem>
+                      <SelectItem value="reviewed">Reviewed</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : null}
+                <div className="space-y-2">
+                  <label htmlFor="inquiry-admin-remarks" className="text-sm font-medium text-foreground">
+                    Admin Remarks <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <Textarea
+                    id="inquiry-admin-remarks"
+                    value={inquiryAdminRemarksDraft}
+                    onChange={(event) => setInquiryAdminRemarksDraft(event.target.value)}
+                    placeholder="Add a note about this inquiry or status change."
+                    rows={3}
+                    disabled={savingInquiryStatus}
+                  />
+                </div>
+              </div>
             </div>
           ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={savingInquiryStatus}
+              onClick={() => setSelectedInquiry(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                !selectedInquiry ||
+                savingInquiryStatus ||
+                (inquiryStatusDraft === selectedInquiry.status &&
+                  inquiryAdminRemarksDraft.trim() === selectedInquiry.adminRemarks.trim())
+              }
+              onClick={() => void handleSaveInquiryStatus()}
+            >
+              {savingInquiryStatus ? "Saving..." : "Save Status"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog open={Boolean(pendingAdminConfirmation)} onOpenChange={(open) => (!open ? closeAdminConfirmation() : undefined)}>

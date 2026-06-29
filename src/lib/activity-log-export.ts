@@ -12,7 +12,6 @@ export type ExportActivityRow = {
   affectedRecord: string;
   actor: string;
   organization: string;
-  additionalDetails: string;
 };
 
 const actionLabels: Record<string, string> = {
@@ -59,7 +58,7 @@ export const getFriendlyAuditCategory = (category: string) =>
 
 export const mapAuditLogToExportRow = (
   log: ActivityLog,
-  context?: { actor?: string; organization?: string; additionalDetails?: string },
+  context?: { actor?: string; organization?: string },
 ): ExportActivityRow => {
   const parsed = new Date(log.createdAt);
   const validDate = !Number.isNaN(parsed.getTime());
@@ -90,7 +89,6 @@ export const mapAuditLogToExportRow = (
     affectedRecord: log.relatedId,
     actor: context?.actor ?? "",
     organization: context?.organization ?? "",
-    additionalDetails: context?.additionalDetails ?? "",
   };
 };
 
@@ -103,16 +101,17 @@ export const activityLogExportConfig: ReportExportConfig<ExportActivityRow> = {
   footerText: "Y-TRACE Admin Audit Report",
   xlsxSheetName: "Activity Logs",
   pdfUseUnicodeFont: true,
+  pdfFontSize: 7.5,
+  pdfCellPadding: 4,
   columns: [
-    { label: "Log ID", value: (row) => row.logId, pdfWidth: 64, xlsxWidth: 24 },
-    { label: "Date", value: (row) => row.date, xlsxValue: (row) => row.timestamp, xlsxType: "date", pdfWidth: 62, xlsxWidth: 16 },
-    { label: "Time", value: (row) => row.time, pdfWidth: 48, xlsxWidth: 14 },
-    { label: "Action", value: (row) => row.action, pdfWidth: 105, xlsxWidth: 30, xlsxWrap: true },
-    { label: "Category", value: (row) => row.category, pdfWidth: 66, xlsxWidth: 20 },
-    { label: "Description", value: (row) => row.description, csvPreserveLineBreaks: true, pdfWidth: 168, xlsxWidth: 55, xlsxWrap: true },
-    { label: "Affected Record", value: (row) => row.affectedRecord, pdfWidth: 85, xlsxWidth: 35, xlsxWrap: true },
-    { label: "Actor", value: (row) => row.actor, pdfWidth: 64, xlsxWidth: 24 },
-    { label: "Organization", value: (row) => row.organization, pdfWidth: 82, xlsxWidth: 28, xlsxWrap: true },
-    { label: "Additional Details", value: (row) => row.additionalDetails, csvPreserveLineBreaks: true, pdfWidth: 88, xlsxWidth: 32, xlsxWrap: true },
+    { label: "Log ID", value: (row) => row.logId, pdfWidth: 60, xlsxWidth: 24 },
+    { label: "Date", value: (row) => row.date, xlsxValue: (row) => row.timestamp, xlsxType: "date", pdfWidth: 58, xlsxWidth: 16 },
+    { label: "Time", value: (row) => row.time, pdfWidth: 44, xlsxWidth: 14 },
+    { label: "Action", value: (row) => row.action, pdfWidth: 110, xlsxWidth: 30, xlsxWrap: true },
+    { label: "Category", value: (row) => row.category, pdfWidth: 63, xlsxWidth: 20 },
+    { label: "Description", value: (row) => row.description, csvPreserveLineBreaks: true, pdfWidth: 194, xlsxWidth: 55, xlsxWrap: true },
+    { label: "Affected Record", value: (row) => row.affectedRecord, pdfWidth: 90, xlsxWidth: 35, xlsxWrap: true },
+    { label: "Actor", value: (row) => row.actor, pdfWidth: 60, xlsxWidth: 24 },
+    { label: "Organization", value: (row) => row.organization, pdfWidth: 90, xlsxWidth: 28, xlsxWrap: true },
   ],
 };

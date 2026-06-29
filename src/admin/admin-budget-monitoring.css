@@ -323,7 +323,9 @@
   .admin-budget-monitoring-page .monitoring-summary-card.summary-card--currency .summary-value {
     overflow: visible;
     overflow-wrap: anywhere;
-    font-size: clamp(1.35rem, 7vw, 1.8rem);
+    font-size: clamp(1.15rem, 5.5vw, 1.45rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
     font-variant-numeric: tabular-nums;
   }
 

@@ -1,6 +1,7 @@
-const CACHE_NAME = "y-trace-v6";
+const CACHE_NAME = "y-trace-v7";
 const APP_SHELL = [
   "/",
+  "/dashboard",
   "/admin",
   "/signin",
   "/index.html",

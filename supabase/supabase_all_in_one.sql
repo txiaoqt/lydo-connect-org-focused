@@ -2659,31 +2659,9 @@ values
   ('Manggahan')
 on conflict (name) do nothing;
 
-insert into public.required_document_types (
-  name,
-  description,
-  required_year,
-  is_required,
-  template_url,
-  template_description,
-  sort_order,
-  is_active
-)
-values
-  ('Constitution and By-Laws', 'Upload the signed constitution and by-laws.', 2026, true, '#constitution-bylaws-template', 'Template placeholder for the constitutional packet.', 1, true),
-  ('2026 NYC YORP Registration Form (Form B)', 'Use the current Form B upload slot.', 2026, true, '#form-b-template', 'Template placeholder for Form B.', 2, true),
-  ('2026 YORP Directory of Officers and Adviser', 'List the officers and adviser for the year.', 2026, true, '#officers-adviser-template', 'Template placeholder for the officers list.', 3, true),
-  ('2026 YORP List of Members in Good Standing', 'Upload the current list of members in good standing.', 2026, true, '#members-template', 'Template placeholder for the members list.', 4, true),
-  ('Pasig City YORP Registration Form (Form A)', 'Official Pasig City Form A requirement.', 2026, true, '#form-a-template', 'Template placeholder for Form A.', 5, true),
-  ('PCYDO YORP Data Request Form', 'PCYDO data request form requirement.', 2026, true, '#data-request-template', 'Template placeholder for the PCYDO request form.', 6, true)
-on conflict (name) do update
-  set description = excluded.description,
-      required_year = excluded.required_year,
-      is_required = excluded.is_required,
-      template_url = excluded.template_url,
-      template_description = excluded.template_description,
-      sort_order = excluded.sort_order,
-      is_active = excluded.is_active;
+-- Template records are intentionally not seeded here.
+-- Administrators manage templates through the portal, so rerunning this
+-- all-in-one script must not recreate or overwrite those records.
 
 insert into public.policy_versions (version, title, terms_content, privacy_content, is_active, effective_date)
 values (
@@ -3136,6 +3114,41 @@ begin
   if _admin_id is null then raise exception 'Admin account is not authorized.'; end if;
 
   delete from public.ypop_city_activities where id = _activity_id;
+end;
+$$;
+
+-- Admin inquiry status update
+create or replace function public.admin_update_inquiry(
+  _session_token text,
+  _inquiry_id uuid,
+  _status public.inquiry_status,
+  _admin_remarks text default null
+)
+returns setof public.inquiries
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  _admin_id uuid;
+begin
+  select vat.admin_id into _admin_id
+  from public.validate_admin_session_token(_session_token) vat limit 1;
+  if _admin_id is null then raise exception 'Admin account is not authorized.'; end if;
+
+  update public.inquiries set
+    status = _status,
+    admin_remarks = coalesce(_admin_remarks, admin_remarks),
+    reviewed_at = case
+      when _status = 'pending_review' then null
+      else coalesce(reviewed_at, now())
+    end,
+    updated_at = now()
+  where id = _inquiry_id;
+
+  if not found then raise exception 'Inquiry not found.'; end if;
+
+  return query select * from public.inquiries where id = _inquiry_id;
 end;
 $$;
 

@@ -2100,6 +2100,23 @@ export const createAdminActivityLogInSupabase = async (params: {
   return mapActivityLog(createdRow as ActivityLogRow);
 };
 
+export const adminUpdateInquiryInSupabase = async (
+  inquiryId: string,
+  patch: Pick<InquiryRecord, "status" | "adminRemarks">,
+): Promise<InquiryRecord> => {
+  const adminSession = getAuthenticatedAdminSession();
+  const { data, error } = await supabase!.rpc("admin_update_inquiry", {
+    _session_token: adminSession.sessionToken,
+    _inquiry_id: inquiryId,
+    _status: patch.status,
+    _admin_remarks: patch.adminRemarks,
+  });
+
+  const updatedRow = Array.isArray(data) ? data[0] : null;
+  if (error || !updatedRow) throw new Error(error?.message ?? "Failed to update the inquiry.");
+  return mapInquiry(updatedRow as InquiryRow);
+};
+
 export const updateLiquidationReportInSupabase = async (
   liquidationReportId: string,
   patch: Partial<Omit<LiquidationReport, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy" | "budgetRequestId">>,

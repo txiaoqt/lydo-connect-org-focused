@@ -20,6 +20,15 @@ const activity: ActivityLog = {
 };
 
 describe("activity log export normalization", () => {
+  it("keeps the PDF table within the printable A4 landscape width", () => {
+    const totalWidth = activityLogExportConfig.columns.reduce(
+      (sum, column) => sum + (column.pdfWidth ?? 0),
+      0,
+    );
+
+    expect(totalWidth).toBe(769);
+  });
+
   it("uses shared friendly labels and preserves traceability fields", () => {
     const row = mapAuditLogToExportRow(activity, {
       actor: "Administrator",

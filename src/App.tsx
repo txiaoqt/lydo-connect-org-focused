@@ -21,7 +21,7 @@ import NewsReleaseRecord from "./pages/NewsReleaseRecord";
 import PublicTemplates from "./pages/PublicTemplates";
 import { usePolicyAgreement } from "./hooks/use-policy-agreement";
 import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
-import UserPortal from "./user/UserPortal";
+import UserPortalEntry from "./user/UserPortalEntry";
 import { LydoConnectProvider } from "./lib/lydo-connect-store";
 import { isSupabaseConfigured } from "./lib/supabase";
 import {
@@ -220,19 +220,21 @@ const App = () => (
                       <Route path="/auth/callback" element={<AuthCallback />} />
                       <Route path="/signup" element={<SignUp />} />
                       <Route path="/reset-password" element={<ResetPassword />} />
-                      <Route path="/dashboard" element={<RequireUser><UserPortal section="dashboard" /></RequireUser>} />
-                      <Route path="/organization-profile" element={<RequireUser><UserPortal section="organization-profile" /></RequireUser>} />
-                      <Route path="/document-submission" element={<RequireUser><UserPortal section="document-submission" /></RequireUser>} />
+                      <Route path="/dashboard" element={<RequireUser><UserPortalEntry section="dashboard" /></RequireUser>} />
+                      <Route path="/organization-profile" element={<RequireUser><UserPortalEntry section="organization-profile" /></RequireUser>} />
+                      <Route path="/document-submission" element={<RequireUser><UserPortalEntry section="document-submission" /></RequireUser>} />
                       <Route path="/validation-review" element={<Navigate to="/document-submission" replace />} />
-                      <Route path="/budget-request" element={<RequireUser><UserPortal section="budget-request" /></RequireUser>} />
-                      <Route path="/liquidation-reporting" element={<RequireUser><UserPortal section="liquidation-reporting" /></RequireUser>} />
-                      <Route path="/news-releases" element={<RequireUser><UserPortal section="news-releases" /></RequireUser>} />
-                      <Route path="/news-releases/:newsReleaseId" element={<NewsReleaseRecord />} />
-                      <Route path="/public-transparency" element={<RequireUser><UserPortal section="public-transparency" /></RequireUser>} />
-                      <Route path="/compliance-status" element={<RequireUser><UserPortal section="compliance-status" /></RequireUser>} />
-                      <Route path="/notifications" element={<RequireUser><UserPortal section="notifications" /></RequireUser>} />
-                      <Route path="/ypop" element={<RequireUser><UserPortal section="ypop" /></RequireUser>} />
-                      <Route path="/templates" element={<RequireUser><UserPortal section="templates" /></RequireUser>} />
+                      <Route path="/budget-request" element={<RequireUser><UserPortalEntry section="budget-request" /></RequireUser>} />
+                      <Route path="/liquidation-reporting" element={<RequireUser><UserPortalEntry section="liquidation-reporting" /></RequireUser>} />
+                      <Route path="/news-releases" element={<RequireUser><UserPortalEntry section="news-releases" /></RequireUser>} />
+                      <Route path="/news-releases/:newsReleaseId" element={<RequireUser><UserPortalEntry section="news-releases" browserElement={<NewsReleaseRecord />} /></RequireUser>} />
+                      <Route path="/public-transparency" element={<RequireUser><UserPortalEntry section="public-transparency" /></RequireUser>} />
+                      <Route path="/compliance-status" element={<RequireUser><UserPortalEntry section="compliance-status" /></RequireUser>} />
+                      <Route path="/notifications" element={<RequireUser><UserPortalEntry section="notifications" /></RequireUser>} />
+                      <Route path="/ypop" element={<RequireUser><UserPortalEntry section="ypop" /></RequireUser>} />
+                      <Route path="/templates" element={<RequireUser><UserPortalEntry section="templates" /></RequireUser>} />
+                      <Route path="/app-more" element={<RequireUser><UserPortalEntry section="more" /></RequireUser>} />
+                      <Route path="/app-inquiries" element={<RequireUser><UserPortalEntry section="inquiries" /></RequireUser>} />
                       <Route path="/profile" element={<Navigate to="/organization-profile" replace />} />
                       <Route path="*" element={<NotFoundRoute />} />
                     </>
