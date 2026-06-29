@@ -491,7 +491,7 @@ export default function UserPortal({ section }: { section: string }) {
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false,
   );
   const [isBudgetDesktopViewport, setIsBudgetDesktopViewport] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 768px)").matches : false,
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false,
   );
   const [savingProfile, setSavingProfile] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -672,7 +672,7 @@ export default function UserPortal({ section }: { section: string }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
     const syncViewport = (event?: MediaQueryListEvent) => {
       setIsBudgetDesktopViewport(event ? event.matches : mediaQuery.matches);
     };
@@ -4471,13 +4471,18 @@ export default function UserPortal({ section }: { section: string }) {
             draft: "Saved as draft",
           };
           return (
-            <div className="space-y-6">
+            <div className="user-budget-requests-page space-y-6">
               <PortalSection
                 title="Budget Requests"
                 description="Create, edit, and submit allocation requests for your organization's activities."
-                headerClassName={showBudgetForm ? "hidden lg:block" : undefined}
-                action={!showBudgetForm ? (
-                  <Button type="button" size="sm" onClick={() => { resetBudgetForm(); setShowBudgetForm(true); }}>
+                headerClassName={showBudgetForm ? "hidden lg:block" : "max-lg:gap-3 max-lg:px-3.5 max-lg:pb-2 max-lg:pt-3.5 lg:items-center lg:pb-3"}
+                action={!showBudgetForm && !(searchParams.get("budgetRequestId") && !isBudgetDesktopViewport) ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-10 w-full sm:w-auto lg:h-9"
+                    onClick={() => { resetBudgetForm(); setShowBudgetForm(true); }}
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     New Budget Request
                   </Button>
@@ -4769,6 +4774,36 @@ export default function UserPortal({ section }: { section: string }) {
                         r.status === "budget_released" ||
                         r.status === "completed"
                       ).length;
+                      const budgetSummaryItems = [
+                        {
+                          label: "Total Requests",
+                          value: totalRequests,
+                          helper: "All time",
+                          icon: ClipboardList,
+                          iconTone: "bg-primary/10 text-primary",
+                        },
+                        {
+                          label: "Under Review",
+                          value: pendingReviewCount,
+                          helper: "Awaiting admin",
+                          icon: Eye,
+                          iconTone: "bg-amber-500/10 text-amber-600",
+                        },
+                        {
+                          label: "Needs Revision",
+                          value: needsRevisionCount,
+                          helper: "Action required",
+                          icon: AlertTriangle,
+                          iconTone: "bg-orange-500/10 text-orange-600",
+                        },
+                        {
+                          label: "Approved",
+                          value: approvedCount,
+                          helper: "Approved or released",
+                          icon: CheckCircle2,
+                          iconTone: "bg-emerald-500/10 text-emerald-600",
+                        },
+                      ];
                       const budgetStatusSecondaryMap: Partial<Record<BudgetRequest["status"], string>> = {
                         draft: "Draft saved",
                         submitted: "Awaiting admin review",
@@ -4818,6 +4853,12 @@ export default function UserPortal({ section }: { section: string }) {
                           return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
                         });
                       const totalFilteredRequests = filteredRequests.length;
+                      const hasActiveBudgetFilters =
+                        Boolean(budgetSearch.trim()) ||
+                        budgetStatusFilter !== "all" ||
+                        budgetDateRangeFilter !== "all" ||
+                        budgetHasFileOnly ||
+                        budgetYpopOnly;
                       const totalBudgetPages = Math.max(1, Math.ceil(totalFilteredRequests / budgetRowsPerPage));
                       const safeBudgetPage = Math.min(budgetPage, totalBudgetPages);
                       const startIndex = totalFilteredRequests === 0 ? 0 : (safeBudgetPage - 1) * budgetRowsPerPage;
@@ -4825,7 +4866,7 @@ export default function UserPortal({ section }: { section: string }) {
                       const paginatedRequests = filteredRequests.slice(startIndex, endIndexExclusive);
                       const showingFrom = totalFilteredRequests === 0 ? 0 : startIndex + 1;
                       const showingTo = totalFilteredRequests === 0 ? 0 : Math.min(endIndexExclusive, totalFilteredRequests);
-                      const rowPaddingClass = "py-3";
+                      const rowPaddingClass = "py-3 lg:px-3.5 lg:py-3.5";
                       const uniqueStatuses = Array.from(new Set(budgetRequests.map((request) => request.status)));
                       const mobileBudgetRequestId = searchParams.get("budgetRequestId");
                       const openBudgetMobileDetail = (requestId: string) => {
@@ -4847,7 +4888,7 @@ export default function UserPortal({ section }: { section: string }) {
                       if (isShowingMobileBudgetDetail) {
                         if (!selectedMobileBudgetRequest) {
                           return (
-                            <div className="space-y-4 md:hidden">
+                            <div className="space-y-4 lg:hidden">
                               <button
                                 type="button"
                                 onClick={closeBudgetMobileDetail}
@@ -4879,7 +4920,7 @@ export default function UserPortal({ section }: { section: string }) {
                         const canEditOrDelete = !approvedBudgetStatuses.has(selectedMobileBudgetRequest.status);
 
                         return (
-                          <div className="space-y-4 md:hidden">
+                          <div className="space-y-4 lg:hidden">
                             <button
                               type="button"
                               onClick={closeBudgetMobileDetail}
@@ -5061,46 +5102,39 @@ export default function UserPortal({ section }: { section: string }) {
 
                       return (
                         <div className="space-y-4">
-                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            {[
-                              {
-                                label: "Total Requests",
-                                value: totalRequests,
-                                helper: "All time",
-                                icon: ClipboardList,
-                                iconTone: "bg-primary/10 text-primary",
-                              },
-                              {
-                                label: "Under Review",
-                                value: pendingReviewCount,
-                                helper: "Awaiting admin",
-                                icon: Eye,
-                                iconTone: "bg-amber-500/10 text-amber-600",
-                              },
-                              {
-                                label: "Needs Revision",
-                                value: needsRevisionCount,
-                                helper: "Action required",
-                                icon: AlertTriangle,
-                                iconTone: "bg-orange-500/10 text-orange-600",
-                              },
-                              {
-                                label: "Approved",
-                                value: approvedCount,
-                                helper: "Approved or released",
-                                icon: CheckCircle2,
-                                iconTone: "bg-emerald-500/10 text-emerald-600",
-                              },
-                            ].map((item) => {
+                          <div className="budget-summary-grid grid grid-cols-2 gap-2.5 max-[430px]:mr-3 lg:hidden">
+                            {budgetSummaryItems.map((item) => {
                               const Icon = item.icon;
                               return (
-                                <Card key={item.label} className="border-border/70 shadow-sm">
-                                  <CardContent className="flex items-center gap-3 p-4">
-                                    <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", item.iconTone)}>
-                                      <Icon className="h-5 w-5" />
+                                <Card key={item.label} className="budget-summary-card min-w-0 border-border/70 shadow-sm">
+                                  <CardContent className="flex min-h-[124px] flex-col p-3">
+                                    <div className="budget-summary-header flex items-start justify-between gap-2">
+                                      <p className="min-w-0 text-[0.68rem] font-medium uppercase leading-tight tracking-[0.08em] text-muted-foreground">
+                                        {item.label}
+                                      </p>
+                                      <UserFeatureIcon icon={Icon} />
                                     </div>
+                                    <p className="budget-summary-value mt-3 text-[1.7rem] font-semibold leading-none text-foreground">
+                                      {item.value}
+                                    </p>
+                                    <p className="budget-summary-description mt-auto pt-2 text-xs leading-[1.35] text-muted-foreground">
+                                      {item.helper}
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+
+                          <div className="budget-summary-grid hidden gap-3 lg:grid lg:grid-cols-4">
+                            {budgetSummaryItems.map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <Card key={item.label} className="budget-summary-card min-w-0 border-border/70 shadow-sm">
+                                  <CardContent className="flex min-h-[96px] items-center gap-3 p-3.5 xl:px-4">
+                                    <UserFeatureIcon icon={Icon} />
                                     <div className="min-w-0">
-                                      <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
+                                      <p className="text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">{item.label}</p>
                                       <p className="mt-1 text-2xl font-semibold leading-none text-foreground">{item.value}</p>
                                       <p className="mt-1 text-xs text-muted-foreground">{item.helper}</p>
                                     </div>
@@ -5110,24 +5144,24 @@ export default function UserPortal({ section }: { section: string }) {
                             })}
                           </div>
 
-                          <Card className="overflow-hidden border-border/70 shadow-sm">
-                            <CardContent className="space-y-4 p-4 sm:p-5">
-                              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between max-md:gap-2.5">
-                                <div className="grid gap-3 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap max-md:grid-cols-2 max-md:gap-2">
-                                  <div className="relative min-w-[220px] flex-1 xl:max-w-xs max-md:col-span-2 max-md:min-w-0">
+                          <Card className="overflow-hidden border-border/70 shadow-sm max-[430px]:mr-3 lg:mr-0">
+                            <CardContent className="space-y-3 p-3.5 sm:p-4 lg:space-y-4 lg:p-5">
+                              <div className="flex flex-col gap-2 lg:hidden">
+                                <div className="budget-filter-grid grid grid-cols-2 gap-2">
+                                  <div className="budget-search relative col-span-2 min-w-0">
                                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                     <Input
                                       value={budgetSearch}
                                       onChange={(event) => setBudgetSearch(event.target.value)}
-                                      placeholder="Search requests by title, venue, ID..."
-                                      className="pl-9 max-md:h-11"
+                                      placeholder="Search by title, venue, or ID"
+                                      className="h-10 pl-9 text-sm"
                                     />
                                   </div>
-                                  <div className="relative min-w-[160px] max-md:min-w-0">
+                                  <div className="relative min-w-0">
                                     <select
                                       value={budgetStatusFilter}
                                       onChange={(event) => setBudgetStatusFilter(event.target.value as "all" | BudgetRequest["status"])}
-                                      className={`${budgetNativeSelectClass} max-md:h-11`}
+                                      className={`${budgetNativeSelectClass} h-10 text-sm`}
                                     >
                                       <option value="all">Status: All</option>
                                       {uniqueStatuses.map((status) => (
@@ -5138,11 +5172,11 @@ export default function UserPortal({ section }: { section: string }) {
                                     </select>
                                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                   </div>
-                                  <div className="relative min-w-[150px] max-md:min-w-0">
+                                  <div className="relative min-w-0">
                                     <select
                                       value={budgetDateRangeFilter}
                                       onChange={(event) => setBudgetDateRangeFilter(event.target.value as "all" | "30d" | "90d" | "year")}
-                                      className={`${budgetNativeSelectClass} max-md:h-11`}
+                                      className={`${budgetNativeSelectClass} h-10 text-sm`}
                                     >
                                       <option value="all">Date range</option>
                                       <option value="30d">Last 30 days</option>
@@ -5155,39 +5189,87 @@ export default function UserPortal({ section }: { section: string }) {
                                     type="button"
                                     variant="outline"
                                     onClick={() => setBudgetFiltersExpanded((current) => !current)}
-                                    className="max-md:h-11 max-md:w-full max-md:justify-center"
+                                    className="h-10 w-full justify-center px-2 text-sm"
                                   >
                                     <SlidersHorizontal className="mr-2 h-4 w-4" />
                                     More filters
                                   </Button>
-                                  <div className="relative min-w-[150px] max-md:min-w-0 md:hidden">
+                                  <div className="relative min-w-0">
                                     <select
                                       value={budgetSortOrder}
                                       onChange={(event) => setBudgetSortOrder(event.target.value as "newest" | "oldest" | "requested_desc" | "requested_asc")}
-                                      className={`${budgetNativeSelectClass} max-md:h-11`}
+                                      className={`${budgetNativeSelectClass} h-10 text-sm`}
                                     >
-                                      <option value="newest">Sort by: Newest</option>
-                                      <option value="oldest">Sort by: Oldest</option>
+                                      <option value="newest">Newest</option>
+                                      <option value="oldest">Oldest</option>
                                       <option value="requested_desc">Highest amount</option>
                                       <option value="requested_asc">Lowest amount</option>
                                     </select>
                                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                   </div>
                                 </div>
-                                <div className="hidden flex-wrap items-center gap-2 md:flex">
-                                  <div className="relative min-w-[150px]">
-                                    <select
-                                      value={budgetSortOrder}
-                                      onChange={(event) => setBudgetSortOrder(event.target.value as "newest" | "oldest" | "requested_desc" | "requested_asc")}
-                                      className={budgetNativeSelectClass}
-                                    >
-                                      <option value="newest">Sort by: Newest</option>
-                                      <option value="oldest">Sort by: Oldest</option>
-                                      <option value="requested_desc">Highest amount</option>
-                                      <option value="requested_asc">Lowest amount</option>
-                                    </select>
-                                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                  </div>
+                              </div>
+
+                              <div className="budget-toolbar hidden items-center gap-2.5 lg:grid lg:grid-cols-[minmax(220px,1.4fr)_minmax(135px,0.75fr)_minmax(130px,0.65fr)_auto_minmax(0,1fr)_minmax(150px,auto)]">
+                                <div className="relative min-w-0">
+                                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                  <Input
+                                    value={budgetSearch}
+                                    onChange={(event) => setBudgetSearch(event.target.value)}
+                                    placeholder="Search requests..."
+                                    className="h-10 pl-9"
+                                  />
+                                </div>
+                                <div className="relative min-w-0">
+                                  <select
+                                    value={budgetStatusFilter}
+                                    onChange={(event) => setBudgetStatusFilter(event.target.value as "all" | BudgetRequest["status"])}
+                                    className={`${budgetNativeSelectClass} h-10`}
+                                  >
+                                    <option value="all">Status: All</option>
+                                    {uniqueStatuses.map((status) => (
+                                      <option key={status} value={status}>
+                                        {formatStatusLabel(status)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                </div>
+                                <div className="relative min-w-0">
+                                  <select
+                                    value={budgetDateRangeFilter}
+                                    onChange={(event) => setBudgetDateRangeFilter(event.target.value as "all" | "30d" | "90d" | "year")}
+                                    className={`${budgetNativeSelectClass} h-10`}
+                                  >
+                                    <option value="all">Date range</option>
+                                    <option value="30d">Last 30 days</option>
+                                    <option value="90d">Last 90 days</option>
+                                    <option value="year">This year</option>
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="h-10 px-3"
+                                  onClick={() => setBudgetFiltersExpanded((current) => !current)}
+                                >
+                                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                                  More filters
+                                </Button>
+                                <div aria-hidden="true" />
+                                <div className="relative min-w-0">
+                                  <select
+                                    value={budgetSortOrder}
+                                    onChange={(event) => setBudgetSortOrder(event.target.value as "newest" | "oldest" | "requested_desc" | "requested_asc")}
+                                    className={`${budgetNativeSelectClass} h-10`}
+                                  >
+                                    <option value="newest">Sort: Newest</option>
+                                    <option value="oldest">Sort: Oldest</option>
+                                    <option value="requested_desc">Highest amount</option>
+                                    <option value="requested_asc">Lowest amount</option>
+                                  </select>
+                                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 </div>
                               </div>
 
@@ -5214,34 +5296,56 @@ export default function UserPortal({ section }: { section: string }) {
                                 </div>
                               ) : null}
 
+                              <div className="hidden text-xs text-muted-foreground lg:block">
+                                {totalFilteredRequests} {hasActiveBudgetFilters ? "matching " : ""}
+                                request{totalFilteredRequests === 1 ? "" : "s"}
+                              </div>
+
                               {totalFilteredRequests ? (
                                 <>
-                                  <div className="space-y-3 md:hidden">
+                                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground lg:hidden">
+                                    <span>{totalFilteredRequests} request{totalFilteredRequests === 1 ? "" : "s"}</span>
+                                    <span>
+                                      {budgetSortOrder === "oldest"
+                                        ? "Sorted by oldest"
+                                        : budgetSortOrder === "requested_desc"
+                                          ? "Highest amount"
+                                          : budgetSortOrder === "requested_asc"
+                                            ? "Lowest amount"
+                                            : "Sorted by newest"}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-3 lg:hidden">
                                     {paginatedRequests.map((request) => {
                                       const requestCode = buildPublicRecordCode("BR", request, budgetRequests);
                                       const requestedAmount = formatCurrency(request.requestedAmount || 0);
                                       return (
-                                        <Card key={request.id} className="border-border/70 shadow-sm">
-                                          <CardContent className="grid gap-3 p-[14px] sm:p-4">
-                                            <div className="min-w-0">
-                                              <div className="flex flex-wrap items-center gap-2">
-                                                <p className="overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                        <Card key={request.id} className="budget-request-card border-border/70 shadow-sm">
+                                          <CardContent className="grid gap-[11px] p-[14px]">
+                                            <div className="budget-card-header grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                                              <div className="min-w-0">
+                                                <p className="budget-card-title overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [overflow-wrap:anywhere]">
                                                   {request.activityTitle || "Untitled request"}
                                                 </p>
                                                 {request.budgetRequestType === "ypop_incentive" ? (
-                                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                                                     <Trophy className="h-2.5 w-2.5 text-amber-600" />
                                                     YPOP
                                                   </span>
                                                 ) : null}
                                               </div>
+                                              <div className="budget-card-status mr-3 max-w-[118px] text-center [&>span]:h-auto [&>span]:max-w-full [&>span]:whitespace-normal [&>span]:text-center [&>span]:leading-tight min-[431px]:mr-0">
+                                                <PortalStatusBadge status={request.status} />
+                                              </div>
                                             </div>
 
-                                            <p className="min-w-0 break-words text-[0.82rem] leading-5 text-muted-foreground">
-                                              <span>{requestCode}</span> · <span className="font-medium text-emerald-600">{requestedAmount}</span>
+                                            <p className="min-w-0 text-[0.8rem] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+                                              <span>{requestCode}</span>
+                                              <span className="text-muted-foreground/60"> · </span>
+                                              <span className="budget-card-amount font-semibold tabular-nums text-foreground">{requestedAmount}</span>
                                             </p>
 
-                                            <div className="grid grid-cols-2 gap-3 border-y border-border/60 py-3">
+                                            <div className="budget-card-details grid grid-cols-2 gap-3 border-y border-border/60 py-[11px]">
                                               <div className="min-w-0">
                                                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Proposed Date</p>
                                                 <p className="mt-1 text-sm font-medium text-foreground">
@@ -5250,7 +5354,7 @@ export default function UserPortal({ section }: { section: string }) {
                                               </div>
                                               <div className="min-w-0">
                                                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Venue</p>
-                                                <p className="mt-1 text-sm font-medium text-foreground break-words">
+                                                <p className="budget-card-venue mt-1 overflow-hidden text-sm font-medium leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [overflow-wrap:anywhere]">
                                                   {request.venue || "Not set"}
                                                 </p>
                                               </div>
@@ -5259,28 +5363,29 @@ export default function UserPortal({ section }: { section: string }) {
                                             <Button
                                               type="button"
                                               variant="outline"
-                                              className="h-10 w-full"
+                                              className="budget-card-action ml-auto h-9 w-full px-3.5 min-[340px]:w-auto"
                                               onClick={() => openBudgetMobileDetail(request.id)}
                                             >
-                                              View Details
+                                              View details
+                                              <ChevronRight className="ml-1.5 h-4 w-4" />
                                             </Button>
                                           </CardContent>
                                         </Card>
                                       );
                                     })}
                                   </div>
-                                  <div className="hidden overflow-x-auto md:block">
-                                    <div className="min-w-[1080px] rounded-2xl border border-border/70">
-                                      <Table>
+                                  <div className="hidden overflow-x-auto lg:block">
+                                    <div className="min-w-[1080px] rounded-2xl border border-border/70 lg:w-full lg:min-w-0 lg:overflow-hidden">
+                                      <Table className="budget-requests-table lg:w-full lg:table-fixed">
                                         <TableHeader>
                                           <TableRow className="bg-muted/15 hover:bg-muted/15">
-                                            <TableHead className="w-[22%]">Request</TableHead>
-                                            <TableHead className="w-[14%]">Status</TableHead>
-                                            <TableHead className="w-[12%]">Proposed Date</TableHead>
-                                            <TableHead className="w-[12%]">Venue</TableHead>
-                                            <TableHead className="w-[16%]">Amounts (PHP)</TableHead>
-                                            <TableHead className="w-[14%]">File</TableHead>
-                                            <TableHead className="w-[10%]">Recent Activity</TableHead>
+                                            <TableHead className="w-[22%] lg:w-[24%] lg:px-3.5 lg:py-3">Request</TableHead>
+                                            <TableHead className="w-[14%] lg:w-[13%] lg:px-3.5 lg:py-3">Status</TableHead>
+                                            <TableHead className="w-[12%] lg:w-[10%] lg:px-3.5 lg:py-3">Proposed Date</TableHead>
+                                            <TableHead className="w-[12%] lg:w-[10%] lg:px-3.5 lg:py-3">Venue</TableHead>
+                                            <TableHead className="w-[16%] lg:w-[17%] lg:px-3.5 lg:py-3">Amounts (PHP)</TableHead>
+                                            <TableHead className="w-[14%] lg:w-[16%] lg:px-3.5 lg:py-3">File</TableHead>
+                                            <TableHead className="w-[10%] lg:w-[10%] lg:px-3.5 lg:py-3">Recent Activity</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -5292,11 +5397,13 @@ export default function UserPortal({ section }: { section: string }) {
                                             const additionalActivities = Math.max((request.revisionHistory?.length ?? 0) - 1, 0);
                                             const secondaryStatus = budgetStatusSecondaryMap[request.status] ?? formatStatusLabel(request.status);
                                             return (
-                                              <TableRow key={request.id} className="align-middle">
-                                                <TableCell className={`${rowPaddingClass} align-middle`}>
+                                              <TableRow key={request.id} className="align-middle transition-colors lg:align-top lg:hover:bg-muted/20">
+                                                <TableCell className={`${rowPaddingClass} align-middle lg:align-top`}>
                                                   <div className="min-w-0 space-y-1">
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                      <p className="font-semibold text-foreground">{request.activityTitle || "Untitled request"}</p>
+                                                      <p className="font-semibold leading-snug text-foreground lg:line-clamp-2 lg:[overflow-wrap:anywhere]">
+                                                        {request.activityTitle || "Untitled request"}
+                                                      </p>
                                                       {request.budgetRequestType === "ypop_incentive" ? (
                                                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                                                           <Trophy className="h-2.5 w-2.5 text-amber-600" />
@@ -5308,8 +5415,10 @@ export default function UserPortal({ section }: { section: string }) {
                                                     <p className="text-xs text-muted-foreground">Created {formatDateTimeLabel(request.createdAt)}</p>
                                                   </div>
                                                 </TableCell>
-                                                <TableCell className={`${rowPaddingClass} align-middle`}>
-                                                  <PortalStatusBadge status={request.status} />
+                                                <TableCell className={`${rowPaddingClass} align-middle lg:align-top`}>
+                                                  <div className="inline-flex lg:max-w-[132px] lg:[&>span]:h-auto lg:[&>span]:max-w-full lg:[&>span]:whitespace-normal lg:[&>span]:text-center lg:[&>span]:leading-[1.2]">
+                                                    <PortalStatusBadge status={request.status} />
+                                                  </div>
                                                 </TableCell>
                                                 <TableCell className={`${rowPaddingClass} align-middle`}>
                                                   <p className="text-sm text-foreground">
@@ -5321,35 +5430,36 @@ export default function UserPortal({ section }: { section: string }) {
                                                 <TableCell className={`${rowPaddingClass} align-middle`}>
                                                   <p className="text-sm text-foreground">{request.venue || "Not set"}</p>
                                                 </TableCell>
-                                                <TableCell className={`${rowPaddingClass} align-middle`}>
+                                                <TableCell className={`${rowPaddingClass} align-middle lg:align-top`}>
                                                   <div className="space-y-2 text-sm">
                                                     <div>
                                                       <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Requested</p>
-                                                      <p className="font-medium text-foreground">{formatCurrency(request.requestedAmount || 0)}</p>
+                                                      <p className="font-medium tabular-nums text-foreground">{formatCurrency(request.requestedAmount || 0)}</p>
                                                     </div>
                                                     <div>
                                                       <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Approved</p>
-                                                      <p className="font-semibold text-emerald-600">
+                                                      <p className="font-semibold tabular-nums text-emerald-600 lg:text-foreground/80">
                                                         {request.approvedAmount ? formatCurrency(request.approvedAmount) : "—"}
                                                       </p>
                                                     </div>
                                                   </div>
                                                 </TableCell>
-                                                <TableCell className={`${rowPaddingClass} align-middle`}>
+                                                <TableCell className={`${rowPaddingClass} align-middle lg:align-top`}>
                                                   {attachedFile ? (
                                                     <div className="flex items-start gap-2.5">
-                                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600">
+                                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-600 lg:hidden">
                                                         <FileText className="h-4 w-4 text-red-500" />
                                                       </div>
+                                                      <UserFeatureIcon icon={FileText} size="compact" className="hidden lg:inline-grid" />
                                                       <div className="min-w-0 flex-1">
-                                                        <p className="line-clamp-2 break-all text-sm font-medium leading-snug text-foreground">{attachedFile.fileName}</p>
-                                                        <p className="text-xs text-muted-foreground">
+                                                        <p className="line-clamp-2 break-all text-sm font-medium leading-snug text-foreground lg:break-normal lg:[overflow-wrap:anywhere]">{attachedFile.fileName}</p>
+                                                        <p className="mt-1 text-xs text-muted-foreground">
                                                           PDF • {attachedFile.fileSize ? `${Math.max(1, Math.round(attachedFile.fileSize / 1024))} KB` : "file attached"}
                                                         </p>
                                                       </div>
                                                       <DropdownMenu modal={false}>
                                                         <DropdownMenuTrigger asChild>
-                                                          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0">
+                                                          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0" aria-label="Open request file actions">
                                                             <MoreHorizontal className="h-4 w-4" />
                                                           </Button>
                                                         </DropdownMenuTrigger>
@@ -5379,16 +5489,17 @@ export default function UserPortal({ section }: { section: string }) {
                                                     </div>
                                                   ) : (
                                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dashed border-border/70">
+                                                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dashed border-border/70 lg:hidden">
                                                         <FileText className="h-4 w-4 text-red-500" />
                                                       </div>
+                                                      <UserFeatureIcon icon={FileText} size="compact" className="hidden lg:inline-grid" />
                                                       <span>No file attached</span>
                                                     </div>
                                                   )}
                                                 </TableCell>
                                                 <TableCell className={rowPaddingClass}>
                                                   <div className="space-y-1">
-                                                    <p className="text-sm text-foreground">
+                                                    <p className="text-sm leading-snug text-foreground lg:line-clamp-2">
                                                       {latestActivity ? (budgetActionLabels[latestActivity.action] ?? latestActivity.action) : secondaryStatus}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">
@@ -5504,10 +5615,21 @@ export default function UserPortal({ section }: { section: string }) {
           );
         }
         return (
-          <PortalSection
-            title="Liquidation Reports"
-            description="Upload post-activity documents for each approved budget. The admin will review and mark your liquidation complete."
-          >
+          <div className="user-liquidation-reports-page">
+            <PortalSection
+              title="Liquidation Reports"
+              description={
+                <>
+                  <span className="lg:hidden">
+                    Upload post-activity documents for each approved budget. The admin will review and mark your liquidation complete.
+                  </span>
+                  <span className="hidden lg:inline">
+                    Upload post-activity documents for approved budgets and track their review and completion status.
+                  </span>
+                </>
+              }
+              headerClassName="max-lg:gap-1 max-lg:px-3.5 max-lg:pb-2 max-lg:pt-3.5"
+            >
             <input
               ref={liquidationFileInputRef}
               type="file"
@@ -5555,6 +5677,32 @@ export default function UserPortal({ section }: { section: string }) {
                     report.status === "needs_revision" || report.status === "overdue" || report.status === "rejected_red"
                   ).length;
                   const completedCount = liquidationReports.filter((report) => report.status === "completed_liquidated").length;
+                  const liquidationSummaryItems = [
+                    {
+                      label: "Total Reports",
+                      value: totalReports,
+                      helper: "Approved budgets linked",
+                      icon: Receipt,
+                    },
+                    {
+                      label: "Under Review",
+                      value: underReviewCount,
+                      helper: "Awaiting admin action",
+                      icon: Eye,
+                    },
+                    {
+                      label: "Needs Revision",
+                      value: needsRevisionCount,
+                      helper: "Action required",
+                      icon: AlertTriangle,
+                    },
+                    {
+                      label: "Completed",
+                      value: completedCount,
+                      helper: "Liquidated reports",
+                      icon: CheckCircle2,
+                    },
+                  ];
                   const liquidationStatusSecondaryMap: Partial<Record<LiquidationStatus, string>> = {
                     pending_activity_completion: "Awaiting activity completion",
                     not_started: "Not started",
@@ -5618,6 +5766,11 @@ export default function UserPortal({ section }: { section: string }) {
                       return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
                     });
                   const totalFilteredReports = filteredReports.length;
+                  const hasActiveLiquidationFilters =
+                    Boolean(liquidationSearch.trim()) ||
+                    liquidationStatusFilter !== "all" ||
+                    liquidationDateRangeFilter !== "all" ||
+                    liquidationHasFileOnly;
                   const totalLiquidationPages = Math.max(1, Math.ceil(totalFilteredReports / liquidationRowsPerPage));
                   const safeLiquidationPage = Math.min(liquidationPage, totalLiquidationPages);
                   const startIndex = totalFilteredReports === 0 ? 0 : (safeLiquidationPage - 1) * liquidationRowsPerPage;
@@ -5625,7 +5778,7 @@ export default function UserPortal({ section }: { section: string }) {
                   const paginatedReports = filteredReports.slice(startIndex, endIndexExclusive);
                   const showingFrom = totalFilteredReports === 0 ? 0 : startIndex + 1;
                   const showingTo = totalFilteredReports === 0 ? 0 : Math.min(endIndexExclusive, totalFilteredReports);
-                  const rowPaddingClass = "py-3";
+                  const rowPaddingClass = "px-3.5 py-3.5";
                   const uniqueStatuses = Array.from(new Set(liquidationReports.map((report) => report.status)));
                   const selectedMobileReport = mobileLiquidationReportId
                     ? liquidationReports.find((report) => report.id === mobileLiquidationReportId) ?? null
@@ -5938,73 +6091,72 @@ export default function UserPortal({ section }: { section: string }) {
 
                   return (
                     <div className="space-y-4">
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        {[
-                          {
-                            label: "Total Reports",
-                            value: totalReports,
-                            helper: "Approved budgets linked",
-                            icon: Receipt,
-                            iconTone: "bg-primary/10 text-primary",
-                          },
-                          {
-                            label: "Under Review",
-                            value: underReviewCount,
-                            helper: "Awaiting admin action",
-                            icon: Eye,
-                            iconTone: "bg-amber-500/10 text-amber-600",
-                          },
-                          {
-                            label: "Needs Revision",
-                            value: needsRevisionCount,
-                            helper: "Action required",
-                            icon: AlertTriangle,
-                            iconTone: "bg-orange-500/10 text-orange-600",
-                          },
-                          {
-                            label: "Completed",
-                            value: completedCount,
-                            helper: "Liquidated reports",
-                            icon: CheckCircle2,
-                            iconTone: "bg-emerald-500/10 text-emerald-600",
-                          },
-                        ].map((item) => {
+                      <div className="liquidation-summary-grid grid grid-cols-2 gap-2.5 max-[430px]:mr-3 lg:hidden">
+                        {liquidationSummaryItems.map((item) => {
                           const Icon = item.icon;
                           return (
-                            <Card key={item.label} className="border-border/70 shadow-sm">
-                              <CardContent className="flex items-center gap-3 p-4">
-                                <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", item.iconTone)}>
-                                  <Icon className="h-5 w-5" />
+                            <Card key={item.label} className="liquidation-summary-card min-w-0 border-border/70 shadow-sm">
+                              <CardContent className="flex min-h-[126px] flex-col p-3">
+                                <div className="liquidation-summary-header flex items-start justify-between gap-2">
+                                  <p className="min-w-0 text-[0.68rem] font-medium uppercase leading-tight tracking-[0.08em] text-muted-foreground">
+                                    {item.label}
+                                  </p>
+                                  <UserFeatureIcon icon={Icon} />
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
-                                  <p className="mt-1 text-2xl font-semibold leading-none text-foreground">{item.value}</p>
-                                  <p className="mt-1 text-xs text-muted-foreground">{item.helper}</p>
-                                </div>
+                                <p className="liquidation-summary-value mt-3 text-[1.7rem] font-semibold leading-none text-foreground">
+                                  {item.value}
+                                </p>
+                                <p className="liquidation-summary-description mt-auto pt-2 text-xs leading-[1.35] text-muted-foreground">
+                                  {item.helper}
+                                </p>
                               </CardContent>
                             </Card>
                           );
                         })}
                       </div>
 
-                      <Card className="overflow-hidden border-border/70 shadow-sm">
-                        <CardContent className="space-y-4 p-4 sm:p-5">
-                          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between max-lg:gap-2.5">
+                      <div className="liquidation-summary-grid hidden gap-3 lg:grid lg:grid-cols-4">
+                        {liquidationSummaryItems.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <Card key={item.label} className="liquidation-summary-card min-w-0 border-border/70 shadow-sm">
+                              <CardContent className="flex min-h-[108px] flex-col p-3.5 xl:px-4">
+                                <div className="liquidation-summary-header flex items-start justify-between gap-3">
+                                  <p className="min-w-0 text-[0.7rem] font-medium uppercase leading-tight tracking-[0.08em] text-muted-foreground">
+                                    {item.label}
+                                  </p>
+                                  <UserFeatureIcon icon={Icon} size="compact" />
+                                </div>
+                                <p className="liquidation-summary-value mt-2.5 text-2xl font-semibold leading-none text-foreground">
+                                  {item.value}
+                                </p>
+                                <p className="liquidation-summary-description mt-auto pt-1.5 text-xs leading-snug text-muted-foreground">
+                                  {item.helper}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+
+                      <Card className="overflow-hidden border-border/70 shadow-sm max-[430px]:mr-3 lg:mr-0">
+                        <CardContent className="space-y-3 p-3.5 sm:p-4 lg:space-y-4 lg:p-5">
+                          <div className="flex flex-col gap-3 max-lg:gap-2.5 lg:hidden">
                             <div className="grid gap-3 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap max-lg:grid-cols-2 max-lg:gap-2">
                               <div className="relative min-w-[220px] flex-1 xl:max-w-xs max-lg:col-span-2 max-lg:min-w-0">
                                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                   value={liquidationSearch}
                                   onChange={(event) => setLiquidationSearch(event.target.value)}
-                                  placeholder="Search reports by title, category, ID..."
-                                  className="pl-9 max-lg:h-11"
+                                  placeholder="Search by title, category, or ID"
+                                  className="pl-9 max-lg:h-10 max-lg:text-sm"
                                 />
                               </div>
                               <div className="relative min-w-[160px] max-lg:min-w-0">
                                 <select
                                   value={liquidationStatusFilter}
                                   onChange={(event) => setLiquidationStatusFilter(event.target.value as "all" | LiquidationStatus)}
-                                  className={`${budgetNativeSelectClass} max-lg:h-11`}
+                                  className={`${budgetNativeSelectClass} max-lg:h-10 max-lg:text-sm`}
                                 >
                                   <option value="all">Status: All</option>
                                   {uniqueStatuses.map((status) => (
@@ -6019,7 +6171,7 @@ export default function UserPortal({ section }: { section: string }) {
                                 <select
                                   value={liquidationDateRangeFilter}
                                   onChange={(event) => setLiquidationDateRangeFilter(event.target.value as "all" | "30d" | "90d" | "year")}
-                                  className={`${budgetNativeSelectClass} max-lg:h-11`}
+                                  className={`${budgetNativeSelectClass} max-lg:h-10 max-lg:text-sm`}
                                 >
                                   <option value="all">Date range</option>
                                   <option value="30d">Last 30 days</option>
@@ -6032,7 +6184,7 @@ export default function UserPortal({ section }: { section: string }) {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setLiquidationFiltersExpanded((current) => !current)}
-                                className="max-lg:h-11 max-lg:w-full max-lg:justify-center"
+                                className="max-lg:h-10 max-lg:w-full max-lg:justify-center max-lg:px-2 max-lg:text-sm"
                               >
                                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                                 More filters
@@ -6041,10 +6193,10 @@ export default function UserPortal({ section }: { section: string }) {
                                 <select
                                   value={liquidationSortOrder}
                                   onChange={(event) => setLiquidationSortOrder(event.target.value as "newest" | "oldest" | "deadline_asc" | "deadline_desc")}
-                                  className={`${budgetNativeSelectClass} max-lg:h-11`}
+                                  className={`${budgetNativeSelectClass} max-lg:h-10 max-lg:text-sm`}
                                 >
-                                  <option value="newest">Sort by: Newest</option>
-                                  <option value="oldest">Sort by: Oldest</option>
+                                  <option value="newest">Newest</option>
+                                  <option value="oldest">Oldest</option>
                                   <option value="deadline_asc">Earliest deadline</option>
                                   <option value="deadline_desc">Latest deadline</option>
                                 </select>
@@ -6068,6 +6220,69 @@ export default function UserPortal({ section }: { section: string }) {
                             </div>
                           </div>
 
+                          <div className="report-toolbar hidden items-center gap-2.5 lg:grid lg:grid-cols-[minmax(220px,1.4fr)_minmax(135px,0.75fr)_minmax(130px,0.65fr)_auto_minmax(0,1fr)_minmax(150px,auto)]">
+                            <div className="relative min-w-0">
+                              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                              <Input
+                                value={liquidationSearch}
+                                onChange={(event) => setLiquidationSearch(event.target.value)}
+                                placeholder="Search reports..."
+                                className="h-10 pl-9"
+                              />
+                            </div>
+                            <div className="relative min-w-0">
+                              <select
+                                value={liquidationStatusFilter}
+                                onChange={(event) => setLiquidationStatusFilter(event.target.value as "all" | LiquidationStatus)}
+                                className={`${budgetNativeSelectClass} h-10`}
+                              >
+                                <option value="all">Status: All</option>
+                                {uniqueStatuses.map((status) => (
+                                  <option key={status} value={status}>
+                                    {formatStatusLabel(status)}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            </div>
+                            <div className="relative min-w-0">
+                              <select
+                                value={liquidationDateRangeFilter}
+                                onChange={(event) => setLiquidationDateRangeFilter(event.target.value as "all" | "30d" | "90d" | "year")}
+                                className={`${budgetNativeSelectClass} h-10`}
+                              >
+                                <option value="all">Date range</option>
+                                <option value="30d">Last 30 days</option>
+                                <option value="90d">Last 90 days</option>
+                                <option value="year">This year</option>
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-10 px-3"
+                              onClick={() => setLiquidationFiltersExpanded((current) => !current)}
+                            >
+                              <SlidersHorizontal className="mr-2 h-4 w-4" />
+                              More filters
+                            </Button>
+                            <div aria-hidden="true" />
+                            <div className="sort-control relative min-w-0">
+                              <select
+                                value={liquidationSortOrder}
+                                onChange={(event) => setLiquidationSortOrder(event.target.value as "newest" | "oldest" | "deadline_asc" | "deadline_desc")}
+                                className={`${budgetNativeSelectClass} h-10`}
+                              >
+                                <option value="newest">Sort: Newest</option>
+                                <option value="oldest">Sort: Oldest</option>
+                                <option value="deadline_asc">Earliest deadline</option>
+                                <option value="deadline_desc">Latest deadline</option>
+                              </select>
+                              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            </div>
+                          </div>
+
                           {liquidationFiltersExpanded ? (
                             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/15 px-3 py-3 max-lg:px-3 max-lg:py-2.5">
                               <Button
@@ -6082,32 +6297,55 @@ export default function UserPortal({ section }: { section: string }) {
                             </div>
                           ) : null}
 
+                          <div className="hidden text-xs text-muted-foreground lg:block">
+                            {totalFilteredReports} {hasActiveLiquidationFilters ? "matching " : ""}
+                            report{totalFilteredReports === 1 ? "" : "s"}
+                          </div>
+
                           {totalFilteredReports ? (
                             <>
+                              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground lg:hidden">
+                                <span>{totalFilteredReports} report{totalFilteredReports === 1 ? "" : "s"}</span>
+                                <span>
+                                  {liquidationSortOrder === "oldest"
+                                    ? "Sorted by oldest"
+                                    : liquidationSortOrder === "deadline_asc"
+                                      ? "Earliest deadline"
+                                      : liquidationSortOrder === "deadline_desc"
+                                        ? "Latest deadline"
+                                        : "Sorted by newest"}
+                                </span>
+                              </div>
                               <div className="space-y-3 lg:hidden">
                                 {paginatedReports.map((report) => {
                                   const relatedBudget = budgetRequests.find((request) => request.id === report.budgetRequestId) ?? null;
                                   const isDeadlineUrgent =
-                                    report.status === "overdue" ||
-                                    (report.deadlineAt ? new Date(report.deadlineAt) < new Date() : false);
+                                    report.status !== "completed_liquidated" &&
+                                    (report.status === "overdue" ||
+                                      (report.deadlineAt ? new Date(report.deadlineAt) < new Date() : false));
                                   const reportCode = buildPublicRecordCode("LR", report, liquidationReports);
                                   const budgetAmount = relatedBudget
                                     ? formatCurrency(relatedBudget.releasedAmount || relatedBudget.approvedAmount || 0)
                                     : "Budget linked";
                                   return (
-                                    <Card key={report.id} className="border-border/70 shadow-sm">
-                                      <CardContent className="grid gap-3 p-[14px] sm:p-4">
-                                        <div className="min-w-0">
-                                          <p className="overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                    <Card key={report.id} className="liquidation-report-card border-border/70 shadow-sm">
+                                      <CardContent className="grid gap-3 p-[14px]">
+                                        <div className="report-card-header grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                                          <p className="report-card-title min-w-0 overflow-hidden text-sm font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [overflow-wrap:anywhere]">
                                             {relatedBudget?.activityTitle || "Approved budget"}
                                           </p>
+                                          <div className="report-card-status mr-3 max-w-[116px] text-center [&>span]:h-auto [&>span]:max-w-full [&>span]:whitespace-normal [&>span]:text-center [&>span]:leading-tight min-[431px]:mr-0">
+                                            <PortalStatusBadge status={report.status} />
+                                          </div>
                                         </div>
 
-                                        <p className="min-w-0 break-words text-[0.82rem] leading-5 text-muted-foreground">
-                                          <span>{reportCode}</span> · <span className="font-medium text-emerald-600">{budgetAmount}</span>
+                                        <p className="min-w-0 text-[0.8rem] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+                                          <span>{reportCode}</span>
+                                          <span className="text-muted-foreground/60"> · </span>
+                                          <span className="font-semibold tabular-nums text-foreground">{budgetAmount}</span>
                                         </p>
 
-                                        <div className="grid grid-cols-2 gap-3 border-y border-border/60 py-3">
+                                        <div className="report-card-dates grid grid-cols-2 gap-3 border-y border-border/60 py-[11px]">
                                           <div className="min-w-0">
                                             <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground/75">Go Signal</p>
                                             <p className="mt-1 text-sm font-medium text-foreground">
@@ -6115,10 +6353,10 @@ export default function UserPortal({ section }: { section: string }) {
                                             </p>
                                           </div>
                                           <div className="min-w-0">
-                                            <p className="text-[11px] uppercase tracking-[0.14em] text-destructive">
+                                            <p className={cn("text-[11px] uppercase tracking-[0.14em]", isDeadlineUrgent ? "text-destructive" : "text-muted-foreground/75")}>
                                               Deadline
                                             </p>
-                                            <p className="mt-1 text-sm font-semibold text-destructive">
+                                            <p className={cn("mt-1 text-sm font-semibold", isDeadlineUrgent ? "text-destructive" : report.status === "completed_liquidated" ? "text-muted-foreground" : "text-foreground")}>
                                               {report.deadlineAt ? formatShortPortalDate(report.deadlineAt) : "Pending"}
                                             </p>
                                           </div>
@@ -6127,10 +6365,11 @@ export default function UserPortal({ section }: { section: string }) {
                                         <Button
                                           type="button"
                                           variant="outline"
-                                          className="h-10 w-full"
+                                          className="report-card-action ml-auto h-9 w-full px-3.5 min-[340px]:w-auto"
                                           onClick={() => openLiquidationDetail(report.id)}
                                         >
-                                          View Details
+                                          View details
+                                          <ChevronRight className="ml-1.5 h-4 w-4" />
                                         </Button>
                                       </CardContent>
                                     </Card>
@@ -6138,16 +6377,16 @@ export default function UserPortal({ section }: { section: string }) {
                                 })}
                               </div>
                               <div className="hidden overflow-x-auto lg:block">
-                                <div className="min-w-[1240px] rounded-2xl border border-border/70">
-                                  <Table>
+                                <div className="w-full overflow-hidden rounded-2xl border border-border/70">
+                                  <Table className="reports-table w-full table-fixed">
                                     <TableHeader>
                                       <TableRow className="bg-muted/15 hover:bg-muted/15">
-                                        <TableHead className="w-[22%]">Report</TableHead>
-                                        <TableHead className="w-[14%]">Status</TableHead>
-                                        <TableHead className="w-[14%]">Timeline</TableHead>
-                                        <TableHead className="w-[20%]">File</TableHead>
-                                        <TableHead className="w-[14%]">Recent Activity</TableHead>
-                                        <TableHead className="w-[16%]">Action</TableHead>
+                                        <TableHead className="col-report w-[24%] px-3.5 py-3">Report</TableHead>
+                                        <TableHead className="col-status w-[14%] px-3.5 py-3">Status</TableHead>
+                                        <TableHead className="col-timeline w-[14%] px-3.5 py-3">Timeline</TableHead>
+                                        <TableHead className="col-file w-[20%] px-3.5 py-3">File</TableHead>
+                                        <TableHead className="col-activity w-[18%] px-3.5 py-3">Recent Activity</TableHead>
+                                        <TableHead className="col-action w-[10%] px-3.5 py-3 text-center">Action</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -6155,8 +6394,9 @@ export default function UserPortal({ section }: { section: string }) {
                                         const relatedBudget = budgetRequests.find((request) => request.id === report.budgetRequestId) ?? null;
                                         const attachedFiles = liquidationFilesByReportId.get(report.id) ?? [];
                                         const isDeadlineUrgent =
-                                          report.status === "overdue" ||
-                                          (report.deadlineAt ? new Date(report.deadlineAt) < new Date() : false);
+                                          report.status !== "completed_liquidated" &&
+                                          (report.status === "overdue" ||
+                                            (report.deadlineAt ? new Date(report.deadlineAt) < new Date() : false));
                                         const hasAdminNote =
                                           report.remarks?.trim().length > 0 &&
                                           (report.status === "needs_revision" || report.status === "overdue" || report.status === "rejected_red");
@@ -6174,28 +6414,34 @@ export default function UserPortal({ section }: { section: string }) {
                                         const secondaryStatus = liquidationStatusSecondaryMap[report.status] ?? formatStatusLabel(report.status);
                                         const primaryFile = attachedFiles[0] ?? null;
                                         return (
-                                              <TableRow key={report.id} className="align-middle">
-                                            <TableCell className={`${rowPaddingClass} align-middle`}>
+                                          <TableRow key={report.id} className="align-top transition-colors hover:bg-muted/20">
+                                            <TableCell className={`${rowPaddingClass} align-top`}>
                                               <div className="min-w-0 space-y-1">
-                                                <p className="font-semibold text-foreground">{relatedBudget?.activityTitle || "Approved budget"}</p>
-                                                <p className="text-xs text-muted-foreground">{relatedBudget?.purposeCategory || "No category"}</p>
-                                                <p className="text-xs text-primary">Report ID: {buildPublicRecordCode("LR", report, liquidationReports)}</p>
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="report-title overflow-hidden font-semibold leading-snug text-foreground [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] [overflow-wrap:anywhere]">
+                                                  {relatedBudget?.activityTitle || "Approved budget"}
+                                                </p>
+                                                <p className="line-clamp-1 text-xs text-muted-foreground xl:line-clamp-2">
+                                                  {relatedBudget?.purposeCategory || "No category"}
+                                                </p>
+                                                <p className="text-xs text-primary">{buildPublicRecordCode("LR", report, liquidationReports)}</p>
+                                                <p className="report-amount text-xs tabular-nums text-foreground/75">
                                                   {relatedBudget ? `${formatCurrency(relatedBudget.releasedAmount || relatedBudget.approvedAmount || 0)} released` : "Released budget linked"}
                                                 </p>
                                               </div>
                                             </TableCell>
-                                            <TableCell className={`${rowPaddingClass} align-middle`}>
+                                            <TableCell className={`${rowPaddingClass} align-top`}>
                                               <div className="space-y-2">
-                                                <PortalStatusBadge status={report.status} />
+                                                <div className="report-status-badge inline-flex max-w-[132px] [&>span]:h-auto [&>span]:max-w-full [&>span]:whitespace-normal [&>span]:text-center [&>span]:leading-[1.2]">
+                                                  <PortalStatusBadge status={report.status} />
+                                                </div>
                                                 {hasAdminNote ? (
                                                   <div className="rounded-lg border border-amber-200/70 bg-amber-50/50 p-2">
-                                                    <p className="text-[11px] leading-snug text-amber-800">{report.remarks.trim()}</p>
+                                                    <p className="line-clamp-2 text-[11px] leading-snug text-amber-800">{report.remarks.trim()}</p>
                                                   </div>
                                                 ) : null}
                                               </div>
                                             </TableCell>
-                                            <TableCell className={`${rowPaddingClass} align-middle`}>
+                                            <TableCell className={`${rowPaddingClass} align-top`}>
                                               <div className="space-y-2 text-sm">
                                                 <div>
                                                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Go Signal</p>
@@ -6215,31 +6461,32 @@ export default function UserPortal({ section }: { section: string }) {
                                                 </div>
                                               </div>
                                             </TableCell>
-                                            <TableCell className={`${rowPaddingClass} align-middle`}>
+                                            <TableCell className={`${rowPaddingClass} align-top`}>
                                               {primaryFile ? (
                                                 <div className="flex items-start gap-2">
-                                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600">
-                                                    <FileText className="h-4 w-4 text-red-500" />
-                                                  </div>
+                                                  <UserFeatureIcon icon={FileText} size="compact" />
                                                   <div className="min-w-0 flex-1">
-                                                    <p className="line-clamp-2 break-all text-sm font-medium leading-snug text-foreground">{primaryFile.fileName}</p>
-                                                    <p className="mt-1 text-[11px] text-muted-foreground">
-                                                      {`${(primaryFile.fileType || "PDF").toUpperCase()} • ${primaryFile.fileSize ? `${Math.max(1, Math.round(primaryFile.fileSize / 1024))} KB` : "File attached"}`}
+                                                    <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground [overflow-wrap:anywhere]">{primaryFile.fileName}</p>
+                                                    <p className="mt-1 whitespace-nowrap text-[11px] text-muted-foreground">
+                                                      {(primaryFile.fileType || "PDF").toUpperCase()} ·{" "}
+                                                      {primaryFile.fileSize
+                                                        ? primaryFile.fileSize >= 1024 * 1024
+                                                          ? `${(primaryFile.fileSize / (1024 * 1024)).toFixed(1)} MB`
+                                                          : `${Math.max(1, Math.round(primaryFile.fileSize / 1024))} KB`
+                                                        : "File attached"}
                                                     </p>
                                                   </div>
                                                 </div>
                                               ) : (
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dashed border-border/70">
-                                                    <FileText className="h-4 w-4 text-red-500" />
-                                                  </div>
-                                                  <span>No file uploaded yet</span>
+                                                  <UserFeatureIcon icon={FileText} size="compact" />
+                                                  <span>No file uploaded</span>
                                                 </div>
                                               )}
                                             </TableCell>
-                                            <TableCell className={`${rowPaddingClass} align-middle`}>
+                                            <TableCell className={`${rowPaddingClass} align-top`}>
                                               <div className="space-y-1">
-                                                <p className="text-sm text-foreground">
+                                                <p className="line-clamp-2 text-sm leading-snug text-foreground">
                                                   {latestActivity ? (liquidationActionLabels[latestActivity.action] ?? latestActivity.action) : secondaryStatus}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
@@ -6256,16 +6503,22 @@ export default function UserPortal({ section }: { section: string }) {
                                                 ) : null}
                                               </div>
                                             </TableCell>
-                                            <TableCell className={`${rowPaddingClass} align-middle`}>
+                                            <TableCell className={`${rowPaddingClass} align-top`}>
                                               <div className="space-y-2.5">
-                                                <div className="flex justify-start">
+                                                <div className="flex justify-center">
                                                   <DropdownMenu modal={false}>
                                                     <DropdownMenuTrigger asChild>
-                                                      <Button type="button" size="icon" variant="outline" className="h-8 w-8">
+                                                      <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant="outline"
+                                                        className="h-9 w-9"
+                                                        aria-label="Open report actions"
+                                                      >
                                                         <MoreHorizontal className="h-4 w-4" />
                                                       </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="start">
+                                                    <DropdownMenuContent align="end" className="min-w-[210px]">
                                                       {isSubmittable ? (
                                                         <DropdownMenuItem onClick={() => setDesktopLiquidationFormReportId(report.id)}>
                                                           <Receipt className="mr-2 h-4 w-4" />
@@ -6288,20 +6541,6 @@ export default function UserPortal({ section }: { section: string }) {
                                                             <Eye className="mr-2 h-4 w-4" />
                                                             Open File
                                                           </DropdownMenuItem>
-                                                          {canRemoveSubmittedFile ? (
-                                                            <DropdownMenuItem
-                                                              onClick={() =>
-                                                                requestDeleteConfirmation({
-                                                                  title: "Remove Submitted File",
-                                                                  description: `Are you sure you want to delete "${primaryFile.fileName}"? This action cannot be undone.`,
-                                                                  action: () => handleDeleteLiquidationFile(primaryFile),
-                                                                })
-                                                              }
-                                                            >
-                                                              <Trash2 className="mr-2 h-4 w-4" />
-                                                              Remove Submitted File
-                                                            </DropdownMenuItem>
-                                                          ) : null}
                                                           {canUploadReplacement ? (
                                                             <DropdownMenuItem
                                                               onClick={() => {
@@ -6312,6 +6551,24 @@ export default function UserPortal({ section }: { section: string }) {
                                                               <FileUp className="mr-2 h-4 w-4" />
                                                               Upload Another Document
                                                             </DropdownMenuItem>
+                                                          ) : null}
+                                                          {canRemoveSubmittedFile ? (
+                                                            <>
+                                                              <DropdownMenuSeparator />
+                                                              <DropdownMenuItem
+                                                                className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                                                onClick={() =>
+                                                                  requestDeleteConfirmation({
+                                                                    title: "Remove Submitted File",
+                                                                    description: `Are you sure you want to delete "${primaryFile.fileName}"? This action cannot be undone.`,
+                                                                    action: () => handleDeleteLiquidationFile(primaryFile),
+                                                                  })
+                                                                }
+                                                              >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Remove Submitted File
+                                                              </DropdownMenuItem>
+                                                            </>
                                                           ) : null}
                                                         </>
                                                       )}
@@ -6435,7 +6692,8 @@ export default function UserPortal({ section }: { section: string }) {
                 description="Liquidation reports appear here once a budget has been released. Upload your post-activity documents after your event."
               />
             )}
-          </PortalSection>
+            </PortalSection>
+          </div>
         );
       }
       case "news-releases": {

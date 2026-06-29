@@ -114,7 +114,7 @@ export const PortalSection = ({
   headerClassName,
 }: {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
   action?: React.ReactNode;
   headerClassName?: string;
