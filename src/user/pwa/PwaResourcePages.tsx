@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
-  Bell, CalendarDays, ChevronRight, Download, ExternalLink, FileText, HelpCircle,
-  MapPin, Medal, Megaphone, ReceiptText, Scale, ShieldCheck, UserRound, WalletCards,
+  Bell, Download, ExternalLink, FileText, HelpCircle, MapPin, Medal, Megaphone,
+  Scale, ShieldCheck, UserRound,
 } from "lucide-react";
 import { StatusBadge } from "@/components/portal/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -11,59 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createInquiryInSupabase, resolveSupabaseFileUrl } from "@/lib/lydo-connect-supabase";
 import type { usePwaPortalData } from "./hooks/usePwaPortalData";
+import { usePwaNavigation } from "./hooks/usePwaNavigation";
+import { PwaBackButton } from "./PwaBackButton";
+import { getPwaRelatedRecordRoute, PWA_ROUTES, pwaNewsDetailRoute } from "./pwaRoutes";
 
 type PortalData = ReturnType<typeof usePwaPortalData>;
 
-const currency = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 });
 const dateLabel = (value: string) => value ? new Date(value).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Not set";
-
-function FullTools({ path, label = "Open Full Workspace" }: { path: string; label?: string }) {
-  const separator = path.includes("?") ? "&" : "?";
-  return <a className="pwa-primary-link" href={`${path}${separator}webView=1`}>{label}<ChevronRight aria-hidden="true" /></a>;
-}
 
 function PageIntro({ icon: Icon, title, copy }: { icon: typeof FileText; title: string; copy: string }) {
   return <section className="pwa-page-intro"><span><Icon aria-hidden="true" /></span><div><h2>{title}</h2><p>{copy}</p></div></section>;
-}
-
-export function PwaDocuments({ data }: { data: PortalData }) {
-  const byType = new Map(data.documentFiles.map((file) => [file.documentTypeId, file]));
-  return <div className="pwa-stack">
-    <PageIntro icon={FileText} title={`${data.approvedDocuments} of ${data.requiredTemplates.length} approved`} copy="Review every required file and open the full workspace to upload or replace documents." />
-    <section className="pwa-card pwa-record-list">
-      {data.requiredTemplates.map((template) => {
-        const file = byType.get(template.id);
-        return <article key={template.id}><span className="pwa-record-icon"><FileText /></span><div><strong>{template.name}</strong><small>{file?.fileName || "No file uploaded"}</small></div><StatusBadge status={file?.adminStatus ?? "missing"} /></article>;
-      })}
-    </section>
-    <FullTools path="/document-submission" label="Upload or Manage Documents" />
-  </div>;
-}
-
-export function PwaBudgets({ data }: { data: PortalData }) {
-  return <div className="pwa-stack">
-    <PageIntro icon={WalletCards} title={`${data.budgetRequests.length} budget request${data.budgetRequests.length === 1 ? "" : "s"}`} copy="Track requests and use the full workspace to create, revise, or submit one." />
-    <section className="pwa-record-list pwa-stack">
-      {data.budgetRequests.map((item) => <article className="pwa-card" key={item.id}><div className="pwa-record-heading"><div><h3>{item.activityTitle || "Untitled activity"}</h3><p>{currency.format(item.requestedAmount)} · {dateLabel(item.activityDate)}</p></div><StatusBadge status={item.status} /></div><dl><div><dt>Venue</dt><dd>{item.venue || "Not set"}</dd></div><div><dt>Updated</dt><dd>{dateLabel(item.updatedAt)}</dd></div></dl></article>)}
-      {!data.budgetRequests.length ? <section className="pwa-card pwa-empty-copy">No budget requests yet.</section> : null}
-    </section>
-    <FullTools path="/budget-request" label="Create or Manage Budget Request" />
-  </div>;
-}
-
-export function PwaLiquidations({ data }: { data: PortalData }) {
-  return <div className="pwa-stack">
-    <PageIntro icon={ReceiptText} title={`${data.liquidationReports.length} liquidation report${data.liquidationReports.length === 1 ? "" : "s"}`} copy="Deadlines turn red only when they are genuinely overdue." />
-    <section className="pwa-record-list pwa-stack">
-      {data.liquidationReports.map((item) => {
-        const budget = data.budgetRequests.find((request) => request.id === item.budgetRequestId);
-        const overdue = item.status === "overdue" || (item.deadlineAt && new Date(item.deadlineAt).getTime() < Date.now() && item.status !== "completed_liquidated");
-        return <article className="pwa-card" key={item.id}><div className="pwa-record-heading"><div><h3>{budget?.activityTitle || "Liquidation Report"}</h3><p>{currency.format(budget?.releasedAmount ?? 0)}</p></div><StatusBadge status={item.status} /></div><dl><div><dt>Go Signal</dt><dd>{dateLabel(item.goSignalAt)}</dd></div><div className={overdue ? "is-danger" : ""}><dt>Deadline</dt><dd>{dateLabel(item.deadlineAt)}</dd></div></dl></article>;
-      })}
-      {!data.liquidationReports.length ? <section className="pwa-card pwa-empty-copy">No liquidation reports are available yet.</section> : null}
-    </section>
-    <FullTools path="/liquidation-reporting" label="Upload or Manage Liquidation" />
-  </div>;
 }
 
 export function PwaProfile({ data }: { data: PortalData }) {
@@ -76,12 +33,7 @@ export function PwaProfile({ data }: { data: PortalData }) {
       <div><MapPin /><span><small>Location</small><strong>{[profile?.barangay, profile?.district].filter(Boolean).join(" · ") || "Not set"}</strong></span></div>
       <div><Medal /><span><small>Advocacy Areas</small><strong>{profile?.advocacies.join(", ") || "Not set"}</strong></span></div>
     </section>
-    <FullTools path="/organization-profile" label="Edit Organization Profile" />
   </div>;
-}
-
-export function PwaYpop({ data }: { data: PortalData }) {
-  return <div className="pwa-stack"><PageIntro icon={Medal} title="YPOP Incentive" copy="Review semesters, qualification results, and current scoring." /><section className="pwa-record-list pwa-stack">{data.ypopEntries.map((item) => <article className="pwa-card" key={item.id}><div className="pwa-record-heading"><div><h3>{item.semesterLabel}</h3><p>{item.pointsEarned} of {item.pointsRequired} required points</p></div><StatusBadge status={item.status} /></div><div className="pwa-progress"><span style={{ width: `${Math.min(100, item.pointsRequired ? (item.pointsEarned / item.pointsRequired) * 100 : 0)}%` }} /></div></article>)}{!data.ypopEntries.length ? <section className="pwa-card pwa-empty-copy">No YPOP semester records yet.</section> : null}</section><FullTools path="/ypop" label="Open YPOP Workspace" /></div>;
 }
 
 export function PwaTemplates({ data }: { data: PortalData }) {
@@ -94,12 +46,12 @@ export function PwaTemplates({ data }: { data: PortalData }) {
 
 export function PwaNews({ data }: { data: PortalData }) {
   const { newsReleaseId } = useParams();
-  const navigate = useNavigate();
+  const { go } = usePwaNavigation();
   const selected = newsReleaseId ? data.news.find((item) => item.id === newsReleaseId) : null;
   if (selected) {
-    return <article className="pwa-card pwa-news-detail">{selected.previewImageUrl ? <img src={selected.previewImageUrl} alt="" /> : null}<StatusBadge status={selected.visibilityStatus} /><h2>{selected.title}</h2><time>{dateLabel(selected.datePosted)}</time><p>{selected.description}</p>{selected.facebookPostUrl ? <a className="pwa-primary-link" href={selected.facebookPostUrl} target="_blank" rel="noreferrer">Open Facebook Post <ExternalLink /></a> : null}</article>;
+    return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.news} label="News Releases" /><article className="pwa-card pwa-news-detail">{selected.previewImageUrl ? <img src={selected.previewImageUrl} alt="" /> : null}<StatusBadge status={selected.visibilityStatus} /><h2>{selected.title}</h2><time>{dateLabel(selected.datePosted)}</time><p>{selected.description}</p>{selected.facebookPostUrl ? <a className="pwa-primary-link" href={selected.facebookPostUrl} target="_blank" rel="noreferrer">Open Facebook Post <ExternalLink /></a> : null}</article></div>;
   }
-  return <div className="pwa-stack"><PageIntro icon={Megaphone} title="News Releases" copy="Official announcements and updates from the LYDO." /><section className="pwa-news-list">{data.news.map((item) => <button key={item.id} type="button" className="pwa-card" onClick={() => item.facebookPostUrl ? window.open(item.facebookPostUrl, "_blank", "noopener,noreferrer") : navigate(`/news-releases/${item.id}`)}>{item.previewImageUrl ? <img src={item.previewImageUrl} alt="" /> : <span className="pwa-news-placeholder"><Megaphone /></span>}<span><strong>{item.title}</strong><small>{dateLabel(item.datePosted)}</small><p>{item.description}</p></span><ExternalLink /></button>)}</section></div>;
+  return <div className="pwa-stack"><PageIntro icon={Megaphone} title="News Releases" copy="Official announcements and updates from the LYDO." /><section className="pwa-news-list">{data.news.map((item) => <button key={item.id} type="button" className="pwa-card" onClick={() => item.facebookPostUrl ? window.open(item.facebookPostUrl, "_blank", "noopener,noreferrer") : go(pwaNewsDetailRoute(item.id))}>{item.previewImageUrl ? <img src={item.previewImageUrl} alt="" /> : <span className="pwa-news-placeholder"><Megaphone /></span>}<span><strong>{item.title}</strong><small>{dateLabel(item.datePosted)}</small><p>{item.description}</p></span><ExternalLink /></button>)}</section></div>;
 }
 
 export function PwaCompliance({ data }: { data: PortalData }) {
@@ -111,7 +63,17 @@ export function PwaTransparency({ data }: { data: PortalData }) {
 }
 
 export function PwaNotifications({ data }: { data: PortalData }) {
-  return <div className="pwa-stack"><div className="pwa-inline-heading"><span>{data.unreadCount} unread</span>{data.unreadCount ? <button type="button" onClick={() => void data.markAllRead()}>Mark all read</button> : null}</div><section className="pwa-notification-list">{data.notifications.map((item) => <button key={item.id} type="button" className={`pwa-card ${item.isRead ? "" : "is-unread"}`} onClick={() => !item.isRead && void data.markRead(item.id)}><span className="pwa-record-icon"><Bell /></span><span><strong>{item.title}</strong><p>{item.message}</p><small>{dateLabel(item.createdAt)}</small></span></button>)}{!data.notifications.length ? <section className="pwa-card pwa-empty-copy">You&apos;re all caught up.</section> : null}</section></div>;
+  const { go } = usePwaNavigation();
+  const open = async (item: (typeof data.notifications)[number]) => {
+    if (!item.isRead) await data.markRead(item.id);
+    const target = getPwaRelatedRecordRoute(item.relatedType, item.relatedId);
+    if (target) go(target);
+  };
+  return <div className="pwa-stack"><div className="pwa-inline-heading"><span>{data.unreadCount} unread</span>{data.unreadCount ? <button type="button" onClick={() => void data.markAllRead()}>Mark all read</button> : null}</div><section className="pwa-notification-list">{data.notifications.map((item) => <button key={item.id} type="button" className={`pwa-card ${item.isRead ? "" : "is-unread"}`} onClick={() => void open(item)}><span className="pwa-record-icon"><Bell /></span><span><strong>{item.title}</strong><p>{item.message}</p><small>{dateLabel(item.createdAt)}</small></span></button>)}{!data.notifications.length ? <section className="pwa-card pwa-empty-copy">You&apos;re all caught up.</section> : null}</section></div>;
+}
+
+export function PwaActivity({ data }: { data: PortalData }) {
+  return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.home} label="Dashboard" /><section className="pwa-card"><h2 className="pwa-section-title">Organization Activity</h2><div className="pwa-activity-list">{data.activities.map((item) => <article key={item.id}><span className="pwa-activity-marker" /><div><strong>{item.description}</strong><time>{dateLabel(item.createdAt)}</time></div></article>)}{!data.activities.length ? <p className="pwa-empty-copy">No activity recorded yet.</p> : null}</div></section></div>;
 }
 
 export function PwaInquiries({ data }: { data: PortalData }) {

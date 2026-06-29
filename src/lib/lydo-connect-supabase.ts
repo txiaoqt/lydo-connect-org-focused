@@ -24,6 +24,7 @@ import type {
 } from "./lydo-connect-data";
 import { createTemplateLocalId, legacyRemovedTemplateNames, normalizeYpopCityLedPoints, requiredDocumentTypes, resolveYpopCityLedCategory } from "./lydo-connect-data";
 import { readAdminSession } from "./admin-auth";
+import { resolveBudgetEligibility, type BudgetEligibility } from "./budget-eligibility";
 import { supabase } from "./supabase";
 
 const ORGANIZATION_DOCUMENTS_BUCKET = "organization-documents";
@@ -1656,6 +1657,41 @@ const getAuthenticatedOrganizationContext = async () => {
   return { session, organizationProfile };
 };
 
+export const getAuthenticatedBudgetEligibilityInSupabase = async (): Promise<BudgetEligibility> => {
+  const { organizationProfile } = await getAuthenticatedOrganizationContext();
+  const { data: periodRows, error: periodError } = await supabase!
+    .from("ypop_periods")
+    .select("*")
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (periodError) throw new Error(periodError.message);
+  const periods = ((periodRows as YpopPeriodRow[] | null) ?? []).map(mapYpopPeriod);
+  const activePeriod = periods[0] ?? null;
+  if (!activePeriod) {
+    return resolveBudgetEligibility({
+      organizationId: organizationProfile.id,
+      periods: [],
+      entries: [],
+    });
+  }
+
+  const { data: entryRows, error: entryError } = await supabase!
+    .from("ypop_entries")
+    .select("*")
+    .eq("organization_id", organizationProfile.id)
+    .eq("semester", activePeriod.semesterKey)
+    .order("updated_at", { ascending: false });
+
+  if (entryError) throw new Error(entryError.message);
+  return resolveBudgetEligibility({
+    organizationId: organizationProfile.id,
+    periods,
+    entries: ((entryRows as YpopEntryRow[] | null) ?? []).map(mapYpopEntry),
+  });
+};
+
 const getAuthenticatedAdminSession = () => {
   if (!supabase) throw new Error("Supabase is not configured.");
   const adminSession = readAdminSession();
@@ -1689,6 +1725,10 @@ export const createBudgetRequestInSupabase = async (params: {
   file?: File | null;
 }) => {
   const { session, organizationProfile } = await getAuthenticatedOrganizationContext();
+  const eligibility = await getAuthenticatedBudgetEligibilityInSupabase();
+  if (!eligibility.eligible) {
+    throw new Error("A qualified YPOP validation in the active period is required before creating a budget request.");
+  }
 
   const payload = {
     organization_id: organizationProfile.id,

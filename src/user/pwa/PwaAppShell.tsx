@@ -1,7 +1,9 @@
 import { useEffect, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { PwaHeader } from "./PwaHeader";
 import { PwaBottomNavigation } from "./PwaBottomNavigation";
+import { usePwaNavigation } from "./hooks/usePwaNavigation";
+import { PWA_ROUTES } from "./pwaRoutes";
 
 export function PwaAppShell({
   title,
@@ -16,7 +18,8 @@ export function PwaAppShell({
   dashboard?: boolean;
   children: ReactNode;
 }) {
-  const navigate = useNavigate();
+  const { go } = usePwaNavigation();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     document.documentElement.classList.add("ytrace-pwa-active");
@@ -26,7 +29,7 @@ export function PwaAppShell({
       document.documentElement.classList.remove("ytrace-pwa-active");
       document.body.classList.remove("ytrace-pwa-active");
     };
-  }, [title]);
+  }, [pathname]);
 
   return (
     <div className="ytrace-pwa-app">
@@ -36,7 +39,7 @@ export function PwaAppShell({
           organizationName={organizationName}
           unreadCount={unreadCount}
           dashboard={dashboard}
-          onNotifications={() => navigate("/notifications")}
+          onNotifications={() => go(PWA_ROUTES.notifications)}
         />
         <main className="pwa-main-content" aria-label={title}>{children}</main>
       </div>

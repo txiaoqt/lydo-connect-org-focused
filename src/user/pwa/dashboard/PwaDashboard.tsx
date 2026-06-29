@@ -1,18 +1,13 @@
 import {
-  AlertTriangle, CalendarClock, ChevronRight, FileText, Megaphone,
-  ReceiptText, Sparkles, UserRound, WalletCards,
+  AlertTriangle, ChevronRight, FileText, Megaphone, ReceiptText, Sparkles,
+  UserRound, WalletCards,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { StatusBadge } from "@/components/portal/StatusBadge";
+import { statusLabelMap } from "@/lib/lydo-connect-data";
 import type { usePwaPortalData } from "../hooks/usePwaPortalData";
+import { usePwaNavigation } from "../hooks/usePwaNavigation";
+import { PWA_ROUTES } from "../pwaRoutes";
 
 type PortalData = ReturnType<typeof usePwaPortalData>;
-
-const money = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-  maximumFractionDigits: 0,
-});
 
 const actionIcons = {
   profile: UserRound,
@@ -23,12 +18,79 @@ const actionIcons = {
 } as const;
 
 export default function PwaDashboard({ data }: { data: PortalData }) {
-  const navigate = useNavigate();
+  const { go } = usePwaNavigation();
+  const profileStatus = data.profile?.profileStatus === "verified"
+    ? { text: "Verified", tone: "success" }
+    : data.profile?.profileStatus === "pending_review"
+      ? { text: "Under review", tone: "progress" }
+      : data.profile?.profileStatus === "suspended_inactive"
+        ? { text: "Inactive", tone: "danger" }
+        : data.profilePercent < 100
+          ? { text: "Needs completion", tone: "attention" }
+          : { text: "Complete", tone: "neutral" };
+  const documentStatus = data.revisionDocuments.length
+    ? { text: `${data.revisionDocuments.length} need revision`, tone: "attention" }
+    : data.underReviewDocuments
+      ? { text: `${data.underReviewDocuments} under review`, tone: "progress" }
+      : data.missingDocuments
+        ? { text: `${data.missingDocuments} still missing`, tone: "attention" }
+        : { text: data.requiredTemplates.length ? "Requirements complete" : "No requirements", tone: "success" };
+  const budgetStatus = data.revisionBudgetRequests.length
+    ? { text: `${data.revisionBudgetRequests.length} need revision`, tone: "attention" }
+    : data.underReviewBudgetRequests
+      ? { text: `${data.underReviewBudgetRequests} under review`, tone: "progress" }
+      : data.releasedBudgetRequests
+        ? { text: `${data.releasedBudgetRequests} released`, tone: "success" }
+        : data.latestBudget?.status === "draft"
+          ? { text: "Draft to finish", tone: "attention" }
+          : { text: data.latestBudget ? statusLabelMap[data.latestBudget.status] : "No requests yet", tone: "neutral" };
+  const liquidationStatus = data.overdueLiquidations.length
+    ? { text: `${data.overdueLiquidations.length} overdue`, tone: "danger" }
+    : data.revisionLiquidations.length
+      ? { text: `${data.revisionLiquidations.length} need revision`, tone: "attention" }
+      : data.underReviewLiquidations
+        ? { text: `${data.underReviewLiquidations} under review`, tone: "progress" }
+        : data.completedLiquidations
+          ? { text: `${data.completedLiquidations} completed`, tone: "success" }
+          : { text: data.liquidationReports.length ? "In progress" : "No reports yet", tone: "neutral" };
   const overview = [
-    { label: "Profile", value: `${data.profilePercent}%`, status: data.profile?.profileStatus ?? "incomplete", icon: UserRound, path: "/organization-profile" },
-    { label: "Documents", value: `${data.documentPercent}%`, status: data.submission?.status ?? "not_started", icon: FileText, path: "/document-submission" },
-    { label: "Budget", value: `${data.budgetPercent}%`, status: data.latestBudget?.status ?? "draft", icon: WalletCards, path: "/budget-request" },
-    { label: "Liquidation", value: `${data.liquidationPercent}%`, status: data.latestLiquidation?.status ?? "not_started", icon: ReceiptText, path: "/liquidation-reporting" },
+    {
+      label: "Profile",
+      value: `${data.profilePercent}%`,
+      descriptor: "Complete",
+      status: profileStatus.text,
+      tone: profileStatus.tone,
+      icon: UserRound,
+      path: PWA_ROUTES.profile,
+    },
+    {
+      label: "Documents",
+      value: `${data.approvedDocuments} of ${data.requiredTemplates.length}`,
+      descriptor: "Approved",
+      status: documentStatus.text,
+      tone: documentStatus.tone,
+      progress: data.documentPercent,
+      icon: FileText,
+      path: PWA_ROUTES.documents,
+    },
+    {
+      label: "Budget",
+      value: String(data.budgetRequests.length),
+      descriptor: data.budgetRequests.length === 1 ? "Request" : "Requests",
+      status: budgetStatus.text,
+      tone: budgetStatus.tone,
+      icon: WalletCards,
+      path: PWA_ROUTES.budgets,
+    },
+    {
+      label: "Liquidation",
+      value: `${data.completedLiquidations} of ${data.liquidationReports.length}`,
+      descriptor: "Completed",
+      status: liquidationStatus.text,
+      tone: liquidationStatus.tone,
+      icon: ReceiptText,
+      path: PWA_ROUTES.liquidations,
+    },
   ];
 
   return (
@@ -39,21 +101,25 @@ export default function PwaDashboard({ data }: { data: PortalData }) {
           <h2>{data.briefing.title}</h2>
           <p>{data.briefing.description}</p>
         </div>
-        <div className="pwa-briefing-stats">
-          <div><FileText aria-hidden="true" /><span><strong>{data.pendingActions}</strong><small>Pending Actions</small></span></div>
-          <div><WalletCards aria-hidden="true" /><span><strong>{money.format(data.releasedBudget)}</strong><small>Budget Released</small></span></div>
-          <div><CalendarClock aria-hidden="true" /><span><strong>{data.daysUntilDeadline ?? "—"}</strong><small>Days to Milestone</small></span></div>
-        </div>
+        {data.briefing.action ? (
+          <button type="button" className="pwa-briefing-action" onClick={() => go(data.briefing.action!.path)}>
+            {data.briefing.action.label}<ChevronRight aria-hidden="true" />
+          </button>
+        ) : null}
       </section>
 
       <section className="pwa-overview-grid" aria-label="Workflow overview">
-        {overview.map(({ label, value, status, icon: Icon, path }) => (
-          <button key={label} type="button" className="pwa-overview-card" onClick={() => navigate(path)}>
-            <span className="pwa-overview-icon"><Icon aria-hidden="true" /></span>
-            <span className="pwa-overview-copy">
+        {overview.map(({ label, value, descriptor, status, tone, progress, icon: Icon, path }) => (
+          <button key={label} type="button" className="pwa-overview-card" onClick={() => go(path)}>
+            <span className="pwa-overview-heading">
+              <span className="pwa-overview-icon"><Icon aria-hidden="true" /></span>
               <small>{label}</small>
-              <strong>{value}</strong>
-              <StatusBadge status={status} />
+            </span>
+            <strong className="pwa-overview-value">{value}</strong>
+            <span className="pwa-overview-descriptor">{descriptor}</span>
+            {progress !== undefined ? <span className="pwa-overview-progress"><span style={{ width: `${progress}%` }} /></span> : null}
+            <span className={`pwa-overview-status pwa-overview-status--${tone}`}>
+              {status}
             </span>
           </button>
         ))}
@@ -65,7 +131,7 @@ export default function PwaDashboard({ data }: { data: PortalData }) {
           {data.actions.map((action) => {
             const Icon = actionIcons[action.kind as keyof typeof actionIcons] ?? AlertTriangle;
             return (
-              <button key={`${action.path}-${action.title}`} type="button" onClick={() => navigate(action.path)}>
+              <button key={`${action.path}-${action.title}`} type="button" onClick={() => go(action.path)}>
                 <span className="pwa-action-icon"><Icon aria-hidden="true" /></span>
                 <span><strong>{action.title}</strong><small>{action.detail}</small></span>
                 <ChevronRight aria-hidden="true" />
@@ -78,7 +144,7 @@ export default function PwaDashboard({ data }: { data: PortalData }) {
       <section className="pwa-card">
         <div className="pwa-section-heading">
           <h2 className="pwa-section-title">Recent Activity</h2>
-          {data.activities.length > 3 ? <button type="button" onClick={() => navigate("/organization-profile")}>View All</button> : null}
+          {data.activities.length > 3 ? <button type="button" onClick={() => go(PWA_ROUTES.activity)}>View All</button> : null}
         </div>
         <div className="pwa-activity-list">
           {data.activities.slice(0, 3).map((activity) => (

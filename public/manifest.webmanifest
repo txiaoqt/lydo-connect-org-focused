@@ -2,7 +2,7 @@
   "name": "Y-TRACE",
   "short_name": "Y-TRACE",
   "description": "Y-TRACE streamlines youth organization registration, compliance documents, budget requests, liquidation reporting, YPOP incentives, and official LYDO updates.",
-  "start_url": "/dashboard",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

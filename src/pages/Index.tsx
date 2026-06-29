@@ -157,7 +157,7 @@ const Index = () => {
       {/* How It Works */}
       <section className="bg-background py-10 sm:py-12 md:py-24">
         <div className="container mx-auto max-w-7xl px-6 sm:px-8 lg:px-10">
-          <div className="mb-8 mx-auto max-w-2xl text-center sm:mb-14">
+          <div className="mb-6 mx-auto max-w-2xl text-center md:mb-14">
             <span className="mb-2 block text-xs font-semibold uppercase tracking-widest text-primary">
               How It Works
             </span>
@@ -173,21 +173,21 @@ const Index = () => {
             {howItWorksSteps.map(({ step, icon: Icon, title, description }) => (
               <div
                 key={step}
-                className="how-it-works-item grid grid-cols-[auto_minmax(0,1fr)] gap-3 border-b border-border/70 py-4 last:border-b-0 lg:flex lg:flex-col lg:gap-4 lg:rounded-xl lg:border lg:bg-card lg:p-5 lg:card-shadow"
+                className="how-it-works-item grid grid-cols-[48px_minmax(0,1fr)] gap-x-3.5 border-b border-border/70 py-6 last:border-b-0 md:grid-cols-[auto_minmax(0,1fr)] md:gap-3 md:py-4 lg:flex lg:flex-col lg:gap-4 lg:rounded-xl lg:border lg:bg-card lg:p-5 lg:card-shadow"
               >
-                <div className="flex items-start gap-3 lg:items-start lg:justify-between">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 lg:h-11 lg:w-11">
+                <div className="contents md:flex md:items-start md:gap-3 lg:justify-between">
+                  <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 md:flex lg:h-11 lg:w-11">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <span className="font-heading text-2xl font-extrabold leading-none text-muted-foreground/20 lg:text-3xl">
+                  <span className="self-start font-heading text-[2rem] font-semibold leading-none tabular-nums text-primary/60 md:normal-nums md:text-2xl md:font-extrabold md:text-muted-foreground/20 lg:text-3xl">
                     {step}
                   </span>
                 </div>
                 <div className="min-w-0">
-                  <h3 className="mb-1 font-heading text-[0.98rem] font-bold leading-snug text-foreground lg:mb-1.5 lg:text-base">
+                  <h3 className="mb-1.5 font-heading text-[1.08rem] font-bold leading-snug text-foreground md:mb-1 md:text-[0.98rem] lg:mb-1.5 lg:text-base">
                     {title}
                   </h3>
-                  <p className="text-[0.875rem] leading-relaxed text-muted-foreground lg:text-sm">{description}</p>
+                  <p className="min-w-0 break-words text-left text-[0.9375rem] leading-[1.6] text-muted-foreground md:text-[0.875rem] md:leading-relaxed lg:text-sm">{description}</p>
                 </div>
               </div>
             ))}

@@ -2,30 +2,28 @@ import { useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import {
+  loadLydoConnectSupabaseState,
   markAllNotificationsReadInSupabase,
   markNotificationReadInSupabase,
 } from "@/lib/lydo-connect-supabase";
+import { resolveBudgetEligibility } from "@/lib/budget-eligibility";
+import { getProfileCompletionPercent } from "./pwaPortalMetrics";
+import { PWA_ROUTES } from "../pwaRoutes";
 
 const approvedBudgetStatuses = new Set(["approved_for_ftf_green", "hard_copy_submitted", "budget_released", "completed"]);
 const unlockedLiquidationStatuses = new Set(["budget_released", "completed"]);
+const approvedDocumentStatuses = new Set(["approved", "approved_green"]);
+const underReviewDocumentStatuses = new Set(["uploaded", "ready_for_review", "submitted", "under_admin_review"]);
+const revisionDocumentStatuses = new Set(["needs_revision", "rejected_red"]);
+const underReviewLiquidationStatuses = new Set(["submitted", "under_review", "approved_for_ftf_green", "hard_copy_submitted"]);
+const actionableLiquidationStatuses = new Set(["not_started", "draft", "needs_revision", "rejected_red", "overdue"]);
 
-const completionCount = (profile: ReturnType<typeof useLydoConnect>["state"]["organizationProfiles"][number] | null) =>
-  profile
-    ? [
-        profile.organizationName.trim(),
-        profile.organizationEmail.trim(),
-        profile.contactNumber.trim(),
-        profile.district.trim(),
-        profile.barangay.trim(),
-        profile.isExistingOrganization ? profile.organizationIdentifierNumber.trim() : "not-required",
-        profile.majorClassification.trim(),
-        profile.subClassification.trim(),
-        profile.advocacies.length ? "advocacies" : "",
-        profile.adviserName.trim(),
-        profile.representativeName.trim(),
-        profile.address.trim(),
-      ].filter(Boolean).length
-    : 0;
+type PwaBriefing = {
+  title: string;
+  description: string;
+  tone: "success" | "warning" | "danger" | "info";
+  action: { label: string; path: string } | null;
+};
 
 export function usePwaPortalData() {
   const { user, signOut } = useAuth();
@@ -43,11 +41,15 @@ export function usePwaPortalData() {
     const documentFiles = submission
       ? state.documentSubmissionFiles.filter((item) => item.submissionId === submission.id)
       : [];
-    const approvedDocuments = documentFiles.filter((item) => item.adminStatus === "approved_green").length;
-    const revisionDocuments = documentFiles.filter((item) =>
-      item.adminStatus === "needs_revision" || item.adminStatus === "rejected_red",
-    );
-    const missingDocuments = Math.max(requiredTemplates.length - documentFiles.length, 0);
+    const documentFileByType = new Map(documentFiles.map((item) => [item.documentTypeId, item]));
+    const requiredDocumentFiles = requiredTemplates
+      .map((template) => documentFileByType.get(template.id))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    const approvedDocuments = requiredDocumentFiles.filter((item) => approvedDocumentStatuses.has(item.adminStatus)).length;
+    const underReviewDocuments = requiredDocumentFiles.filter((item) => underReviewDocumentStatuses.has(item.adminStatus)).length;
+    const revisionDocuments = requiredDocumentFiles.filter((item) => revisionDocumentStatuses.has(item.adminStatus));
+    const draftDocuments = requiredDocumentFiles.filter((item) => item.adminStatus === "draft").length;
+    const missingDocuments = requiredTemplates.filter((template) => !documentFileByType.has(template.id)).length;
     const documentPercent = requiredTemplates.length
       ? Math.round((approvedDocuments / requiredTemplates.length) * 100)
       : 0;
@@ -58,6 +60,10 @@ export function usePwaPortalData() {
     const latestBudget = budgetRequests[0] ?? null;
     const releasedBudget = budgetRequests.reduce((sum, item) => sum + Number(item.releasedAmount || 0), 0);
     const budgetPercent = latestBudget && approvedBudgetStatuses.has(latestBudget.status) ? 100 : 0;
+    const draftBudgetRequests = budgetRequests.filter((item) => item.status === "draft");
+    const releasedBudgetRequests = budgetRequests.filter((item) => item.status === "budget_released" || item.status === "completed").length;
+    const underReviewBudgetRequests = budgetRequests.filter((item) => item.status === "submitted" || item.status === "under_review").length;
+    const revisionBudgetRequests = budgetRequests.filter((item) => item.status === "needs_revision");
 
     const liquidationReports = [...state.liquidationReports]
       .filter((item) => item.organizationId === organizationId)
@@ -68,21 +74,32 @@ export function usePwaPortalData() {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const latestLiquidation = liquidationReports[0] ?? null;
     const liquidationPercent = latestLiquidation?.status === "completed_liquidated" ? 100 : 0;
+    const completedLiquidations = liquidationReports.filter((item) => item.status === "completed_liquidated").length;
+    const underReviewLiquidations = liquidationReports.filter((item) => underReviewLiquidationStatuses.has(item.status)).length;
+    const revisionLiquidations = liquidationReports.filter((item) => item.status === "needs_revision" || item.status === "rejected_red");
+    const draftLiquidations = liquidationReports.filter((item) => item.status === "draft" || item.status === "not_started");
     const now = Date.now();
     const overdueLiquidations = liquidationReports.filter((item) =>
       item.status === "overdue" ||
-      (item.deadlineAt && new Date(item.deadlineAt).getTime() < now && item.status !== "completed_liquidated"),
+      (
+        actionableLiquidationStatuses.has(item.status) &&
+        item.deadlineAt &&
+        new Date(item.deadlineAt).getTime() < now
+      ),
     );
     const upcomingLiquidations = liquidationReports
-      .filter((item) => item.deadlineAt && new Date(item.deadlineAt).getTime() >= now && item.status !== "completed_liquidated")
+      .filter((item) =>
+        actionableLiquidationStatuses.has(item.status) &&
+        item.deadlineAt &&
+        new Date(item.deadlineAt).getTime() >= now,
+      )
       .sort((a, b) => a.deadlineAt.localeCompare(b.deadlineAt));
     const nextDeadline = upcomingLiquidations[0]?.deadlineAt ?? "";
     const daysUntilDeadline = nextDeadline
       ? Math.max(0, Math.ceil((new Date(nextDeadline).getTime() - now) / 86_400_000))
       : null;
 
-    const profileTarget = 11 + (profile?.isExistingOrganization ? 1 : 0);
-    const profilePercent = profileTarget ? Math.round((completionCount(profile) / profileTarget) * 100) : 0;
+    const profilePercent = getProfileCompletionPercent(profile);
     const notifications = [...state.notifications]
       .filter((item) => item.userId === user?.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -95,6 +112,11 @@ export function usePwaPortalData() {
     const ypopEntries = [...state.ypopEntries]
       .filter((item) => item.organizationId === organizationId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const budgetEligibility = resolveBudgetEligibility({
+      organizationId,
+      periods: state.ypopPeriods,
+      entries: state.ypopEntries,
+    });
 
     const pendingActions =
       (profile?.profileStatus === "incomplete" ? 1 : 0) +
@@ -103,39 +125,52 @@ export function usePwaPortalData() {
       (latestBudget?.status === "needs_revision" ? 1 : 0) +
       liquidationReports.filter((item) => ["not_started", "draft", "needs_revision", "overdue"].includes(item.status)).length;
 
-    let briefing = {
+    let briefing: PwaBriefing = {
       title: "Your organization is on track.",
-      description: "Keep up the great work. There are no overdue records requiring action.",
-      tone: "success" as "success" | "warning" | "danger" | "info",
+      description: "There are no overdue records or submissions currently requiring your action.",
+      tone: "success",
+      action: null,
     };
     if (overdueLiquidations.length) {
-      briefing = { title: "A liquidation report is overdue.", description: "Open Liquidation and complete the required report as soon as possible.", tone: "danger" };
-    } else if (revisionDocuments.length || latestBudget?.status === "needs_revision") {
-      briefing = { title: "A submission needs revision.", description: "Review the latest admin remarks and update the flagged record.", tone: "warning" };
+      briefing = { title: "A liquidation report is overdue.", description: "Submit the required report as soon as possible to restore compliance.", tone: "danger", action: { label: "Open Liquidation", path: PWA_ROUTES.liquidations } };
+    } else if (revisionLiquidations.length) {
+      briefing = { title: "A liquidation report needs revision.", description: "Review the admin remarks and upload the corrected report.", tone: "warning", action: { label: "Review Liquidation", path: PWA_ROUTES.liquidations } };
+    } else if (revisionDocuments.length) {
+      briefing = { title: `${revisionDocuments.length === 1 ? "One document needs" : `${revisionDocuments.length} documents need`} revision.`, description: "Review the admin remarks and upload the corrected file.", tone: "warning", action: { label: "Review Document", path: PWA_ROUTES.documents } };
+    } else if (revisionBudgetRequests.length) {
+      briefing = { title: "A budget request needs revision.", description: "Review the latest admin feedback and update the request.", tone: "warning", action: { label: "Review Budget", path: PWA_ROUTES.budgets } };
     } else if (profile?.profileStatus === "incomplete" || !profile) {
-      briefing = { title: "Complete your organization profile.", description: "Your profile must be complete before the full workflow can proceed.", tone: "warning" };
+      briefing = { title: "Your organization profile is incomplete.", description: "Complete the required organization details to continue the workflow.", tone: "warning", action: { label: "Complete Profile", path: PWA_ROUTES.profile } };
     } else if (missingDocuments) {
-      briefing = { title: `${missingDocuments} required document${missingDocuments === 1 ? " is" : "s are"} missing.`, description: "Continue your document submission to prepare for review.", tone: "warning" };
+      briefing = { title: `${missingDocuments} required document${missingDocuments === 1 ? " is" : "s are"} still missing.`, description: "Upload the remaining required files for admin review.", tone: "warning", action: { label: "Continue Documents", path: PWA_ROUTES.documentsManage } };
     } else if (daysUntilDeadline !== null && daysUntilDeadline <= 7) {
-      briefing = { title: "A liquidation deadline is approaching.", description: `${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"} remaining before the next deadline.`, tone: "warning" };
-    } else if (pendingActions) {
-      briefing = { title: `You have ${pendingActions} action${pendingActions === 1 ? "" : "s"} that need attention.`, description: "Use the recommended next steps below to keep your records moving.", tone: "info" };
+      briefing = { title: "A liquidation deadline is approaching.", description: `${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"} remaining before the next deadline.`, tone: "warning", action: { label: "View Liquidation", path: PWA_ROUTES.liquidations } };
+    } else if (draftLiquidations.length) {
+      briefing = { title: "You have an unfinished liquidation report.", description: "Continue the draft and submit it when the required file is ready.", tone: "info", action: { label: "Continue Liquidation", path: PWA_ROUTES.liquidations } };
+    } else if (draftBudgetRequests.length) {
+      briefing = { title: "You have an unfinished budget draft.", description: "Continue the request and submit it when its details are complete.", tone: "info", action: { label: "Continue Budget", path: PWA_ROUTES.budgets } };
     }
 
     const actions: Array<{ title: string; detail: string; path: string; kind: string }> = [];
-    if (!profile || profile.profileStatus === "incomplete") actions.push({ title: "Complete Profile", detail: "Finish your organization information.", path: "/organization-profile", kind: "profile" });
-    if (revisionDocuments.length) actions.push({ title: "Review Admin Remarks", detail: "Correct the flagged document files.", path: "/document-submission", kind: "documents" });
-    else if (missingDocuments) actions.push({ title: "Continue Submission", detail: `${missingDocuments} required file${missingDocuments === 1 ? "" : "s"} remaining.`, path: "/document-submission", kind: "documents" });
-    if (latestBudget?.status === "needs_revision") actions.push({ title: "Revise Budget Request", detail: "Address the latest review feedback.", path: "/budget-request", kind: "budget" });
-    if (latestLiquidation && ["not_started", "draft", "needs_revision", "overdue"].includes(latestLiquidation.status)) actions.push({ title: "Upload Liquidation", detail: "Complete the current liquidation report.", path: "/liquidation-reporting", kind: "liquidation" });
-    if (actions.length < 3) actions.push({ title: "View News Releases", detail: "Read the latest official updates.", path: "/news-releases", kind: "news" });
+    if (overdueLiquidations.length) actions.push({ title: "Upload Liquidation Report", detail: "Complete the overdue report as soon as possible.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (revisionLiquidations.length) actions.push({ title: "Review Liquidation Remarks", detail: "Correct the report flagged by the admin.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (revisionDocuments.length) actions.push({ title: "Review Admin Remarks", detail: "Correct the flagged document files.", path: PWA_ROUTES.documents, kind: "documents" });
+    if (revisionBudgetRequests.length) actions.push({ title: "Revise Budget Request", detail: "Address the latest review feedback.", path: PWA_ROUTES.budgets, kind: "budget" });
+    if (!profile || profile.profileStatus === "incomplete") actions.push({ title: "Complete Profile", detail: "Finish your organization information.", path: PWA_ROUTES.profile, kind: "profile" });
+    if (!revisionDocuments.length && missingDocuments) actions.push({ title: "Continue Document Submission", detail: `${missingDocuments} required file${missingDocuments === 1 ? "" : "s"} remaining.`, path: PWA_ROUTES.documentsManage, kind: "documents" });
+    if (!overdueLiquidations.length && !revisionLiquidations.length && daysUntilDeadline !== null && daysUntilDeadline <= 7) actions.push({ title: "Upload Liquidation Report", detail: `${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"} remain before the deadline.`, path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (draftLiquidations.length) actions.push({ title: "Continue Liquidation Draft", detail: "Finish the current report draft.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (draftBudgetRequests.length) actions.push({ title: "Continue Budget Draft", detail: "Finish the current budget request.", path: PWA_ROUTES.budgets, kind: "budget" });
+    if (!actions.length) actions.push({ title: "View News Releases", detail: "Read the latest official updates.", path: PWA_ROUTES.news, kind: "news" });
 
     return {
-      templates, requiredTemplates, submission, documentFiles, approvedDocuments, revisionDocuments,
-      missingDocuments, documentPercent, budgetRequests, latestBudget, releasedBudget, budgetPercent,
-      liquidationReports, latestLiquidation, liquidationPercent, overdueLiquidations, daysUntilDeadline,
+      templates, requiredTemplates, submission, documentFiles, approvedDocuments, underReviewDocuments,
+      revisionDocuments, draftDocuments, missingDocuments, documentPercent, budgetRequests, latestBudget,
+      releasedBudget, budgetPercent, releasedBudgetRequests, underReviewBudgetRequests, revisionBudgetRequests,
+      liquidationReports, latestLiquidation, liquidationPercent, completedLiquidations, underReviewLiquidations,
+      revisionLiquidations, overdueLiquidations, daysUntilDeadline,
       profilePercent, notifications, unreadCount: notifications.filter((item) => !item.isRead).length,
-      activities, inquiries, ypopEntries, pendingActions, briefing, actions: actions.slice(0, 3),
+      activities, inquiries, ypopEntries, budgetEligibility, pendingActions, briefing, actions: actions.slice(0, 3),
       news: [...state.newsReleases].filter((item) => item.visibilityStatus === "published").sort((a, b) => b.datePosted.localeCompare(a.datePosted)),
       transparency: [...state.transparencyPosts].filter((item) => item.visibilityStatus === "published").sort((a, b) => b.postDate.localeCompare(a.postDate)),
       compliance: state.complianceRemarks.filter((item) => item.organizationId === organizationId),
@@ -150,6 +185,10 @@ export function usePwaPortalData() {
     await markAllNotificationsReadInSupabase();
     store.markAllNotificationsRead();
   };
+  const refresh = async () => {
+    const remoteSnapshot = await loadLydoConnectSupabaseState();
+    if (remoteSnapshot) store.mergeRemoteState(remoteSnapshot);
+  };
 
   return {
     ...data,
@@ -160,5 +199,6 @@ export function usePwaPortalData() {
     signOut,
     markRead,
     markAllRead,
+    refresh,
   };
 }

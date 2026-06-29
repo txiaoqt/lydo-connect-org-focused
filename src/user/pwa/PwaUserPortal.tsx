@@ -1,58 +1,62 @@
-import type { UserPortalSection } from "@/user/UserPortalEntry";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { PwaAppShell } from "./PwaAppShell";
 import { PwaMorePage } from "./PwaMorePage";
 import PwaDashboard from "./dashboard/PwaDashboard";
 import { usePwaPortalData } from "./hooks/usePwaPortalData";
 import {
-  PwaBudgets, PwaCompliance, PwaDocuments, PwaInquiries, PwaLiquidations,
-  PwaNews, PwaNotifications, PwaProfile, PwaTemplates, PwaTransparency, PwaYpop,
+  PwaActivity, PwaCompliance, PwaInquiries, PwaNews, PwaNotifications, PwaProfile,
+  PwaTemplates, PwaTransparency,
 } from "./PwaResourcePages";
+import { PwaYpopPage } from "./ypop/PwaYpopPage";
+import {
+  PwaDocumentDetail, PwaDocumentList, PwaDocumentManager,
+} from "./documents/PwaDocumentPages";
+import {
+  PwaBudgetDetail, PwaBudgetForm, PwaBudgetList,
+} from "./budgets/PwaBudgetPages";
+import {
+  PwaLiquidationDetail, PwaLiquidationList, PwaLiquidationManager,
+} from "./liquidations/PwaLiquidationPages";
+import { getPwaPageTitle, PWA_ROUTES } from "./pwaRoutes";
 import "./styles/pwa-app.css";
 
-const titles: Record<UserPortalSection, string> = {
-  dashboard: "Dashboard",
-  "organization-profile": "Organization Profile",
-  "document-submission": "Documents",
-  "budget-request": "Budget Requests",
-  "liquidation-reporting": "Liquidation",
-  "news-releases": "News Releases",
-  "public-transparency": "Public Transparency",
-  "compliance-status": "Compliance Status",
-  notifications: "Notifications",
-  ypop: "YPOP Incentive",
-  templates: "Templates",
-  more: "More",
-  inquiries: "Inquiries",
-};
-
-export default function PwaUserPortal({ section }: { section: UserPortalSection }) {
+export default function PwaUserPortal() {
   const data = usePwaPortalData();
-  let content;
-
-  switch (section) {
-    case "dashboard": content = <PwaDashboard data={data} />; break;
-    case "organization-profile": content = <PwaProfile data={data} />; break;
-    case "document-submission": content = <PwaDocuments data={data} />; break;
-    case "budget-request": content = <PwaBudgets data={data} />; break;
-    case "liquidation-reporting": content = <PwaLiquidations data={data} />; break;
-    case "news-releases": content = <PwaNews data={data} />; break;
-    case "public-transparency": content = <PwaTransparency data={data} />; break;
-    case "compliance-status": content = <PwaCompliance data={data} />; break;
-    case "notifications": content = <PwaNotifications data={data} />; break;
-    case "ypop": content = <PwaYpop data={data} />; break;
-    case "templates": content = <PwaTemplates data={data} />; break;
-    case "inquiries": content = <PwaInquiries data={data} />; break;
-    case "more": content = <PwaMorePage onSignOut={data.signOut} />; break;
-  }
+  const { pathname } = useLocation();
+  const title = getPwaPageTitle(pathname);
 
   return (
     <PwaAppShell
-      title={titles[section]}
+      title={title}
       organizationName={data.organizationName}
       unreadCount={data.unreadCount}
-      dashboard={section === "dashboard"}
+      dashboard={pathname === PWA_ROUTES.home}
     >
-      {content}
+      <Routes>
+        <Route index element={<PwaDashboard data={data} />} />
+        <Route path="documents" element={<PwaDocumentList data={data} />} />
+        <Route path="documents/manage" element={<PwaDocumentManager data={data} />} />
+        <Route path="documents/:documentId" element={<PwaDocumentDetail data={data} />} />
+        <Route path="budgets" element={<PwaBudgetList data={data} />} />
+        <Route path="budgets/new" element={<PwaBudgetForm data={data} mode="new" />} />
+        <Route path="budgets/:requestId" element={<PwaBudgetDetail data={data} />} />
+        <Route path="budgets/:requestId/edit" element={<PwaBudgetForm data={data} mode="edit" />} />
+        <Route path="liquidations" element={<PwaLiquidationList data={data} />} />
+        <Route path="liquidations/:reportId" element={<PwaLiquidationDetail data={data} />} />
+        <Route path="liquidations/:reportId/manage" element={<PwaLiquidationManager data={data} />} />
+        <Route path="notifications" element={<PwaNotifications data={data} />} />
+        <Route path="activity" element={<PwaActivity data={data} />} />
+        <Route path="profile" element={<PwaProfile data={data} />} />
+        <Route path="ypop" element={<PwaYpopPage data={data} />} />
+        <Route path="templates" element={<PwaTemplates data={data} />} />
+        <Route path="news" element={<PwaNews data={data} />} />
+        <Route path="news/:newsReleaseId" element={<PwaNews data={data} />} />
+        <Route path="transparency" element={<PwaTransparency data={data} />} />
+        <Route path="compliance" element={<PwaCompliance data={data} />} />
+        <Route path="inquiries" element={<PwaInquiries data={data} />} />
+        <Route path="more" element={<PwaMorePage onSignOut={data.signOut} />} />
+        <Route path="*" element={<Navigate to={PWA_ROUTES.home} replace />} />
+      </Routes>
     </PwaAppShell>
   );
 }

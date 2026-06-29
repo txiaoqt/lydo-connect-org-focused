@@ -11,7 +11,6 @@ const eligible: InstalledUserPwaDecision = {
   compact: true,
   standalone: true,
   developmentPreview: false,
-  forceWebView: false,
 };
 
 describe("shouldUseInstalledUserPwa", () => {
@@ -25,7 +24,6 @@ describe("shouldUseInstalledUserPwa", () => {
     ["public or admin route", { userRoute: false }],
     ["viewport wider than 768px", { compact: false }],
     ["ordinary mobile browser", { standalone: false }],
-    ["explicit full-workspace escape", { forceWebView: true }],
   ])("keeps the existing website UI when %s", (_label, change) => {
     expect(shouldUseInstalledUserPwa({ ...eligible, ...change })).toBe(false);
   });

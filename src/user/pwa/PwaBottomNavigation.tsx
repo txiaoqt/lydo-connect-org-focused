@@ -1,21 +1,24 @@
 import { FileText, Home, Menu, ReceiptText, WalletCards } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { usePwaNavigation } from "./hooks/usePwaNavigation";
+import { PWA_ROUTES } from "./pwaRoutes";
 
 const items = [
-  { label: "Home", path: "/dashboard", icon: Home },
-  { label: "Documents", path: "/document-submission", icon: FileText },
-  { label: "Budget", path: "/budget-request", icon: WalletCards },
-  { label: "Liquidation", path: "/liquidation-reporting", icon: ReceiptText },
-  { label: "More", path: "/app-more", icon: Menu },
+  { label: "Home", path: PWA_ROUTES.home, icon: Home },
+  { label: "Documents", path: PWA_ROUTES.documents, icon: FileText },
+  { label: "Budget", path: PWA_ROUTES.budgets, icon: WalletCards },
+  { label: "Liquidation", path: PWA_ROUTES.liquidations, icon: ReceiptText },
+  { label: "More", path: PWA_ROUTES.more, icon: Menu },
 ];
 
 const secondaryPaths = new Set([
-  "/organization-profile", "/news-releases", "/public-transparency", "/compliance-status",
-  "/notifications", "/ypop", "/templates", "/app-inquiries",
+  PWA_ROUTES.profile, PWA_ROUTES.news, PWA_ROUTES.transparency, PWA_ROUTES.compliance,
+  PWA_ROUTES.notifications, PWA_ROUTES.ypop, PWA_ROUTES.templates, PWA_ROUTES.inquiries,
+  PWA_ROUTES.activity,
 ]);
 
 export function PwaBottomNavigation() {
-  const navigate = useNavigate();
+  const { go } = usePwaNavigation();
   const { pathname } = useLocation();
 
   return (
@@ -25,7 +28,10 @@ export function PwaBottomNavigation() {
           const isSecondaryPage = [...secondaryPaths].some(
             (path) => pathname === path || pathname.startsWith(`${path}/`),
           );
-          const active = pathname === item.path || (item.path === "/app-more" && isSecondaryPage);
+          const active =
+            pathname === item.path ||
+            (item.path !== PWA_ROUTES.home && pathname.startsWith(`${item.path}/`)) ||
+            (item.path === PWA_ROUTES.more && isSecondaryPage);
           const Icon = item.icon;
           return (
             <button
@@ -33,7 +39,7 @@ export function PwaBottomNavigation() {
               type="button"
               className={active ? "is-active" : ""}
               aria-current={active ? "page" : undefined}
-              onClick={() => navigate(item.path)}
+              onClick={() => go(item.path)}
             >
               <Icon aria-hidden="true" />
               <span>{item.label}</span>

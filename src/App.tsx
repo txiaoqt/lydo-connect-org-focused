@@ -21,7 +21,7 @@ import NewsReleaseRecord from "./pages/NewsReleaseRecord";
 import PublicTemplates from "./pages/PublicTemplates";
 import { usePolicyAgreement } from "./hooks/use-policy-agreement";
 import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
-import UserPortalEntry from "./user/UserPortalEntry";
+import UserPortalEntry, { PwaRouteEntry } from "./user/UserPortalEntry";
 import { LydoConnectProvider } from "./lib/lydo-connect-store";
 import { isSupabaseConfigured } from "./lib/supabase";
 import {
@@ -235,6 +235,7 @@ const App = () => (
                       <Route path="/templates" element={<RequireUser><UserPortalEntry section="templates" /></RequireUser>} />
                       <Route path="/app-more" element={<RequireUser><UserPortalEntry section="more" /></RequireUser>} />
                       <Route path="/app-inquiries" element={<RequireUser><UserPortalEntry section="inquiries" /></RequireUser>} />
+                      <Route path="/app/*" element={<RequireUser><PwaRouteEntry /></RequireUser>} />
                       <Route path="/profile" element={<Navigate to="/organization-profile" replace />} />
                       <Route path="*" element={<NotFoundRoute />} />
                     </>

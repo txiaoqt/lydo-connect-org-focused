@@ -1,0 +1,99 @@
+export const PWA_ROUTES = {
+  home: "/app",
+  documents: "/app/documents",
+  documentsManage: "/app/documents/manage",
+  budgets: "/app/budgets",
+  budgetNew: "/app/budgets/new",
+  liquidations: "/app/liquidations",
+  notifications: "/app/notifications",
+  activity: "/app/activity",
+  profile: "/app/profile",
+  ypop: "/app/ypop",
+  templates: "/app/templates",
+  news: "/app/news",
+  transparency: "/app/transparency",
+  compliance: "/app/compliance",
+  inquiries: "/app/inquiries",
+  more: "/app/more",
+} as const;
+
+export const pwaDocumentDetailRoute = (documentId: string) =>
+  `${PWA_ROUTES.documents}/${encodeURIComponent(documentId)}`;
+
+export const pwaBudgetDetailRoute = (requestId: string) =>
+  `${PWA_ROUTES.budgets}/${encodeURIComponent(requestId)}`;
+
+export const pwaBudgetEditRoute = (requestId: string) =>
+  `${pwaBudgetDetailRoute(requestId)}/edit`;
+
+export const pwaLiquidationDetailRoute = (reportId: string) =>
+  `${PWA_ROUTES.liquidations}/${encodeURIComponent(reportId)}`;
+
+export const pwaLiquidationManageRoute = (reportId: string) =>
+  `${pwaLiquidationDetailRoute(reportId)}/manage`;
+
+export const pwaNewsDetailRoute = (newsId: string) =>
+  `${PWA_ROUTES.news}/${encodeURIComponent(newsId)}`;
+
+export const isPwaRoute = (pathname: string) =>
+  pathname === PWA_ROUTES.home || pathname.startsWith(`${PWA_ROUTES.home}/`);
+
+const legacyRouteMap: Array<[string, string]> = [
+  ["/dashboard", PWA_ROUTES.home],
+  ["/organization-profile", PWA_ROUTES.profile],
+  ["/document-submission", PWA_ROUTES.documents],
+  ["/budget-request", PWA_ROUTES.budgets],
+  ["/liquidation-reporting", PWA_ROUTES.liquidations],
+  ["/news-releases", PWA_ROUTES.news],
+  ["/public-transparency", PWA_ROUTES.transparency],
+  ["/compliance-status", PWA_ROUTES.compliance],
+  ["/notifications", PWA_ROUTES.notifications],
+  ["/ypop", PWA_ROUTES.ypop],
+  ["/templates", PWA_ROUTES.templates],
+  ["/app-more", PWA_ROUTES.more],
+  ["/app-inquiries", PWA_ROUTES.inquiries],
+];
+
+export function getPwaEquivalentRoute(pathname: string) {
+  const newsMatch = pathname.match(/^\/news-releases\/([^/]+)$/);
+  if (newsMatch) return pwaNewsDetailRoute(newsMatch[1]);
+  return legacyRouteMap.find(([legacy]) => pathname === legacy)?.[1] ?? PWA_ROUTES.home;
+}
+
+export function getPwaParentRoute(pathname: string) {
+  if (pathname.startsWith(`${PWA_ROUTES.documents}/`)) return PWA_ROUTES.documents;
+  if (pathname.startsWith(`${PWA_ROUTES.budgets}/`)) return PWA_ROUTES.budgets;
+  if (pathname.startsWith(`${PWA_ROUTES.liquidations}/`)) return PWA_ROUTES.liquidations;
+  if (pathname.startsWith(`${PWA_ROUTES.news}/`)) return PWA_ROUTES.news;
+  return PWA_ROUTES.home;
+}
+
+export function getPwaPageTitle(pathname: string) {
+  if (pathname === PWA_ROUTES.home) return "Dashboard";
+  if (pathname.startsWith(PWA_ROUTES.documentsManage)) return "Manage Documents";
+  if (pathname.startsWith(PWA_ROUTES.documents)) return "Documents";
+  if (pathname === PWA_ROUTES.budgetNew) return "New Budget Request";
+  if (pathname.startsWith(PWA_ROUTES.budgets)) return "Budget Requests";
+  if (pathname.includes("/manage") && pathname.startsWith(PWA_ROUTES.liquidations)) return "Manage Liquidation";
+  if (pathname.startsWith(PWA_ROUTES.liquidations)) return "Liquidation";
+  if (pathname.startsWith(PWA_ROUTES.notifications)) return "Notifications";
+  if (pathname.startsWith(PWA_ROUTES.activity)) return "Activity";
+  if (pathname.startsWith(PWA_ROUTES.profile)) return "Organization Profile";
+  if (pathname.startsWith(PWA_ROUTES.ypop)) return "YPOP Incentive";
+  if (pathname.startsWith(PWA_ROUTES.templates)) return "Templates";
+  if (pathname.startsWith(PWA_ROUTES.news)) return "News Releases";
+  if (pathname.startsWith(PWA_ROUTES.transparency)) return "Public Transparency";
+  if (pathname.startsWith(PWA_ROUTES.compliance)) return "Compliance Status";
+  if (pathname.startsWith(PWA_ROUTES.inquiries)) return "Inquiries";
+  return "More";
+}
+
+export function getPwaRelatedRecordRoute(relatedType: string, relatedId: string) {
+  if (relatedType === "budget_request" && relatedId) return pwaBudgetDetailRoute(relatedId);
+  if (relatedType === "liquidation_report" && relatedId) return pwaLiquidationDetailRoute(relatedId);
+  if (relatedType === "news_release" && relatedId) return pwaNewsDetailRoute(relatedId);
+  if (relatedType === "document_submission" || relatedType === "document") return PWA_ROUTES.documents;
+  if (relatedType === "organization_profile") return PWA_ROUTES.profile;
+  if (relatedType.startsWith("ypop")) return PWA_ROUTES.ypop;
+  return null;
+}

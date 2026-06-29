@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 export class PwaErrorBoundary extends Component<
-  { children: ReactNode },
+  { children: ReactNode; onDashboard: () => void },
   { failed: boolean }
 > {
   state = { failed: false };
@@ -23,7 +23,7 @@ export class PwaErrorBoundary extends Component<
           <p>Your records are safe. Reload the app or return to Dashboard.</p>
           <div className="pwa-error-actions">
             <button type="button" onClick={() => window.location.reload()}>Retry</button>
-            <a href="/dashboard">Dashboard</a>
+            <button type="button" onClick={this.props.onDashboard}>Dashboard</button>
           </div>
         </section>
       </div>

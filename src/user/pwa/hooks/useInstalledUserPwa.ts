@@ -17,6 +17,7 @@ const USER_PWA_ROUTES = [
   "/templates",
   "/app-more",
   "/app-inquiries",
+  "/app",
 ];
 
 export type InstalledUserPwaDecision = {
@@ -26,7 +27,6 @@ export type InstalledUserPwaDecision = {
   compact: boolean;
   standalone: boolean;
   developmentPreview: boolean;
-  forceWebView: boolean;
 };
 
 export const shouldUseInstalledUserPwa = ({
@@ -36,14 +36,12 @@ export const shouldUseInstalledUserPwa = ({
   compact,
   standalone,
   developmentPreview,
-  forceWebView,
 }: InstalledUserPwaDecision) =>
   enabled &&
   !adminSurface &&
   userRoute &&
   compact &&
-  (standalone || developmentPreview) &&
-  !forceWebView;
+  (standalone || developmentPreview);
 
 export function useInstalledUserPwa() {
   const { pathname, search } = useLocation();
@@ -61,8 +59,18 @@ export function useInstalledUserPwa() {
   }, []);
 
   const params = new URLSearchParams(search);
-  const developmentPreview = import.meta.env.DEV && params.get("pwaPreview") === "1";
-  const forceWebView = params.get("webView") === "1";
+  const previewRequested = import.meta.env.DEV && params.get("pwaPreview") === "1";
+  const [previewSession, setPreviewSession] = useState(() =>
+    import.meta.env.DEV && typeof window !== "undefined"
+      ? window.sessionStorage.getItem("ytrace-pwa-preview") === "1"
+      : false,
+  );
+  useEffect(() => {
+    if (!previewRequested) return;
+    window.sessionStorage.setItem("ytrace-pwa-preview", "1");
+    setPreviewSession(true);
+  }, [previewRequested]);
+  const developmentPreview = previewRequested || previewSession;
   const enabled = import.meta.env.VITE_ENABLE_STANDALONE_USER_PWA_UI === "true";
   const isUserRoute = USER_PWA_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
@@ -73,6 +81,5 @@ export function useInstalledUserPwa() {
     compact,
     standalone,
     developmentPreview,
-    forceWebView,
   });
 }

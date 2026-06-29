@@ -83,6 +83,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import { cn } from "@/lib/utils";
+import { resolveBudgetEligibility } from "@/lib/budget-eligibility";
 import {
   type BudgetRequest,
   advocacyOptions,
@@ -606,6 +607,15 @@ export default function UserPortal({ section }: { section: string }) {
   const [batchDroppedFiles, setBatchDroppedFiles] = useState<BatchDroppedDocumentFile[]>([]);
   const [batchUploadResult, setBatchUploadResult] = useState<BatchUploadResultSummary | null>(null);
   const currentProfile = state.organizationProfiles.find((item) => item.userId === user?.id) ?? null;
+  const budgetEligibility = useMemo(
+    () =>
+      resolveBudgetEligibility({
+        organizationId: currentProfile?.id ?? "",
+        periods: state.ypopPeriods,
+        entries: state.ypopEntries,
+      }),
+    [currentProfile?.id, state.ypopEntries, state.ypopPeriods],
+  );
   useEffect(() => {
     if (!currentProfile) return;
     setInquiryForm((current) => ({
@@ -624,9 +634,12 @@ export default function UserPortal({ section }: { section: string }) {
   useEffect(() => {
     if (section === "budget-request") {
       const ypopEntryId = searchParams.get("ypopEntryId");
-      const qualifiedYpopEntry = ypopEntryId
-        ? state.ypopEntries.find((entry) => entry.id === ypopEntryId && entry.status === "qualified")
-        : null;
+      const qualifiedYpopEntry =
+        ypopEntryId &&
+        budgetEligibility.eligible &&
+        budgetEligibility.entry?.id === ypopEntryId
+          ? budgetEligibility.entry
+          : null;
       if (qualifiedYpopEntry) {
         const blank = createBlankBudgetRequest(currentProfile?.id ?? "", user?.id ?? "");
         setBudgetForm({ ...blank, budgetRequestType: "ypop_incentive", ypopEntryId: qualifiedYpopEntry.id });
@@ -636,8 +649,7 @@ export default function UserPortal({ section }: { section: string }) {
         setShowBudgetForm(false);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, searchParams]);
+  }, [budgetEligibility, currentProfile?.id, section, searchParams, user?.id]);
 
   useEffect(() => {
     setBudgetPage(1);
@@ -2053,9 +2065,12 @@ export default function UserPortal({ section }: { section: string }) {
     }
 
     const existingBudgetRequest = budgetRequests.find((request) => request.id === budgetForm.id) ?? null;
-    const qualifiedYpopEntry = budgetForm.ypopEntryId
-      ? state.ypopEntries.find((entry) => entry.id === budgetForm.ypopEntryId && entry.status === "qualified")
-      : null;
+    const qualifiedYpopEntry =
+      budgetForm.ypopEntryId &&
+      budgetEligibility.eligible &&
+      budgetEligibility.entry?.id === budgetForm.ypopEntryId
+        ? budgetEligibility.entry
+        : null;
     if (!existingBudgetRequest && (budgetForm.budgetRequestType !== "ypop_incentive" || !qualifiedYpopEntry)) {
       toast({
         title: "YPOP qualification required",
