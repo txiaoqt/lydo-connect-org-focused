@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Eye, File, FileArchive, FileSpreadsheet, FileText, Search } from "lucide-react";
 import JSZip from "jszip";
 import { useParams } from "react-router-dom";
@@ -250,34 +250,62 @@ export function PwaTemplateLibrary({ data }: { data: PortalData }) {
 export function PwaTemplatePreview({ data }: { data: PortalData }) {
   const { templateId } = useParams();
   const template = data.templates.find((item) => item.id === templateId);
+  const selectedTemplateId = template?.id ?? "";
+  const templateFileUrl = template?.templateFileUrl.trim() ?? "";
   const [previewUrl, setPreviewUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const previewUrlRef = useRef("");
+  const activePreviewRef = useRef({ templateId: "", fileUrl: "", resolvedUrl: "" });
 
   useEffect(() => {
-    let active = true;
-    setPreviewUrl("");
+    let cancelled = false;
     setError("");
-    if (!template || !hasFile(template)) {
+    if (!selectedTemplateId || !templateFileUrl || templateFileUrl.startsWith("#")) {
+      previewUrlRef.current = "";
+      activePreviewRef.current = { templateId: selectedTemplateId, fileUrl: templateFileUrl, resolvedUrl: "" };
+      setPreviewUrl((current) => current ? "" : current);
       setLoading(false);
-      return () => { active = false; };
+      return () => { cancelled = true; };
     }
-    setLoading(true);
-    void resolveSupabaseFileUrl(template.templateFileUrl)
+
+    const alreadyDisplayingThisFile =
+      activePreviewRef.current.templateId === selectedTemplateId
+      && activePreviewRef.current.fileUrl === templateFileUrl
+      && Boolean(activePreviewRef.current.resolvedUrl);
+    if (alreadyDisplayingThisFile) {
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
+
+    // Keep an existing iframe mounted while a genuinely changed file URL is
+    // resolved. This avoids losing the reader's position unless the active
+    // file itself actually resolves to a different URL.
+    if (!previewUrlRef.current) setLoading(true);
+
+    void resolveSupabaseFileUrl(templateFileUrl)
       .then((url) => {
-        if (!active) return;
+        if (cancelled) return;
         if (!url) throw new Error("This template file is currently unavailable.");
-        setPreviewUrl(url);
+        activePreviewRef.current = {
+          templateId: selectedTemplateId,
+          fileUrl: templateFileUrl,
+          resolvedUrl: url,
+        };
+        if (previewUrlRef.current !== url) {
+          previewUrlRef.current = url;
+          setPreviewUrl(url);
+        }
       })
       .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : "Templates could not be loaded.");
+        if (!cancelled) setError(reason instanceof Error ? reason.message : "Templates could not be loaded.");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (!cancelled) setLoading(false);
       });
-    return () => { active = false; };
-  }, [template]);
+    return () => { cancelled = true; };
+  }, [selectedTemplateId, templateFileUrl]);
 
   if (!template) {
     return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.templates} label="Templates" /><section className="pwa-card pwa-template-empty"><FileText /><h2>Template not found.</h2><p>This template may no longer be available.</p></section></div>;

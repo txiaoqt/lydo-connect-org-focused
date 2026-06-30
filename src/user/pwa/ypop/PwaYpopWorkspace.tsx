@@ -6,6 +6,7 @@ import {
   Download,
   FileText,
   Loader2,
+  LockKeyhole,
   Medal,
   Plus,
   Send,
@@ -87,6 +88,12 @@ const formatDateTime = (value: string) => {
   }).format(date);
 };
 
+const getFileTypeLabel = (fileName: string, fileType: string) => {
+  const extension = fileName.split(".").pop()?.trim().toUpperCase();
+  if (extension && extension.length <= 5) return extension;
+  return fileType.split("/").pop()?.toUpperCase() || "FILE";
+};
+
 const eventProofLabel = (participation: YPOPEventParticipation, fileCount: number) => {
   if (participation.status === "verified") return "Verified";
   if (participation.status === "needs_revision") return "Needs Revision";
@@ -130,6 +137,8 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   const orgActivities = entry ? state.ypopOrgActivities.filter((item) => item.ypopEntryId === entry.id) : [];
   const entryFiles = entry ? state.ypopFiles.filter((item) => item.ypopEntryId === entry.id) : [];
   const editable = Boolean(entry && isYpopEntryEditable(entry) && isYpopPeriodOpen(period));
+  const finalized = entry?.status === "qualified" || entry?.status === "not_qualified";
+  const readOnly = Boolean(entry && !editable);
   const approvedPpas = entry ? getApprovedYpopOrgActivityCount(orgActivities, entry.id, entry.orgLedProjectCount ?? 0) : 0;
   const score = computeYpopScore(entry?.cityLedAttendance ?? [], activities, approvedPpas, period?.orgLedTiers);
 
@@ -403,12 +412,8 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           <span><small>Approved PPAs</small><strong>{approvedPpas}</strong></span>
           <span><small>Attached proof</small><strong>{totalProofCount}</strong></span>
         </div>
-        {entry?.adminRemarks ? <div className="pwa-admin-note"><strong>Admin remarks</strong><p>{entry.adminRemarks}</p></div> : null}
+        {entry?.adminRemarks && !finalized ? <div className="pwa-admin-note"><strong>Admin remarks</strong><p>{entry.adminRemarks}</p></div> : null}
       </section>
-
-      {!editable ? (
-        <section className="pwa-ypop-readonly-note"><Medal /><div><strong>{period?.status === "closed" ? "Period closed" : "Submission is read-only"}</strong><p>Existing records and proof remain available, but new participation changes are disabled.</p></div></section>
-      ) : null}
 
       <div className="pwa-ypop-event-tabs" role="tablist" aria-label="YPOP event timeframe">
         <button type="button" role="tab" aria-selected={eventTab === "ongoing"} className={eventTab === "ongoing" ? "is-active" : ""} onClick={() => setEventTab("ongoing")}>Ongoing</button>
@@ -490,46 +495,109 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         </div>
       </section>
 
-      <section className="pwa-card pwa-ypop-workspace-section">
-        <h2>Qualification and Scoring</h2>
-        <dl className="pwa-ypop-scoring-list">
-          <div><dt>City-Led Score</dt><dd>{score.cityLedPercent}%</dd></div>
-          <div><dt>Organization Bonus</dt><dd>+{score.orgLedBonus}%</dd></div>
-          <div><dt>Final Score</dt><dd>{score.totalScore}%</dd></div>
-          <div><dt>Qualification Threshold</dt><dd>{entry?.pointsRequired ?? 70}%</dd></div>
-          <div><dt>Approved PPA Count</dt><dd>{approvedPpas}</dd></div>
-        </dl>
-        {(entry?.status === "qualified" || entry?.status === "not_qualified") ? <div className={`pwa-ypop-result ${entry.status === "qualified" ? "is-qualified" : "is-not-qualified"}`}>{entry.status === "qualified" ? <Trophy /> : <Medal />}<div><strong>{entry.status === "qualified" ? "Qualified for a project grant" : "Not qualified for this period"}</strong><p>This is the finalized admin validation result.</p></div></div> : null}
-      </section>
+      {finalized && entry ? (
+        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-final-result" aria-labelledby="ypop-final-result-title">
+          <h2 id="ypop-final-result-title">Final Result</h2>
+          <div className={`pwa-ypop-result ${entry.status === "qualified" ? "is-qualified" : "is-not-qualified"}`}>
+            {entry.status === "qualified" ? <Trophy aria-hidden="true" /> : <Medal aria-hidden="true" />}
+            <div>
+              <strong>{entry.status === "qualified" ? "Qualified for a project grant" : "Not qualified for this period"}</strong>
+              <dl className="pwa-ypop-result-metadata">
+                <div><dt>Final score</dt><dd>{score.totalScore}%</dd></div>
+                <div><dt>Required threshold</dt><dd>{entry.pointsRequired}%</dd></div>
+                {entry.validatedAt ? <div><dt>Finalized</dt><dd><time dateTime={entry.validatedAt}>{formatDateTime(entry.validatedAt)}</time></dd></div> : null}
+              </dl>
+              {entry.adminRemarks ? <div className="pwa-ypop-final-remarks"><span>Admin final remarks</span><p>{entry.adminRemarks}</p></div> : null}
+            </div>
+          </div>
+        </section>
+      ) : (
+        <section className="pwa-card pwa-ypop-workspace-section">
+          <h2>Qualification and Scoring</h2>
+          <dl className="pwa-ypop-scoring-list">
+            <div><dt>City-Led Score</dt><dd>{score.cityLedPercent}%</dd></div>
+            <div><dt>Organization Bonus</dt><dd>+{score.orgLedBonus}%</dd></div>
+            <div><dt>Current Score</dt><dd>{score.totalScore}%</dd></div>
+            <div><dt>Qualification Threshold</dt><dd>{entry?.pointsRequired ?? 70}%</dd></div>
+            <div><dt>Approved PPA Count</dt><dd>{approvedPpas}</dd></div>
+          </dl>
+        </section>
+      )}
 
-      {entry ? <section className="pwa-card pwa-ypop-workspace-section">
-        <h2>Message for Admin</h2>
-        <Textarea rows={4} value={note} readOnly={!editable} placeholder="Optional notes for the admin reviewing your participation..." onChange={(event) => setNote(event.target.value)} />
-        {editable ? <Button variant="outline" disabled={busyKey === "save-note"} onClick={() => void saveMessage()}>{busyKey === "save-note" ? "Saving..." : "Save Message"}</Button> : null}
-      </section> : null}
+      {entry ? (
+        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-submission-info" aria-labelledby="ypop-submission-info-title">
+          <h2 id="ypop-submission-info-title">Submission Information</h2>
+          <dl className="pwa-ypop-submission-metadata">
+            <div><dt>Status</dt><dd><StatusBadge status={entry.status} /></dd></div>
+            {entry.submittedAt ? <div><dt>Submitted</dt><dd><time dateTime={entry.submittedAt}>{formatDateTime(entry.submittedAt)}</time></dd></div> : null}
+          </dl>
 
-      {entry ? <section className="pwa-card pwa-ypop-workspace-section">
-        <h2>Submission Supporting Files</h2>
-        <input ref={entryFileInput} hidden type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEntryFile(file); }} />
-        {entryFiles.length ? <ul className="pwa-ypop-file-list">{entryFiles.map((file) => (
-          <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{editable ? <button type="button" aria-label={`Remove ${file.fileName}`} disabled={busyKey === `entry-delete-${file.id}`} onClick={() => void removeEntryFile(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>
-        ))}</ul> : <p className="pwa-empty-copy">No general supporting files attached.</p>}
-        {editable ? <Button variant="outline" disabled={busyKey === "entry-upload"} onClick={() => entryFileInput.current?.click()}><Upload />{busyKey === "entry-upload" ? "Uploading..." : "Attach File"}</Button> : null}
-      </section> : null}
+          {editable ? (
+            <div className="pwa-ypop-info-group">
+              <h3>Message for Admin <span>Optional</span></h3>
+              <Textarea rows={4} value={note} placeholder="Optional notes for the admin reviewing your participation..." onChange={(event) => setNote(event.target.value)} />
+              <Button variant="outline" disabled={busyKey === "save-note"} onClick={() => void saveMessage()}>{busyKey === "save-note" ? "Saving..." : "Save Message"}</Button>
+            </div>
+          ) : note.trim() ? (
+            <div className="pwa-ypop-info-group">
+              <h3>Message sent to admin</h3>
+              <p className="pwa-ypop-submitted-message">{note}</p>
+            </div>
+          ) : null}
 
-      {entry ? <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-submission-actions">
+          {(editable || entryFiles.length > 0) ? (
+            <div className="pwa-ypop-info-group">
+              <h3>Supporting Files</h3>
+              <input ref={entryFileInput} hidden type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEntryFile(file); }} />
+              {entryFiles.length ? (
+                <ul className="pwa-ypop-supporting-files">
+                  {entryFiles.map((file) => (
+                    <li key={file.id}>
+                      <button type="button" aria-label={`View ${file.fileName}`} onClick={() => void openStoredFile(file.fileUrl)}>
+                        <FileText aria-hidden="true" />
+                        <span>
+                          <strong>{file.fileName}</strong>
+                          <small>{getFileTypeLabel(file.fileName, file.fileType)}{file.uploadedAt ? <> · <time dateTime={file.uploadedAt}>{formatDateTime(file.uploadedAt)}</time></> : null}</small>
+                        </span>
+                        <Download aria-hidden="true" />
+                      </button>
+                      {editable ? <button type="button" aria-label={`Remove ${file.fileName}`} disabled={busyKey === `entry-delete-${file.id}`} onClick={() => void removeEntryFile(file.id, file.fileUrl)}><Trash2 /></button> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="pwa-ypop-inline-empty">No supporting files attached.</p>}
+              {editable ? <Button variant="outline" disabled={busyKey === "entry-upload"} onClick={() => entryFileInput.current?.click()}><Upload />{busyKey === "entry-upload" ? "Uploading..." : "Attach File"}</Button> : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {readOnly ? (
+        <section className="pwa-ypop-readonly-note" aria-label="Finalized submission notice">
+          <LockKeyhole aria-hidden="true" />
+          <div>
+            <strong>{finalized ? "Submission finalized" : period?.status === "closed" ? "Period closed" : "Submission under review"}</strong>
+            <p>{finalized ? "This submission was finalized and can no longer be edited." : period?.status === "closed" ? "This period is closed and the submission can no longer be edited." : "This submission is being reviewed and can no longer be edited."}</p>
+          </div>
+        </section>
+      ) : null}
+
+      {entry && editable ? <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-submission-actions">
         <h2>Submission Actions</h2>
         {submissionBlockReason ? <p className="pwa-ypop-block-reason">{submissionBlockReason}</p> : null}
         <div>
-          {editable ? <Button variant="outline" className="is-danger" onClick={() => setDeleteEntryOpen(true)}><Trash2 />Delete Submission</Button> : null}
-          {editable ? <Button disabled={Boolean(submissionBlockReason) || busyKey === "submit-entry"} onClick={() => void submitEntry()}><Send />{busyKey === "submit-entry" ? "Submitting..." : entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation"}</Button> : null}
+          <Button variant="outline" className="is-danger" onClick={() => setDeleteEntryOpen(true)}><Trash2 />Delete Submission</Button>
+          <Button disabled={Boolean(submissionBlockReason) || busyKey === "submit-entry"} onClick={() => void submitEntry()}><Send />{busyKey === "submit-entry" ? "Submitting..." : entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation"}</Button>
         </div>
       </section> : null}
 
-      <section className="pwa-card pwa-ypop-workspace-section">
-        <div className="pwa-section-heading"><h2>Recent Activity</h2>{activityLog.length > 3 ? <button type="button" onClick={() => go(PWA_ROUTES.activity)}>View full activity log <ChevronRight /></button> : null}</div>
-        <div className="pwa-profile-audit-list">{activityLog.slice(0, 3).map((item) => <article key={item.id}><span /><div><strong>{item.title}</strong>{item.context ? <p>{item.context}</p> : null}<time>{formatDateTime(item.date)}</time></div></article>)}</div>
-        {!activityLog.length ? <p className="pwa-empty-copy">No recent YPOP activity.</p> : null}
+      <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-recent-activity" aria-labelledby="ypop-recent-activity-title">
+        <div className="pwa-section-heading">
+          <h2 id="ypop-recent-activity-title">Recent Activity</h2>
+          {activityLog.length ? <button type="button" aria-label="View all YPOP activity" onClick={() => go(PWA_ROUTES.activity)}>View all <ChevronRight aria-hidden="true" /></button> : null}
+        </div>
+        <div className="pwa-profile-audit-list">{activityLog.slice(0, 3).map((item) => <article key={item.id}><span /><div><strong>{item.title}</strong>{item.context ? <p>{item.context}</p> : null}<time dateTime={item.date}>{formatDateTime(item.date)}</time></div></article>)}</div>
+        {!activityLog.length ? <p className="pwa-ypop-inline-empty">No recent YPOP activity.</p> : null}
       </section>
 
       <AlertDialog open={deleteEntryOpen} onOpenChange={setDeleteEntryOpen}>

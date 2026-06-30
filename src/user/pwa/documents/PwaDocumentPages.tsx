@@ -1,13 +1,17 @@
 import { useMemo, useRef, useState, type DragEvent } from "react";
 import JSZip from "jszip";
 import {
-  ChevronRight, Download, Eye, FileArchive, FileText, Loader2, Trash2, UploadCloud,
+  CalendarClock, ChevronRight, Download, Eye, FileArchive, FileText, Info, Loader2, Trash2, UploadCloud,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { StatusBadge } from "@/components/portal/StatusBadge";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   removeOrganizationDocumentFromSupabase,
+  replaceOrganizationDocumentFileInSupabase,
   resolveSupabaseFileUrl,
   submitOrganizationDocumentsBatchToSupabase,
 } from "@/lib/lydo-connect-supabase";
@@ -16,12 +20,20 @@ import { PwaBackButton } from "../PwaBackButton";
 import { usePwaNavigation } from "../hooks/usePwaNavigation";
 import type { usePwaPortalData } from "../hooks/usePwaPortalData";
 import { PWA_ROUTES, pwaDocumentDetailRoute } from "../pwaRoutes";
+import {
+  DOCUMENT_UPLOAD_MAX_BYTES,
+  formatDocumentFileSize,
+  getAcceptedDocumentFormats,
+  getDocumentInputAccept,
+  validateOrganizationDocumentFile,
+} from "./documentFileValidation";
 
 type PortalData = ReturnType<typeof usePwaPortalData>;
 type PendingFile = { id: string; file: File; documentTypeId: string };
 
 const approvedStatuses = new Set(["approved", "approved_green"]);
-const editableStatuses = new Set(["draft", "needs_revision", "rejected_red"]);
+const initialUploadStatuses = new Set(["draft"]);
+const correctionStatuses = new Set(["needs_revision", "rejected_red"]);
 const reviewStatuses = new Set(["uploaded", "ready_for_review", "submitted", "under_admin_review"]);
 
 const getDocumentPresentation = (file?: SubmissionFile) => {
@@ -36,7 +48,7 @@ const getDocumentPresentation = (file?: SubmissionFile) => {
     return {
       status: file.adminStatus,
       label: file.adminStatus === "needs_revision" ? "Needs Revision" : "Rejected",
-      supportingText: file.adminRemarks || "Review the latest admin feedback.",
+      supportingText: "Action required",
     };
   }
   return { status: "draft", label: "Draft", supportingText: "Saved as draft" };
@@ -60,13 +72,19 @@ const downloadReference = async (reference: string, name: string) => {
   saveBlob(await response.blob(), name);
 };
 
-const validateFile = (documentTypeId: string, file: File) => {
-  const pdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-  const spreadsheet = /\.(xlsx|xls)$/i.test(file.name);
-  if (pdf || (documentTypeId === "yorp-members" && spreadsheet)) return "";
-  return documentTypeId === "yorp-members"
-    ? "The members list must be a PDF or XLSX file."
-    : "This document must be a PDF file.";
+const formatDocumentDateTime = (value?: string) => {
+  if (!value) return "Not available";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Not available";
+  return new Intl.DateTimeFormat("en-PH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsed);
+};
+
+const getFileFormat = (file: SubmissionFile) => {
+  const extension = file.fileName.split(".").pop()?.toUpperCase();
+  return extension && extension.length <= 5 ? extension : file.fileType || "File";
 };
 
 export function PwaDocumentList({ data }: { data: PortalData }) {
@@ -77,7 +95,7 @@ export function PwaDocumentList({ data }: { data: PortalData }) {
   const allApproved = total > 0 && data.approvedDocuments === total;
   const canManageDocuments = !submissionLocked && data.requiredTemplates.some((template) => {
     const file = byType.get(template.id);
-    return !file || editableStatuses.has(file.adminStatus);
+    return !file || initialUploadStatuses.has(file.adminStatus);
   });
   const helper = data.underReviewDocuments
     ? `${data.underReviewDocuments} under admin review`
@@ -142,6 +160,11 @@ export function PwaDocumentList({ data }: { data: PortalData }) {
 export function PwaDocumentDetail({ data }: { data: PortalData }) {
   const { documentId = "" } = useParams();
   const { go } = usePwaNavigation();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [replaceOpen, setReplaceOpen] = useState(false);
+  const [replacementFile, setReplacementFile] = useState<File | null>(null);
+  const [replacementError, setReplacementError] = useState("");
+  const [replacing, setReplacing] = useState(false);
   const template = data.requiredTemplates.find((item) => item.id === documentId);
   const file = data.documentFiles.find((item) => item.documentTypeId === documentId);
   if (!template) {
@@ -157,6 +180,66 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
     }
   };
 
+  const requiresCorrection = Boolean(file && correctionStatuses.has(file.adminStatus));
+  const latestRevision = file?.revisionHistory?.at(-1);
+  const previousRemark = latestRevision?.adminRemarks || (
+    file?.adminRemarks && !/^awaiting admin review\.?$/i.test(file.adminRemarks.trim())
+      ? file.adminRemarks
+      : ""
+  );
+
+  const closeReplacement = (open: boolean) => {
+    if (replacing) return;
+    setReplaceOpen(open);
+    if (!open) {
+      setReplacementFile(null);
+      setReplacementError("");
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const selectReplacement = async (selected?: File) => {
+    setReplacementFile(selected ?? null);
+    setReplacementError("");
+    if (!selected) return;
+    setReplacementError(await validateOrganizationDocumentFile(documentId, selected));
+  };
+
+  const submitReplacement = async () => {
+    if (!file || !replacementFile) {
+      setReplacementError("Choose the corrected file before submitting.");
+      return;
+    }
+    const issue = await validateOrganizationDocumentFile(documentId, replacementFile);
+    if (issue) {
+      setReplacementError(issue);
+      return;
+    }
+
+    setReplacing(true);
+    setReplacementError("");
+    try {
+      await replaceOrganizationDocumentFileInSupabase({
+        fileId: file.id,
+        documentTypeId: template.databaseId,
+        expectedUpdatedAt: file.updatedAt,
+        file: replacementFile,
+      });
+      await data.refresh();
+      setReplaceOpen(false);
+      setReplacementFile(null);
+      if (inputRef.current) inputRef.current.value = "";
+      toast({
+        title: "Corrected file submitted",
+        description: `${template.name} is now back under admin review.`,
+      });
+    } catch (error) {
+      setReplacementError(error instanceof Error ? error.message : "The corrected file could not be submitted.");
+    } finally {
+      setReplacing(false);
+    }
+  };
+
   return (
     <div className="pwa-stack">
       <PwaBackButton fallback={PWA_ROUTES.documents} label="Documents" />
@@ -164,15 +247,72 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
         <span className="pwa-record-icon"><FileText aria-hidden="true" /></span>
         <div><h2>{template.name}</h2><StatusBadge status={file?.adminStatus ?? "not_started"} label={file ? undefined : "Missing"} /></div>
       </section>
+      {requiresCorrection ? (
+        <section className={`pwa-card pwa-revision-notice ${file?.adminStatus === "rejected_red" ? "is-rejected" : ""}`}>
+          <Info aria-hidden="true" />
+          <div>
+            <strong>{file?.adminStatus === "rejected_red" ? "This document was rejected." : "Admin requested changes to this document."}</strong>
+            <p>{previousRemark || "Review the requirement and upload a corrected file."}</p>
+          </div>
+        </section>
+      ) : null}
       <section className="pwa-card pwa-detail-list">
         <div><FileText /><span><small>Attached file</small><strong>{file?.fileName || "No file uploaded"}</strong></span></div>
-        <div><Eye /><span><small>Admin remarks</small><strong>{file?.adminRemarks || "No admin remarks."}</strong></span></div>
+        {file ? <div><Info /><span><small>File details</small><strong>{getFileFormat(file)} · {formatDocumentFileSize(file.fileSize)}</strong></span></div> : null}
+        {file ? <div><CalendarClock /><span><small>{latestRevision ? "Resubmitted" : "Uploaded"}</small><strong>{formatDocumentDateTime(file.uploadedAt)}</strong></span></div> : null}
+        {file?.reviewedAt ? <div><Eye /><span><small>Reviewed</small><strong>{formatDocumentDateTime(file.reviewedAt)}</strong></span></div> : null}
+        {previousRemark ? <div><Eye /><span><small>{latestRevision ? "Previous review remark" : "Admin remark"}</small><strong>{previousRemark}</strong></span></div> : null}
       </section>
       <div className="pwa-button-stack">
+        {requiresCorrection ? <button type="button" className="pwa-primary-button" onClick={() => setReplaceOpen(true)}><UploadCloud /> Re-upload File</button> : null}
         {file?.fileUrl ? <button type="button" className="pwa-secondary-button" onClick={() => void openReference(file.fileUrl)}><Eye /> View Attached File</button> : null}
         {template.templateFileUrl ? <button type="button" className="pwa-secondary-button" onClick={() => void openReference(template.templateFileUrl)}><Download /> View Template</button> : null}
-        {!file || editableStatuses.has(file.adminStatus) ? <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.documentsManage)}><UploadCloud /> {file ? "Replace in Document Manager" : "Upload in Document Manager"}</button> : null}
+        {!file || initialUploadStatuses.has(file.adminStatus) ? <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.documentsManage)}><UploadCloud /> Upload in Document Manager</button> : null}
       </div>
+
+      <Dialog open={replaceOpen} onOpenChange={closeReplacement}>
+        <DialogContent className="pwa-reupload-dialog w-[calc(100vw-1.5rem)] max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Re-upload corrected file</DialogTitle>
+            <DialogDescription>
+              Replace only the file for this requirement. The document type cannot be changed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="pwa-reupload-content">
+            <dl>
+              <div><dt>Document</dt><dd>{template.name}</dd></div>
+              <div><dt>Current file</dt><dd>{file?.fileName}</dd></div>
+              <div><dt>Admin remark</dt><dd>{previousRemark || "No admin remark was provided."}</dd></div>
+              <div><dt>Accepted format</dt><dd>{getAcceptedDocumentFormats(documentId)}</dd></div>
+              <div><dt>Maximum size</dt><dd>{formatDocumentFileSize(DOCUMENT_UPLOAD_MAX_BYTES)}</dd></div>
+            </dl>
+            <label className="pwa-reupload-picker">
+              <span>Corrected file</span>
+              <input
+                ref={inputRef}
+                type="file"
+                accept={getDocumentInputAccept(documentId)}
+                disabled={replacing}
+                onChange={(event) => void selectReplacement(event.target.files?.[0])}
+              />
+            </label>
+            {replacementFile ? (
+              <div className="pwa-selected-replacement">
+                <FileText aria-hidden="true" />
+                <span><strong>{replacementFile.name}</strong><small>{formatDocumentFileSize(replacementFile.size)}</small></span>
+              </div>
+            ) : null}
+            <p className="pwa-reupload-note">Submitting will replace the current file and return it to admin review.</p>
+            <p className="pwa-reupload-error" role="alert" aria-live="assertive">{replacementError}</p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <button type="button" className="pwa-secondary-button" disabled={replacing} onClick={() => closeReplacement(false)}>Cancel</button>
+            <button type="button" className="pwa-primary-button" disabled={replacing || !replacementFile || Boolean(replacementError)} onClick={() => void submitReplacement()}>
+              {replacing ? <Loader2 className="pwa-spin" /> : <UploadCloud />} {replacing ? "Submitting..." : "Submit Corrected File"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -224,7 +364,11 @@ export function PwaDocumentManager({ data }: { data: PortalData }) {
         toast({ title: "Approved document locked", description: "Approved documents cannot be replaced.", variant: "destructive" });
         return;
       }
-      const issue = validateFile(item.documentTypeId, item.file);
+      if (existing && correctionStatuses.has(existing.adminStatus)) {
+        toast({ title: "Use the document details page", description: "Reviewed documents must be corrected one at a time.", variant: "destructive" });
+        return;
+      }
+      const issue = await validateOrganizationDocumentFile(item.documentTypeId, item.file);
       if (issue) {
         toast({ title: "Unsupported file", description: issue, variant: "destructive" });
         return;
@@ -338,8 +482,8 @@ export function PwaDocumentManager({ data }: { data: PortalData }) {
                   <option value="">Select a document type</option>
                   {data.requiredTemplates.map((template) => {
                     const existing = fileByType.get(template.id);
-                    const locked = submissionLocked || Boolean(existing && approvedStatuses.has(existing.adminStatus));
-                    return <option key={template.id} value={template.id} disabled={locked || (assignedTypes.has(template.id) && item.documentTypeId !== template.id)}>{template.name}{locked ? " (Approved)" : ""}</option>;
+                    const locked = submissionLocked || Boolean(existing && (approvedStatuses.has(existing.adminStatus) || correctionStatuses.has(existing.adminStatus)));
+                    return <option key={template.id} value={template.id} disabled={locked || (assignedTypes.has(template.id) && item.documentTypeId !== template.id)}>{template.name}{locked ? " (Locked)" : ""}</option>;
                   })}
                 </select>
               </label>
@@ -359,7 +503,7 @@ export function PwaDocumentManager({ data }: { data: PortalData }) {
               <div className="pwa-manage-actions">
                 {template.templateFileUrl ? <button type="button" aria-label={`Download ${template.name} template`} onClick={() => void downloadReference(template.templateFileUrl, template.templateFileName || `${template.name}.pdf`)}><Download /></button> : null}
                 {file?.fileUrl ? <button type="button" aria-label={`View ${template.name}`} onClick={() => void resolveSupabaseFileUrl(file.fileUrl).then((url) => window.open(url, "_blank", "noopener,noreferrer"))}><Eye /></button> : null}
-                {file && !submissionLocked && !approvedStatuses.has(file.adminStatus) ? <button type="button" aria-label={`Remove ${template.name}`} onClick={() => void removeExisting(file)}><Trash2 /></button> : null}
+                {file && !submissionLocked && !approvedStatuses.has(file.adminStatus) && !correctionStatuses.has(file.adminStatus) ? <button type="button" aria-label={`Remove ${template.name}`} onClick={() => void removeExisting(file)}><Trash2 /></button> : null}
               </div>
             </article>
           );

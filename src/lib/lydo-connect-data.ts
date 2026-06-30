@@ -595,6 +595,17 @@ export type SubmissionFile = {
   adminRemarks: string;
   userRemarks?: string;
   ocrMetadata?: Record<string, unknown> | null;
+  revisionHistory?: Array<{
+    action?: string;
+    adminRemarks?: string;
+    changedAt?: string;
+    previousFileName?: string;
+    previousFileType?: string;
+    previousFileSize?: number;
+    previousFileUrl?: string;
+    previousStatus?: string;
+    reviewedAt?: string;
+  }>;
   uploadedAt: string;
   reviewedAt: string;
   createdAt: string;

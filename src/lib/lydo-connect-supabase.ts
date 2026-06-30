@@ -102,6 +102,7 @@ type DocumentSubmissionFileRow = {
   admin_status: SubmissionFile["adminStatus"];
   admin_remarks: string | null;
   ocr_metadata?: Record<string, unknown> | null;
+  revision_history?: SubmissionFile["revisionHistory"] | null;
   uploaded_at: string | null;
   reviewed_at: string | null;
   created_at: string;
@@ -496,6 +497,7 @@ const mapDocumentFile = (row: DocumentSubmissionFileRow): SubmissionFile | null 
     adminStatus: row.admin_status,
     adminRemarks: row.admin_remarks ?? "",
     ocrMetadata: row.ocr_metadata ?? null,
+    revisionHistory: row.revision_history ?? [],
     uploadedAt: row.uploaded_at ?? "",
     reviewedAt: row.reviewed_at ?? "",
     createdAt: row.created_at,
@@ -984,7 +986,7 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
 
   const { data: fileRows, error: filesError } = await supabase!
     .from("document_submission_files")
-    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,ocr_metadata,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
+    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,ocr_metadata,revision_history,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
     .eq("submission_id", latestSubmission.id);
 
   if (filesError) throw new Error(filesError.message);
@@ -1387,7 +1389,7 @@ export const submitOrganizationDocumentToSupabase = async (params: {
         onConflict: "submission_id,document_type_id",
       },
     )
-    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,ocr_metadata,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
+    .select("id,submission_id,file_url,file_name,file_type,file_size,ocr_text,ocr_status,ocr_confidence,validation_status,admin_status,admin_remarks,ocr_metadata,revision_history,uploaded_at,reviewed_at,created_at,updated_at,required_document_types(id,name)")
     .single();
 
   if (error || !data) throw new Error(error?.message ?? "Failed to save the uploaded document.");
@@ -1416,6 +1418,56 @@ export const submitOrganizationDocumentToSupabase = async (params: {
     submissionId: submission.id,
     file: mappedFile,
   };
+};
+
+export const replaceOrganizationDocumentFileInSupabase = async (params: {
+  fileId: string;
+  documentTypeId: string;
+  expectedUpdatedAt: string;
+  file: File;
+}) => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error("Please sign in with your organization account first.");
+
+  const organizationProfile = await fetchOrganizationProfile(session.user.id);
+  if (!organizationProfile) throw new Error("No organization profile was found for this account.");
+
+  const documentTypeId = await resolveTemplateDatabaseId(params.documentTypeId);
+  const safeFileName = sanitizeFileName(params.file.name);
+  const objectPath = `${organizationProfile.id}/${documentTypeId}/revisions/${Date.now()}-${safeFileName}`;
+  const storageUri = buildStorageUri(ORGANIZATION_DOCUMENTS_BUCKET, objectPath);
+
+  const { error: uploadError } = await supabase.storage
+    .from(ORGANIZATION_DOCUMENTS_BUCKET)
+    .upload(objectPath, params.file, {
+      upsert: false,
+      contentType: params.file.type || "application/octet-stream",
+    });
+  if (uploadError) throw new Error(uploadError.message);
+
+  try {
+    const { data, error } = await supabase.rpc("replace_organization_document_file", {
+      _file_id: params.fileId,
+      _document_type_id: documentTypeId,
+      _expected_updated_at: params.expectedUpdatedAt,
+      _file_url: storageUri,
+      _file_name: params.file.name,
+      _file_type: params.file.type || "application/octet-stream",
+      _file_size: params.file.size,
+    });
+    if (error) throw new Error(error.message);
+
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error("The corrected document was not saved.");
+    return row;
+  } catch (error) {
+    await removeStorageObjects([storageUri]).catch(() => undefined);
+    throw error;
+  }
 };
 
 export const submitOrganizationDocumentsBatchToSupabase = async (params: {
