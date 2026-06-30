@@ -1,6 +1,5 @@
 import {
-  AlertTriangle, ChevronRight, FileText, Megaphone, ReceiptText, Sparkles,
-  UserRound, WalletCards,
+  AlertTriangle, ChevronRight, FileText, ReceiptText, Sparkles, UserRound, WalletCards,
 } from "lucide-react";
 import { statusLabelMap } from "@/lib/lydo-connect-data";
 import type { usePwaPortalData } from "../hooks/usePwaPortalData";
@@ -14,7 +13,6 @@ const actionIcons = {
   documents: FileText,
   budget: WalletCards,
   liquidation: ReceiptText,
-  news: Megaphone,
 } as const;
 
 export default function PwaDashboard({ data }: { data: PortalData }) {
@@ -125,26 +123,28 @@ export default function PwaDashboard({ data }: { data: PortalData }) {
         ))}
       </section>
 
-      <section className="pwa-card">
-        <h2 className="pwa-section-title">Recommended Next Steps</h2>
-        <div className="pwa-action-grid">
-          {data.actions.map((action) => {
-            const Icon = actionIcons[action.kind as keyof typeof actionIcons] ?? AlertTriangle;
-            return (
-              <button key={`${action.path}-${action.title}`} type="button" onClick={() => go(action.path)}>
-                <span className="pwa-action-icon"><Icon aria-hidden="true" /></span>
-                <span><strong>{action.title}</strong><small>{action.detail}</small></span>
-                <ChevronRight aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {data.actions.length ? (
+        <section className="pwa-card">
+          <h2 className="pwa-section-title">Recommended Next Steps</h2>
+          <div className="pwa-action-grid">
+            {data.actions.map((action) => {
+              const Icon = actionIcons[action.kind as keyof typeof actionIcons] ?? AlertTriangle;
+              return (
+                <button key={`${action.path}-${action.title}`} type="button" onClick={() => go(action.path)}>
+                  <span className="pwa-action-icon"><Icon aria-hidden="true" /></span>
+                  <span><strong>{action.title}</strong><small>{action.detail}</small></span>
+                  <ChevronRight aria-hidden="true" />
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section className="pwa-card">
         <div className="pwa-section-heading">
           <h2 className="pwa-section-title">Recent Activity</h2>
-          {data.activities.length > 3 ? <button type="button" onClick={() => go(PWA_ROUTES.activity)}>View All</button> : null}
+          {data.activities.length > 3 ? <button type="button" onClick={() => go(PWA_ROUTES.activity)}>View all activity</button> : null}
         </div>
         <div className="pwa-activity-list">
           {data.activities.slice(0, 3).map((activity) => (

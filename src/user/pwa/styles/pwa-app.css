@@ -30,13 +30,17 @@
 
 .ytrace-pwa-app .pwa-app-header {
   display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr) 2.75rem;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
   align-items: center;
   gap: 0.75rem;
   padding: max(1rem, env(safe-area-inset-top)) 1rem 0.9rem;
   background: rgb(246 248 252 / 94%);
   backdrop-filter: blur(18px);
 }
+.ytrace-pwa-app .pwa-app-header--nested { grid-template-columns: 2.75rem minmax(0,1fr); padding-bottom: 0.75rem; }
+.ytrace-pwa-app .pwa-identity-button { display: grid; min-width: 0; min-height: 3.25rem; grid-template-columns: 3.25rem minmax(0,1fr); align-items: center; gap: 0.75rem; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+.ytrace-pwa-app .pwa-header-back { display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 1px solid var(--pwa-border); border-radius: 0.85rem; background: #fff; color: var(--pwa-blue-strong); }
+.ytrace-pwa-app .pwa-header-back svg { width: 1.2rem; }
 
 .ytrace-pwa-app .pwa-avatar,
 .ytrace-pwa-app .pwa-large-avatar {
@@ -50,13 +54,19 @@
 .ytrace-pwa-app .pwa-avatar { width: 3.25rem; height: 3.25rem; border-radius: 1.15rem; font-size: 1.25rem; }
 .ytrace-pwa-app .pwa-header-copy { min-width: 0; }
 .ytrace-pwa-app .pwa-header-copy h1 { max-width: 100%; margin: 0; overflow-wrap: anywhere; font-size: clamp(1.35rem, 6vw, 1.85rem); line-height: 1.08; letter-spacing: -0.035em; font-weight: 750; }
-.ytrace-pwa-app .pwa-header-copy p { margin: 0.3rem 0 0; overflow: hidden; color: var(--pwa-muted); font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
+.ytrace-pwa-app .pwa-header-copy > span { display: block; margin: 0.3rem 0 0; overflow: hidden; color: var(--pwa-muted); font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
+.ytrace-pwa-app .pwa-app-header--nested .pwa-header-copy h1 { font-size: clamp(1.15rem,5vw,1.45rem); letter-spacing: -0.02em; }
 .ytrace-pwa-app .pwa-icon-button { position: relative; display: grid; width: 2.75rem; height: 2.75rem; place-items: center; border: 0; border-radius: 0.9rem; background: transparent; color: #334155; }
 .ytrace-pwa-app .pwa-icon-button svg { width: 1.45rem; height: 1.45rem; }
 .ytrace-pwa-app .pwa-notification-dot { position: absolute; top: 0.25rem; right: 0.25rem; display: grid; min-width: 1rem; height: 1rem; place-items: center; border: 2px solid #f6f8fc; border-radius: 999px; background: #dc2626; color: white; font-size: 0.55rem; font-weight: 700; }
 
-.ytrace-pwa-app .pwa-main-content { min-width: 0; max-width: 100%; padding: 0.45rem 0.9rem calc(5.4rem + env(safe-area-inset-bottom)); }
-.ytrace-pwa-app .pwa-stack { display: grid; gap: 0.9rem; }
+.ytrace-pwa-app .pwa-main-content { min-width: 0; max-width: 100%; padding: 0.45rem 1rem calc(5.4rem + env(safe-area-inset-bottom)); }
+.ytrace-pwa-app .pwa-app-frame--headerless .pwa-main-content { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+.ytrace-pwa-app .pwa-runtime-banner { display: flex; width: min(calc(100% - 2rem), 568px); min-height: 3rem; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0.1rem auto 0.55rem; padding: 0.65rem 0.8rem; border: 1px solid #bfdbfe; border-radius: 0.8rem; background: #eff6ff; color: #1e40af; font-size: 0.7rem; line-height: 1.4; }
+.ytrace-pwa-app .pwa-runtime-banner.is-offline { align-items: flex-start; flex-direction: column; border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.ytrace-pwa-app .pwa-runtime-banner strong, .ytrace-pwa-app .pwa-runtime-banner span { display: block; }
+.ytrace-pwa-app .pwa-runtime-banner button { min-height: 2.75rem; flex: 0 0 auto; padding: 0 0.75rem; border: 1px solid currentColor; border-radius: 0.65rem; background: #fff; color: inherit; font-weight: 700; }
+.ytrace-pwa-app .pwa-stack { display: grid; gap: 1rem; }
 .ytrace-pwa-app .pwa-card,
 .ytrace-pwa-app .pwa-page-intro,
 .ytrace-pwa-app .pwa-briefing {
@@ -197,6 +207,7 @@
 .ytrace-pwa-app .pwa-document-copy small { display: -webkit-box; max-width: 100%; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .ytrace-pwa-app .pwa-document-copy strong { font-size: 0.83rem; line-height: 1.4; }
 .ytrace-pwa-app .pwa-document-copy small { margin-top: 0.3rem; color: var(--pwa-muted); font-size: 0.7rem; line-height: 1.4; white-space: normal; }
+.ytrace-pwa-app .pwa-document-copy .pwa-document-state-copy { color: #475569; font-weight: 650; -webkit-line-clamp: 3; }
 .ytrace-pwa-app .pwa-document-status { width: fit-content; max-width: 100%; margin-top: 0.6rem; overflow-wrap: anywhere; text-align: center; white-space: normal; }
 .ytrace-pwa-app .pwa-document-chevron { width: 1rem; height: 1rem; margin-top: 0.7rem; flex: 0 0 auto; color: #94a3b8; }
 
@@ -226,6 +237,9 @@
 .ytrace-pwa-app .pwa-back-button { width: fit-content; min-height: 2.75rem; justify-content: flex-start; padding-inline: 0.2rem 0.7rem; border: 0; background: transparent; color: var(--pwa-blue-strong); }
 .ytrace-pwa-app .pwa-button-stack,
 .ytrace-pwa-app .pwa-sticky-actions { display: grid; min-width: 0; max-width: 100%; gap: 0.65rem; }
+.ytrace-pwa-app .pwa-completion-message { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+.ytrace-pwa-app .pwa-completion-message strong { font-size: 0.82rem; }
+.ytrace-pwa-app .pwa-completion-message p { margin: 0.35rem 0 0; font-size: 0.72rem; line-height: 1.5; }
 
 .ytrace-pwa-app .pwa-workspace-intro { min-width: 0; max-width: 100%; }
 .ytrace-pwa-app .pwa-workspace-intro h2 { margin: 0; overflow-wrap: anywhere; font-size: 1rem; }
@@ -634,6 +648,8 @@
 .ytrace-pwa-app .pwa-profile-editor-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0.65rem; padding-bottom: 0.35rem; }
 .ytrace-pwa-app .pwa-profile-editor-actions button { min-height: 2.9rem; }
 
+.ytrace-pwa-app .pwa-menu-group, .ytrace-pwa-app .pwa-settings-group { display: grid; gap: 0.55rem; }
+.ytrace-pwa-app .pwa-menu-group > .pwa-section-title, .ytrace-pwa-app .pwa-settings-group > .pwa-section-title { padding-left: 0.2rem; }
 .ytrace-pwa-app .pwa-menu-card { padding-block: 0.25rem; }
 .ytrace-pwa-app .pwa-menu-card > button { display: grid; width: 100%; min-height: 4.4rem; grid-template-columns: 2.6rem minmax(0,1fr) 1rem; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border: 0; border-bottom: 1px solid #edf1f7; background: transparent; color: inherit; text-align: left; }
 .ytrace-pwa-app .pwa-menu-card > button:last-child { border-bottom: 0; }
@@ -645,6 +661,88 @@
 .ytrace-pwa-app .pwa-chevron { width: 1rem; color: #94a3b8; }
 .ytrace-pwa-app .pwa-signout-button { display: flex; min-height: 3rem; align-items: center; justify-content: center; gap: 0.5rem; border: 1px solid #fecaca; border-radius: 0.9rem; background: #fff; color: #b91c1c; font-weight: 650; }
 .ytrace-pwa-app .pwa-signout-button svg { width: 1rem; }
+
+.ytrace-pwa-app .pwa-settings-list { padding-block: 0.2rem; }
+.ytrace-pwa-app .pwa-settings-row { display: grid; width: 100%; min-height: 4.4rem; grid-template-columns: 2.6rem minmax(0,1fr) 1rem; align-items: center; gap: 0.75rem; padding: 0.7rem 0; border: 0; border-bottom: 1px solid #edf1f7; background: transparent; color: inherit; text-align: left; }
+.ytrace-pwa-app .pwa-settings-row:last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-settings-detail-card, .ytrace-pwa-app .pwa-about-app-card { display: grid; min-width: 0; grid-template-columns: 2.8rem minmax(0,1fr); align-items: start; gap: 0.8rem; }
+.ytrace-pwa-app .pwa-settings-hero-icon { display: grid; width: 2.8rem; height: 2.8rem; place-items: center; border-radius: 0.9rem; background: var(--pwa-blue-soft); color: var(--pwa-blue); }
+.ytrace-pwa-app .pwa-settings-hero-icon svg { width: 1.3rem; }
+.ytrace-pwa-app .pwa-settings-detail-card h2, .ytrace-pwa-app .pwa-about-app-card h2 { margin: 0; font-size: 0.95rem; }
+.ytrace-pwa-app .pwa-settings-detail-card p, .ytrace-pwa-app .pwa-about-app-card p { margin: 0.3rem 0 0; color: var(--pwa-muted); font-size: 0.73rem; line-height: 1.5; }
+.ytrace-pwa-app .pwa-setting-fieldset { display: grid; min-width: 0; gap: 0; margin: 0; padding: 0.2rem 1rem; border: 1px solid var(--pwa-border); border-radius: 1.15rem; background: #fff; }
+.ytrace-pwa-app .pwa-setting-fieldset legend { padding: 0 0.2rem; color: #475569; font-size: 0.72rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+.ytrace-pwa-app .pwa-setting-fieldset > button { display: flex; width: 100%; min-height: 3.8rem; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.65rem 0; border: 0; border-bottom: 1px solid #edf1f7; background: transparent; color: inherit; text-align: left; }
+.ytrace-pwa-app .pwa-setting-fieldset > button:last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-setting-fieldset > button > span, .ytrace-pwa-app .pwa-setting-fieldset strong, .ytrace-pwa-app .pwa-setting-fieldset small { display: block; min-width: 0; }
+.ytrace-pwa-app .pwa-setting-fieldset strong { font-size: 0.8rem; }
+.ytrace-pwa-app .pwa-setting-fieldset small { margin-top: 0.18rem; color: var(--pwa-muted); font-size: 0.67rem; }
+.ytrace-pwa-app .pwa-setting-fieldset button > svg { width: 1.05rem; flex: 0 0 auto; color: var(--pwa-blue); }
+.ytrace-pwa-app .pwa-setting-fieldset button.is-selected strong { color: var(--pwa-blue-strong); }
+.ytrace-pwa-app .pwa-preference-list { padding-block: 0.2rem; }
+.ytrace-pwa-app .pwa-preference-switch { display: flex; min-height: 4.15rem; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.65rem 0; border-bottom: 1px solid #edf1f7; }
+.ytrace-pwa-app .pwa-preference-switch:last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-preference-switch > span, .ytrace-pwa-app .pwa-preference-switch strong, .ytrace-pwa-app .pwa-preference-switch small { display: block; min-width: 0; }
+.ytrace-pwa-app .pwa-preference-switch strong { font-size: 0.8rem; }
+.ytrace-pwa-app .pwa-preference-switch small { margin-top: 0.18rem; color: var(--pwa-muted); font-size: 0.67rem; line-height: 1.4; }
+.ytrace-pwa-app .pwa-preference-switch input { width: 2.5rem; height: 1.4rem; flex: 0 0 auto; accent-color: var(--pwa-blue); }
+.ytrace-pwa-app .pwa-setting-status-row { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.ytrace-pwa-app .pwa-setting-status-row > span, .ytrace-pwa-app .pwa-setting-status-row > span strong, .ytrace-pwa-app .pwa-setting-status-row > span small { display: block; min-width: 0; }
+.ytrace-pwa-app .pwa-setting-status-row > span strong { font-size: 0.8rem; }
+.ytrace-pwa-app .pwa-setting-status-row > span small { margin-top: 0.2rem; color: var(--pwa-muted); font-size: 0.67rem; }
+.ytrace-pwa-app .pwa-setting-status-row > strong { max-width: 50%; overflow-wrap: anywhere; color: var(--pwa-blue-strong); font-size: 0.74rem; text-align: right; }
+.ytrace-pwa-app .pwa-setting-status-row > strong.is-granted { color: #047857; }
+.ytrace-pwa-app .pwa-setting-status-row > strong.is-denied { color: #b91c1c; }
+.ytrace-pwa-app .pwa-settings-note { display: flex; align-items: flex-start; gap: 0.7rem; }
+.ytrace-pwa-app .pwa-settings-note > svg { width: 1.15rem; flex: 0 0 auto; color: var(--pwa-blue); }
+.ytrace-pwa-app .pwa-settings-note strong { font-size: 0.8rem; }
+.ytrace-pwa-app .pwa-settings-note p { margin: 0.35rem 0 0; color: var(--pwa-muted); font-size: 0.72rem; line-height: 1.5; }
+.ytrace-pwa-app .pwa-settings-footnote { margin: 0; padding: 0 0.25rem; color: var(--pwa-muted); font-size: 0.68rem; line-height: 1.5; }
+.ytrace-pwa-app .pwa-danger-outline-button { display: flex; width: 100%; min-height: 3rem; align-items: center; justify-content: center; gap: 0.5rem; border: 1px solid #fecaca; border-radius: 0.85rem; background: #fff; color: #b91c1c; font-size: 0.8rem; font-weight: 700; }
+.ytrace-pwa-app .pwa-danger-outline-button svg { width: 1rem; }
+.ytrace-pwa-app .pwa-settings-metadata { display: grid; gap: 0; }
+.ytrace-pwa-app .pwa-settings-metadata > div { display: flex; min-height: 3rem; align-items: center; justify-content: space-between; gap: 0.7rem; border-bottom: 1px solid #edf1f7; }
+.ytrace-pwa-app .pwa-settings-metadata > div:last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-settings-metadata span { color: var(--pwa-muted); font-size: 0.72rem; }
+.ytrace-pwa-app .pwa-settings-metadata strong { font-size: 0.74rem; text-align: right; }
+.ytrace-pwa-app .pwa-account-email { font-weight: 650; }
+
+.ytrace-pwa-app .pwa-requirement-list { display: grid; gap: 0.5rem; margin: 0.8rem 0 0; padding: 0; list-style: none; }
+.ytrace-pwa-app .pwa-requirement-list li { display: grid; min-width: 0; grid-template-columns: 1rem minmax(0,1fr); align-items: center; gap: 0.5rem; color: #64748b; font-size: 0.7rem; line-height: 1.35; }
+.ytrace-pwa-app .pwa-requirement-list li svg { width: 0.9rem; height: 0.9rem; }
+.ytrace-pwa-app .pwa-requirement-list li.is-complete { color: #047857; }
+.ytrace-pwa-app .pwa-contextual-empty { display: grid; min-width: 0; gap: 0.85rem; }
+.ytrace-pwa-app .pwa-contextual-empty > div h2 { margin: 0; font-size: 1rem; }
+.ytrace-pwa-app .pwa-contextual-empty > div p { margin: 0.35rem 0 0; color: var(--pwa-muted); font-size: 0.74rem; line-height: 1.5; }
+
+.ytrace-pwa-app .pwa-information-copy h2 { margin: 0; font-size: 0.95rem; }
+.ytrace-pwa-app .pwa-information-copy p { margin: 0.55rem 0 0; color: var(--pwa-muted); font-size: 0.75rem; line-height: 1.55; }
+.ytrace-pwa-app .pwa-about-summary h2 { margin: 0.45rem 0 0; font-size: 1.05rem; line-height: 1.3; }
+.ytrace-pwa-app .pwa-about-summary p { margin: 0.65rem 0 0; color: var(--pwa-muted); font-size: 0.78rem; line-height: 1.62; }
+.ytrace-pwa-app .pwa-about-audience { display: grid; padding-block: 0.35rem; }
+.ytrace-pwa-app .pwa-about-audience > h2 { margin: 0; padding: 0.8rem 0 0.45rem; font-size: 0.9rem; }
+.ytrace-pwa-app .pwa-about-audience article { display: grid; min-width: 0; grid-template-columns: 2.6rem minmax(0,1fr); gap: 0.75rem; padding: 0.85rem 0; border-bottom: 1px solid #edf1f7; }
+.ytrace-pwa-app .pwa-about-audience article:last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-about-audience h3 { margin: 0; font-size: 0.8rem; line-height: 1.4; }
+.ytrace-pwa-app .pwa-about-audience p { margin: 0.3rem 0 0; color: var(--pwa-muted); font-size: 0.72rem; line-height: 1.55; }
+.ytrace-pwa-app .pwa-faq-list { padding-block: 0.2rem; }
+.ytrace-pwa-app .pwa-faq-list details { border-bottom: 1px solid #edf1f7; }
+.ytrace-pwa-app .pwa-faq-list details:last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-faq-list summary { min-height: 3.5rem; padding: 0.75rem 0; cursor: pointer; font-size: 0.8rem; font-weight: 700; line-height: 1.4; }
+.ytrace-pwa-app .pwa-faq-list p { margin: 0; padding: 0 0 0.85rem; color: var(--pwa-muted); font-size: 0.72rem; line-height: 1.55; }
+.ytrace-pwa-app .pwa-contact-list { display: grid; padding-block: 0.2rem; }
+.ytrace-pwa-app .pwa-contact-list > div, .ytrace-pwa-app .pwa-contact-list > a { display: grid; min-width: 0; min-height: 4.2rem; grid-template-columns: 2.6rem minmax(0,1fr); align-items: center; gap: 0.7rem; padding: 0.65rem 0; border-bottom: 1px solid #edf1f7; color: inherit; text-decoration: none; }
+.ytrace-pwa-app .pwa-contact-list > :last-child { border-bottom: 0; }
+.ytrace-pwa-app .pwa-contact-list small, .ytrace-pwa-app .pwa-contact-list strong { display: block; min-width: 0; overflow-wrap: anywhere; }
+.ytrace-pwa-app .pwa-contact-list small { color: var(--pwa-muted); font-size: 0.65rem; }
+.ytrace-pwa-app .pwa-contact-list strong { margin-top: 0.18rem; font-size: 0.77rem; }
+.ytrace-pwa-app .pwa-legal-page { min-width: 0; margin-inline: 0.25rem; padding: 0.2rem 0 1rem; overflow-wrap: anywhere; }
+.ytrace-pwa-app .pwa-legal-page .legal-policy-view { color: var(--pwa-ink); }
+
+.ytrace-pwa-app.pwa-high-contrast { --pwa-muted: #475569; --pwa-border: #b9c9dc; }
+.ytrace-pwa-app.pwa-underline-links a, .ytrace-pwa-app.pwa-underline-links .pwa-text-button, .ytrace-pwa-app.pwa-underline-links .pwa-section-heading button { text-decoration: underline; text-underline-offset: 0.18em; }
+html.ytrace-pwa-text-large { font-size: 17px; }
+html.ytrace-pwa-reduce-motion .ytrace-pwa-app *, html.ytrace-pwa-reduce-motion .ytrace-pwa-app *::before, html.ytrace-pwa-reduce-motion .ytrace-pwa-app *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 
 .ytrace-pwa-app .pwa-bottom-nav { position: fixed; z-index: 50; right: 0; bottom: 0; left: 0; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #dbe4ef; background: rgb(255 255 255 / 94%); box-shadow: 0 -8px 24px rgb(35 67 105 / 8%); backdrop-filter: blur(18px); }
 .ytrace-pwa-app .pwa-bottom-nav-inner { display: grid; width: min(100%,600px); height: 4.5rem; margin: 0 auto; grid-template-columns: repeat(5,minmax(0,1fr)); }

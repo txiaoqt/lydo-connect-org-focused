@@ -135,37 +135,47 @@ export function usePwaPortalData() {
       tone: "success",
       action: null,
     };
-    if (overdueLiquidations.length) {
-      briefing = { title: "A liquidation report is overdue.", description: "Submit the required report as soon as possible to restore compliance.", tone: "danger", action: { label: "Open Liquidation", path: PWA_ROUTES.liquidations } };
-    } else if (revisionLiquidations.length) {
-      briefing = { title: "A liquidation report needs revision.", description: "Review the admin remarks and upload the corrected report.", tone: "warning", action: { label: "Review Liquidation", path: PWA_ROUTES.liquidations } };
+    if (missingDocuments) {
+      briefing = { title: `${missingDocuments} required document${missingDocuments === 1 ? " is" : "s are"} still missing.`, description: "Upload the remaining required files for admin review.", tone: "warning", action: { label: "Continue Documents", path: PWA_ROUTES.documentsManage } };
     } else if (revisionDocuments.length) {
-      briefing = { title: `${revisionDocuments.length === 1 ? "One document needs" : `${revisionDocuments.length} documents need`} revision.`, description: "Review the admin remarks and upload the corrected file.", tone: "warning", action: { label: "Review Document", path: PWA_ROUTES.documents } };
+      briefing = { title: `${revisionDocuments.length === 1 ? "One document needs" : `${revisionDocuments.length} documents need`} revision.`, description: "Review the latest admin remarks and upload the corrected file.", tone: "warning", action: { label: "Review Required Changes", path: PWA_ROUTES.documents } };
+    } else if (profile?.profileStatus === "pending_review") {
+      briefing = { title: "Your registration is awaiting verification.", description: "LYDO / PCYDO is reviewing your organization profile. You can monitor the current status while you wait.", tone: "info", action: { label: "View Verification Status", path: PWA_ROUTES.profile } };
+    } else if (!profile || profile.profileStatus === "incomplete") {
+      briefing = { title: "Your organization profile is incomplete.", description: "Complete the required organization details to continue the compliance workflow.", tone: "warning", action: { label: "Complete Profile", path: PWA_ROUTES.profile } };
+    } else if (!budgetEligibility.eligible) {
+      briefing = { title: "Complete YPOP validation first.", description: "Your organization must qualify in the active YPOP period before creating an activity budget request.", tone: "info", action: { label: "Open YPOP Incentive", path: PWA_ROUTES.ypop } };
+    } else if (!budgetRequests.length) {
+      briefing = { title: "Your organization can create a budget request.", description: "YPOP qualification is complete and no activity budget request has been created yet.", tone: "success", action: { label: "Create Budget Request", path: PWA_ROUTES.budgetNew } };
     } else if (revisionBudgetRequests.length) {
       briefing = { title: "A budget request needs revision.", description: "Review the latest admin feedback and update the request.", tone: "warning", action: { label: "Review Budget", path: PWA_ROUTES.budgets } };
-    } else if (profile?.profileStatus === "incomplete" || !profile) {
-      briefing = { title: "Your organization profile is incomplete.", description: "Complete the required organization details to continue the workflow.", tone: "warning", action: { label: "Complete Profile", path: PWA_ROUTES.profile } };
-    } else if (missingDocuments) {
-      briefing = { title: `${missingDocuments} required document${missingDocuments === 1 ? " is" : "s are"} still missing.`, description: "Upload the remaining required files for admin review.", tone: "warning", action: { label: "Continue Documents", path: PWA_ROUTES.documentsManage } };
+    } else if (latestBudget?.status === "draft") {
+      briefing = { title: "You have an unfinished budget request.", description: "Continue the draft and submit it when the required details and file are ready.", tone: "info", action: { label: "View Budget", path: PWA_ROUTES.budgets } };
+    } else if (latestBudget && approvedBudgetStatuses.has(latestBudget.status) && !liquidationReports.length) {
+      briefing = { title: "Your approved budget is moving through the release workflow.", description: "Open the request to review its current release and post-activity status.", tone: "info", action: { label: "View Budget", path: PWA_ROUTES.budgets } };
+    } else if (overdueLiquidations.length) {
+      briefing = { title: "A liquidation report is overdue.", description: "Submit the required report as soon as possible to restore compliance.", tone: "danger", action: { label: "Submit Liquidation", path: PWA_ROUTES.liquidations } };
+    } else if (revisionLiquidations.length) {
+      briefing = { title: "A liquidation report needs revision.", description: "Review the admin remarks and upload the corrected report.", tone: "warning", action: { label: "Submit Liquidation", path: PWA_ROUTES.liquidations } };
     } else if (daysUntilDeadline !== null && daysUntilDeadline <= 7) {
       briefing = { title: "A liquidation deadline is approaching.", description: `${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"} remaining before the next deadline.`, tone: "warning", action: { label: "View Liquidation", path: PWA_ROUTES.liquidations } };
     } else if (draftLiquidations.length) {
       briefing = { title: "You have an unfinished liquidation report.", description: "Continue the draft and submit it when the required file is ready.", tone: "info", action: { label: "Continue Liquidation", path: PWA_ROUTES.liquidations } };
-    } else if (draftBudgetRequests.length) {
-      briefing = { title: "You have an unfinished budget draft.", description: "Continue the request and submit it when its details are complete.", tone: "info", action: { label: "Continue Budget", path: PWA_ROUTES.budgets } };
     }
 
     const actions: Array<{ title: string; detail: string; path: string; kind: string }> = [];
-    if (overdueLiquidations.length) actions.push({ title: "Upload Liquidation Report", detail: "Complete the overdue report as soon as possible.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
-    if (revisionLiquidations.length) actions.push({ title: "Review Liquidation Remarks", detail: "Correct the report flagged by the admin.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
-    if (revisionDocuments.length) actions.push({ title: "Review Admin Remarks", detail: "Correct the flagged document files.", path: PWA_ROUTES.documents, kind: "documents" });
-    if (revisionBudgetRequests.length) actions.push({ title: "Revise Budget Request", detail: "Address the latest review feedback.", path: PWA_ROUTES.budgets, kind: "budget" });
+    if (missingDocuments) actions.push({ title: "Continue Document Submission", detail: `${missingDocuments} required file${missingDocuments === 1 ? "" : "s"} remaining.`, path: PWA_ROUTES.documentsManage, kind: "documents" });
+    if (revisionDocuments.length) actions.push({ title: "Review Required Changes", detail: "Correct the documents flagged by the admin.", path: PWA_ROUTES.documents, kind: "documents" });
+    if (profile?.profileStatus === "pending_review") actions.push({ title: "View Verification Status", detail: "Your organization profile is awaiting admin verification.", path: PWA_ROUTES.profile, kind: "profile" });
     if (!profile || profile.profileStatus === "incomplete") actions.push({ title: "Complete Profile", detail: "Finish your organization information.", path: PWA_ROUTES.profile, kind: "profile" });
-    if (!revisionDocuments.length && missingDocuments) actions.push({ title: "Continue Document Submission", detail: `${missingDocuments} required file${missingDocuments === 1 ? "" : "s"} remaining.`, path: PWA_ROUTES.documentsManage, kind: "documents" });
-    if (!overdueLiquidations.length && !revisionLiquidations.length && daysUntilDeadline !== null && daysUntilDeadline <= 7) actions.push({ title: "Upload Liquidation Report", detail: `${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"} remain before the deadline.`, path: PWA_ROUTES.liquidations, kind: "liquidation" });
-    if (draftLiquidations.length) actions.push({ title: "Continue Liquidation Draft", detail: "Finish the current report draft.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (!budgetEligibility.eligible) actions.push({ title: "Open YPOP Incentive", detail: "Complete the active period qualification workflow.", path: PWA_ROUTES.ypop, kind: "budget" });
+    if (budgetEligibility.eligible && !budgetRequests.length) actions.push({ title: "Create Budget Request", detail: "Start an eligible activity budget request.", path: PWA_ROUTES.budgetNew, kind: "budget" });
+    if (revisionBudgetRequests.length) actions.push({ title: "Revise Budget Request", detail: "Address the latest review feedback.", path: PWA_ROUTES.budgets, kind: "budget" });
     if (draftBudgetRequests.length) actions.push({ title: "Continue Budget Draft", detail: "Finish the current budget request.", path: PWA_ROUTES.budgets, kind: "budget" });
-    if (!actions.length) actions.push({ title: "View News Releases", detail: "Read the latest official updates.", path: PWA_ROUTES.news, kind: "news" });
+    if (overdueLiquidations.length) actions.push({ title: "Submit Overdue Liquidation", detail: "Complete the overdue report as soon as possible.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (revisionLiquidations.length) actions.push({ title: "Review Liquidation Remarks", detail: "Correct the report flagged by the admin.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (!overdueLiquidations.length && !revisionLiquidations.length && daysUntilDeadline !== null && daysUntilDeadline <= 7) actions.push({ title: "Submit Liquidation", detail: `${daysUntilDeadline} day${daysUntilDeadline === 1 ? "" : "s"} remain before the deadline.`, path: PWA_ROUTES.liquidations, kind: "liquidation" });
+    if (draftLiquidations.length) actions.push({ title: "Continue Liquidation Draft", detail: "Finish the current report draft.", path: PWA_ROUTES.liquidations, kind: "liquidation" });
 
     return {
       templates, requiredTemplates, submission, documentFiles, approvedDocuments, underReviewDocuments,

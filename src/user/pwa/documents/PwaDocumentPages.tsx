@@ -22,6 +22,25 @@ type PendingFile = { id: string; file: File; documentTypeId: string };
 
 const approvedStatuses = new Set(["approved", "approved_green"]);
 const editableStatuses = new Set(["draft", "needs_revision", "rejected_red"]);
+const reviewStatuses = new Set(["uploaded", "ready_for_review", "submitted", "under_admin_review"]);
+
+const getDocumentPresentation = (file?: SubmissionFile) => {
+  if (!file) return { status: "not_started", label: "Missing", supportingText: "No file uploaded" };
+  if (approvedStatuses.has(file.adminStatus)) {
+    return { status: file.adminStatus, label: "Approved", supportingText: "" };
+  }
+  if (reviewStatuses.has(file.adminStatus)) {
+    return { status: "under_admin_review", label: "Under Admin Review", supportingText: "Awaiting admin review" };
+  }
+  if (file.adminStatus === "needs_revision" || file.adminStatus === "rejected_red") {
+    return {
+      status: file.adminStatus,
+      label: file.adminStatus === "needs_revision" ? "Needs Revision" : "Rejected",
+      supportingText: file.adminRemarks || "Review the latest admin feedback.",
+    };
+  }
+  return { status: "draft", label: "Draft", supportingText: "Saved as draft" };
+};
 
 const saveBlob = (blob: Blob, name: string) => {
   const objectUrl = URL.createObjectURL(blob);
@@ -54,6 +73,12 @@ export function PwaDocumentList({ data }: { data: PortalData }) {
   const { go } = usePwaNavigation();
   const byType = new Map(data.documentFiles.map((file) => [file.documentTypeId, file]));
   const total = data.requiredTemplates.length;
+  const submissionLocked = data.submission?.status === "approved_green" || (data.submission?.status as string | undefined) === "approved";
+  const allApproved = total > 0 && data.approvedDocuments === total;
+  const canManageDocuments = !submissionLocked && data.requiredTemplates.some((template) => {
+    const file = byType.get(template.id);
+    return !file || editableStatuses.has(file.adminStatus);
+  });
   const helper = data.underReviewDocuments
     ? `${data.underReviewDocuments} under admin review`
     : data.revisionDocuments.length
@@ -77,6 +102,7 @@ export function PwaDocumentList({ data }: { data: PortalData }) {
       <section className="pwa-document-list" aria-label="Required documents">
         {data.requiredTemplates.map((template) => {
           const file = byType.get(template.id);
+          const presentation = getDocumentPresentation(file);
           return (
             <button
               key={template.id}
@@ -88,7 +114,8 @@ export function PwaDocumentList({ data }: { data: PortalData }) {
               <span className="pwa-document-copy">
                 <strong>{template.name}</strong>
                 <small>{file?.fileName || "No file uploaded"}</small>
-                <StatusBadge className="pwa-document-status" status={file?.adminStatus ?? "missing"} />
+                {presentation.supportingText && file ? <small className="pwa-document-state-copy">{presentation.supportingText}</small> : null}
+                <StatusBadge className="pwa-document-status" status={presentation.status} label={presentation.label} />
               </span>
               <ChevronRight className="pwa-document-chevron" aria-hidden="true" />
             </button>
@@ -97,9 +124,17 @@ export function PwaDocumentList({ data }: { data: PortalData }) {
         {!total ? <div className="pwa-card pwa-empty-copy">No required documents are configured.</div> : null}
       </section>
 
-      <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.documentsManage)}>
-        <UploadCloud aria-hidden="true" /> Upload or Manage Documents
-      </button>
+      {canManageDocuments ? (
+        <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.documentsManage)}>
+          <UploadCloud aria-hidden="true" /> Upload or Manage Documents
+        </button>
+      ) : null}
+      {allApproved ? (
+        <section className="pwa-card pwa-completion-message">
+          <strong>All required documents are approved.</strong>
+          <p>Approved documents are locked and cannot be replaced unless the admin explicitly reopens one for revision.</p>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -127,7 +162,7 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
       <PwaBackButton fallback={PWA_ROUTES.documents} label="Documents" />
       <section className="pwa-card pwa-detail-hero">
         <span className="pwa-record-icon"><FileText aria-hidden="true" /></span>
-        <div><h2>{template.name}</h2><StatusBadge status={file?.adminStatus ?? "missing"} /></div>
+        <div><h2>{template.name}</h2><StatusBadge status={file?.adminStatus ?? "not_started"} label={file ? undefined : "Missing"} /></div>
       </section>
       <section className="pwa-card pwa-detail-list">
         <div><FileText /><span><small>Attached file</small><strong>{file?.fileName || "No file uploaded"}</strong></span></div>

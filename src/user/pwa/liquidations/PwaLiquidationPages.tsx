@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  ChevronRight, Eye, FileText, Loader2, ReceiptText, Trash2, UploadCloud,
+  Check, ChevronRight, Circle, Eye, FileText, Loader2, ReceiptText, Trash2, UploadCloud,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { StatusBadge } from "@/components/portal/StatusBadge";
@@ -15,7 +15,7 @@ import {
 import { PwaBackButton } from "../PwaBackButton";
 import { usePwaNavigation } from "../hooks/usePwaNavigation";
 import type { usePwaPortalData } from "../hooks/usePwaPortalData";
-import { PWA_ROUTES, pwaLiquidationDetailRoute, pwaLiquidationManageRoute } from "../pwaRoutes";
+import { PWA_ROUTES, pwaBudgetDetailRoute, pwaLiquidationDetailRoute, pwaLiquidationManageRoute } from "../pwaRoutes";
 
 type PortalData = ReturnType<typeof usePwaPortalData>;
 
@@ -27,6 +27,8 @@ const replacementStatuses = new Set<LiquidationStatus>(["needs_revision", "rejec
 
 export function PwaLiquidationList({ data }: { data: PortalData }) {
   const { go } = usePwaNavigation();
+  const releasedBudget = data.budgetRequests.find((item) => item.status === "budget_released" || item.status === "completed");
+  const completedActivityBudget = data.budgetRequests.find((item) => item.status === "completed");
   const managementTarget =
     data.liquidationReports.find((item) => submittableStatuses.has(item.status)) ??
     data.liquidationReports[0];
@@ -53,7 +55,42 @@ export function PwaLiquidationList({ data }: { data: PortalData }) {
             </button>
           );
         })}
-        {!data.liquidationReports.length ? <div className="pwa-card pwa-empty-copy">No liquidation reports are available yet.</div> : null}
+        {!data.liquidationReports.length ? (
+          <section className="pwa-card pwa-contextual-empty">
+            <span className="pwa-settings-hero-icon"><ReceiptText aria-hidden="true" /></span>
+            <div>
+              <h2>No liquidation report is available yet</h2>
+              <p>Liquidation becomes available after an eligible budget is approved, released, and reaches the applicable post-activity stage.</p>
+            </div>
+            <ul className="pwa-requirement-list">
+              {[
+                { label: "Organization verified", met: data.profile?.profileStatus === "verified" },
+                { label: "Budget approved and released", met: Boolean(releasedBudget) },
+                { label: "Activity completed", met: Boolean(completedActivityBudget) },
+                { label: "Liquidation available", met: false },
+              ].map((item) => <li key={item.label} className={item.met ? "is-complete" : ""}>{item.met ? <Check /> : <Circle />}<span>{item.label}</span></li>)}
+            </ul>
+            <button
+              type="button"
+              className="pwa-secondary-button"
+              onClick={() => {
+                if (data.profile?.profileStatus !== "verified") go(PWA_ROUTES.profile);
+                else if (!data.budgetEligibility.eligible) go(PWA_ROUTES.ypop);
+                else if (releasedBudget) go(pwaBudgetDetailRoute(releasedBudget.id));
+                else go(PWA_ROUTES.budgets);
+              }}
+            >
+              {data.profile?.profileStatus !== "verified"
+                ? "View Registration Status"
+                : !data.budgetEligibility.eligible
+                  ? "Open YPOP Incentive"
+                  : releasedBudget
+                    ? "View Released Budget"
+                    : "View Budget Requests"}
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </section>
+        ) : null}
       </section>
       {managementTarget ? (
         <button type="button" className="pwa-primary-button" onClick={() => go(pwaLiquidationManageRoute(managementTarget.id))}><UploadCloud /> Upload or Manage Liquidation</button>

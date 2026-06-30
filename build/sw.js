@@ -1,4 +1,4 @@
-const CACHE_NAME = "y-trace-v8";
+const CACHE_NAME = "y-trace-v9";
 const APP_SHELL = [
   "/",
   "/dashboard",
@@ -32,6 +32,12 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

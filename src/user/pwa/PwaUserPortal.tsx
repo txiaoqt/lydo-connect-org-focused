@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { PwaAppShell } from "./PwaAppShell";
 import { PwaMorePage } from "./PwaMorePage";
+import { PwaAboutPage, PwaContactPage, PwaFaqPage, PwaLegalPage } from "./PwaInformationPages";
 import PwaDashboard from "./dashboard/PwaDashboard";
 import { usePwaPortalData } from "./hooks/usePwaPortalData";
 import {
@@ -21,12 +23,37 @@ import {
   PwaLiquidationDetail, PwaLiquidationList, PwaLiquidationManager,
 } from "./liquidations/PwaLiquidationPages";
 import { getPwaPageTitle, PWA_ROUTES } from "./pwaRoutes";
+import { usePwaNavigation } from "./hooks/usePwaNavigation";
+import { usePwaPreferences } from "./hooks/usePwaPreferences";
+import {
+  PwaAccountSettings,
+  PwaAppearanceSettings,
+  PwaAppPreferences,
+  PwaNotificationSettings,
+  PwaSettingsMain,
+  PwaStorageSettings,
+} from "./settings/PwaSettingsPages";
 import "./styles/pwa-app.css";
 
 export default function PwaUserPortal() {
   const data = usePwaPortalData();
   const { pathname } = useLocation();
   const title = getPwaPageTitle(pathname);
+  const { go } = usePwaNavigation();
+  const { preferences } = usePwaPreferences();
+
+  useEffect(() => {
+    const launchKey = "ytrace-pwa-launch-routed";
+    if (window.sessionStorage.getItem(launchKey)) return;
+    window.sessionStorage.setItem(launchKey, "1");
+    if (pathname !== PWA_ROUTES.home || preferences.defaultLanding === "home") return;
+    const target = {
+      documents: PWA_ROUTES.documents,
+      budget: PWA_ROUTES.budgets,
+      liquidation: PWA_ROUTES.liquidations,
+    }[preferences.defaultLanding];
+    if (target) go(target, { replace: true });
+  }, [go, pathname, preferences.defaultLanding]);
 
   return (
     <PwaAppShell
@@ -64,6 +91,17 @@ export default function PwaUserPortal() {
         <Route path="transparency" element={<PwaTransparency data={data} />} />
         <Route path="compliance" element={<PwaCompliance data={data} />} />
         <Route path="inquiries" element={<PwaInquiries data={data} />} />
+        <Route path="settings" element={<PwaSettingsMain />} />
+        <Route path="settings/notifications" element={<PwaNotificationSettings />} />
+        <Route path="settings/appearance" element={<PwaAppearanceSettings />} />
+        <Route path="settings/storage" element={<PwaStorageSettings />} />
+        <Route path="settings/preferences" element={<PwaAppPreferences />} />
+        <Route path="settings/account" element={<PwaAccountSettings data={data} />} />
+        <Route path="about" element={<PwaAboutPage />} />
+        <Route path="faqs" element={<PwaFaqPage />} />
+        <Route path="contact" element={<PwaContactPage />} />
+        <Route path="privacy" element={<PwaLegalPage type="privacy" />} />
+        <Route path="terms" element={<PwaLegalPage type="terms" />} />
         <Route path="more" element={<PwaMorePage onSignOut={data.signOut} />} />
         <Route path="*" element={<Navigate to={PWA_ROUTES.home} replace />} />
       </Routes>

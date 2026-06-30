@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getPwaEquivalentRoute,
+  getPwaPageTitle,
   getPwaParentRoute,
   getPwaRelatedRecordRoute,
   isPwaRoute,
@@ -41,6 +42,9 @@ describe("PWA routes", () => {
     expect(getPwaParentRoute("/app/documents/manage")).toBe(PWA_ROUTES.documents);
     expect(getPwaParentRoute("/app/budgets/123/edit")).toBe(PWA_ROUTES.budgets);
     expect(getPwaParentRoute("/app/liquidations/123")).toBe(PWA_ROUTES.liquidations);
+    expect(getPwaParentRoute(PWA_ROUTES.settingsAppearance)).toBe(PWA_ROUTES.settings);
+    expect(getPwaParentRoute(PWA_ROUTES.privacy)).toBe(PWA_ROUTES.more);
+    expect(getPwaPageTitle(PWA_ROUTES.settingsStorage)).toBe("Files & Offline Storage");
   });
 
   it("does not classify ordinary website paths as PWA routes", () => {

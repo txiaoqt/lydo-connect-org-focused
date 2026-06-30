@@ -29,6 +29,7 @@ import {
 
 type BarangayOption = { id: string; name: string };
 type PasigDistrict = "District I" | "District II";
+type EmailAvailability = "idle" | "checking" | "available" | "registered" | "error";
 
 const pasigDistrictBarangays: Record<PasigDistrict, BarangayOption[]> = {
   "District I": [
@@ -69,6 +70,15 @@ const pasigDistrictBarangays: Record<PasigDistrict, BarangayOption[]> = {
 
 const pasigDistrictOptions: PasigDistrict[] = ["District I", "District II"];
 
+const checkSignupEmail = async (email: string): Promise<Exclude<EmailAvailability, "idle" | "checking">> => {
+  if (!supabase) return "error";
+  const { data, error } = await supabase.rpc("is_signup_email_registered", {
+    _email: email.trim().toLowerCase(),
+  });
+  if (error) return "error";
+  return data === true ? "registered" : "available";
+};
+
 /** A labeled form section with a top border divider */
 const FormSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="space-y-4">
@@ -98,6 +108,7 @@ const SignUp = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const [inlineError, setInlineError] = useState("");
+  const [emailAvailability, setEmailAvailability] = useState<EmailAvailability>("idle");
 
   // Track which fields have been blurred so we only show errors after interaction
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -123,6 +134,7 @@ const SignUp = () => {
       name.trim() &&
       email.trim() &&
       isGmailEmail &&
+      (emailAvailability === "available" || emailAvailability === "error") &&
       isContactNumberValid &&
       district &&
       barangayId &&
@@ -145,6 +157,27 @@ const SignUp = () => {
     if (!isExistingOrganization) setOrganizationIdentifierNumber("");
   }, [isExistingOrganization]);
 
+  useEffect(() => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!isGmailEmail || !supabase) {
+      setEmailAvailability("idle");
+      return;
+    }
+
+    let active = true;
+    setEmailAvailability("checking");
+    const timeoutId = window.setTimeout(() => {
+      void checkSignupEmail(normalizedEmail).then((result) => {
+        if (active) setEmailAvailability(result);
+      });
+    }, 500);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [email, isGmailEmail]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setInlineError("");
@@ -157,12 +190,28 @@ const SignUp = () => {
       setInlineError("Email must end with @gmail.com.");
       return;
     }
+    if (emailAvailability === "checking") {
+      setInlineError("Please wait while we check your email address.");
+      return;
+    }
+    if (emailAvailability === "registered") {
+      setInlineError("This email is already registered. Please sign in instead.");
+      return;
+    }
     if (!isContactNumberValid) {
       setInlineError("Contact number must be 11 digits starting with 09.");
       return;
     }
     if (isExistingOrganization && !normalizedIdentifierNumber) {
       setInlineError("Organization identifier number is required for existing organizations.");
+      return;
+    }
+
+    setEmailAvailability("checking");
+    const latestAvailability = await checkSignupEmail(email);
+    setEmailAvailability(latestAvailability);
+    if (latestAvailability === "registered") {
+      setInlineError("This email is already registered. Please sign in instead.");
       return;
     }
 
@@ -258,11 +307,34 @@ const SignUp = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={() => touch("email")}
                   autoComplete="email"
+                  aria-invalid={emailAvailability === "registered" || (touched.has("email") && Boolean(email) && !isGmailEmail)}
+                  aria-describedby="signup-email-status"
                   required
                 />
-                {touched.has("email") && email && !isGmailEmail && (
-                  <p className="text-xs text-destructive">Email must end with @gmail.com.</p>
-                )}
+                <div id="signup-email-status" aria-live="polite">
+                  {touched.has("email") && email && !isGmailEmail ? (
+                    <p className="text-xs text-destructive">Email must end with @gmail.com.</p>
+                  ) : null}
+                  {isGmailEmail && emailAvailability === "checking" ? (
+                    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                      Checking email availability...
+                    </p>
+                  ) : null}
+                  {isGmailEmail && emailAvailability === "registered" ? (
+                    <p className="text-xs text-destructive">
+                      This email is already registered. <Link to="/signin" className="font-medium underline">Sign in instead.</Link>
+                    </p>
+                  ) : null}
+                  {isGmailEmail && emailAvailability === "available" ? (
+                    <p className="text-xs text-success">Email is available.</p>
+                  ) : null}
+                  {isGmailEmail && emailAvailability === "error" ? (
+                    <p className="text-xs text-muted-foreground">
+                      We could not verify this email right now. It will be checked again when you continue.
+                    </p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="space-y-1.5">

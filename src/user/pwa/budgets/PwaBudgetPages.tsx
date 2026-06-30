@@ -1,11 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  ChevronRight, Eye, FileText, Loader2, Pencil, Plus, WalletCards,
+  Check, ChevronRight, Circle, Eye, FileText, Loader2, Pencil, Plus, WalletCards,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { StatusBadge } from "@/components/portal/StatusBadge";
 import { toast } from "@/hooks/use-toast";
-import { budgetEligibilityMessage } from "@/lib/budget-eligibility";
 import type { BudgetRequest } from "@/lib/lydo-connect-data";
 import {
   createBudgetRequestInSupabase,
@@ -38,11 +37,23 @@ const filterOptions: Array<{ id: Filter; label: string }> = [
 export function PwaEligibilityNotice({ data }: { data: PortalData }) {
   const { go } = usePwaNavigation();
   if (data.budgetEligibility.eligible) return null;
-  const message = budgetEligibilityMessage[data.budgetEligibility.reason];
+  const requirements = [
+    { label: "Organization verification", met: data.profile?.profileStatus === "verified" },
+    { label: "Required documents", met: data.requiredTemplates.length > 0 && data.approvedDocuments === data.requiredTemplates.length },
+    { label: "Active YPOP participation", met: Boolean(data.budgetEligibility.period && data.budgetEligibility.entry) },
+    { label: "YPOP qualification", met: data.budgetEligibility.eligible },
+  ];
   return (
     <section className={`pwa-eligibility-notice ${data.budgetEligibility.reason === "ypop_not_qualified" ? "is-rejected" : ""}`}>
       <WalletCards aria-hidden="true" />
-      <div><h2>{message.title}</h2><p>{message.description}</p><button type="button" onClick={() => go(PWA_ROUTES.ypop)}>{message.actionLabel}<ChevronRight /></button></div>
+      <div>
+        <h2>Complete YPOP validation first</h2>
+        <p>Your organization must qualify in an active YPOP period before it can create an activity budget request.</p>
+        <ul className="pwa-requirement-list">
+          {requirements.map((item) => <li key={item.label} className={item.met ? "is-complete" : ""}>{item.met ? <Check /> : <Circle />}<span>{item.label}</span></li>)}
+        </ul>
+        <button type="button" onClick={() => go(PWA_ROUTES.ypop)}>Open YPOP Incentive<ChevronRight /></button>
+      </div>
     </section>
   );
 }
@@ -61,9 +72,11 @@ export function PwaBudgetList({ data }: { data: PortalData }) {
   return (
     <div className="pwa-stack">
       <PwaEligibilityNotice data={data} />
-      <div className="pwa-filter-chips" aria-label="Budget request filters">
-        {filterOptions.map((item) => <button key={item.id} type="button" className={filter === item.id ? "is-active" : ""} onClick={() => setFilter(item.id)}>{item.label}</button>)}
-      </div>
+      {data.budgetRequests.length ? (
+        <div className="pwa-filter-chips" aria-label="Budget request filters">
+          {filterOptions.map((item) => <button key={item.id} type="button" className={filter === item.id ? "is-active" : ""} onClick={() => setFilter(item.id)}>{item.label}</button>)}
+        </div>
+      ) : null}
       <section className="pwa-compact-card-list">
         {visible.map((request) => (
           <button key={request.id} type="button" className="pwa-card pwa-transaction-card" onClick={() => go(pwaBudgetDetailRoute(request.id))}>
@@ -77,7 +90,7 @@ export function PwaBudgetList({ data }: { data: PortalData }) {
             <span className="pwa-view-row">View Details <ChevronRight aria-hidden="true" /></span>
           </button>
         ))}
-        {!visible.length ? <div className="pwa-card pwa-empty-copy">No budget requests match this filter.</div> : null}
+        {!visible.length ? <div className="pwa-card pwa-empty-copy">{data.budgetRequests.length ? "No budget requests match this filter." : "No budget requests have been created yet."}</div> : null}
       </section>
       {data.budgetEligibility.eligible ? (
         <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.budgetNew)}><Plus /> New Budget Request</button>

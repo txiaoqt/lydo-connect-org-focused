@@ -42,6 +42,11 @@ describe("YPOP event eligibility", () => {
   it("allows only verified organizations in an open editable period", () => {
     expect(getYpopEventJoinEligibility({ activity, period, profile, now: new Date("2026-06-30T09:00:00Z") }).allowed).toBe(true);
     expect(getYpopEventJoinEligibility({ activity, period, profile, now: new Date("2026-06-30T16:00:00Z") }).reason).toBe("event_ended");
-    expect(getYpopEventJoinEligibility({ activity, period: { ...period, status: "closed" }, profile }).reason).toBe("period_closed");
+    expect(getYpopEventJoinEligibility({
+      activity,
+      period: { ...period, status: "closed" },
+      profile,
+      now: new Date("2026-06-30T09:00:00Z"),
+    }).reason).toBe("period_closed");
   });
 });

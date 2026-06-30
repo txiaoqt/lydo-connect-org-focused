@@ -1,27 +1,46 @@
-import { Bell } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 
 export function PwaHeader({
   title,
   organizationName,
   unreadCount,
+  mode,
   dashboard,
+  onProfile,
+  onBack,
   onNotifications,
 }: {
   title: string;
   organizationName: string;
   unreadCount: number;
+  mode: "identity" | "nested";
   dashboard?: boolean;
+  onProfile: () => void;
+  onBack: () => void;
   onNotifications: () => void;
 }) {
   const initial = organizationName.trim().charAt(0).toUpperCase() || "Y";
 
+  if (mode === "nested") {
+    return (
+      <header className="pwa-app-header pwa-app-header--nested">
+        <button type="button" className="pwa-header-back" aria-label="Go back" onClick={onBack}>
+          <ArrowLeft aria-hidden="true" />
+        </button>
+        <div className="pwa-header-copy"><h1>{title}</h1></div>
+      </header>
+    );
+  }
+
   return (
     <header className="pwa-app-header">
-      <div className="pwa-avatar" aria-hidden="true">{initial}</div>
-      <div className="pwa-header-copy">
-        <h1>{title}</h1>
-        <p>{dashboard ? `Good ${getDayPart()}, ${organizationName || "Organization"}` : organizationName}</p>
-      </div>
+      <button type="button" className="pwa-identity-button" onClick={onProfile} aria-label="Open organization profile">
+        <span className="pwa-avatar" aria-hidden="true">{initial}</span>
+        <span className="pwa-header-copy">
+          <h1>{title}</h1>
+          <span>{dashboard ? `Good ${getDayPart()}, ${organizationName || "Organization"}` : organizationName}</span>
+        </span>
+      </button>
       <button type="button" className="pwa-icon-button" aria-label="Open notifications" onClick={onNotifications}>
         <Bell aria-hidden="true" />
         {unreadCount > 0 ? <span className="pwa-notification-dot">{Math.min(unreadCount, 9)}</span> : null}

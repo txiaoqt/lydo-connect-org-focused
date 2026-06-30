@@ -16,6 +16,17 @@ export const PWA_ROUTES = {
   transparency: "/app/transparency",
   compliance: "/app/compliance",
   inquiries: "/app/inquiries",
+  settings: "/app/settings",
+  settingsNotifications: "/app/settings/notifications",
+  settingsAppearance: "/app/settings/appearance",
+  settingsStorage: "/app/settings/storage",
+  settingsPreferences: "/app/settings/preferences",
+  settingsAccount: "/app/settings/account",
+  about: "/app/about",
+  faqs: "/app/faqs",
+  contact: "/app/contact",
+  privacy: "/app/privacy",
+  terms: "/app/terms",
   more: "/app/more",
 } as const;
 
@@ -85,6 +96,8 @@ export function getPwaParentRoute(pathname: string) {
   if (pathname.startsWith(`${PWA_ROUTES.news}/`)) return PWA_ROUTES.news;
   if (pathname.startsWith(`${PWA_ROUTES.templates}/`)) return PWA_ROUTES.templates;
   if (pathname.startsWith(`${PWA_ROUTES.ypop}/`)) return PWA_ROUTES.ypop;
+  if (pathname.startsWith(`${PWA_ROUTES.settings}/`)) return PWA_ROUTES.settings;
+  if ([PWA_ROUTES.settings, PWA_ROUTES.about, PWA_ROUTES.faqs, PWA_ROUTES.contact, PWA_ROUTES.privacy, PWA_ROUTES.terms].includes(pathname as never)) return PWA_ROUTES.more;
   return PWA_ROUTES.home;
 }
 
@@ -108,6 +121,17 @@ export function getPwaPageTitle(pathname: string) {
   if (pathname.startsWith(PWA_ROUTES.transparency)) return "Public Transparency";
   if (pathname.startsWith(PWA_ROUTES.compliance)) return "Compliance Status";
   if (pathname.startsWith(PWA_ROUTES.inquiries)) return "Inquiries";
+  if (pathname === PWA_ROUTES.settingsNotifications) return "Notification Settings";
+  if (pathname === PWA_ROUTES.settingsAppearance) return "Appearance & Accessibility";
+  if (pathname === PWA_ROUTES.settingsStorage) return "Files & Offline Storage";
+  if (pathname === PWA_ROUTES.settingsPreferences) return "App Preferences";
+  if (pathname === PWA_ROUTES.settingsAccount) return "Account & Security";
+  if (pathname.startsWith(PWA_ROUTES.settings)) return "Settings";
+  if (pathname.startsWith(PWA_ROUTES.about)) return "About Y-TRACE";
+  if (pathname.startsWith(PWA_ROUTES.faqs)) return "FAQs";
+  if (pathname.startsWith(PWA_ROUTES.contact)) return "Contact LYDO / PCYDO";
+  if (pathname.startsWith(PWA_ROUTES.privacy)) return "Privacy Policy";
+  if (pathname.startsWith(PWA_ROUTES.terms)) return "Terms of Service";
   return "More";
 }
 

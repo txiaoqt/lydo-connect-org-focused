@@ -1,4 +1,5 @@
 const AUTH_CALLBACK_PATH = "/auth/callback";
+const PASSWORD_RESET_PATH = "/reset-password";
 
 const cleanUrl = (value: unknown) => {
   if (typeof value !== "string") return "";
@@ -22,4 +23,15 @@ export const getAuthCallbackUrl = () => {
   }
 
   return AUTH_CALLBACK_PATH;
+};
+
+export const getPasswordResetUrl = () => {
+  const configuredSiteUrl = cleanUrl(import.meta.env.VITE_SITE_URL);
+  if (configuredSiteUrl) return joinUrl(configuredSiteUrl, PASSWORD_RESET_PATH);
+
+  if (typeof window !== "undefined" && window.location.origin) {
+    return joinUrl(window.location.origin, PASSWORD_RESET_PATH);
+  }
+
+  return PASSWORD_RESET_PATH;
 };
