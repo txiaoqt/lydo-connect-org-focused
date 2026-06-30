@@ -106,6 +106,10 @@ export function usePwaPortalData() {
     const activities = [...state.activityLogs]
       .filter((item) => item.organizationId === organizationId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const profileActivities = activities.filter((item) => item.relatedType === "organization_profile");
+    const cityLedParticipations = [...state.ypopEventParticipations]
+      .filter((item) => item.organizationId === organizationId)
+      .sort((a, b) => (b.joinedAt || b.createdAt).localeCompare(a.joinedAt || a.createdAt));
     const inquiries = [...state.inquiries]
       .filter((item) => item.organizationId === organizationId || item.submittedBy === user?.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -170,7 +174,8 @@ export function usePwaPortalData() {
       liquidationReports, latestLiquidation, liquidationPercent, completedLiquidations, underReviewLiquidations,
       revisionLiquidations, overdueLiquidations, daysUntilDeadline,
       profilePercent, notifications, unreadCount: notifications.filter((item) => !item.isRead).length,
-      activities, inquiries, ypopEntries, budgetEligibility, pendingActions, briefing, actions: actions.slice(0, 3),
+      activities, profileActivities, cityLedParticipations, inquiries, ypopEntries, budgetEligibility,
+      pendingActions, briefing, actions: actions.slice(0, 3),
       news: [...state.newsReleases].filter((item) => item.visibilityStatus === "published").sort((a, b) => b.datePosted.localeCompare(a.datePosted)),
       transparency: [...state.transparencyPosts].filter((item) => item.visibilityStatus === "published").sort((a, b) => b.postDate.localeCompare(a.postDate)),
       compliance: state.complianceRemarks.filter((item) => item.organizationId === organizationId),

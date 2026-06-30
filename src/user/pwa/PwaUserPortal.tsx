@@ -4,10 +4,13 @@ import { PwaMorePage } from "./PwaMorePage";
 import PwaDashboard from "./dashboard/PwaDashboard";
 import { usePwaPortalData } from "./hooks/usePwaPortalData";
 import {
-  PwaActivity, PwaCompliance, PwaInquiries, PwaNews, PwaNotifications, PwaProfile,
-  PwaTemplates, PwaTransparency,
+  PwaActivity, PwaCompliance, PwaInquiries, PwaNews, PwaNotifications,
+  PwaTransparency,
 } from "./PwaResourcePages";
+import { PwaProfileEdit, PwaProfilePage, PwaProfilePublicPreview } from "./profile/PwaProfilePages";
+import { PwaTemplateLibrary, PwaTemplatePreview } from "./templates/PwaTemplatePages";
 import { PwaYpopPage } from "./ypop/PwaYpopPage";
+import { PwaYpopPpaEditor, PwaYpopWorkspace } from "./ypop/PwaYpopWorkspace";
 import {
   PwaDocumentDetail, PwaDocumentList, PwaDocumentManager,
 } from "./documents/PwaDocumentPages";
@@ -46,9 +49,16 @@ export default function PwaUserPortal() {
         <Route path="liquidations/:reportId/manage" element={<PwaLiquidationManager data={data} />} />
         <Route path="notifications" element={<PwaNotifications data={data} />} />
         <Route path="activity" element={<PwaActivity data={data} />} />
-        <Route path="profile" element={<PwaProfile data={data} />} />
+        <Route path="profile" element={<PwaProfilePage data={data} />} />
+        <Route path="profile/edit" element={<PwaProfileEdit data={data} />} />
+        <Route path="profile/public" element={<PwaProfilePublicPreview data={data} />} />
         <Route path="ypop" element={<PwaYpopPage data={data} />} />
-        <Route path="templates" element={<PwaTemplates data={data} />} />
+        <Route path="ypop/period/:periodId" element={<PwaYpopWorkspace data={data} />} />
+        <Route path="ypop/:entryId/ppa/new" element={<PwaYpopPpaEditor data={data} />} />
+        <Route path="ypop/:entryId/ppa/:activityId" element={<PwaYpopPpaEditor data={data} />} />
+        <Route path="ypop/:entryId" element={<PwaYpopWorkspace data={data} />} />
+        <Route path="templates" element={<PwaTemplateLibrary data={data} />} />
+        <Route path="templates/:templateId" element={<PwaTemplatePreview data={data} />} />
         <Route path="news" element={<PwaNews data={data} />} />
         <Route path="news/:newsReleaseId" element={<PwaNews data={data} />} />
         <Route path="transparency" element={<PwaTransparency data={data} />} />

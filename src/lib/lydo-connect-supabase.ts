@@ -1176,7 +1176,13 @@ export const updateDocumentSubmissionFileReviewInSupabase = async (params: {
     _session_token: adminSession.sessionToken,
     _file_id: params.fileId,
     _status: params.status,
-    _admin_remarks: params.adminRemarks?.trim() || null,
+    // An empty string deliberately clears stale submission placeholders for
+    // statuses that are not actionable admin feedback, including on databases
+    // running the earlier RPC.
+    _admin_remarks:
+      params.status === "needs_revision" || params.status === "rejected_red"
+        ? params.adminRemarks?.trim() || null
+        : "",
   });
 
   const updatedRow = Array.isArray(data) ? data[0] : null;
@@ -1357,7 +1363,9 @@ export const submitOrganizationDocumentToSupabase = async (params: {
         ocr_confidence: params.ocrConfidence,
         validation_status: params.validationStatus,
         admin_status: submitMode === "draft" ? "draft" : "under_admin_review",
-        admin_remarks: params.adminRemarks?.trim() || (submitMode === "draft" ? "Saved as draft." : "Awaiting admin review."),
+        // This field is reserved for actual admin feedback. Pending/draft
+        // messaging is derived from the status in the UI.
+        admin_remarks: params.adminRemarks?.trim() || null,
         ocr_metadata: params.ocrMetadata ?? null,
         uploaded_at: submittedAt,
         reviewed_at: null,
@@ -1472,7 +1480,6 @@ export const submitOrganizationDocumentsBatchToSupabase = async (params: {
 export const submitDocumentReviewBatchToSupabase = async (params: {
   decisions: BatchDocumentReviewDecision[];
 }) => {
-  const adminSession = getAuthenticatedAdminSession();
   const decisions = params.decisions.filter((decision) => decision.fileId.trim());
   if (!decisions.length) {
     return {
@@ -1482,41 +1489,13 @@ export const submitDocumentReviewBatchToSupabase = async (params: {
     };
   }
 
-  const uniqueFileIds = Array.from(new Set(decisions.map((decision) => decision.fileId)));
-  const { data: existingRows, error: existingRowsError } = await supabase!
-    .from("document_submission_files")
-    .select("id,updated_at,admin_status")
-    .in("id", uniqueFileIds);
-
-  if (existingRowsError) throw new Error(existingRowsError.message);
-
-  const existingById = new Map(
-    ((existingRows as Array<{ id: string; updated_at: string; admin_status: DocumentSubmission["status"] }> | null) ?? []).map((row) => [
-      row.id,
-      row,
-    ]),
-  );
-
   const results: BatchDocumentReviewResult[] = [];
   for (const decision of decisions) {
-    const existing = existingById.get(decision.fileId);
-    if (!existing) {
-      results.push({
-        fileId: decision.fileId,
-        success: false,
-        error: "This document file no longer exists. Please refresh the page.",
-      });
-      continue;
-    }
-    if (decision.expectedUpdatedAt && existing.updated_at && decision.expectedUpdatedAt !== existing.updated_at) {
-      results.push({
-        fileId: decision.fileId,
-        success: false,
-        error: "This document was updated by another reviewer. Please refresh before submitting again.",
-      });
-      continue;
-    }
     try {
+      // Admins authenticate with the custom admin session token rather than a
+      // Supabase Auth user. Reading these rows directly is therefore blocked by
+      // RLS in production. The security-definer RPC validates the admin token,
+      // updates the file, and derives the parent submission status atomically.
       const updatedFile = await updateDocumentSubmissionFileReviewInSupabase({
         fileId: decision.fileId,
         status: decision.status,
@@ -1533,51 +1512,6 @@ export const submitDocumentReviewBatchToSupabase = async (params: {
         success: false,
         error: error instanceof Error ? error.message : "The review decision could not be saved.",
       });
-    }
-  }
-
-  const successfulStatuses = results
-    .filter((result): result is BatchDocumentReviewResult & { file: SubmissionFile } => result.success && Boolean(result.file))
-    .map((result) => result.file.adminStatus);
-
-  if (successfulStatuses.length) {
-    const submissionIds = Array.from(
-      new Set(
-        results
-          .filter((result): result is BatchDocumentReviewResult & { file: SubmissionFile } => result.success && Boolean(result.file))
-          .map((result) => result.file.submissionId),
-      ),
-    );
-
-    for (const submissionId of submissionIds) {
-      const { data: submissionRows, error: submissionRowsError } = await supabase!
-        .from("document_submission_files")
-        .select("admin_status")
-        .eq("submission_id", submissionId);
-
-      if (submissionRowsError) throw new Error(submissionRowsError.message);
-
-      const statuses = ((submissionRows as Array<{ admin_status: DocumentSubmission["status"] }> | null) ?? []).map(
-        (row) => row.admin_status,
-      );
-
-      const nextStatus = deriveDocumentSubmissionStatus(statuses);
-      const updatePayload: Record<string, unknown> = {
-        status: nextStatus,
-        reviewed_by: adminSession.email,
-        reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      if (nextStatus === "approved_green") {
-        updatePayload.user_confirmed = true;
-      }
-
-      const { error: submissionUpdateError } = await supabase!
-        .from("document_submissions")
-        .update(updatePayload)
-        .eq("id", submissionId);
-
-      if (submissionUpdateError) throw new Error(submissionUpdateError.message);
     }
   }
 
@@ -2437,29 +2371,14 @@ export const createYpopEventParticipationInSupabase = async (
   params: Omit<YPOPEventParticipation, "id" | "createdAt" | "updatedAt" | "revisionHistory" | "verifiedAt" | "proofSubmittedAt">,
 ): Promise<YPOPEventParticipation> => {
   if (!supabase) throw new Error("Supabase is not configured.");
-  const { session, organizationProfile } = await getAuthenticatedOrganizationContext();
+  await getAuthenticatedOrganizationContext();
 
-  const { data, error } = await supabase
-    .from("ypop_event_participations")
-    .insert({
-      organization_id: organizationProfile.id,
-      activity_id: params.activityId,
-      activity_name: params.activityName,
-      activity_date: params.activityDate || null,
-      venue: params.venue || null,
-      status: params.status,
-      admin_remarks: params.adminRemarks ?? "",
-      joined_at: params.joinedAt || new Date().toISOString(),
-      proof_submitted_at: null,
-      verified_at: null,
-      revision_history: [{ action: params.status, adminRemarks: params.adminRemarks ?? "Organization joined the YPOP event.", changedAt: params.joinedAt || new Date().toISOString() }],
-      submitted_by: session.user.id,
-    })
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return mapYpopEventParticipation(data as YpopEventParticipationRow);
+  const { data, error } = await supabase.rpc("join_ypop_city_activity", {
+    _activity_id: params.activityId,
+  });
+  const row = Array.isArray(data) ? data[0] : null;
+  if (error || !row) throw new Error(error?.message ?? "The YPOP event could not be joined.");
+  return mapYpopEventParticipation(row as YpopEventParticipationRow);
 };
 
 export const updateYpopEventParticipationInSupabase = async (

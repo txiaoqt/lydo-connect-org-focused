@@ -1,0 +1,662 @@
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import {
+  CalendarDays,
+  ChevronRight,
+  Download,
+  FileText,
+  Loader2,
+  Medal,
+  Plus,
+  Send,
+  Trash2,
+  Trophy,
+  Upload,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { StatusBadge } from "@/components/portal/StatusBadge";
+import { toast } from "@/hooks/use-toast";
+import {
+  computeYpopScore,
+  getApprovedYpopOrgActivityCount,
+  normalizeYpopCityLedPoints,
+  resolveYpopCityLedCategory,
+  YPOP_CITY_LED_CATEGORY_LABELS,
+  type YPOPEntry,
+  type YPOPEventParticipation,
+  type YPOPOrgActivity,
+} from "@/lib/lydo-connect-data";
+import {
+  createYpopEventParticipationInSupabase,
+  createYpopOrgActivityInSupabase,
+  deleteYpopEntryFromSupabase,
+  deleteYpopEventFileFromSupabase,
+  deleteYpopFileFromSupabase,
+  deleteYpopOrgActivityFileFromSupabase,
+  deleteYpopOrgActivityFromSupabase,
+  resolveSupabaseFileUrl,
+  updateYpopEntryInSupabase,
+  updateYpopEventParticipationInSupabase,
+  updateYpopOrgActivityInSupabase,
+  uploadYpopEventFileToSupabase,
+  uploadYpopFileToSupabase,
+  uploadYpopOrgActivityFileToSupabase,
+} from "@/lib/lydo-connect-supabase";
+import {
+  getYpopEventJoinEligibility,
+  isPastYpopActivityDate,
+  isYpopEntryEditable,
+  isYpopPeriodOpen,
+} from "@/lib/ypop-event-eligibility";
+import type { usePwaPortalData } from "../hooks/usePwaPortalData";
+import { PwaBackButton } from "../PwaBackButton";
+import { usePwaNavigation } from "../hooks/usePwaNavigation";
+import {
+  PWA_ROUTES,
+  pwaYpopEntryRoute,
+  pwaYpopPpaEditRoute,
+  pwaYpopPpaNewRoute,
+} from "../pwaRoutes";
+
+type PortalData = ReturnType<typeof usePwaPortalData>;
+type EventTab = "ongoing" | "past";
+
+const formatDateTime = (value: string) => {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Manila",
+  }).format(date);
+};
+
+const eventProofLabel = (participation: YPOPEventParticipation, fileCount: number) => {
+  if (participation.status === "verified") return "Verified";
+  if (participation.status === "needs_revision") return "Needs Revision";
+  if (participation.status === "rejected") return "Rejected";
+  if (participation.proofSubmittedAt) return "Under Admin Review";
+  if (fileCount) return "Proof Attached";
+  return "Proof Required";
+};
+
+async function openStoredFile(fileUrl: string) {
+  const url = await resolveSupabaseFileUrl(fileUrl);
+  if (!url) throw new Error("The file is currently unavailable.");
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+export function PwaYpopWorkspace({ data }: { data: PortalData }) {
+  const { entryId, periodId } = useParams();
+  const { go } = usePwaNavigation();
+  const [eventTab, setEventTab] = useState<EventTab>("ongoing");
+  const [note, setNote] = useState("");
+  const [busyKey, setBusyKey] = useState("");
+  const [deleteEntryOpen, setDeleteEntryOpen] = useState(false);
+  const eventFileInput = useRef<HTMLInputElement | null>(null);
+  const entryFileInput = useRef<HTMLInputElement | null>(null);
+  const [uploadParticipationId, setUploadParticipationId] = useState("");
+  const { state } = data.store;
+  const organizationId = data.profile?.id ?? "";
+  const entry = entryId
+    ? state.ypopEntries.find((item) => item.id === entryId && item.organizationId === organizationId) ?? null
+    : null;
+  const period = periodId
+    ? state.ypopPeriods.find((item) => item.id === periodId) ?? null
+    : state.ypopPeriods.find((item) => item.semesterKey === entry?.semester) ?? null;
+  const semesterKey = entry?.semester || period?.semesterKey || "";
+  const activities = state.ypopCityActivities
+    .filter((item) => item.semesterKey === semesterKey)
+    .sort((left, right) => left.date.localeCompare(right.date));
+  const participations = state.ypopEventParticipations.filter((item) =>
+    item.organizationId === organizationId && activities.some((activity) => activity.id === item.activityId),
+  );
+  const orgActivities = entry ? state.ypopOrgActivities.filter((item) => item.ypopEntryId === entry.id) : [];
+  const entryFiles = entry ? state.ypopFiles.filter((item) => item.ypopEntryId === entry.id) : [];
+  const editable = Boolean(entry && isYpopEntryEditable(entry) && isYpopPeriodOpen(period));
+  const approvedPpas = entry ? getApprovedYpopOrgActivityCount(orgActivities, entry.id, entry.orgLedProjectCount ?? 0) : 0;
+  const score = computeYpopScore(entry?.cityLedAttendance ?? [], activities, approvedPpas, period?.orgLedTiers);
+
+  useEffect(() => {
+    setNote(entry?.submissionNote ?? "");
+  }, [entry?.id, entry?.submissionNote]);
+
+  const refresh = async () => {
+    await data.refresh();
+  };
+
+  const joinEvent = async (activityId: string) => {
+    const activity = activities.find((item) => item.id === activityId);
+    if (!activity) return;
+    const participation = participations.find((item) => item.activityId === activity.id);
+    const eligibility = getYpopEventJoinEligibility({ activity, period, entry, participation, profile: data.profile });
+    if (!eligibility.allowed) {
+      toast({ title: eligibility.label, description: "This activity cannot be joined in its current state.", variant: "destructive" });
+      return;
+    }
+    setBusyKey(`join-${activity.id}`);
+    try {
+      const saved = await createYpopEventParticipationInSupabase({
+        organizationId,
+        activityId: activity.id,
+        activityName: activity.name,
+        activityDate: activity.date,
+        venue: activity.venue,
+        status: "pending_verification",
+        adminRemarks: "",
+        joinedAt: new Date().toISOString(),
+      });
+      data.store.createYPOPEventParticipation(saved);
+      await refresh();
+      toast({ title: "Event joined", description: `${activity.name} was added to Joined Activities.` });
+    } catch (error) {
+      toast({ title: "Unable to join event", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const uploadEventProof = async (file: File) => {
+    if (!uploadParticipationId) return;
+    setBusyKey(`event-upload-${uploadParticipationId}`);
+    try {
+      const saved = await uploadYpopEventFileToSupabase({ participationId: uploadParticipationId, organizationId, file });
+      data.store.createYPOPEventFile(saved);
+      await refresh();
+      toast({ title: "Proof attached", description: file.name });
+    } catch (error) {
+      toast({ title: "Upload failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+      setUploadParticipationId("");
+      if (eventFileInput.current) eventFileInput.current.value = "";
+    }
+  };
+
+  const removeEventProof = async (fileId: string, fileUrl: string) => {
+    if (!window.confirm("Remove this proof file?")) return;
+    setBusyKey(`event-delete-${fileId}`);
+    try {
+      await deleteYpopEventFileFromSupabase(fileId, fileUrl);
+      data.store.deleteYPOPEventFile(fileId);
+      await refresh();
+    } catch (error) {
+      toast({ title: "Unable to remove proof", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const submitEventProof = async (participation: YPOPEventParticipation) => {
+    const files = state.ypopEventFiles.filter((item) => item.participationId === participation.id);
+    if (!files.length) {
+      toast({ title: "Proof required", description: "Attach at least one proof file first.", variant: "destructive" });
+      return;
+    }
+    setBusyKey(`event-submit-${participation.id}`);
+    try {
+      const now = new Date().toISOString();
+      const saved = await updateYpopEventParticipationInSupabase(participation.id, {
+        status: "pending_verification",
+        adminRemarks: "",
+        proofSubmittedAt: now,
+        revisionHistory: [
+          ...(participation.revisionHistory ?? []),
+          { action: "pending_verification", adminRemarks: "Proof submitted for admin verification.", changedAt: now },
+        ],
+      });
+      data.store.updateYPOPEventParticipation(saved.id, saved);
+      await refresh();
+      toast({ title: "Proof submitted", description: "The event proof is under admin review." });
+    } catch (error) {
+      toast({ title: "Submission failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const uploadEntryFile = async (file: File) => {
+    if (!entry) return;
+    setBusyKey("entry-upload");
+    try {
+      const saved = await uploadYpopFileToSupabase({ entryId: entry.id, organizationId, file });
+      data.store.createYPOPFile(saved);
+      await refresh();
+      toast({ title: "Supporting file attached", description: file.name });
+    } catch (error) {
+      toast({ title: "Upload failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+      if (entryFileInput.current) entryFileInput.current.value = "";
+    }
+  };
+
+  const removeEntryFile = async (fileId: string, fileUrl: string) => {
+    if (!window.confirm("Remove this supporting file?")) return;
+    setBusyKey(`entry-delete-${fileId}`);
+    try {
+      await deleteYpopFileFromSupabase(fileId, fileUrl);
+      data.store.deleteYPOPFile(fileId);
+      await refresh();
+    } catch (error) {
+      toast({ title: "Unable to remove file", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const saveMessage = async () => {
+    if (!entry || !editable) return;
+    setBusyKey("save-note");
+    try {
+      const saved = await updateYpopEntryInSupabase(entry.id, { submissionNote: note.trim() });
+      data.store.updateYPOPEntry(saved.id, saved);
+      await refresh();
+      toast({ title: "Message saved" });
+    } catch (error) {
+      toast({ title: "Unable to save message", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const pastJoinedWithoutProof = participations.filter((participation) =>
+    isPastYpopActivityDate(participation.activityDate) && !participation.proofSubmittedAt,
+  );
+  const incompletePpas = orgActivities.filter((activity) => activity.status === "draft" || activity.status === "needs_revision");
+  const totalProofCount =
+    entryFiles.length +
+    state.ypopEventFiles.filter((file) => participations.some((participation) => participation.id === file.participationId)).length +
+    state.ypopOrgActivityFiles.filter((file) => orgActivities.some((activity) => activity.id === file.orgActivityId)).length;
+  const submissionBlockReason = !entry
+    ? "Start a submission before sending it for validation."
+    : !editable
+      ? "This submission is read-only in its current state."
+      : pastJoinedWithoutProof.length
+        ? "Submit the required proof for every completed joined event."
+        : incompletePpas.length
+          ? "Complete or submit all PPA drafts and revision requests first."
+          : totalProofCount === 0
+            ? "Attach at least one supporting proof file before submitting."
+            : "";
+
+  const submitEntry = async () => {
+    if (!entry || submissionBlockReason) return;
+    setBusyKey("submit-entry");
+    try {
+      const now = new Date().toISOString();
+      const saved = await updateYpopEntryInSupabase(entry.id, {
+        status: "submitted",
+        submissionNote: note.trim(),
+        submittedAt: now,
+        revisionHistory: [
+          ...(entry.revisionHistory ?? []),
+          { action: "submitted", adminRemarks: "", changedAt: now },
+        ],
+      });
+      data.store.updateYPOPEntry(saved.id, saved);
+      await refresh();
+      toast({ title: "Submitted for validation", description: "Your semester record is now under admin review." });
+    } catch (error) {
+      toast({ title: "Submission failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const deleteEntry = async () => {
+    if (!entry) return;
+    setBusyKey("delete-entry");
+    try {
+      await deleteYpopEntryFromSupabase(entry.id);
+      data.store.deleteYPOPEntry(entry.id);
+      await refresh();
+      setDeleteEntryOpen(false);
+      go(PWA_ROUTES.ypop, { replace: true });
+      toast({ title: "Draft deleted" });
+    } catch (error) {
+      toast({ title: "Unable to delete submission", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const deletePpa = async (activity: YPOPOrgActivity) => {
+    if (!window.confirm(`Delete "${activity.activityName}"?`)) return;
+    setBusyKey(`ppa-delete-${activity.id}`);
+    try {
+      await deleteYpopOrgActivityFromSupabase(activity.id);
+      data.store.deleteYPOPOrgActivity(activity.id);
+      await refresh();
+    } catch (error) {
+      toast({ title: "Unable to delete PPA", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setBusyKey("");
+    }
+  };
+
+  const activityLog = (() => {
+    if (!entry) return [];
+    const records: Array<{ id: string; title: string; context: string; date: string }> = [
+      { id: `entry-${entry.id}`, title: "Submission started", context: entry.semesterLabel, date: entry.createdAt },
+      ...(entry.revisionHistory ?? []).map((item, index) => ({
+        id: `entry-history-${index}`,
+        title: item.action.replaceAll("_", " "),
+        context: item.adminRemarks,
+        date: item.changedAt,
+      })),
+      ...participations.flatMap((participation) => [
+        { id: `joined-${participation.id}`, title: "Joined event", context: participation.activityName, date: participation.joinedAt },
+        ...(participation.proofSubmittedAt ? [{ id: `proof-${participation.id}`, title: "Event proof submitted", context: participation.activityName, date: participation.proofSubmittedAt }] : []),
+      ]),
+      ...orgActivities.map((activity) => ({
+        id: `ppa-${activity.id}`,
+        title: `PPA ${activity.status.replaceAll("_", " ")}`,
+        context: activity.activityName,
+        date: activity.updatedAt,
+      })),
+    ];
+    return records.filter((item) => item.date).sort((left, right) => right.date.localeCompare(left.date));
+  })();
+
+  if (!period && !entry) {
+    return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.ypop} label="YPOP Incentive" /><section className="pwa-card pwa-empty-copy">YPOP period not found.</section></div>;
+  }
+
+  const filteredActivities = activities.filter((activity) => eventTab === "past" ? isPastYpopActivityDate(activity.date) : !isPastYpopActivityDate(activity.date));
+  const filteredParticipations = participations.filter((participation) => eventTab === "past" ? isPastYpopActivityDate(participation.activityDate) : !isPastYpopActivityDate(participation.activityDate));
+  const availableActivities = filteredActivities.filter((activity) => !participations.some((participation) => participation.activityId === activity.id));
+
+  return (
+    <div className="pwa-stack pwa-ypop-workspace">
+      <PwaBackButton fallback={PWA_ROUTES.ypop} label="YPOP Incentive" />
+      <section className="pwa-card pwa-ypop-workspace-summary">
+        <div className="pwa-ypop-heading">
+          <div><h2>{entry?.semesterLabel || period?.semesterLabel}</h2><p><CalendarDays /> Validation closes {formatDateTime(entry?.validationDeadline || period?.validationDeadline || "")}</p></div>
+          <StatusBadge status={entry?.status ?? period?.status ?? "closed"} />
+        </div>
+        <div className="pwa-ypop-score">
+          <span><small>Current score</small><strong>{score.totalScore}%</strong></span>
+          <span><small>Qualification threshold</small><strong>{entry?.pointsRequired ?? 70}%</strong></span>
+        </div>
+        <div className="pwa-progress"><span style={{ width: `${Math.min(100, score.totalScore)}%` }} /></div>
+        <div className="pwa-ypop-metrics">
+          <span><small>City-led points</small><strong>{score.cityLedEarned} / {score.cityLedMax}</strong></span>
+          <span><small>City percentage</small><strong>{score.cityLedPercent}%</strong></span>
+          <span><small>Organization bonus</small><strong>+{score.orgLedBonus}%</strong></span>
+          <span><small>Approved PPAs</small><strong>{approvedPpas}</strong></span>
+          <span><small>Attached proof</small><strong>{totalProofCount}</strong></span>
+        </div>
+        {entry?.adminRemarks ? <div className="pwa-admin-note"><strong>Admin remarks</strong><p>{entry.adminRemarks}</p></div> : null}
+      </section>
+
+      {!editable ? (
+        <section className="pwa-ypop-readonly-note"><Medal /><div><strong>{period?.status === "closed" ? "Period closed" : "Submission is read-only"}</strong><p>Existing records and proof remain available, but new participation changes are disabled.</p></div></section>
+      ) : null}
+
+      <div className="pwa-ypop-event-tabs" role="tablist" aria-label="YPOP event timeframe">
+        <button type="button" role="tab" aria-selected={eventTab === "ongoing"} className={eventTab === "ongoing" ? "is-active" : ""} onClick={() => setEventTab("ongoing")}>Ongoing</button>
+        <button type="button" role="tab" aria-selected={eventTab === "past"} className={eventTab === "past" ? "is-active" : ""} onClick={() => setEventTab("past")}>Past</button>
+      </div>
+
+      <section className="pwa-card pwa-ypop-workspace-section">
+        <h2>Available Activities</h2>
+        <div className="pwa-ypop-workspace-list">
+          {availableActivities.map((activity) => {
+            const eligibility = getYpopEventJoinEligibility({ activity, period, entry, profile: data.profile });
+            return (
+              <article key={activity.id}>
+                <div><strong>{activity.name}</strong><p>{formatDateTime(activity.date)}{activity.venue ? ` · ${activity.venue}` : ""}</p><small>{YPOP_CITY_LED_CATEGORY_LABELS[resolveYpopCityLedCategory(activity.category, activity.points)]} · {normalizeYpopCityLedPoints(activity.points, activity.category)} points</small></div>
+                <Button size="sm" disabled={!eligibility.allowed || busyKey === `join-${activity.id}`} onClick={() => void joinEvent(activity.id)}>
+                  {busyKey === `join-${activity.id}` ? "Joining..." : eligibility.label}
+                </Button>
+              </article>
+            );
+          })}
+          {!availableActivities.length ? <p className="pwa-empty-copy">No {eventTab} unjoined activities.</p> : null}
+        </div>
+      </section>
+
+      <section className="pwa-card pwa-ypop-workspace-section">
+        <h2>Joined Activities</h2>
+        <input ref={eventFileInput} hidden type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEventProof(file); }} />
+        <div className="pwa-ypop-joined-list">
+          {filteredParticipations.map((participation) => {
+            const activity = activities.find((item) => item.id === participation.activityId);
+            const files = state.ypopEventFiles.filter((item) => item.participationId === participation.id);
+            const eventEnded = isPastYpopActivityDate(participation.activityDate);
+            const canEditProof =
+              editable &&
+              participation.status !== "verified" &&
+              participation.status !== "rejected" &&
+              (!participation.proofSubmittedAt || participation.status === "needs_revision");
+            const canSubmitProof = canEditProof && (eventEnded || participation.status === "needs_revision");
+            return (
+              <article key={participation.id}>
+                <div className="pwa-ypop-joined-heading">
+                  <div><strong>{participation.activityName}</strong><p>{formatDateTime(participation.activityDate)}{participation.venue ? ` · ${participation.venue}` : ""}</p><small>{activity ? `${YPOP_CITY_LED_CATEGORY_LABELS[resolveYpopCityLedCategory(activity.category, activity.points)]} · ${normalizeYpopCityLedPoints(activity.points, activity.category)} points` : "Joined city-led activity"}</small></div>
+                  <StatusBadge status={participation.status} />
+                </div>
+                <div className="pwa-ypop-proof-state"><span>{eventProofLabel(participation, files.length)}</span><span>{files.length} file{files.length === 1 ? "" : "s"}</span></div>
+                {participation.adminRemarks ? <p className="pwa-ypop-feedback">Admin: {participation.adminRemarks}</p> : null}
+                {files.length ? <ul className="pwa-ypop-file-list">{files.map((file) => (
+                  <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{canEditProof ? <button type="button" aria-label={`Remove ${file.fileName}`} disabled={busyKey === `event-delete-${file.id}`} onClick={() => void removeEventProof(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>
+                ))}</ul> : null}
+                <div className="pwa-ypop-row-actions">
+                  {canEditProof ? <Button variant="outline" disabled={!canSubmitProof || busyKey.startsWith("event-upload")} onClick={() => { setUploadParticipationId(participation.id); eventFileInput.current?.click(); }}><Upload />{files.length ? "Add Proof" : "Upload Proof"}</Button> : null}
+                  {canSubmitProof ? <Button disabled={!files.length || busyKey === `event-submit-${participation.id}`} onClick={() => void submitEventProof(participation)}><Send />{participation.status === "needs_revision" ? "Resubmit Proof" : "Submit Proof"}</Button> : null}
+                </div>
+                {!eventEnded && !participation.proofSubmittedAt ? <p className="pwa-form-helper">Proof upload becomes available after the event ends.</p> : null}
+              </article>
+            );
+          })}
+          {!filteredParticipations.length ? <p className="pwa-empty-copy">No joined {eventTab} activities.</p> : null}
+        </div>
+      </section>
+
+      <section className="pwa-card pwa-ypop-workspace-section">
+        <div className="pwa-section-heading"><h2>Organization-Initiated Activities</h2>{editable && entry ? <Button size="sm" variant="outline" onClick={() => go(pwaYpopPpaNewRoute(entry.id))}><Plus />Log PPA</Button> : null}</div>
+        <div className="pwa-ypop-ppa-list">
+          {orgActivities.map((activity) => {
+            const files = state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === activity.id);
+            const canEdit = editable && (activity.status === "draft" || activity.status === "needs_revision");
+            return <article key={activity.id}>
+              <div><strong>{activity.activityName}</strong><p>{formatDateTime(activity.activityDate)} · {activity.venue || "Venue not set"}</p><small>{files.length} proof file{files.length === 1 ? "" : "s"}</small></div>
+              <StatusBadge status={activity.status} />
+              {activity.adminRemarks ? <p className="pwa-ypop-feedback">Admin: {activity.adminRemarks}</p> : null}
+              <div className="pwa-ypop-row-actions">
+                {canEdit && entry ? <Button variant="outline" onClick={() => go(pwaYpopPpaEditRoute(entry.id, activity.id))}>{activity.status === "needs_revision" ? "Respond to Revision" : "Manage PPA"}</Button> : null}
+                {canEdit ? <Button variant="outline" disabled={busyKey === `ppa-delete-${activity.id}`} onClick={() => void deletePpa(activity)}><Trash2 />Delete</Button> : null}
+              </div>
+            </article>;
+          })}
+          {!orgActivities.length ? <p className="pwa-empty-copy">No organization-initiated activities logged.</p> : null}
+        </div>
+      </section>
+
+      <section className="pwa-card pwa-ypop-workspace-section">
+        <h2>Qualification and Scoring</h2>
+        <dl className="pwa-ypop-scoring-list">
+          <div><dt>City-Led Score</dt><dd>{score.cityLedPercent}%</dd></div>
+          <div><dt>Organization Bonus</dt><dd>+{score.orgLedBonus}%</dd></div>
+          <div><dt>Final Score</dt><dd>{score.totalScore}%</dd></div>
+          <div><dt>Qualification Threshold</dt><dd>{entry?.pointsRequired ?? 70}%</dd></div>
+          <div><dt>Approved PPA Count</dt><dd>{approvedPpas}</dd></div>
+        </dl>
+        {(entry?.status === "qualified" || entry?.status === "not_qualified") ? <div className={`pwa-ypop-result ${entry.status === "qualified" ? "is-qualified" : "is-not-qualified"}`}>{entry.status === "qualified" ? <Trophy /> : <Medal />}<div><strong>{entry.status === "qualified" ? "Qualified for a project grant" : "Not qualified for this period"}</strong><p>This is the finalized admin validation result.</p></div></div> : null}
+      </section>
+
+      {entry ? <section className="pwa-card pwa-ypop-workspace-section">
+        <h2>Message for Admin</h2>
+        <Textarea rows={4} value={note} readOnly={!editable} placeholder="Optional notes for the admin reviewing your participation..." onChange={(event) => setNote(event.target.value)} />
+        {editable ? <Button variant="outline" disabled={busyKey === "save-note"} onClick={() => void saveMessage()}>{busyKey === "save-note" ? "Saving..." : "Save Message"}</Button> : null}
+      </section> : null}
+
+      {entry ? <section className="pwa-card pwa-ypop-workspace-section">
+        <h2>Submission Supporting Files</h2>
+        <input ref={entryFileInput} hidden type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEntryFile(file); }} />
+        {entryFiles.length ? <ul className="pwa-ypop-file-list">{entryFiles.map((file) => (
+          <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{editable ? <button type="button" aria-label={`Remove ${file.fileName}`} disabled={busyKey === `entry-delete-${file.id}`} onClick={() => void removeEntryFile(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>
+        ))}</ul> : <p className="pwa-empty-copy">No general supporting files attached.</p>}
+        {editable ? <Button variant="outline" disabled={busyKey === "entry-upload"} onClick={() => entryFileInput.current?.click()}><Upload />{busyKey === "entry-upload" ? "Uploading..." : "Attach File"}</Button> : null}
+      </section> : null}
+
+      {entry ? <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-submission-actions">
+        <h2>Submission Actions</h2>
+        {submissionBlockReason ? <p className="pwa-ypop-block-reason">{submissionBlockReason}</p> : null}
+        <div>
+          {editable ? <Button variant="outline" className="is-danger" onClick={() => setDeleteEntryOpen(true)}><Trash2 />Delete Submission</Button> : null}
+          {editable ? <Button disabled={Boolean(submissionBlockReason) || busyKey === "submit-entry"} onClick={() => void submitEntry()}><Send />{busyKey === "submit-entry" ? "Submitting..." : entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation"}</Button> : null}
+        </div>
+      </section> : null}
+
+      <section className="pwa-card pwa-ypop-workspace-section">
+        <div className="pwa-section-heading"><h2>Recent Activity</h2>{activityLog.length > 3 ? <button type="button" onClick={() => go(PWA_ROUTES.activity)}>View full activity log <ChevronRight /></button> : null}</div>
+        <div className="pwa-profile-audit-list">{activityLog.slice(0, 3).map((item) => <article key={item.id}><span /><div><strong>{item.title}</strong>{item.context ? <p>{item.context}</p> : null}<time>{formatDateTime(item.date)}</time></div></article>)}</div>
+        {!activityLog.length ? <p className="pwa-empty-copy">No recent YPOP activity.</p> : null}
+      </section>
+
+      <AlertDialog open={deleteEntryOpen} onOpenChange={setDeleteEntryOpen}>
+        <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-sm">
+          <AlertDialogHeader><AlertDialogTitle>Delete YPOP submission?</AlertDialogTitle><AlertDialogDescription>This removes the draft semester record and its attached records. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={busyKey === "delete-entry"}>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={busyKey === "delete-entry"} onClick={(event) => { event.preventDefault(); void deleteEntry(); }}>{busyKey === "delete-entry" ? "Deleting..." : "Delete Submission"}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
+  const { entryId, activityId } = useParams();
+  const { go } = usePwaNavigation();
+  const entry = data.store.state.ypopEntries.find((item) => item.id === entryId) ?? null;
+  const period = data.store.state.ypopPeriods.find((item) => item.semesterKey === entry?.semester) ?? null;
+  const existing = data.store.state.ypopOrgActivities.find((item) => item.id === activityId && item.ypopEntryId === entryId) ?? null;
+  const existingFiles = existing ? data.store.state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === existing.id) : [];
+  const [form, setForm] = useState({
+    activityName: existing?.activityName ?? "",
+    activityDate: existing?.activityDate ?? "",
+    venue: existing?.venue ?? "",
+    narrativeReport: existing?.narrativeReport ?? "",
+  });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
+  const editable = Boolean(entry && isYpopEntryEditable(entry) && isYpopPeriodOpen(period));
+
+  useEffect(() => {
+    if (existing) setForm({ activityName: existing.activityName, activityDate: existing.activityDate, venue: existing.venue, narrativeReport: existing.narrativeReport });
+  }, [existing]);
+
+  const save = async (submit: boolean) => {
+    if (!entry || !data.profile || !data.user || !editable) return;
+    const activityName = form.activityName.trim();
+    const activityDate = form.activityDate.trim();
+    const venue = form.venue.trim();
+    const narrativeReport = form.narrativeReport.trim();
+    if (!activityName || !activityDate || !venue || !narrativeReport) {
+      toast({ title: "Missing details", description: "Complete the activity name, date, venue, and narrative report.", variant: "destructive" });
+      return;
+    }
+    if (submit && existingFiles.length + selectedFiles.length === 0) {
+      toast({ title: "Proof required", description: "Attach at least one supporting file before submitting the PPA.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const now = new Date().toISOString();
+      let saved: YPOPOrgActivity;
+      if (existing) {
+        saved = await updateYpopOrgActivityInSupabase(existing.id, {
+          activityName,
+          activityDate,
+          venue,
+          narrativeReport,
+          status: existing.status,
+          submittedAt: existing.submittedAt,
+          adminRemarks: existing.adminRemarks,
+          revisionHistory: existing.revisionHistory,
+        });
+        data.store.updateYPOPOrgActivity(saved.id, saved);
+      } else {
+        saved = await createYpopOrgActivityInSupabase({
+          ypopEntryId: entry.id,
+          organizationId: data.profile.id,
+          submittedBy: data.user.id,
+          activityName,
+          activityDate,
+          venue,
+          narrativeReport,
+          status: "draft",
+          adminRemarks: "",
+          submittedAt: "",
+        });
+        data.store.createYPOPOrgActivity(saved);
+      }
+      for (const file of selectedFiles) {
+        const uploaded = await uploadYpopOrgActivityFileToSupabase({ orgActivityId: saved.id, organizationId: data.profile.id, file });
+        data.store.createYPOPOrgActivityFile(uploaded);
+      }
+      if (submit) {
+        saved = await updateYpopOrgActivityInSupabase(saved.id, {
+          status: "submitted",
+          submittedAt: now,
+          adminRemarks: "",
+          revisionHistory: [...(saved.revisionHistory ?? []), { action: "submitted", adminRemarks: "", changedAt: now }],
+        });
+        data.store.updateYPOPOrgActivity(saved.id, saved);
+      }
+      await data.refresh();
+      toast({ title: submit ? "PPA submitted" : "PPA draft saved", description: submit ? "The activity is now pending admin approval." : "You can continue this draft later." });
+      go(pwaYpopEntryRoute(entry.id), { replace: true });
+    } catch (error) {
+      toast({ title: "Unable to save PPA", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeExistingFile = async (fileId: string, fileUrl: string) => {
+    if (!window.confirm("Remove this PPA attachment?")) return;
+    try {
+      await deleteYpopOrgActivityFileFromSupabase(fileId, fileUrl);
+      data.store.deleteYPOPOrgActivityFile(fileId);
+      await data.refresh();
+    } catch (error) {
+      toast({ title: "Unable to remove file", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  };
+
+  if (!entry) return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.ypop} label="YPOP Incentive" /><section className="pwa-card pwa-empty-copy">YPOP submission not found.</section></div>;
+  return (
+    <div className="pwa-stack pwa-ypop-ppa-editor">
+      <PwaBackButton fallback={pwaYpopEntryRoute(entry.id)} label={entry.semesterLabel} />
+      <section className="pwa-page-intro"><span><Plus /></span><div><h2>{existing ? "Manage PPA" : "Log PPA"}</h2><p>Create an organization-initiated activity and attach its supporting proof.</p></div></section>
+      {existing?.adminRemarks ? <div className="pwa-admin-note"><strong>Admin remarks</strong><p>{existing.adminRemarks}</p></div> : null}
+      <section className="pwa-card pwa-native-form">
+        <label>Activity Name *<Input value={form.activityName} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, activityName: event.target.value }))} /></label>
+        <label>Activity Date *<Input type="date" value={form.activityDate} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, activityDate: event.target.value }))} /></label>
+        <label>Venue *<Input value={form.venue} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, venue: event.target.value }))} /></label>
+        <label>Narrative Report *<Textarea rows={6} value={form.narrativeReport} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, narrativeReport: event.target.value }))} /></label>
+        <label className="pwa-file-control"><input type="file" multiple disabled={!editable} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/*" onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))} /><span><Upload /> {selectedFiles.length ? `${selectedFiles.length} new file${selectedFiles.length === 1 ? "" : "s"} selected` : "Attach PPA proof files"}</span></label>
+        {existingFiles.length ? <ul className="pwa-ypop-file-list">{existingFiles.map((file) => <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{editable ? <button type="button" onClick={() => void removeExistingFile(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>)}</ul> : null}
+      </section>
+      {editable ? <div className="pwa-profile-editor-actions"><Button variant="outline" disabled={saving} onClick={() => void save(false)}>Save Draft</Button><Button disabled={saving} onClick={() => void save(true)}>{saving ? <Loader2 className="pwa-spin" /> : <Send />}{saving ? "Saving..." : existing?.status === "needs_revision" ? "Resubmit PPA" : "Submit PPA"}</Button></div> : null}
+    </div>
+  );
+}

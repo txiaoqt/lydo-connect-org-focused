@@ -8,6 +8,8 @@ export const PWA_ROUTES = {
   notifications: "/app/notifications",
   activity: "/app/activity",
   profile: "/app/profile",
+  profileEdit: "/app/profile/edit",
+  profilePublic: "/app/profile/public",
   ypop: "/app/ypop",
   templates: "/app/templates",
   news: "/app/news",
@@ -35,6 +37,21 @@ export const pwaLiquidationManageRoute = (reportId: string) =>
 export const pwaNewsDetailRoute = (newsId: string) =>
   `${PWA_ROUTES.news}/${encodeURIComponent(newsId)}`;
 
+export const pwaTemplateDetailRoute = (templateId: string) =>
+  `${PWA_ROUTES.templates}/${encodeURIComponent(templateId)}`;
+
+export const pwaYpopEntryRoute = (entryId: string) =>
+  `${PWA_ROUTES.ypop}/${encodeURIComponent(entryId)}`;
+
+export const pwaYpopPeriodRoute = (periodId: string) =>
+  `${PWA_ROUTES.ypop}/period/${encodeURIComponent(periodId)}`;
+
+export const pwaYpopPpaNewRoute = (entryId: string) =>
+  `${pwaYpopEntryRoute(entryId)}/ppa/new`;
+
+export const pwaYpopPpaEditRoute = (entryId: string, activityId: string) =>
+  `${pwaYpopEntryRoute(entryId)}/ppa/${encodeURIComponent(activityId)}`;
+
 export const isPwaRoute = (pathname: string) =>
   pathname === PWA_ROUTES.home || pathname.startsWith(`${PWA_ROUTES.home}/`);
 
@@ -61,10 +78,13 @@ export function getPwaEquivalentRoute(pathname: string) {
 }
 
 export function getPwaParentRoute(pathname: string) {
+  if (pathname.startsWith(`${PWA_ROUTES.profile}/`)) return PWA_ROUTES.profile;
   if (pathname.startsWith(`${PWA_ROUTES.documents}/`)) return PWA_ROUTES.documents;
   if (pathname.startsWith(`${PWA_ROUTES.budgets}/`)) return PWA_ROUTES.budgets;
   if (pathname.startsWith(`${PWA_ROUTES.liquidations}/`)) return PWA_ROUTES.liquidations;
   if (pathname.startsWith(`${PWA_ROUTES.news}/`)) return PWA_ROUTES.news;
+  if (pathname.startsWith(`${PWA_ROUTES.templates}/`)) return PWA_ROUTES.templates;
+  if (pathname.startsWith(`${PWA_ROUTES.ypop}/`)) return PWA_ROUTES.ypop;
   return PWA_ROUTES.home;
 }
 
@@ -78,7 +98,10 @@ export function getPwaPageTitle(pathname: string) {
   if (pathname.startsWith(PWA_ROUTES.liquidations)) return "Liquidation";
   if (pathname.startsWith(PWA_ROUTES.notifications)) return "Notifications";
   if (pathname.startsWith(PWA_ROUTES.activity)) return "Activity";
+  if (pathname === PWA_ROUTES.profileEdit) return "Edit Profile";
+  if (pathname === PWA_ROUTES.profilePublic) return "Public Profile";
   if (pathname.startsWith(PWA_ROUTES.profile)) return "Organization Profile";
+  if (pathname.includes("/ppa/") && pathname.startsWith(PWA_ROUTES.ypop)) return "Log PPA";
   if (pathname.startsWith(PWA_ROUTES.ypop)) return "YPOP Incentive";
   if (pathname.startsWith(PWA_ROUTES.templates)) return "Templates";
   if (pathname.startsWith(PWA_ROUTES.news)) return "News Releases";

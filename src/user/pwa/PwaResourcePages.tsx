@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Bell, Download, ExternalLink, FileText, HelpCircle, MapPin, Medal, Megaphone,
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createInquiryInSupabase, resolveSupabaseFileUrl } from "@/lib/lydo-connect-supabase";
+import { organizationEmailPattern } from "@/lib/organization-profile-domain";
 import type { usePwaPortalData } from "./hooks/usePwaPortalData";
 import { usePwaNavigation } from "./hooks/usePwaNavigation";
 import { PwaBackButton } from "./PwaBackButton";
@@ -77,21 +78,35 @@ export function PwaActivity({ data }: { data: PortalData }) {
 }
 
 export function PwaInquiries({ data }: { data: PortalData }) {
-  const [form, setForm] = useState({ subject: "", description: "" });
+  const profileEmail = data.profile?.organizationEmail || data.user?.email || "";
+  const [form, setForm] = useState({ email: profileEmail, subject: "", description: "" });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setForm((current) => current.email ? current : { ...current, email: profileEmail });
+  }, [profileEmail]);
+
   const submit = async () => {
-    if (!form.subject.trim() || !form.description.trim()) return;
+    const email = form.email.trim();
+    if (!email || !form.subject.trim() || !form.description.trim()) {
+      toast({ title: "Missing details", description: "Please complete the email, subject, and description fields.", variant: "destructive" });
+      return;
+    }
+    if (!organizationEmailPattern.test(email)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const saved = await createInquiryInSupabase({
         submitterName: data.organizationName,
         organizationName: data.organizationName,
-        email: data.profile?.organizationEmail || data.user?.email || "",
+        email,
         subject: form.subject,
         description: form.description,
       });
       data.store.createInquiry(saved);
-      setForm({ subject: "", description: "" });
+      setForm({ email, subject: "", description: "" });
       toast({ title: "Inquiry sent", description: "Your inquiry is now pending review." });
     } catch (error) {
       toast({ title: "Unable to send inquiry", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -99,5 +114,5 @@ export function PwaInquiries({ data }: { data: PortalData }) {
       setSaving(false);
     }
   };
-  return <div className="pwa-stack"><PageIntro icon={HelpCircle} title="Inquiries" copy="Send a question to the LYDO and track earlier submissions." /><section className="pwa-card pwa-form-card"><label>Subject<Input value={form.subject} onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))} /></label><label>Description<Textarea rows={4} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></label><Button disabled={saving || !form.subject.trim() || !form.description.trim()} onClick={() => void submit()}>{saving ? "Sending..." : "Send Inquiry"}</Button></section><section className="pwa-record-list pwa-stack">{data.inquiries.map((item) => <article className="pwa-card" key={item.id}><div className="pwa-record-heading"><div><h3>{item.subject}</h3><p>{dateLabel(item.createdAt)}</p></div><StatusBadge status={item.status} /></div><p>{item.description}</p>{item.adminRemarks ? <small className="pwa-admin-note">Admin: {item.adminRemarks}</small> : null}</article>)}</section></div>;
+  return <div className="pwa-stack"><PageIntro icon={HelpCircle} title="Inquiries" copy="Send a question to the LYDO and track earlier submissions." /><section className="pwa-card pwa-form-card"><label>Email<Input type="email" inputMode="email" autoComplete="email" placeholder="Email address" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} /></label><label>Subject<Input value={form.subject} onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))} /></label><label>Description<Textarea rows={4} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></label><Button disabled={saving || !form.email.trim() || !form.subject.trim() || !form.description.trim()} onClick={() => void submit()}>{saving ? "Sending..." : "Send Inquiry"}</Button></section><section className="pwa-record-list pwa-stack">{data.inquiries.map((item) => <article className="pwa-card" key={item.id}><div className="pwa-record-heading"><div><h3>{item.subject}</h3><p>{dateLabel(item.createdAt)}</p></div><StatusBadge status={item.status} /></div><p>{item.description}</p>{item.adminRemarks ? <small className="pwa-admin-note">Admin: {item.adminRemarks}</small> : null}</article>)}</section></div>;
 }

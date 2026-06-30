@@ -2133,9 +2133,22 @@ export default function AdminPortal({ section }: { section: string }) {
         })),
       });
 
+      const successfulFileIds = new Set(
+        result.results.filter((item) => item.success).map((item) => item.fileId),
+      );
+      const successfulEntries = decisionEntries.filter((entry) => successfulFileIds.has(entry.file.id));
+      const failedResults = result.results.filter((item) => !item.success);
+
+      if (!successfulEntries.length) {
+        throw new Error(
+          failedResults.map((item) => item.error).filter(Boolean).join(" ") ||
+            "No document review decisions were saved. Please refresh and try again.",
+        );
+      }
+
       await refreshAdminState();
 
-      for (const entry of decisionEntries) {
+      for (const entry of successfulEntries) {
         if (entry.draft.decision === "approve") {
           await appendAuditLog(
             "Approved document submission",
@@ -2181,19 +2194,27 @@ export default function AdminPortal({ section }: { section: string }) {
         relatedId: selectedRegistrationSubmission.id,
       });
 
-      const successfulFileIds = new Set(
-        result.results.filter((item) => item.success).map((item) => item.fileId),
-      );
       setRegistrationReviewDraftsByFileId((current) =>
         Object.fromEntries(Object.entries(current).filter(([fileId]) => !successfulFileIds.has(fileId))),
       );
       setSelectedRegistrationReviewFileIds([]);
       setRegistrationBulkRemark("");
 
-      toast({
-        title: "Review completed",
-        description: `${result.successCount} document${result.successCount === 1 ? "" : "s"} were updated successfully.`,
-      });
+      if (failedResults.length) {
+        toast({
+          title: "Review partially completed",
+          description: `${result.successCount} saved; ${result.failureCount} failed. ${failedResults
+            .map((item) => item.error)
+            .filter(Boolean)
+            .join(" ")}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Review completed",
+          description: `${result.successCount} document${result.successCount === 1 ? "" : "s"} were updated successfully.`,
+        });
+      }
     } catch (error) {
       toast({
         title: "Unable to submit review decisions",
@@ -4408,7 +4429,12 @@ export default function AdminPortal({ section }: { section: string }) {
                 ? [{
                     id: `${activeReviewEntry.file.id}-reviewed`,
                     message: statusLabelMap[activeReviewEntry.file.adminStatus] ?? activeReviewEntry.file.adminStatus.replaceAll("_", " "),
-                    note: activeReviewEntry.file.adminRemarks ? `"${activeReviewEntry.file.adminRemarks}"` : undefined,
+                    note:
+                      (activeReviewEntry.file.adminStatus === "needs_revision" ||
+                        activeReviewEntry.file.adminStatus === "rejected_red") &&
+                      activeReviewEntry.file.adminRemarks
+                        ? `"${activeReviewEntry.file.adminRemarks}"`
+                        : undefined,
                     timestamp: activeReviewEntry.file.reviewedAt,
                     timestampLabel: activeReviewEntry.file.reviewedAt ? formatDateTimeLabel(activeReviewEntry.file.reviewedAt) : undefined,
                   }]

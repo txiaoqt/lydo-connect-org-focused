@@ -85,6 +85,18 @@ import { useLydoConnect } from "@/lib/lydo-connect-store";
 import { cn } from "@/lib/utils";
 import { resolveBudgetEligibility } from "@/lib/budget-eligibility";
 import {
+  getOrganizationProfileCompletionCount,
+  getOrganizationProfileCompletionTarget,
+  isOrganizationProfileComplete,
+  organizationEmailPattern,
+  philippineContactNumberPattern,
+} from "@/lib/organization-profile-domain";
+import {
+  getYpopEventJoinEligibility,
+  isPastYpopActivityDate,
+  parseYpopActivityDate,
+} from "@/lib/ypop-event-eligibility";
+import {
   type BudgetRequest,
   advocacyOptions,
   majorClassificationOptions,
@@ -182,8 +194,6 @@ const getLatestBudgetAdminFeedback = (request?: BudgetRequest | null) => {
       ?.adminRemarks?.trim() ?? ""
   );
 };
-const organizationEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const philippineContactNumberPattern = /^09\d{9}$/;
 const canInlinePreviewFile = (value: string) => /\.(pdf|png|jpe?g|gif|webp|svg)$/i.test(value);
 const isImagePreviewFile = (value: string) => /\.(png|jpe?g|gif|webp|svg)$/i.test(value);
 const getDocumentUploadAcceptValue = (documentTypeId: string) =>
@@ -247,26 +257,6 @@ const formatShortPortalDate = (value: string) => {
 };
 const budgetNativeSelectClass =
   "h-10 w-full appearance-none rounded-md border border-input bg-background px-3 py-2 pr-9 text-sm text-foreground outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
-const parseYpopActivityDate = (value: string) => {
-  const directDate = new Date(value);
-  if (!Number.isNaN(directDate.getTime())) return directDate;
-  const normalized = value
-    .replace(/[â€“â€”]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
-  const firstChunk = normalized.split("-")[0]?.trim() ?? normalized;
-  const fallbackDate = new Date(firstChunk);
-  return Number.isNaN(fallbackDate.getTime()) ? null : fallbackDate;
-};
-const isPastYpopActivityDate = (value: string) => {
-  const parsed = parseYpopActivityDate(value);
-  if (!parsed) return false;
-  const normalized = new Date(parsed);
-  normalized.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return normalized < today;
-};
 const approvedBudgetStatuses = new Set<BudgetRequest["status"]>([
   "approved_for_ftf_green",
   "budget_released",
@@ -295,25 +285,6 @@ type BatchUploadResultSummary = {
     error?: string;
   }>;
 };
-const getOrganizationProfileCompletionCount = (profile?: OrganizationProfile | null) =>
-  [
-    profile?.organizationName?.trim(),
-    profile?.organizationEmail?.trim(),
-    profile?.contactNumber?.trim(),
-    profile?.district?.trim(),
-    profile?.barangay?.trim(),
-    profile?.isExistingOrganization ? profile?.organizationIdentifierNumber?.trim() : "",
-    profile?.majorClassification?.trim(),
-    profile?.subClassification?.trim(),
-    profile?.advocacies?.length ? "advocacies" : "",
-    profile?.adviserName?.trim(),
-    profile?.representativeName?.trim(),
-    profile?.address?.trim(),
-  ].filter(Boolean).length;
-const getOrganizationProfileCompletionTarget = (profile?: OrganizationProfile | null) => 11 + (profile?.isExistingOrganization ? 1 : 0);
-const isOrganizationProfileComplete = (profile?: OrganizationProfile | null) =>
-  getOrganizationProfileCompletionCount(profile) === getOrganizationProfileCompletionTarget(profile);
-
 const createBlankOrganizationProfile = (
   userId: string,
   defaults?: Partial<
@@ -1452,7 +1423,6 @@ export default function UserPortal({ section }: { section: string }) {
           documentTypeName: entry.documentType.name,
           file: entry.file,
           validationStatus: "correct",
-          adminRemarks: batchUploadSubmitMode === "draft" ? "Saved as draft." : "Awaiting admin review.",
         })),
       });
 
@@ -1605,7 +1575,6 @@ export default function UserPortal({ section }: { section: string }) {
         ocrText: "",
         ocrConfidence: 0,
         validationStatus: "correct",
-        adminRemarks: "Awaiting admin review.",
         ocrMetadata: null,
       });
 
@@ -7531,37 +7500,26 @@ export default function UserPortal({ section }: { section: string }) {
         const handleJoinYpopEvent = async (activityId: string) => {
           const activity = state.ypopCityActivities.find((item) => item.id === activityId);
           if (!activity || !currentProfile?.id) return;
-          const now = new Date().toISOString();
           const linkedPeriod = state.ypopPeriods.find((period) => period.semesterKey === activity.semesterKey);
           const existingEntry = state.ypopEntries.find(
             (entry) => entry.organizationId === currentProfile.id && entry.semester === activity.semesterKey,
           );
-          if (!existingEntry && linkedPeriod) {
-            const entryData = {
-              organizationId: currentProfile.id,
-              submittedBy: user?.id ?? "",
-              semester: linkedPeriod.semesterKey,
-              semesterLabel: linkedPeriod.semesterLabel,
-              pointsEarned: 0,
-              pointsRequired: 70,
-              totalPoints: 100,
-              status: "draft" as const,
-              adminRemarks: "",
-              submissionNote: "",
-              validationDeadline: linkedPeriod.validationDeadline,
-              submittedAt: "",
-              validatedAt: "",
-              revisionHistory: [],
-              orgLedProjectCount: 0,
-              cityLedAttendance: [],
-            };
-            try {
-              const savedEntry = await createYpopEntryInSupabase(entryData);
-              createYPOPEntry({ ...savedEntry });
-            } catch {
-              createYPOPEntry({ id: `ypop-${Date.now()}`, ...entryData, createdAt: now, updatedAt: now });
-            }
+          const existingParticipation = state.ypopEventParticipations.find(
+            (participation) => participation.organizationId === currentProfile.id && participation.activityId === activity.id,
+          );
+          const eligibility = getYpopEventJoinEligibility({
+            activity,
+            period: linkedPeriod,
+            entry: existingEntry,
+            participation: existingParticipation,
+            profile: currentProfile,
+          });
+          if (!eligibility.allowed) {
+            toast({ title: eligibility.label, description: "This event cannot be joined in its current state.", variant: "destructive" });
+            return;
           }
+
+          const now = new Date().toISOString();
           const payload = {
             organizationId: currentProfile.id,
             activityId: activity.id,
@@ -7575,20 +7533,11 @@ export default function UserPortal({ section }: { section: string }) {
           try {
             const saved = await createYpopEventParticipationInSupabase(payload);
             createYPOPEventParticipation(saved);
+            const remoteSnapshot = await loadLydoConnectSupabaseState();
+            if (remoteSnapshot) mergeRemoteState(remoteSnapshot);
           } catch (error) {
-            createYPOPEventParticipation({
-              id: `ypop-participation-${Date.now()}`,
-              ...payload,
-              proofSubmittedAt: "",
-              verifiedAt: "",
-              revisionHistory: [{ action: "pending_verification", adminRemarks: "Organization joined the YPOP event.", changedAt: now }],
-              createdAt: now,
-              updatedAt: now,
-            });
-            if (error instanceof Error && !/duplicate/i.test(error.message)) {
-              toast({ title: "Joined locally", description: "The event was added locally, but Supabase sync should be checked later." });
-              return;
-            }
+            toast({ title: "Unable to join event", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+            return;
           }
           toast({ title: "YPOP event joined", description: "This event now appears in your joined YPOP events with pending verification status." });
         };
@@ -7632,8 +7581,16 @@ export default function UserPortal({ section }: { section: string }) {
           input.click();
         };
 
-        const renderJoinableYpopActivityCard = (activity: { id: string; name: string; date: string; venue: string; points: number; category?: string }) => (
-          <Card key={activity.id} className="border-border/70">
+        const renderJoinableYpopActivityCard = (activity: YPOPCityActivity) => {
+          const period = state.ypopPeriods.find((item) => item.semesterKey === activity.semesterKey);
+          const entry = state.ypopEntries.find(
+            (item) => item.organizationId === currentProfile?.id && item.semester === activity.semesterKey,
+          );
+          const participation = state.ypopEventParticipations.find(
+            (item) => item.organizationId === currentProfile?.id && item.activityId === activity.id,
+          );
+          const eligibility = getYpopEventJoinEligibility({ activity, period, entry, participation, profile: currentProfile });
+          return <Card key={activity.id} className="border-border/70">
             <CardContent className="flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6">
               <div>
                 <p className="font-semibold">{activity.name}</p>
@@ -7642,12 +7599,12 @@ export default function UserPortal({ section }: { section: string }) {
                   {activity.venue ? ` • ${activity.venue}` : ""} • {YPOP_CITY_LED_CATEGORY_LABELS[resolveYpopCityLedCategory(activity.category, activity.points)]} • {normalizeYpopCityLedPoints(activity.points, activity.category)} pts
                 </p>
               </div>
-              <Button type="button" size="sm" onClick={() => void handleJoinYpopEvent(activity.id)}>
-                Join Event
+              <Button type="button" size="sm" disabled={!eligibility.allowed} onClick={() => void handleJoinYpopEvent(activity.id)}>
+                {eligibility.label}
               </Button>
             </CardContent>
-          </Card>
-        );
+          </Card>;
+        };
 
         const handleDeleteYpopEventFile = (fileId: string) => {
           const targetFile = state.ypopEventFiles.find((file) => file.id === fileId);
