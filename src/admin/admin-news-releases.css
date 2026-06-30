@@ -1,12 +1,12 @@
 @media (max-width: 1023px) {
   .admin-news-releases-page {
-    --page-background: #f6f8fc;
-    --surface-primary: #ffffff;
-    --surface-soft: #f4f7fc;
-    --border-default: #dce4f0;
-    --text-primary: #172033;
-    --text-secondary: #667085;
-    --primary-blue: #2563b8;
+    --page-background: var(--yt-bg);
+    --surface-primary: var(--yt-surface);
+    --surface-soft: var(--yt-surface-subtle);
+    --border-default: var(--yt-border);
+    --text-primary: var(--yt-text);
+    --text-secondary: var(--yt-text-muted);
+    --primary-blue: var(--yt-primary);
   }
 
   .admin-news-releases-page > div > div:first-child {

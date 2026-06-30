@@ -4493,7 +4493,7 @@ export default function AdminPortal({ section }: { section: string }) {
                           : "Pending verification"}
                       </p>
                       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${selectedOrg.isExistingOrganization ? "border-sky-200 bg-sky-50 text-sky-700" : "border-violet-200 bg-violet-50 text-violet-700"}`}>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium ${selectedOrg.isExistingOrganization ? "border-sky-200 bg-sky-50 text-sky-700" : "border-primary/20 bg-primary-soft text-primary"}`}>
                           {selectedOrg.isExistingOrganization ? "Existing organization" : "New organization"}
                         </span>
                         <span>&middot;</span>
@@ -7466,7 +7466,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       value: `PHP ${budgetMonitoringAnalysis.totalRemaining.toLocaleString()}`,
                       helper: "Approved amount still unreleased.",
                       icon: Wallet,
-                      iconClasses: "bg-violet-500/10 text-violet-700",
+                      iconClasses: "bg-primary-soft text-primary",
                     },
                   ].map((metric) => {
                     const MetricIcon = metric.icon;
@@ -8793,7 +8793,7 @@ export default function AdminPortal({ section }: { section: string }) {
         const activityMeta: Record<string, { label: string; iconColor: string; bgColor: string }> = {
           verify_organization_profile: { label: "Organization Verified",  iconColor: "text-emerald-600", bgColor: "bg-emerald-500/10" },
           release_budget:              { label: "Budget Released",         iconColor: "text-blue-600",    bgColor: "bg-blue-500/10"    },
-          approve_document_submission: { label: "Document Approved",       iconColor: "text-violet-600",  bgColor: "bg-violet-500/10"  },
+          approve_document_submission: { label: "Document Approved",       iconColor: "text-emerald-600", bgColor: "bg-emerald-500/10" },
           create_news_release:         { label: "News Release Published",  iconColor: "text-amber-600",   bgColor: "bg-amber-500/10"   },
           reject_budget_request:       { label: "Budget Request Rejected", iconColor: "text-rose-600",    bgColor: "bg-rose-500/10"    },
           review_liquidation_report:   { label: "Liquidation Reviewed",    iconColor: "text-slate-500",   bgColor: "bg-slate-500/10"   },

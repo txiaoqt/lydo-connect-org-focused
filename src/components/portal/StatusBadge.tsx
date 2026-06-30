@@ -49,7 +49,6 @@ export const statusBadgeToneMap: Record<string, StatusBadgeTone> = {
   ongoing: "progress",
 
   incomplete: "warning",
-  needs_update: "warning",
   pending_activity_completion: "warning",
   pending: "warning",
   partial: "warning",
@@ -58,7 +57,10 @@ export const statusBadgeToneMap: Record<string, StatusBadgeTone> = {
   due_soon: "warning",
 
   needs_revision: "action",
+  needs_update: "action",
   needs_reupload: "action",
+  needs_renewal: "action",
+  action_required: "action",
   mismatch: "action",
   issue: "action",
 
@@ -71,6 +73,8 @@ export const statusBadgeToneMap: Record<string, StatusBadgeTone> = {
   late: "danger",
   missing: "danger",
   failed: "danger",
+  validation_failed: "danger",
+  expired: "danger",
 
   not_started: "neutral",
   draft: "neutral",
@@ -80,6 +84,9 @@ export const statusBadgeToneMap: Record<string, StatusBadgeTone> = {
   past: "neutral",
   archived: "neutral",
   inactive: "neutral",
+  not_joined: "neutral",
+  on_track: "progress",
+  submit_onsite: "progress",
   enabled: "success",
   disabled: "danger",
 

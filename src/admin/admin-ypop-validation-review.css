@@ -6,11 +6,11 @@
   .admin-ypop-validation-review-page {
     --mobile-page-gap: 0.75rem;
     --mobile-card-padding: 1rem;
-    --border-default: #dce4f0;
-    --text-primary: #172033;
-    --text-secondary: #667085;
-    --primary-blue: #2563b8;
-    --primary-soft: #eaf2ff;
+    --border-default: var(--yt-border);
+    --text-primary: var(--yt-text);
+    --text-secondary: var(--yt-text-muted);
+    --primary-blue: var(--yt-primary);
+    --primary-soft: var(--yt-primary-soft);
     min-width: 0;
     max-width: 100%;
   }
@@ -38,8 +38,8 @@
     padding: var(--mobile-card-padding);
     border: 1px solid var(--border-default);
     border-radius: 0.875rem;
-    background: #ffffff;
-    box-shadow: 0 2px 7px rgba(23, 32, 51, 0.05);
+    background: var(--yt-surface);
+    box-shadow: var(--yt-shadow-sm);
   }
 
   .admin-ypop-validation-review-page .review-context-top {
@@ -105,13 +105,13 @@
   }
 
   .admin-ypop-validation-review-page .summary-heading .qualifies {
-    background: #eaf7ef;
-    color: #177245;
+    background: var(--yt-success-bg);
+    color: var(--yt-success-text);
   }
 
   .admin-ypop-validation-review-page .summary-heading .does-not-qualify {
-    background: #fff0ee;
-    color: #b42318;
+    background: var(--yt-danger-bg);
+    color: var(--yt-danger-text);
   }
 
   .admin-ypop-validation-review-page .summary-score {
@@ -135,7 +135,7 @@
     margin-top: 0.625rem;
     overflow: hidden;
     border-radius: 999px;
-    background: #eef2f7;
+    background: var(--yt-surface-subtle);
   }
 
   .admin-ypop-validation-review-page .summary-progress > div {
@@ -149,7 +149,7 @@
     top: 0;
     width: 2px;
     height: 100%;
-    background: #8a5a00;
+    background: var(--yt-warning-text);
   }
 
   .admin-ypop-validation-review-page .summary-metrics {
@@ -202,11 +202,11 @@
     align-items: start;
     border: 1px solid var(--border-default);
     border-radius: 0.625rem;
-    background: #ffffff;
+    background: var(--yt-surface);
   }
 
   .admin-ypop-validation-review-page .mobile-activity-option.is-selected {
-    border-color: #b9d2f2;
+    border-color: var(--yt-border-strong);
     background: var(--primary-soft);
   }
 
@@ -239,7 +239,7 @@
   .admin-ypop-validation-review-page .points-badge {
     padding: 0.2rem 0.45rem;
     border-radius: 999px;
-    background: #f4f7fc;
+    background: var(--yt-surface-subtle);
     color: var(--text-secondary);
     font-size: 0.6875rem;
     font-weight: 600;
@@ -332,7 +332,7 @@
     margin-inline: -0.5rem;
     padding-inline: 0.5rem;
     border-radius: 0.625rem;
-    background: #f8faff;
+    background: var(--yt-surface-subtle);
   }
 
   .admin-ypop-validation-review-page .proof-accordion-trigger {
@@ -372,8 +372,8 @@
   .admin-ypop-validation-review-page .proof-status-strip {
     padding: 0.5rem 0.625rem;
     border-radius: 0.5rem;
-    background: #eaf2ff;
-    color: #175ea8;
+    background: var(--yt-primary-soft);
+    color: var(--yt-primary);
     font-size: 0.75rem;
     font-weight: 600;
   }

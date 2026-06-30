@@ -9,7 +9,7 @@
     padding: 0;
     overflow: hidden;
     border-radius: 16px;
-    background: #ffffff;
+    background: var(--yt-surface);
   }
 
   .yorp-registry-details.mobile-yorp-details-modal,
@@ -27,18 +27,18 @@
     padding: 0;
     align-items: center;
     justify-content: center;
-    border: 1px solid #dce4f0;
+    border: 1px solid var(--yt-border);
     border-radius: 10px;
-    background: #ffffff;
-    color: #667085;
+    background: var(--yt-surface);
+    color: var(--yt-text-muted);
     line-height: 1;
     opacity: 1;
     box-shadow: none;
   }
 
   .yorp-registry-details.mobile-yorp-details-modal > button:hover {
-    background: #f2f5f9;
-    color: #172033;
+    background: var(--yt-surface-subtle);
+    color: var(--yt-text);
   }
 
   .yorp-registry-details.mobile-yorp-details-modal > button svg {
@@ -66,8 +66,8 @@
       max(68px, calc(56px + env(safe-area-inset-right)))
       16px
       max(16px, env(safe-area-inset-left));
-    border-bottom: 1px solid #dce4f0;
-    background: #ffffff;
+    border-bottom: 1px solid var(--yt-border);
+    background: var(--yt-surface);
   }
 
   .yorp-registry-details .organization-identity {
@@ -76,7 +76,7 @@
 
   .yorp-registry-details .organization-identity h2 {
     overflow-wrap: anywhere;
-    color: #172033;
+    color: var(--yt-text);
     font-size: 21px;
     font-weight: 650;
     line-height: 1.25;
@@ -85,7 +85,7 @@
   .yorp-registry-details .organization-location {
     margin-top: 4px;
     overflow-wrap: anywhere;
-    color: #667085;
+    color: var(--yt-text-muted);
     font-size: 13px;
     line-height: 1.4;
   }
@@ -102,7 +102,7 @@
   .yorp-registry-details .organization-classification {
     min-width: 0;
     overflow-wrap: anywhere;
-    color: #667085;
+    color: var(--yt-text-muted);
     font-size: 12px;
     line-height: 1.4;
   }
@@ -126,14 +126,14 @@
       max(12px, env(safe-area-inset-right))
       max(16px, env(safe-area-inset-bottom))
       max(12px, env(safe-area-inset-left));
-    background: #f7f9fc;
+    background: var(--yt-surface-subtle);
   }
 
   .yorp-registry-details .mobile-yorp-section {
     padding: 14px;
-    border: 1px solid #dce4f0;
+    border: 1px solid var(--yt-border);
     border-radius: 12px;
-    background: #ffffff;
+    background: var(--yt-surface);
   }
 
   .yorp-registry-details .mobile-modal-section-heading {
@@ -147,11 +147,11 @@
     width: 16px;
     height: 16px;
     flex: 0 0 auto;
-    color: #2563b8;
+    color: var(--yt-primary);
   }
 
   .yorp-registry-details .mobile-modal-section-heading h3 {
-    color: #172033;
+    color: var(--yt-text);
     font-size: 14px;
     font-weight: 650;
     line-height: 1.35;
@@ -181,7 +181,7 @@
   }
 
   .yorp-registry-details .mobile-yorp-detail-label {
-    color: #77839a;
+    color: var(--yt-text-muted);
     font-size: 10px;
     line-height: 1.3;
     letter-spacing: 0.1em;
@@ -192,14 +192,14 @@
     min-width: 0;
     margin-top: 4px;
     overflow-wrap: anywhere;
-    color: #172033;
+    color: var(--yt-text);
     font-size: 13px;
     font-weight: 500;
     line-height: 1.45;
   }
 
   .yorp-registry-details .mobile-yorp-detail-value a {
-    color: #2563b8;
+    color: var(--yt-primary);
     text-decoration: none;
   }
 
@@ -212,7 +212,7 @@
     min-width: 0;
     margin-top: 14px;
     padding-top: 13px;
-    border-top: 1px solid #e4e9f1;
+    border-top: 1px solid var(--yt-border);
   }
 
   .yorp-registry-details .advocacy-tags {
@@ -228,21 +228,21 @@
     max-width: 100%;
     padding: 4px 9px;
     overflow-wrap: anywhere;
-    border: 1px solid #cfd9e7;
+    border: 1px solid var(--yt-border-strong);
     border-radius: 999px;
-    background: #f9fbfd;
-    color: #40536e;
+    background: var(--yt-surface-subtle);
+    color: var(--yt-text-secondary);
     font-size: 11px;
     font-weight: 500;
     line-height: 1.25;
   }
 
   .admin-yorp-registry-page {
-    --surface-primary: #ffffff;
-    --border-default: #dce4f0;
-    --text-primary: #172033;
-    --text-secondary: #667085;
-    --primary-blue: #2563b8;
+    --surface-primary: var(--yt-surface);
+    --border-default: var(--yt-border);
+    --text-primary: var(--yt-text);
+    --text-secondary: var(--yt-text-muted);
+    --primary-blue: var(--yt-primary);
     min-width: 0;
     max-width: 100%;
   }
@@ -287,7 +287,7 @@
     border: 1px solid var(--border-default);
     border-radius: 0.875rem;
     background: var(--surface-primary);
-    box-shadow: 0 2px 7px rgba(23, 32, 51, 0.05);
+    box-shadow: var(--yt-shadow-sm);
   }
 
   .admin-yorp-registry-page .mobile-yorp-card-header {
@@ -324,10 +324,10 @@
     width: fit-content;
     max-width: 7rem;
     padding: 0.25rem 0.5rem;
-    border: 1px solid #f3dda0;
+    border: 1px solid var(--yt-warning-border);
     border-radius: 999px;
-    background: #fff7df;
-    color: #8a5a00;
+    background: var(--yt-warning-bg);
+    color: var(--yt-warning-text);
     font-size: 0.6875rem;
     font-weight: 600;
     line-height: 1.15;
@@ -336,19 +336,24 @@
   }
 
   .admin-yorp-registry-page .mobile-yorp-status.status-verified {
-    border-color: #cfe0f8;
-    background: #eaf2ff;
-    color: #175ea8;
+    border-color: var(--yt-success-border);
+    background: var(--yt-success-bg);
+    color: var(--yt-success-text);
   }
 
   .admin-yorp-registry-page .mobile-yorp-status.status-needs-update,
   .admin-yorp-registry-page .mobile-yorp-status.status-incomplete,
-  .admin-yorp-registry-page .mobile-yorp-status.status-suspended-inactive,
   .admin-yorp-registry-page .mobile-yorp-status.status-expired,
   .admin-yorp-registry-page .mobile-yorp-status.status-needs-renewal {
-    border-color: #f5c6c1;
-    background: #fff0ee;
-    color: #b42318;
+    border-color: var(--yt-revision-border);
+    background: var(--yt-revision-bg);
+    color: var(--yt-revision-text);
+  }
+
+  .admin-yorp-registry-page .mobile-yorp-status.status-suspended-inactive {
+    border-color: var(--yt-danger-border);
+    background: var(--yt-danger-bg);
+    color: var(--yt-danger-text);
   }
 
   .admin-yorp-registry-page .mobile-yorp-summary {

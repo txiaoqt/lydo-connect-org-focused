@@ -17,7 +17,7 @@ export const UserFeatureIcon = ({
   <span
     aria-hidden="true"
     className={cn(
-      "user-feature-icon inline-grid shrink-0 place-items-center border border-primary/15 bg-primary/5 text-primary",
+      "user-feature-icon inline-grid shrink-0 place-items-center border border-primary/15 bg-primary-soft text-primary",
       size === "compact" ? "h-8 w-8 rounded-[10px]" : "h-10 w-10 rounded-xl",
       className,
     )}

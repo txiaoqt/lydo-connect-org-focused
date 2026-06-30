@@ -1,9 +1,9 @@
 @media (max-width: 1023px) {
   .admin-budget-monitoring-page {
-    --border-default: #dce4f0;
-    --text-primary: #172033;
-    --text-secondary: #667085;
-    --primary-blue: #2563b8;
+    --border-default: var(--yt-border);
+    --text-primary: var(--yt-text);
+    --text-secondary: var(--yt-text-muted);
+    --primary-blue: var(--yt-primary);
     min-width: 0;
     max-width: 100%;
   }
@@ -36,7 +36,7 @@
     overflow: hidden;
     border: 1px solid var(--border-default);
     border-radius: 0.625rem;
-    background: #ffffff;
+    background: var(--yt-surface);
   }
 
   .admin-budget-monitoring-page .monitoring-tabs > button {
@@ -76,7 +76,7 @@
     min-width: 0;
     max-width: 100%;
     border-color: var(--border-default);
-    background: #ffffff;
+    background: var(--yt-surface);
   }
 
   .admin-budget-monitoring-page .allocation-summary-card > div {
@@ -144,8 +144,8 @@
     overflow: hidden;
     border: 1px solid var(--border-default);
     border-radius: 0.875rem;
-    background: #ffffff;
-    box-shadow: 0 2px 7px rgba(23, 32, 51, 0.045);
+    background: var(--yt-surface);
+    box-shadow: var(--yt-shadow-sm);
   }
 
   .admin-budget-monitoring-page .barangay-card-heading {
@@ -238,7 +238,7 @@
     margin-top: 0.5rem;
     overflow: hidden;
     border-radius: 999px;
-    background: #e8edf5;
+    background: var(--yt-border);
   }
 
   .admin-budget-monitoring-page .utilization-fill {
@@ -257,7 +257,7 @@
     gap: 0.375rem;
     border: 1px solid var(--border-default);
     border-radius: 0.625rem;
-    background: #ffffff;
+    background: var(--yt-surface);
     color: var(--primary-blue);
     font-size: 0.8125rem;
     font-weight: 600;
@@ -376,8 +376,8 @@
   .admin-budget-monitoring-page .mobile-budget-card {
     border-color: var(--border-default);
     border-radius: 0.875rem;
-    background: #ffffff;
-    box-shadow: 0 2px 7px rgba(23, 32, 51, 0.05);
+    background: var(--yt-surface);
+    box-shadow: var(--yt-shadow-sm);
   }
 
   .admin-budget-monitoring-page .mobile-budget-card > div {

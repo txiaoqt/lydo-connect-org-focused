@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/portal/StatusBadge";
 
 const portalIconToneMap = {
-  primary: "border-primary/15 bg-primary/10 text-primary",
-  sky: "border-sky-500/15 bg-sky-500/10 text-sky-600",
+  primary: "border-primary/15 bg-primary-soft text-primary",
+  sky: "border-primary/15 bg-primary-soft text-primary",
   emerald: "border-emerald-500/15 bg-emerald-500/10 text-emerald-600",
   amber: "border-amber-500/15 bg-amber-500/10 text-amber-600",
   orange: "border-orange-500/15 bg-orange-500/10 text-orange-600",
   red: "border-red-500/15 bg-red-500/10 text-red-600",
-  violet: "border-violet-500/15 bg-violet-500/10 text-violet-600",
+  violet: "border-primary/15 bg-primary-soft text-primary",
 } as const;
 
 type PortalIconTone = keyof typeof portalIconToneMap;

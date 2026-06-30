@@ -2538,7 +2538,7 @@ export default function UserPortal({ section }: { section: string }) {
             ctaLabel: "Open Liquidation",
             onClick: () => navigate(userRouteMap["liquidation-reporting"]),
             icon: CalendarDays,
-            tone: "bg-violet-500/10 text-violet-600",
+            tone: "bg-primary-soft text-primary",
           });
         } else if (latestBudget?.status === "approved_for_ftf_green") {
           dashboardTasks.push({
@@ -5007,7 +5007,7 @@ export default function UserPortal({ section }: { section: string }) {
                             type="button"
                             disabled={savingBudgetRequest}
                             onClick={() => void saveBudgetRequest("draft")}
-                            className="order-2 w-full border border-input bg-background text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground sm:w-auto lg:order-none lg:border-0 lg:bg-primary lg:text-primary-foreground lg:hover:bg-primary/90"
+                            className="order-2 w-full border border-input bg-background text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground sm:w-auto lg:order-none lg:border-0 lg:bg-primary lg:text-primary-foreground lg:hover:bg-primary-hover lg:active:bg-primary-active"
                           >
                             {savingBudgetRequest ? "Saving..." : "Save Draft"}
                           </Button>
@@ -5016,7 +5016,7 @@ export default function UserPortal({ section }: { section: string }) {
                             variant="outline"
                             disabled={savingBudgetRequest}
                             onClick={() => void saveBudgetRequest("submitted")}
-                            className="order-1 w-full bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground sm:w-auto lg:order-none lg:border lg:border-primary/55 lg:bg-card lg:text-primary lg:hover:bg-primary/5 lg:hover:text-primary"
+                            className="order-1 w-full bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active hover:text-primary-foreground sm:w-auto lg:order-none lg:border lg:border-primary/55 lg:bg-card lg:text-primary lg:hover:bg-primary/5 lg:hover:text-primary lg:active:bg-primary-soft"
                           >
                             Submit for Review
                           </Button>

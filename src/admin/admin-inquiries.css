@@ -5,14 +5,14 @@
 
 @media (max-width: 1023px) {
   .admin-inquiries-page {
-    --page-background: #f6f8fc;
-    --surface-primary: #ffffff;
-    --surface-soft: #f4f7fc;
-    --border-default: #dce4f0;
-    --text-primary: #172033;
-    --text-secondary: #667085;
-    --primary-blue: #2563b8;
-    --primary-soft: #eaf2ff;
+    --page-background: var(--yt-bg);
+    --surface-primary: var(--yt-surface);
+    --surface-soft: var(--yt-surface-subtle);
+    --border-default: var(--yt-border);
+    --text-primary: var(--yt-text);
+    --text-secondary: var(--yt-text-muted);
+    --primary-blue: var(--yt-primary);
+    --primary-soft: var(--yt-primary-soft);
     min-width: 0;
     max-width: 100%;
   }
@@ -74,7 +74,7 @@
     border: 1px solid var(--border-default);
     border-radius: 0.875rem;
     background: var(--surface-primary);
-    box-shadow: 0 2px 8px rgba(23, 32, 51, 0.05);
+    box-shadow: var(--yt-shadow-sm);
   }
 
   .admin-inquiries-page .mobile-inquiry-header {

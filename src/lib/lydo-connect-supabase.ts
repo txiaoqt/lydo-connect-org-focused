@@ -880,6 +880,17 @@ const fetchInquiries = async (organizationId?: string) => {
   return (data as InquiryRow[] | null) ?? [];
 };
 
+const fetchActivityLogs = async (organizationId: string) => {
+  const { data, error } = await supabase!
+    .from("activity_logs")
+    .select("id,actor_user_id,organization_id,action,related_type,related_id,description,created_at")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as ActivityLogRow[] | null) ?? [];
+};
+
 export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedState> | null> => {
   if (!supabase) return null;
 
@@ -923,18 +934,20 @@ export const loadLydoConnectSupabaseState = async (): Promise<Partial<LydoSeedSt
     ...sharedState,
   };
 
-  const [latestSubmission, budgetRows, liquidationRows, ypopPeriodRows, ypopActivityRows] = await Promise.all([
+  const [latestSubmission, budgetRows, liquidationRows, ypopPeriodRows, ypopActivityRows, activityLogRows] = await Promise.all([
     fetchLatestSubmission(organizationProfile.id),
     fetchBudgetRequests(organizationProfile.id),
     fetchLiquidationReports(organizationProfile.id),
     supabase!.from("ypop_periods").select("*").order("created_at", { ascending: false }).then((r) => r.data ?? []),
     supabase!.from("ypop_city_activities").select("*").order("created_at", { ascending: true }).then((r) => r.data ?? []),
+    fetchActivityLogs(organizationProfile.id),
   ]);
 
   remoteState.budgetRequests = budgetRows.map(mapBudgetRequest);
   remoteState.liquidationReports = liquidationRows.map(mapLiquidationReport);
   remoteState.ypopPeriods = (ypopPeriodRows as YpopPeriodRow[]).map(mapYpopPeriod);
   remoteState.ypopCityActivities = (ypopActivityRows as YpopCityActivityRow[]).map(mapYpopCityActivity);
+  remoteState.activityLogs = activityLogRows.map(mapActivityLog);
 
   const budgetRequestIds = budgetRows.map((row) => row.id);
   const liquidationReportIds = liquidationRows.map((row) => row.id);

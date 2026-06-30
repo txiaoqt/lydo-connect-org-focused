@@ -2537,6 +2537,18 @@ drop policy if exists activity_logs_admin_only on public.activity_logs;
 create policy activity_logs_admin_only on public.activity_logs
 for all using (public.current_user_is_admin()) with check (public.current_user_is_admin());
 
+drop policy if exists activity_logs_organization_read on public.activity_logs;
+create policy activity_logs_organization_read on public.activity_logs
+for select using (
+  exists (
+    select 1
+    from public.organization_profiles op
+    where op.id = activity_logs.organization_id
+      and op.user_id = auth.uid()
+  )
+);
+grant select on public.activity_logs to authenticated;
+
 -- Legacy compatibility policies
 drop policy if exists organizations_public_read on public.organizations;
 create policy organizations_public_read on public.organizations
