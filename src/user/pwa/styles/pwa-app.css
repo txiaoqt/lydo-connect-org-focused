@@ -212,6 +212,12 @@
 .ytrace-pwa-app .pwa-empty-copy { color: var(--pwa-muted); font-size: 0.78rem; line-height: 1.5; }
 
 .ytrace-pwa-app .pwa-document-summary { min-width: 0; max-width: 100%; overflow: hidden; }
+.ytrace-pwa-app .pwa-document-profile-gate > section { display: flex; min-width: 0; align-items: flex-start; gap: 0.8rem; }
+.ytrace-pwa-app .pwa-document-profile-gate > section > div { min-width: 0; flex: 1; }
+.ytrace-pwa-app .pwa-document-profile-gate h2 { margin: 0; overflow-wrap: anywhere; font-size: 1rem; line-height: 1.35; }
+.ytrace-pwa-app .pwa-document-profile-gate p { margin: 0.4rem 0 0; overflow-wrap: anywhere; color: var(--pwa-muted); font-size: 0.76rem; line-height: 1.5; }
+.ytrace-pwa-app .pwa-document-profile-gate .pwa-profile-progress { margin-top: 0.85rem; }
+.ytrace-pwa-app .pwa-document-profile-gate small { display: block; margin-top: 0.35rem; color: var(--pwa-blue-strong); font-size: 0.68rem; font-weight: 700; }
 .ytrace-pwa-app .pwa-document-summary-heading { display: flex; min-width: 0; max-width: 100%; align-items: flex-start; gap: 0.75rem; }
 .ytrace-pwa-app .pwa-document-summary-heading > div { min-width: 0; max-width: 100%; }
 .ytrace-pwa-app .pwa-document-summary h2 { margin: 0; overflow-wrap: anywhere; font-size: 1rem; line-height: 1.35; }

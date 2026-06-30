@@ -309,7 +309,7 @@ export function PwaAccountSettings({ data }: { data: PortalData }) {
 
 export function PwaAboutSettings() {
   const runtime = usePwaRuntimeStatus();
-  const version = import.meta.env.VITE_APP_VERSION || "0.0.0";
+  const version = import.meta.env.VITE_APP_VERSION || "1.0.0+local";
   const updateLabel = runtime.updateState === "checking"
     ? "Checking..."
     : runtime.updateState === "available"

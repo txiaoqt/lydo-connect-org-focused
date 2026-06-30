@@ -13,9 +13,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import BrandLogo from "@/components/BrandLogo";
+import { PolicyContent } from "@/components/PolicyContent";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
+import { resolveDisplayPolicy } from "@/lib/ytrace-policy";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +40,14 @@ import {
 type BarangayOption = { id: string; name: string };
 type PasigDistrict = "District I" | "District II";
 type EmailAvailability = "idle" | "checking" | "available" | "registered" | "error";
+type LegalPolicyType = "terms" | "privacy";
+type PolicyVersion = {
+  title: string;
+  terms_content: string;
+  privacy_content: string;
+  version: string;
+  effective_date: string | null;
+};
 
 const pasigDistrictBarangays: Record<PasigDistrict, BarangayOption[]> = {
   "District I": [
@@ -92,6 +110,13 @@ const FormSection = ({ title, children }: { title: string; children: React.React
   </div>
 );
 
+const RequiredLabel = ({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) => (
+  <Label htmlFor={htmlFor}>
+    {children} <span className="text-destructive" aria-hidden="true">*</span>
+    <span className="sr-only"> required</span>
+  </Label>
+);
+
 const SignUp = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -109,6 +134,8 @@ const SignUp = () => {
   const [agreedToPolicies, setAgreedToPolicies] = useState(false);
   const [inlineError, setInlineError] = useState("");
   const [emailAvailability, setEmailAvailability] = useState<EmailAvailability>("idle");
+  const [legalPolicyType, setLegalPolicyType] = useState<LegalPolicyType | null>(null);
+  const [activePolicy, setActivePolicy] = useState<PolicyVersion | null>(null);
 
   // Track which fields have been blurred so we only show errors after interaction
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -178,10 +205,46 @@ const SignUp = () => {
     };
   }, [email, isGmailEmail]);
 
+  useEffect(() => {
+    let active = true;
+    if (!supabase) return () => { active = false; };
+    void supabase
+      .from("policy_versions")
+      .select("title,terms_content,privacy_content,version,effective_date")
+      .eq("is_active", true)
+      .order("effective_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active && data) setActivePolicy(data as PolicyVersion);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const displayPolicy = resolveDisplayPolicy(activePolicy);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setInlineError("");
 
+    const missingFields = [
+      !name.trim() ? "organization name" : "",
+      !email.trim() ? "email address" : "",
+      !normalizedContactNumber ? "contact number" : "",
+      !district ? "district" : "",
+      !barangayId ? "barangay" : "",
+      isExistingOrganization && !normalizedIdentifierNumber ? "organization identifier number" : "",
+      !password ? "password" : "",
+      !confirmPassword ? "confirm password" : "",
+      !agreedToPolicies ? "Terms of Service and Privacy Policy agreement" : "",
+    ].filter(Boolean);
+
+    if (missingFields.length) {
+      setTouched(new Set(["name", "email", "contactNumber", "district", "barangay", "identifier", "password", "confirmPassword", "policies"]));
+      setInlineError(`Complete all required fields: ${missingFields.join(", ")}.`);
+      return;
+    }
     if (!passwordsMatch) {
       setInlineError("Password and confirm password must match.");
       return;
@@ -219,6 +282,11 @@ const SignUp = () => {
   };
 
   const proceedCreateAccount = async () => {
+    if (!canSubmit) {
+      setIsConfirmOpen(false);
+      setInlineError("Some required details are missing or invalid. Review every field before creating the account.");
+      return;
+    }
     setIsCreating(true);
     const result = await signUp({
       email: email.trim().toLowerCase(),
@@ -286,7 +354,7 @@ const SignUp = () => {
             {/* ── Section 1: Organization details ── */}
             <FormSection title="Organization details">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Organization Name</Label>
+                <RequiredLabel htmlFor="name">Organization Name</RequiredLabel>
                 <Input
                   id="name"
                   placeholder="e.g. Kapitolyo Youth Council"
@@ -295,10 +363,11 @@ const SignUp = () => {
                   onBlur={() => touch("name")}
                   required
                 />
+                {touched.has("name") && !name.trim() ? <p className="text-xs text-destructive">Organization name is required.</p> : null}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email address</Label>
+                <RequiredLabel htmlFor="email">Email address</RequiredLabel>
                 <Input
                   id="email"
                   type="email"
@@ -312,6 +381,9 @@ const SignUp = () => {
                   required
                 />
                 <div id="signup-email-status" aria-live="polite">
+                  {touched.has("email") && !email.trim() ? (
+                    <p className="text-xs text-destructive">Email address is required.</p>
+                  ) : null}
                   {touched.has("email") && email && !isGmailEmail ? (
                     <p className="text-xs text-destructive">Email must end with @gmail.com.</p>
                   ) : null}
@@ -338,7 +410,7 @@ const SignUp = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="contactNumber">Contact Number</Label>
+                <RequiredLabel htmlFor="contactNumber">Contact Number</RequiredLabel>
                 <Input
                   id="contactNumber"
                   placeholder="09XXXXXXXXX"
@@ -349,11 +421,13 @@ const SignUp = () => {
                   maxLength={11}
                   required
                 />
-                {touched.has("contactNumber") && contactNumber && !isContactNumberValid && (
+                {touched.has("contactNumber") && !normalizedContactNumber ? (
+                  <p className="text-xs text-destructive">Contact number is required.</p>
+                ) : touched.has("contactNumber") && !isContactNumberValid ? (
                   <p className="text-xs text-destructive">
                     Must be 11 digits starting with 09.
                   </p>
-                )}
+                ) : null}
               </div>
             </FormSection>
 
@@ -361,7 +435,7 @@ const SignUp = () => {
             <FormSection title="Location">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="district">District</Label>
+                  <RequiredLabel htmlFor="district">District</RequiredLabel>
                   <Select
                     value={district}
                     onValueChange={(v) => { setDistrict(v as PasigDistrict); touch("district"); }}
@@ -375,10 +449,11 @@ const SignUp = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {touched.has("district") && !district ? <p className="text-xs text-destructive">District is required.</p> : null}
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="barangay">Barangay</Label>
+                  <RequiredLabel htmlFor="barangay">Barangay</RequiredLabel>
                   <Select
                     value={barangayId}
                     onValueChange={(v) => { setBarangayId(v); touch("barangay"); }}
@@ -393,6 +468,7 @@ const SignUp = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {touched.has("barangay") && !barangayId ? <p className="text-xs text-destructive">Barangay is required.</p> : null}
                 </div>
               </div>
             </FormSection>
@@ -424,7 +500,7 @@ const SignUp = () => {
                 }`}
               >
                 <div className="space-y-1.5 pt-1">
-                  <Label htmlFor="organizationIdentifierNumber">Organization Identifier Number</Label>
+                  <RequiredLabel htmlFor="organizationIdentifierNumber">Organization Identifier Number</RequiredLabel>
                   <Input
                     id="organizationIdentifierNumber"
                     placeholder="Enter your YORP Pasig identifier number"
@@ -444,7 +520,7 @@ const SignUp = () => {
             {/* ── Section 4: Account security ── */}
             <FormSection title="Account security">
               <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+                <RequiredLabel htmlFor="password">Password</RequiredLabel>
                 <div className="relative">
                   <Input
                     id="password"
@@ -452,6 +528,7 @@ const SignUp = () => {
                     placeholder="Create a strong password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onBlur={() => touch("password")}
                     className="pr-10"
                     autoComplete="new-password"
                     required
@@ -465,10 +542,11 @@ const SignUp = () => {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {touched.has("password") && !password ? <p className="text-xs text-destructive">Password is required.</p> : null}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <RequiredLabel htmlFor="confirmPassword">Confirm Password</RequiredLabel>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
@@ -490,9 +568,11 @@ const SignUp = () => {
                     {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {touched.has("confirmPassword") && confirmPassword && !passwordsMatch && (
+                {touched.has("confirmPassword") && !confirmPassword ? (
+                  <p className="text-xs text-destructive">Please confirm your password.</p>
+                ) : touched.has("confirmPassword") && !passwordsMatch ? (
                   <p className="text-xs text-destructive">Passwords do not match.</p>
-                )}
+                ) : null}
               </div>
             </FormSection>
 
@@ -501,29 +581,50 @@ const SignUp = () => {
               <Checkbox
                 id="policy-agreement"
                 checked={agreedToPolicies}
-                onCheckedChange={(checked) => setAgreedToPolicies(Boolean(checked))}
+                onCheckedChange={(checked) => {
+                  setAgreedToPolicies(Boolean(checked));
+                  touch("policies");
+                }}
                 disabled={isCreating}
                 className="shrink-0 mt-[3px]"
               />
               <Label htmlFor="policy-agreement" className="text-sm font-normal leading-relaxed cursor-pointer">
+                <span className="text-destructive" aria-hidden="true">*</span>{" "}
                 I have read and agree to the{" "}
-                <Link to="/terms" className="text-primary hover:underline font-medium" target="_blank" rel="noopener">
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setLegalPolicyType("terms");
+                  }}
+                >
                   Terms of Service
-                </Link>{" "}
+                </button>{" "}
                 and{" "}
-                <Link to="/privacy" className="text-primary hover:underline font-medium" target="_blank" rel="noopener">
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setLegalPolicyType("privacy");
+                  }}
+                >
                   Privacy Policy
-                </Link>
+                </button>
                 .
               </Label>
             </div>
+            {touched.has("policies") && !agreedToPolicies ? <p className="-mt-4 text-xs text-destructive">You must accept the Terms of Service and Privacy Policy.</p> : null}
 
             {/* Submit */}
             <div className="space-y-2.5">
               <Button
                 type="submit"
                 className="w-full font-semibold"
-                disabled={!canSubmit || isCreating}
+                disabled={!useSupabaseAuth || isCreating || emailAvailability === "checking"}
               >
                 {isCreating ? (
                   <>
@@ -560,6 +661,47 @@ const SignUp = () => {
         </div>
       </div>
 
+      <Dialog open={legalPolicyType !== null} onOpenChange={(open) => { if (!open) setLegalPolicyType(null); }}>
+        <DialogContent className="grid max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-3xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden p-0">
+          <DialogHeader className="px-5 pt-5 pr-12 sm:px-6 sm:pt-6">
+            <DialogTitle>{legalPolicyType === "privacy" ? "Privacy Policy" : "Terms of Service"}</DialogTitle>
+            <DialogDescription>
+              Version {displayPolicy.version} · Effective {displayPolicy.effectiveDate}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mx-5 grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/40 p-1 sm:mx-6" role="tablist" aria-label="Legal policies">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={legalPolicyType === "terms"}
+              className={`min-h-11 rounded-lg px-3 text-sm font-medium transition-colors ${legalPolicyType === "terms" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setLegalPolicyType("terms")}
+            >
+              Terms of Service
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={legalPolicyType === "privacy"}
+              className={`min-h-11 rounded-lg px-3 text-sm font-medium transition-colors ${legalPolicyType === "privacy" ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setLegalPolicyType("privacy")}
+            >
+              Privacy Policy
+            </button>
+          </div>
+          <div className="min-h-0 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6" tabIndex={0}>
+            <PolicyContent
+              content={legalPolicyType === "privacy" ? displayPolicy.privacy_content : displayPolicy.terms_content}
+              hideDocumentTitle
+              hideMetadata
+            />
+          </div>
+          <DialogFooter className="border-t border-border px-5 py-4 sm:px-6">
+            <Button type="button" className="w-full sm:w-auto" onClick={() => setLegalPolicyType(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Confirmation dialog */}
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
@@ -576,6 +718,10 @@ const SignUp = () => {
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">Email</span>
                 <span className="font-medium text-foreground text-right">{email.trim() || "—"}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-muted-foreground">Contact number</span>
+                <span className="font-medium text-foreground text-right">{normalizedContactNumber}</span>
               </div>
               <div className="flex justify-between gap-2">
                 <span className="text-muted-foreground">District</span>

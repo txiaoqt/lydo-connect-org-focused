@@ -100,6 +100,7 @@ export function usePwaPortalData() {
       : null;
 
     const profilePercent = getProfileCompletionPercent(profile);
+    const profileComplete = profilePercent === 100;
     const notifications = [...state.notifications]
       .filter((item) => item.userId === user?.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -135,14 +136,14 @@ export function usePwaPortalData() {
       tone: "success",
       action: null,
     };
-    if (missingDocuments) {
+    if (!profileComplete) {
+      briefing = { title: "Your organization profile is incomplete.", description: "Complete the required organization details before accessing document submission.", tone: "warning", action: { label: "Complete Profile", path: PWA_ROUTES.profileEdit } };
+    } else if (missingDocuments) {
       briefing = { title: `${missingDocuments} required document${missingDocuments === 1 ? " is" : "s are"} still missing.`, description: "Upload the remaining required files for admin review.", tone: "warning", action: { label: "Continue Documents", path: PWA_ROUTES.documentsManage } };
     } else if (revisionDocuments.length) {
       briefing = { title: `${revisionDocuments.length === 1 ? "One document needs" : `${revisionDocuments.length} documents need`} revision.`, description: "Review the latest admin remarks and upload the corrected file.", tone: "warning", action: { label: "Review Required Changes", path: PWA_ROUTES.documents } };
     } else if (profile?.profileStatus === "pending_review") {
       briefing = { title: "Your registration is awaiting verification.", description: "LYDO / PCYDO is reviewing your organization profile. You can monitor the current status while you wait.", tone: "info", action: { label: "View Verification Status", path: PWA_ROUTES.profile } };
-    } else if (!profile || profile.profileStatus === "incomplete") {
-      briefing = { title: "Your organization profile is incomplete.", description: "Complete the required organization details to continue the compliance workflow.", tone: "warning", action: { label: "Complete Profile", path: PWA_ROUTES.profile } };
     } else if (!budgetEligibility.eligible) {
       briefing = { title: "Complete YPOP validation first.", description: "Your organization must qualify in the active YPOP period before creating an activity budget request.", tone: "info", action: { label: "Open YPOP Incentive", path: PWA_ROUTES.ypop } };
     } else if (!budgetRequests.length) {
@@ -164,10 +165,10 @@ export function usePwaPortalData() {
     }
 
     const actions: Array<{ title: string; detail: string; path: string; kind: string }> = [];
-    if (missingDocuments) actions.push({ title: "Continue Document Submission", detail: `${missingDocuments} required file${missingDocuments === 1 ? "" : "s"} remaining.`, path: PWA_ROUTES.documentsManage, kind: "documents" });
-    if (revisionDocuments.length) actions.push({ title: "Review Required Changes", detail: "Correct the documents flagged by the admin.", path: PWA_ROUTES.documents, kind: "documents" });
-    if (profile?.profileStatus === "pending_review") actions.push({ title: "View Verification Status", detail: "Your organization profile is awaiting admin verification.", path: PWA_ROUTES.profile, kind: "profile" });
-    if (!profile || profile.profileStatus === "incomplete") actions.push({ title: "Complete Profile", detail: "Finish your organization information.", path: PWA_ROUTES.profile, kind: "profile" });
+    if (profileComplete && missingDocuments) actions.push({ title: "Continue Document Submission", detail: `${missingDocuments} required file${missingDocuments === 1 ? "" : "s"} remaining.`, path: PWA_ROUTES.documentsManage, kind: "documents" });
+    if (profileComplete && revisionDocuments.length) actions.push({ title: "Review Required Changes", detail: "Correct the documents flagged by the admin.", path: PWA_ROUTES.documents, kind: "documents" });
+    if (profileComplete && profile?.profileStatus === "pending_review") actions.push({ title: "View Verification Status", detail: "Your organization profile is awaiting admin verification.", path: PWA_ROUTES.profile, kind: "profile" });
+    if (!profileComplete) actions.push({ title: "Complete Profile", detail: "Finish all required organization information before submitting documents.", path: PWA_ROUTES.profileEdit, kind: "profile" });
     if (!budgetEligibility.eligible) actions.push({ title: "Open YPOP Incentive", detail: "Complete the active period qualification workflow.", path: PWA_ROUTES.ypop, kind: "budget" });
     if (budgetEligibility.eligible && !budgetRequests.length) actions.push({ title: "Create Budget Request", detail: "Start an eligible activity budget request.", path: PWA_ROUTES.budgetNew, kind: "budget" });
     if (revisionBudgetRequests.length) actions.push({ title: "Revise Budget Request", detail: "Address the latest review feedback.", path: PWA_ROUTES.budgets, kind: "budget" });

@@ -1,5 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { FileText, UserRoundCheck } from "lucide-react";
+import { isOrganizationProfileComplete } from "@/lib/organization-profile-domain";
 import { PwaAppShell } from "./PwaAppShell";
 import { PwaMorePage } from "./PwaMorePage";
 import { PwaAboutPage, PwaContactPage, PwaFaqPage, PwaLegalPage } from "./PwaInformationPages";
@@ -35,6 +37,33 @@ import {
 } from "./settings/PwaSettingsPages";
 import "./styles/pwa-app.css";
 
+function PwaDocumentAccessGuard({ data, children }: {
+  data: ReturnType<typeof usePwaPortalData>;
+  children: ReactNode;
+}) {
+  const { go } = usePwaNavigation();
+  if (isOrganizationProfileComplete(data.profile)) return <>{children}</>;
+
+  return (
+    <div className="pwa-stack pwa-document-profile-gate">
+      <section className="pwa-card">
+        <span className="pwa-record-icon"><FileText aria-hidden="true" /></span>
+        <div>
+          <h2>Complete your profile first</h2>
+          <p>Finish and save all required organization information before accessing document submission.</p>
+          <div className="pwa-profile-progress" role="progressbar" aria-label="Profile completeness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={data.profilePercent}>
+            <span style={{ width: `${data.profilePercent}%` }} />
+          </div>
+          <small>{data.profilePercent}% complete</small>
+        </div>
+      </section>
+      <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.profileEdit)}>
+        <UserRoundCheck aria-hidden="true" /> Complete Profile
+      </button>
+    </div>
+  );
+}
+
 export default function PwaUserPortal() {
   const data = usePwaPortalData();
   const { pathname } = useLocation();
@@ -64,9 +93,9 @@ export default function PwaUserPortal() {
     >
       <Routes>
         <Route index element={<PwaDashboard data={data} />} />
-        <Route path="documents" element={<PwaDocumentList data={data} />} />
-        <Route path="documents/manage" element={<PwaDocumentManager data={data} />} />
-        <Route path="documents/:documentId" element={<PwaDocumentDetail data={data} />} />
+        <Route path="documents" element={<PwaDocumentAccessGuard data={data}><PwaDocumentList data={data} /></PwaDocumentAccessGuard>} />
+        <Route path="documents/manage" element={<PwaDocumentAccessGuard data={data}><PwaDocumentManager data={data} /></PwaDocumentAccessGuard>} />
+        <Route path="documents/:documentId" element={<PwaDocumentAccessGuard data={data}><PwaDocumentDetail data={data} /></PwaDocumentAccessGuard>} />
         <Route path="budgets" element={<PwaBudgetList data={data} />} />
         <Route path="budgets/new" element={<PwaBudgetForm data={data} mode="new" />} />
         <Route path="budgets/:requestId" element={<PwaBudgetDetail data={data} />} />
