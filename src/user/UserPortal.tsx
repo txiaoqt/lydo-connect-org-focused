@@ -41,6 +41,7 @@ import {
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -391,6 +392,7 @@ const createBlankBudgetRequest = (organizationId: string, submittedBy: string): 
 
 export default function UserPortal({ section }: { section: string }) {
   const navigate = useNavigate();
+  const { confirmAction, confirmationDialog } = useConfirmActionDialog();
   const { signOut, user } = useAuth();
   const {
     state,
@@ -7228,8 +7230,15 @@ export default function UserPortal({ section }: { section: string }) {
             </div>
           );
         }
+        const availableYpopSemesterKeys = new Set(
+          state.ypopPeriods.map((period) => period.semesterKey),
+        );
         const orgYpopEntries = state.ypopEntries
-          .filter((e) => e.organizationId === (currentProfile?.id ?? ""))
+          .filter(
+            (entry) =>
+              entry.organizationId === (currentProfile?.id ?? "") &&
+              availableYpopSemesterKeys.has(entry.semester),
+          )
           .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         const ypopFilesByEntryId = new Map(
           orgYpopEntries.map((e) => [
@@ -7249,16 +7258,17 @@ export default function UserPortal({ section }: { section: string }) {
         const availableYpopActivities = ypopActivitiesSorted.filter((activity) => !ypopParticipationByActivityId.has(activity.id));
 
         const handleSubmitYpop = async (entry: YPOPEntry) => {
+          const note = ypopNotesByEntryId[entry.id] ?? "";
+          if (!await confirmAction({
+            title: entry.status === "needs_revision" ? "Resubmit for city-led validation?" : "Submit for city-led validation?",
+            description: `Your joined city-led activities and proof files will be sent to the admin for validation.${note.trim() ? "\n\nYour message for the admin will be included." : ""}`,
+            confirmLabel: entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation",
+          })) return;
           setSubmittingYpopId(entry.id);
           try {
-            const note = ypopNotesByEntryId[entry.id] ?? "";
             const patch = { status: "submitted" as const, submissionNote: note, submittedAt: new Date().toISOString() };
-            try {
-              const saved = await updateYpopEntryInSupabase(entry.id, patch);
-              updateYPOPEntry(saved.id, saved);
-            } catch {
-              updateYPOPEntry(entry.id, patch);
-            }
+            const saved = await updateYpopEntryInSupabase(entry.id, patch);
+            updateYPOPEntry(saved.id, saved);
             setYpopNotesByEntryId((prev) => { const next = { ...prev }; delete next[entry.id]; return next; });
             toast({ title: "YPOP submitted", description: "Your participation records have been submitted for admin validation." });
           } catch (err) {
@@ -7333,6 +7343,14 @@ export default function UserPortal({ section }: { section: string }) {
 
         const handleSaveYpopOrgActivity = async (entry: YPOPEntry) => {
           if (!currentProfile?.id) return;
+          if (entry.status !== "qualified") {
+            toast({
+              title: "Qualification required",
+              description: "PPA logging unlocks only after the admin marks this semester as qualified.",
+              variant: "destructive",
+            });
+            return;
+          }
           const activityName = ypopOrgActivityDraft.activityName.trim();
           const venue = ypopOrgActivityDraft.venue.trim();
           const activityDate = ypopOrgActivityDraft.activityDate.trim();
@@ -7368,27 +7386,12 @@ export default function UserPortal({ section }: { section: string }) {
                 updatedAt: now,
                 adminRemarks: existing?.status === "needs_revision" ? existing.adminRemarks : "",
               };
-              try {
-                const saved = await updateYpopOrgActivityInSupabase(editingYpopOrgActivityId, updatePatch);
-                updateYPOPOrgActivity(saved.id, saved);
-              } catch {
-                updateYPOPOrgActivity(editingYpopOrgActivityId, updatePatch);
-              }
+              const saved = await updateYpopOrgActivityInSupabase(editingYpopOrgActivityId, updatePatch);
+              updateYPOPOrgActivity(saved.id, saved);
               toast({ title: "PPA log updated", description: "Your organization-initiated activity draft has been updated." });
             } else {
-              try {
-                const saved = await createYpopOrgActivityInSupabase(payload);
-                createYPOPOrgActivity(saved);
-              } catch {
-                createYPOPOrgActivity({
-                  id: `ypop-org-activity-${Date.now()}`,
-                  ...payload,
-                  approvedAt: "",
-                  revisionHistory: [],
-                  createdAt: now,
-                  updatedAt: now,
-                });
-              }
+              const saved = await createYpopOrgActivityInSupabase(payload);
+              createYPOPOrgActivity(saved);
               toast({ title: "PPA log created", description: "Your organization-initiated activity draft is ready for file attachments and submission." });
             }
             handleYpopOrgActivityModalChange(false);
@@ -7403,20 +7406,8 @@ export default function UserPortal({ section }: { section: string }) {
           setYpopOrgActivityUploadingId(activityId);
           try {
             const orgId = currentProfile?.id ?? "";
-            try {
-              const saved = await uploadYpopOrgActivityFileToSupabase({ orgActivityId: activityId, organizationId: orgId, file });
-              createYPOPOrgActivityFile(saved);
-            } catch {
-              createYPOPOrgActivityFile({
-                id: `ypop-org-activity-file-${Date.now()}`,
-                orgActivityId: activityId,
-                organizationId: orgId,
-                fileName: file.name,
-                fileUrl: "",
-                fileType: file.type,
-                uploadedAt: new Date().toISOString(),
-              });
-            }
+            const saved = await uploadYpopOrgActivityFileToSupabase({ orgActivityId: activityId, organizationId: orgId, file });
+            createYPOPOrgActivityFile(saved);
             toast({ title: "Attachment added", description: `${file.name} has been attached to the PPA log.` });
           } catch (error) {
             toast({ title: "Upload failed", description: error instanceof Error ? error.message : "An error occurred.", variant: "destructive" });
@@ -7446,7 +7437,7 @@ export default function UserPortal({ section }: { section: string }) {
             description: `Are you sure you want to delete "${targetFile?.fileName ?? "this file"}"? This action cannot be undone.`,
             action: async () => {
               const fileUrl = targetFile?.fileUrl ?? "";
-              void deleteYpopOrgActivityFileFromSupabase(fileId, fileUrl).catch(() => {});
+              await deleteYpopOrgActivityFileFromSupabase(fileId, fileUrl);
               deleteYPOPOrgActivityFile(fileId);
             },
           });
@@ -7458,6 +7449,11 @@ export default function UserPortal({ section }: { section: string }) {
             toast({ title: "Missing proof files", description: "Attach photo documentation or supporting files before submitting this PPA log.", variant: "destructive" });
             return;
           }
+          if (!await confirmAction({
+            title: activity.status === "needs_revision" ? "Resubmit this PPA for validation?" : "Submit this PPA for validation?",
+            description: "The PPA details and supporting files will be locked while the admin reviews them.",
+            confirmLabel: activity.status === "needs_revision" ? "Resubmit PPA" : "Submit PPA",
+          })) return;
 
           setSubmittingYpopOrgActivityId(activity.id);
           try {
@@ -7471,12 +7467,8 @@ export default function UserPortal({ section }: { section: string }) {
                 { action: "submitted", adminRemarks: "Organization submitted this organization-initiated activity for admin approval.", changedAt: now },
               ],
             };
-            try {
-              const saved = await updateYpopOrgActivityInSupabase(activity.id, patch);
-              updateYPOPOrgActivity(saved.id, saved);
-            } catch {
-              updateYPOPOrgActivity(activity.id, patch);
-            }
+            const saved = await updateYpopOrgActivityInSupabase(activity.id, patch);
+            updateYPOPOrgActivity(saved.id, saved);
             toast({ title: "PPA submitted", description: "This organization-initiated activity is now pending admin approval." });
           } catch (error) {
             toast({ title: "Submission failed", description: error instanceof Error ? error.message : "An error occurred.", variant: "destructive" });
@@ -7491,7 +7483,7 @@ export default function UserPortal({ section }: { section: string }) {
             title: "Delete PPA Log",
             description: `Are you sure you want to delete "${targetActivity?.activityName ?? "this PPA log"}"? This action cannot be undone.`,
             action: async () => {
-              void deleteYpopOrgActivityFromSupabase(activityId).catch(() => {});
+              await deleteYpopOrgActivityFromSupabase(activityId);
               deleteYPOPOrgActivity(activityId);
             },
           });
@@ -7860,7 +7852,7 @@ export default function UserPortal({ section }: { section: string }) {
 
                     <div className="space-y-4">
                       {/* Step 1 â€” Attach files */}
-                      <div className="flex gap-3">
+                      <div className="hidden" aria-hidden="true">
                         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">1</div>
                         <div className="flex-1 space-y-2">
                           <p className="pt-0.5 text-sm font-medium leading-none">Attach proof documents</p>
@@ -7931,7 +7923,7 @@ export default function UserPortal({ section }: { section: string }) {
 
                       {/* Step 2 â€” Add message */}
                       <div className="flex gap-3">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">2</div>
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">1</div>
                         <div className="flex-1 space-y-2">
                           <p className="pt-0.5 text-sm font-medium leading-none">
                             Add a message
@@ -7951,23 +7943,18 @@ export default function UserPortal({ section }: { section: string }) {
 
                       {/* Step 3 â€” Submit */}
                       <div className="flex gap-3">
-                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${files.length > 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>3</div>
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">2</div>
                         <div className="flex-1 space-y-1.5">
                           <Button
                             type="button"
                             size="sm"
                             onClick={() => void handleSubmitYpop(entry)}
-                            disabled={isSubmitting || files.length === 0}
+                            disabled={isSubmitting}
                           >
                             {isSubmitting ? (
                               <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
                             ) : "Submit for Validation"}
                           </Button>
-                          {files.length === 0 && (
-      
-                      <p className="text-[11px] leading-snug text-muted-foreground">
-Attach at least one file before submitting.</p>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -8229,7 +8216,6 @@ Validated {validatedDate}</p>
           const semesterOrgActivityFiles = semesterOrgActivities.flatMap((activity) =>
             ypopOrgActivityFilesByActivityId.get(activity.id) ?? [],
           );
-          const totalSubmissionProofCount = detailFiles.length + semesterEventFiles.length + semesterOrgActivityFiles.length;
           const detailEventFilter = ypopSemesterEventFilterById[activeEntry.id] ?? "ongoing";
           const filteredSemesterAvailableActivities = semesterAvailableActivities.filter((activity) =>
             detailEventFilter === "past" ? isPastYpopActivityDate(activity.date) : !isPastYpopActivityDate(activity.date),
@@ -8420,7 +8406,7 @@ Validated {validatedDate}</p>
                       Log your PPAs here. Only admin-approved entries count toward the organization-initiated bonus.
                     </p>
                   </div>
-                  {isDraftOrRevision && (
+                  {isQualified && (
                     <Button
                       type="button"
                       size="sm"
@@ -8461,7 +8447,7 @@ Validated {validatedDate}</p>
                       const files = ypopOrgActivityFilesByActivityId.get(activity.id) ?? [];
                       const isUploading = ypopOrgActivityUploadingId === activity.id;
                       const isSubmitting = submittingYpopOrgActivityId === activity.id;
-                      const canEdit = activity.status === "draft" || activity.status === "needs_revision";
+                      const canEdit = isQualified && (activity.status === "draft" || activity.status === "needs_revision");
                       return (
                         <Card key={activity.id} className="border-border/60 shadow-none">
                           <CardContent className={cn("space-y-4", mobile ? "p-3.5" : "p-4")}>
@@ -8688,7 +8674,7 @@ Validated {validatedDate}</p>
                             <Button
                               type="button"
                               onClick={() => void handleSubmitYpop(activeEntry)}
-                              disabled={isSubmitting || totalSubmissionProofCount === 0}
+                              disabled={isSubmitting}
                             >
                               {isSubmitting ? (
                                 <>
@@ -9271,7 +9257,7 @@ Validated {validatedDate}</p>
                         <Button
                           type="button"
                           onClick={() => void handleSubmitYpop(activeEntry)}
-                          disabled={isSubmitting || totalSubmissionProofCount === 0}
+                          disabled={isSubmitting}
                         >
                           {isSubmitting ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
@@ -9754,6 +9740,7 @@ Validated {validatedDate}</p>
     ypopScoringExplanationOpenById,
     ypopSemesterEventFilterById,
     isDesktopViewport,
+    confirmAction,
   ]);
 
   return (
@@ -11364,6 +11351,7 @@ Validated {validatedDate}</p>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {confirmationDialog}
     </>
   );
 }

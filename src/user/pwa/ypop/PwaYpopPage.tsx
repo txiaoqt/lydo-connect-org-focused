@@ -40,30 +40,19 @@ export function PwaYpopPage({ data }: { data: PortalData }) {
   const [openingPeriodId, setOpeningPeriodId] = useState("");
   const { state } = data.store;
   const organizationId = data.profile?.id ?? "";
-  const entries = state.ypopEntries
-    .filter((entry) => entry.organizationId === organizationId)
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   const periods = [...state.ypopPeriods].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-  const periodRows = [
-    ...periods.map((period) => ({
-      period,
-      entry: entries.find((entry) => entry.semester === period.semesterKey) ?? null,
-    })),
-    ...entries
-      .filter((entry) => !periods.some((period) => period.semesterKey === entry.semester))
-      .map((entry) => ({
-        entry,
-        period: {
-          id: `legacy-${entry.id}`,
-          semesterKey: entry.semester,
-          semesterLabel: entry.semesterLabel,
-          validationDeadline: entry.validationDeadline,
-          status: "closed",
-          createdAt: entry.createdAt,
-          updatedAt: entry.updatedAt,
-        } as YPOPPeriod,
-      })),
-  ];
+  const semesterKeys = new Set(periods.map((period) => period.semesterKey));
+  const entries = state.ypopEntries
+    .filter(
+      (entry) =>
+        entry.organizationId === organizationId &&
+        semesterKeys.has(entry.semester),
+    )
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const periodRows = periods.map((period) => ({
+    period,
+    entry: entries.find((entry) => entry.semester === period.semesterKey) ?? null,
+  }));
 
   const openPeriod = async (period: YPOPPeriod, entry: YPOPEntry | null) => {
     if (entry) {

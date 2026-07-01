@@ -630,6 +630,18 @@
 .ytrace-pwa-app .pwa-ypop-recent-activity .pwa-section-heading button { display: inline-flex; min-width: 0; min-height: 2.75rem; align-items: center; flex: 0 0 auto; gap: 0.2rem; padding: 0.25rem; white-space: nowrap; }
 .ytrace-pwa-app .pwa-ypop-recent-activity .pwa-section-heading button svg { width: 0.8rem; }
 .ytrace-pwa-app .pwa-ypop-block-reason { margin: 0 0 0.7rem; padding: 0.6rem; border-radius: 0.6rem; background: #fff7ed; color: #9a3412; font-size: 0.67rem; line-height: 1.45; }
+.ytrace-pwa-app .pwa-ypop-ppa-lock { display: flex; min-width: 0; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.75rem; padding: 0.75rem; border: 1px solid #f2d39a; border-radius: 0.7rem; background: #fffaf0; color: #92400e; }
+.ytrace-pwa-app .pwa-ypop-ppa-lock > svg { width: 1.1rem; height: 1.1rem; margin-top: 0.1rem; flex: 0 0 auto; }
+.ytrace-pwa-app .pwa-ypop-ppa-lock > div { min-width: 0; }
+.ytrace-pwa-app .pwa-ypop-ppa-lock strong { display: block; font-size: 0.72rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-lock p { margin: 0.2rem 0 0; font-size: 0.66rem; line-height: 1.45; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit { display: grid; min-width: 0; gap: 0.6rem; margin-bottom: 0.85rem; padding: 0.8rem; border: 1px solid var(--pwa-border); border-radius: 0.75rem; background: #f8fafc; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit h3 { margin: 0; font-size: 0.76rem; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit > p:not(.pwa-ypop-block-reason) { margin: 0; color: var(--pwa-muted); font-size: 0.66rem; line-height: 1.45; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit textarea { min-height: 5.5rem; resize: vertical; font-size: 0.72rem; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit > div { display: grid; min-width: 0; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0.55rem; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit button { min-width: 0; min-height: 2.75rem; padding: 0.5rem; font-size: 0.65rem; white-space: normal; }
+.ytrace-pwa-app .pwa-ypop-city-validation-submit button.is-danger { border-color: #fecaca; color: #b91c1c; }
 .ytrace-pwa-app .pwa-ypop-submission-actions > div { display: grid; min-width: 0; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0.55rem; }
 .ytrace-pwa-app .pwa-ypop-submission-actions button { min-width: 0; min-height: 2.75rem; padding: 0.5rem; font-size: 0.65rem; white-space: normal; }
 .ytrace-pwa-app .pwa-ypop-submission-actions button.is-danger { border-color: #fecaca; color: #b91c1c; }
@@ -638,6 +650,18 @@
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-native-form > label:not(.pwa-file-control) { display: grid; min-width: 0; gap: 0.35rem; color: #475569; font-size: 0.68rem; font-weight: 650; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor input,
 .ytrace-pwa-app .pwa-ypop-ppa-editor textarea { min-width: 0; font-size: 0.74rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-field { display: grid; min-width: 0; gap: 0.35rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-label { color: #475569; font-size: 0.68rem; font-weight: 650; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-field > small { color: var(--pwa-muted); font-size: 0.65rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control { min-height: 3rem; padding: 0.65rem 0.85rem; cursor: pointer; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control:focus-within { border-color: var(--pwa-blue); outline: 2px solid rgb(36 96 167 / 28%); outline-offset: 2px; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control span { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 650; line-height: 1.35; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control span svg { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control:has(input:disabled) { cursor: not-allowed; opacity: 0.6; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control input:disabled { cursor: not-allowed; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative { display: flex; min-width: 0; min-height: 2.75rem; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 1px solid var(--pwa-border); border-radius: 0.65rem; background: #fff; color: var(--pwa-blue-strong); text-align: left; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative span { min-width: 0; overflow: hidden; font-size: 0.68rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 
 .ytrace-pwa-app .pwa-template-library-page,
 .ytrace-pwa-app .pwa-template-preview-page { min-width: 0; max-width: 100%; }

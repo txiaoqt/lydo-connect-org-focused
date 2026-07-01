@@ -2512,6 +2512,16 @@ export const createYpopOrgActivityInSupabase = async (
 ): Promise<YPOPOrgActivity> => {
   if (!supabase) throw new Error("Supabase is not configured.");
   const { session, organizationProfile } = await getAuthenticatedOrganizationContext();
+  const { data: qualifiedEntry, error: entryError } = await supabase
+    .from("ypop_entries")
+    .select("id,status")
+    .eq("id", params.ypopEntryId)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (entryError) throw new Error(entryError.message);
+  if (qualifiedEntry?.status !== "qualified") {
+    throw new Error("PPA logging becomes available only after this YPOP semester is marked qualified.");
+  }
 
   const initialStatus = params.status ?? "draft";
   const now = new Date().toISOString();
@@ -2557,6 +2567,28 @@ export const updateYpopOrgActivityInSupabase = async (
   patch: Partial<Omit<YPOPOrgActivity, "id" | "organizationId" | "createdAt" | "updatedAt">>,
 ): Promise<YPOPOrgActivity> => {
   if (!supabase) throw new Error("Supabase is not configured.");
+  const { organizationProfile } = await getAuthenticatedOrganizationContext();
+  const { data: activity, error: activityError } = await supabase
+    .from("ypop_org_activities")
+    .select("id,ypop_entry_id,status")
+    .eq("id", activityId)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (activityError) throw new Error(activityError.message);
+  if (!activity) throw new Error("PPA submission not found.");
+  if (activity.status !== "draft" && activity.status !== "needs_revision") {
+    throw new Error("This PPA is locked while it is under review or after a final decision.");
+  }
+  const { data: qualifiedEntry, error: entryError } = await supabase
+    .from("ypop_entries")
+    .select("status")
+    .eq("id", activity.ypop_entry_id)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (entryError) throw new Error(entryError.message);
+  if (qualifiedEntry?.status !== "qualified") {
+    throw new Error("PPA submissions can be edited only after this YPOP semester is marked qualified.");
+  }
 
   const dbPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.activityName !== undefined) dbPatch.activity_name = patch.activityName;
@@ -2582,6 +2614,27 @@ export const updateYpopOrgActivityInSupabase = async (
 
 export const deleteYpopOrgActivityFromSupabase = async (activityId: string): Promise<void> => {
   if (!supabase) throw new Error("Supabase is not configured.");
+  const { organizationProfile } = await getAuthenticatedOrganizationContext();
+  const { data: activity, error: activityLoadError } = await supabase
+    .from("ypop_org_activities")
+    .select("id,ypop_entry_id,status")
+    .eq("id", activityId)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (activityLoadError) throw new Error(activityLoadError.message);
+  if (!activity || !["draft", "needs_revision"].includes(activity.status)) {
+    throw new Error("This PPA can no longer be deleted.");
+  }
+  const { data: qualifiedEntry, error: entryError } = await supabase
+    .from("ypop_entries")
+    .select("status")
+    .eq("id", activity.ypop_entry_id)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (entryError) throw new Error(entryError.message);
+  if (qualifiedEntry?.status !== "qualified") {
+    throw new Error("PPA submissions unlock only after this YPOP semester is marked qualified.");
+  }
   const { error } = await supabase.from("ypop_org_activities").delete().eq("id", activityId);
   if (error) throw new Error(error.message);
 };
@@ -2592,6 +2645,27 @@ export const uploadYpopOrgActivityFileToSupabase = async (params: {
   file: File;
 }): Promise<YPOPOrgActivityFile> => {
   if (!supabase) throw new Error("Supabase is not configured.");
+  const { organizationProfile } = await getAuthenticatedOrganizationContext();
+  const { data: activity, error: activityError } = await supabase
+    .from("ypop_org_activities")
+    .select("id,ypop_entry_id,status")
+    .eq("id", params.orgActivityId)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (activityError) throw new Error(activityError.message);
+  if (!activity || !["draft", "needs_revision"].includes(activity.status)) {
+    throw new Error("This PPA no longer accepts file changes.");
+  }
+  const { data: qualifiedEntry, error: entryError } = await supabase
+    .from("ypop_entries")
+    .select("status")
+    .eq("id", activity.ypop_entry_id)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (entryError) throw new Error(entryError.message);
+  if (qualifiedEntry?.status !== "qualified") {
+    throw new Error("PPA attachments unlock only after this YPOP semester is marked qualified.");
+  }
 
   const storageUri = await uploadFileToStorage(YPOP_FILES_BUCKET, params.orgActivityId, params.file);
   const { data, error } = await supabase
@@ -2613,6 +2687,36 @@ export const uploadYpopOrgActivityFileToSupabase = async (params: {
 
 export const deleteYpopOrgActivityFileFromSupabase = async (fileId: string, fileUrl: string): Promise<void> => {
   if (!supabase) throw new Error("Supabase is not configured.");
+  const { organizationProfile } = await getAuthenticatedOrganizationContext();
+  const { data: file, error: fileError } = await supabase
+    .from("ypop_org_activity_files")
+    .select("id,org_activity_id")
+    .eq("id", fileId)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (fileError) throw new Error(fileError.message);
+  const { data: activity, error: activityError } = file
+    ? await supabase
+      .from("ypop_org_activities")
+      .select("status,ypop_entry_id")
+      .eq("id", file.org_activity_id)
+      .eq("organization_id", organizationProfile.id)
+      .maybeSingle()
+    : { data: null, error: null };
+  if (activityError) throw new Error(activityError.message);
+  if (!file || !activity || !["draft", "needs_revision"].includes(activity.status)) {
+    throw new Error("This PPA attachment can no longer be removed.");
+  }
+  const { data: qualifiedEntry, error: entryError } = await supabase
+    .from("ypop_entries")
+    .select("status")
+    .eq("id", activity.ypop_entry_id)
+    .eq("organization_id", organizationProfile.id)
+    .maybeSingle();
+  if (entryError) throw new Error(entryError.message);
+  if (qualifiedEntry?.status !== "qualified") {
+    throw new Error("PPA attachments unlock only after this YPOP semester is marked qualified.");
+  }
 
   await removeStorageObjects([fileUrl]);
   const { error } = await supabase.from("ypop_org_activity_files").delete().eq("id", fileId);

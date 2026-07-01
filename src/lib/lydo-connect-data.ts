@@ -346,8 +346,9 @@ export function getApprovedYpopOrgActivityCount(
   entryId: string,
   fallbackCount = 0,
 ) {
-  const approvedCount = activities.filter((activity) => activity.ypopEntryId === entryId && activity.status === "approved").length;
-  return approvedCount > 0 ? approvedCount : fallbackCount;
+  const linkedActivities = activities.filter((activity) => activity.ypopEntryId === entryId);
+  if (!linkedActivities.length) return fallbackCount;
+  return linkedActivities.filter((activity) => activity.status === "approved").length;
 }
 
 export const majorClassificationOptions = ["Youth Organization", "Youth-Serving Organization"] as const;

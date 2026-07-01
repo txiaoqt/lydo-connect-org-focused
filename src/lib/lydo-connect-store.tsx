@@ -813,12 +813,50 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
       deleteYPOPPeriod: (id) =>
         setState((current) => {
           const period = current.ypopPeriods.find((p) => p.id === id);
+          const entryIds = new Set(
+            period
+              ? current.ypopEntries
+                .filter((entry) => entry.semester === period.semesterKey)
+                .map((entry) => entry.id)
+              : [],
+          );
+          const cityActivityIds = new Set(
+            period
+              ? current.ypopCityActivities
+                .filter((activity) => activity.semesterKey === period.semesterKey)
+                .map((activity) => activity.id)
+              : [],
+          );
+          const participationIds = new Set(
+            current.ypopEventParticipations
+              .filter((participation) => cityActivityIds.has(participation.activityId))
+              .map((participation) => participation.id),
+          );
+          const orgActivityIds = new Set(
+            current.ypopOrgActivities
+              .filter((activity) => entryIds.has(activity.ypopEntryId))
+              .map((activity) => activity.id),
+          );
           return {
             ...current,
             ypopPeriods: removeById(current.ypopPeriods, id),
             ypopCityActivities: period
               ? current.ypopCityActivities.filter((a) => a.semesterKey !== period.semesterKey)
               : current.ypopCityActivities,
+            ypopEntries: current.ypopEntries.filter((entry) => !entryIds.has(entry.id)),
+            ypopFiles: current.ypopFiles.filter((file) => !entryIds.has(file.ypopEntryId)),
+            ypopEventParticipations: current.ypopEventParticipations.filter(
+              (participation) => !participationIds.has(participation.id),
+            ),
+            ypopEventFiles: current.ypopEventFiles.filter(
+              (file) => !participationIds.has(file.participationId),
+            ),
+            ypopOrgActivities: current.ypopOrgActivities.filter(
+              (activity) => !orgActivityIds.has(activity.id),
+            ),
+            ypopOrgActivityFiles: current.ypopOrgActivityFiles.filter(
+              (file) => !orgActivityIds.has(file.orgActivityId),
+            ),
           };
         }),
       removeOrganizationAccountFromCache: (organizationId) =>

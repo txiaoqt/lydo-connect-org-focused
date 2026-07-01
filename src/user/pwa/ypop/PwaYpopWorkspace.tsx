@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import {
   CalendarDays,
   ChevronRight,
-  Download,
   FileText,
   Loader2,
   LockKeyhole,
@@ -28,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/portal/StatusBadge";
+import { useConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { toast } from "@/hooks/use-toast";
 import {
   computeYpopScore,
@@ -44,7 +44,6 @@ import {
   createYpopOrgActivityInSupabase,
   deleteYpopEntryFromSupabase,
   deleteYpopEventFileFromSupabase,
-  deleteYpopFileFromSupabase,
   deleteYpopOrgActivityFileFromSupabase,
   deleteYpopOrgActivityFromSupabase,
   resolveSupabaseFileUrl,
@@ -52,7 +51,6 @@ import {
   updateYpopEventParticipationInSupabase,
   updateYpopOrgActivityInSupabase,
   uploadYpopEventFileToSupabase,
-  uploadYpopFileToSupabase,
   uploadYpopOrgActivityFileToSupabase,
 } from "@/lib/lydo-connect-supabase";
 import {
@@ -88,12 +86,6 @@ const formatDateTime = (value: string) => {
   }).format(date);
 };
 
-const getFileTypeLabel = (fileName: string, fileType: string) => {
-  const extension = fileName.split(".").pop()?.trim().toUpperCase();
-  if (extension && extension.length <= 5) return extension;
-  return fileType.split("/").pop()?.toUpperCase() || "FILE";
-};
-
 const eventProofLabel = (participation: YPOPEventParticipation, fileCount: number) => {
   if (participation.status === "verified") return "Verified";
   if (participation.status === "needs_revision") return "Needs Revision";
@@ -116,13 +108,18 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   const [note, setNote] = useState("");
   const [busyKey, setBusyKey] = useState("");
   const [deleteEntryOpen, setDeleteEntryOpen] = useState(false);
+  const { confirmAction, confirmationDialog } = useConfirmActionDialog();
   const eventFileInput = useRef<HTMLInputElement | null>(null);
-  const entryFileInput = useRef<HTMLInputElement | null>(null);
   const [uploadParticipationId, setUploadParticipationId] = useState("");
   const { state } = data.store;
   const organizationId = data.profile?.id ?? "";
-  const entry = entryId
+  const requestedEntry = entryId
     ? state.ypopEntries.find((item) => item.id === entryId && item.organizationId === organizationId) ?? null
+    : null;
+  const entry = requestedEntry && state.ypopPeriods.some(
+    (item) => item.semesterKey === requestedEntry.semester,
+  )
+    ? requestedEntry
     : null;
   const period = periodId
     ? state.ypopPeriods.find((item) => item.id === periodId) ?? null
@@ -135,8 +132,8 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
     item.organizationId === organizationId && activities.some((activity) => activity.id === item.activityId),
   );
   const orgActivities = entry ? state.ypopOrgActivities.filter((item) => item.ypopEntryId === entry.id) : [];
-  const entryFiles = entry ? state.ypopFiles.filter((item) => item.ypopEntryId === entry.id) : [];
   const editable = Boolean(entry && isYpopEntryEditable(entry) && isYpopPeriodOpen(period));
+  const ppaUnlocked = Boolean(entry?.status === "qualified" && isYpopPeriodOpen(period));
   const finalized = entry?.status === "qualified" || entry?.status === "not_qualified";
   const readOnly = Boolean(entry && !editable);
   const approvedPpas = entry ? getApprovedYpopOrgActivityCount(orgActivities, entry.id, entry.orgLedProjectCount ?? 0) : 0;
@@ -199,7 +196,12 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   };
 
   const removeEventProof = async (fileId: string, fileUrl: string) => {
-    if (!window.confirm("Remove this proof file?")) return;
+    if (!await confirmAction({
+      title: "Remove proof file?",
+      description: "This proof file will be permanently removed from the event submission.",
+      confirmLabel: "Remove File",
+      destructive: true,
+    })) return;
     setBusyKey(`event-delete-${fileId}`);
     try {
       await deleteYpopEventFileFromSupabase(fileId, fileUrl);
@@ -240,57 +242,10 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
     }
   };
 
-  const uploadEntryFile = async (file: File) => {
-    if (!entry) return;
-    setBusyKey("entry-upload");
-    try {
-      const saved = await uploadYpopFileToSupabase({ entryId: entry.id, organizationId, file });
-      data.store.createYPOPFile(saved);
-      await refresh();
-      toast({ title: "Supporting file attached", description: file.name });
-    } catch (error) {
-      toast({ title: "Upload failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
-    } finally {
-      setBusyKey("");
-      if (entryFileInput.current) entryFileInput.current.value = "";
-    }
-  };
-
-  const removeEntryFile = async (fileId: string, fileUrl: string) => {
-    if (!window.confirm("Remove this supporting file?")) return;
-    setBusyKey(`entry-delete-${fileId}`);
-    try {
-      await deleteYpopFileFromSupabase(fileId, fileUrl);
-      data.store.deleteYPOPFile(fileId);
-      await refresh();
-    } catch (error) {
-      toast({ title: "Unable to remove file", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
-    } finally {
-      setBusyKey("");
-    }
-  };
-
-  const saveMessage = async () => {
-    if (!entry || !editable) return;
-    setBusyKey("save-note");
-    try {
-      const saved = await updateYpopEntryInSupabase(entry.id, { submissionNote: note.trim() });
-      data.store.updateYPOPEntry(saved.id, saved);
-      await refresh();
-      toast({ title: "Message saved" });
-    } catch (error) {
-      toast({ title: "Unable to save message", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
-    } finally {
-      setBusyKey("");
-    }
-  };
-
   const pastJoinedWithoutProof = participations.filter((participation) =>
     isPastYpopActivityDate(participation.activityDate) && !participation.proofSubmittedAt,
   );
-  const incompletePpas = orgActivities.filter((activity) => activity.status === "draft" || activity.status === "needs_revision");
   const totalProofCount =
-    entryFiles.length +
     state.ypopEventFiles.filter((file) => participations.some((participation) => participation.id === file.participationId)).length +
     state.ypopOrgActivityFiles.filter((file) => orgActivities.some((activity) => activity.id === file.orgActivityId)).length;
   const submissionBlockReason = !entry
@@ -299,14 +254,15 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
       ? "This submission is read-only in its current state."
       : pastJoinedWithoutProof.length
         ? "Submit the required proof for every completed joined event."
-        : incompletePpas.length
-          ? "Complete or submit all PPA drafts and revision requests first."
-          : totalProofCount === 0
-            ? "Attach at least one supporting proof file before submitting."
-            : "";
+        : "";
 
   const submitEntry = async () => {
     if (!entry || submissionBlockReason) return;
+    if (!await confirmAction({
+      title: entry.status === "needs_revision" ? "Resubmit for city-led validation?" : "Submit for city-led validation?",
+      description: `Your joined city-led activities and their proof files will be sent to the admin for validation.${note.trim() ? "\n\nYour message for the admin will be included." : ""}`,
+      confirmLabel: entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation",
+    })) return;
     setBusyKey("submit-entry");
     try {
       const now = new Date().toISOString();
@@ -347,7 +303,12 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   };
 
   const deletePpa = async (activity: YPOPOrgActivity) => {
-    if (!window.confirm(`Delete "${activity.activityName}"?`)) return;
+    if (!await confirmAction({
+      title: `Delete “${activity.activityName}”?`,
+      description: "This permanently removes the PPA activity and its attached files. This action cannot be undone.",
+      confirmLabel: "Delete PPA",
+      destructive: true,
+    })) return;
     setBusyKey(`ppa-delete-${activity.id}`);
     try {
       await deleteYpopOrgActivityFromSupabase(activity.id);
@@ -476,17 +437,38 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
       </section>
 
       <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-main-section">
-        <div className="pwa-section-heading"><h2>Organization-Initiated Activities</h2>{editable && entry ? <Button size="sm" variant="outline" onClick={() => go(pwaYpopPpaNewRoute(entry.id))}><Plus />Log PPA</Button> : null}</div>
+        <div className="pwa-section-heading"><h2>Organization-Led Activities / PPA Submissions</h2>{ppaUnlocked && entry ? <Button size="sm" variant="outline" onClick={() => go(pwaYpopPpaNewRoute(entry.id))}><Plus />Log PPA</Button> : null}</div>
+        {!ppaUnlocked ? (
+          <div className="pwa-ypop-ppa-lock">
+            <LockKeyhole aria-hidden="true" />
+            <div>
+              <strong>{entry?.status === "submitted" || entry?.status === "under_review" ? "City-led validation in progress" : "Qualification required"}</strong>
+              <p>Organization-led PPA logging unlocks after the admin marks this semester as qualified.</p>
+            </div>
+          </div>
+        ) : null}
+        {entry && editable ? (
+          <div className="pwa-ypop-city-validation-submit">
+            <h3>Submit City-Led Activities for Validation</h3>
+            <p>Your optional note is sent only when you submit. It cannot be saved separately.</p>
+            <Textarea rows={4} value={note} placeholder="Optional message for the admin reviewing your city-led participation..." onChange={(event) => setNote(event.target.value)} />
+            {submissionBlockReason ? <p className="pwa-ypop-block-reason">{submissionBlockReason}</p> : null}
+            <div>
+              <Button variant="outline" className="is-danger" onClick={() => setDeleteEntryOpen(true)}><Trash2 />Delete Submission</Button>
+              <Button disabled={Boolean(submissionBlockReason) || busyKey === "submit-entry"} onClick={() => void submitEntry()}><Send />{busyKey === "submit-entry" ? "Submitting..." : entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation"}</Button>
+            </div>
+          </div>
+        ) : null}
         <div className="pwa-ypop-ppa-list">
           {orgActivities.map((activity) => {
             const files = state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === activity.id);
-            const canEdit = editable && (activity.status === "draft" || activity.status === "needs_revision");
+            const canEdit = ppaUnlocked && (activity.status === "draft" || activity.status === "needs_revision");
             return <article key={activity.id}>
               <div><strong>{activity.activityName}</strong><p>{formatDateTime(activity.activityDate)} · {activity.venue || "Venue not set"}</p><small>{files.length} proof file{files.length === 1 ? "" : "s"}</small></div>
               <StatusBadge status={activity.status} />
               {activity.adminRemarks ? <p className="pwa-ypop-feedback">Admin: {activity.adminRemarks}</p> : null}
               <div className="pwa-ypop-row-actions">
-                {canEdit && entry ? <Button variant="outline" onClick={() => go(pwaYpopPpaEditRoute(entry.id, activity.id))}>{activity.status === "needs_revision" ? "Respond to Revision" : "Manage PPA"}</Button> : null}
+                {entry ? <Button variant="outline" onClick={() => go(pwaYpopPpaEditRoute(entry.id, activity.id))}>{canEdit ? activity.status === "needs_revision" ? "Respond to Revision" : "Manage PPA" : "View Details"}</Button> : null}
                 {canEdit ? <Button variant="outline" disabled={busyKey === `ppa-delete-${activity.id}`} onClick={() => void deletePpa(activity)}><Trash2 />Delete</Button> : null}
               </div>
             </article>;
@@ -532,43 +514,13 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
             {entry.submittedAt ? <div><dt>Submitted</dt><dd><time dateTime={entry.submittedAt}>{formatDateTime(entry.submittedAt)}</time></dd></div> : null}
           </dl>
 
-          {editable ? (
-            <div className="pwa-ypop-info-group">
-              <h3>Message for Admin <span>Optional</span></h3>
-              <Textarea rows={4} value={note} placeholder="Optional notes for the admin reviewing your participation..." onChange={(event) => setNote(event.target.value)} />
-              <Button variant="outline" disabled={busyKey === "save-note"} onClick={() => void saveMessage()}>{busyKey === "save-note" ? "Saving..." : "Save Message"}</Button>
-            </div>
-          ) : note.trim() ? (
+          {!editable && note.trim() ? (
             <div className="pwa-ypop-info-group">
               <h3>Message sent to admin</h3>
               <p className="pwa-ypop-submitted-message">{note}</p>
             </div>
           ) : null}
 
-          {(editable || entryFiles.length > 0) ? (
-            <div className="pwa-ypop-info-group">
-              <h3>Supporting Files</h3>
-              <input ref={entryFileInput} hidden type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEntryFile(file); }} />
-              {entryFiles.length ? (
-                <ul className="pwa-ypop-supporting-files">
-                  {entryFiles.map((file) => (
-                    <li key={file.id}>
-                      <button type="button" aria-label={`View ${file.fileName}`} onClick={() => void openStoredFile(file.fileUrl)}>
-                        <FileText aria-hidden="true" />
-                        <span>
-                          <strong>{file.fileName}</strong>
-                          <small>{getFileTypeLabel(file.fileName, file.fileType)}{file.uploadedAt ? <> · <time dateTime={file.uploadedAt}>{formatDateTime(file.uploadedAt)}</time></> : null}</small>
-                        </span>
-                        <Download aria-hidden="true" />
-                      </button>
-                      {editable ? <button type="button" aria-label={`Remove ${file.fileName}`} disabled={busyKey === `entry-delete-${file.id}`} onClick={() => void removeEntryFile(file.id, file.fileUrl)}><Trash2 /></button> : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="pwa-ypop-inline-empty">No supporting files attached.</p>}
-              {editable ? <Button variant="outline" disabled={busyKey === "entry-upload"} onClick={() => entryFileInput.current?.click()}><Upload />{busyKey === "entry-upload" ? "Uploading..." : "Attach File"}</Button> : null}
-            </div>
-          ) : null}
         </section>
       ) : null}
 
@@ -577,19 +529,10 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           <LockKeyhole aria-hidden="true" />
           <div>
             <strong>{finalized ? "Submission finalized" : period?.status === "closed" ? "Period closed" : "Submission under review"}</strong>
-            <p>{finalized ? "This submission was finalized and can no longer be edited." : period?.status === "closed" ? "This period is closed and the submission can no longer be edited." : "This submission is being reviewed and can no longer be edited."}</p>
+            <p>{entry.status === "qualified" ? "City-led validation is complete. You may now manage PPA submissions in the Organization-Led Activities section." : finalized ? "This submission was finalized and can no longer be edited." : period?.status === "closed" ? "This period is closed and the submission can no longer be edited." : "This submission is being reviewed and can no longer be edited."}</p>
           </div>
         </section>
       ) : null}
-
-      {entry && editable ? <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section pwa-ypop-submission-actions">
-        <h2>Submission Actions</h2>
-        {submissionBlockReason ? <p className="pwa-ypop-block-reason">{submissionBlockReason}</p> : null}
-        <div>
-          <Button variant="outline" className="is-danger" onClick={() => setDeleteEntryOpen(true)}><Trash2 />Delete Submission</Button>
-          <Button disabled={Boolean(submissionBlockReason) || busyKey === "submit-entry"} onClick={() => void submitEntry()}><Send />{busyKey === "submit-entry" ? "Submitting..." : entry.status === "needs_revision" ? "Resubmit for Validation" : "Submit for Validation"}</Button>
-        </div>
-      </section> : null}
 
       <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section pwa-ypop-recent-activity" aria-labelledby="ypop-recent-activity-title">
         <div className="pwa-section-heading">
@@ -606,6 +549,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           <AlertDialogFooter><AlertDialogCancel disabled={busyKey === "delete-entry"}>Cancel</AlertDialogCancel><AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={busyKey === "delete-entry"} onClick={(event) => { event.preventDefault(); void deleteEntry(); }}>{busyKey === "delete-entry" ? "Deleting..." : "Delete Submission"}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {confirmationDialog}
     </div>
   );
 }
@@ -613,7 +557,12 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
 export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
   const { entryId, activityId } = useParams();
   const { go } = usePwaNavigation();
-  const entry = data.store.state.ypopEntries.find((item) => item.id === entryId) ?? null;
+  const requestedEntry = data.store.state.ypopEntries.find((item) => item.id === entryId) ?? null;
+  const entry = requestedEntry && data.store.state.ypopPeriods.some(
+    (item) => item.semesterKey === requestedEntry.semester,
+  )
+    ? requestedEntry
+    : null;
   const period = data.store.state.ypopPeriods.find((item) => item.semesterKey === entry?.semester) ?? null;
   const existing = data.store.state.ypopOrgActivities.find((item) => item.id === activityId && item.ypopEntryId === entryId) ?? null;
   const existingFiles = existing ? data.store.state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === existing.id) : [];
@@ -621,30 +570,76 @@ export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
     activityName: existing?.activityName ?? "",
     activityDate: existing?.activityDate ?? "",
     venue: existing?.venue ?? "",
-    narrativeReport: existing?.narrativeReport ?? "",
   });
+  const [narrativePdf, setNarrativePdf] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
-  const editable = Boolean(entry && isYpopEntryEditable(entry) && isYpopPeriodOpen(period));
+  const { confirmAction, confirmationDialog } = useConfirmActionDialog();
+  const editable = Boolean(
+    entry?.status === "qualified" &&
+    isYpopPeriodOpen(period) &&
+    (!existing || existing.status === "draft" || existing.status === "needs_revision"),
+  );
+  const existingNarrativePdf = existingFiles.find(
+    (file) => file.fileName === existing?.narrativeReport,
+  ) ?? null;
+  const existingProofFiles = existingFiles.filter(
+    (file) => file.id !== existingNarrativePdf?.id,
+  );
 
   useEffect(() => {
-    if (existing) setForm({ activityName: existing.activityName, activityDate: existing.activityDate, venue: existing.venue, narrativeReport: existing.narrativeReport });
+    if (existing) {
+      setForm({
+        activityName: existing.activityName,
+        activityDate: existing.activityDate,
+        venue: existing.venue,
+      });
+    }
   }, [existing]);
+
+  const selectNarrativePdf = (file: File | null) => {
+    if (!file) {
+      setNarrativePdf(null);
+      return;
+    }
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast({
+        title: "PDF required",
+        description: "The narrative report must be uploaded as a PDF file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size <= 0 || file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Invalid file size",
+        description: "The narrative report PDF must be no larger than 10 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setNarrativePdf(file);
+  };
 
   const save = async (submit: boolean) => {
     if (!entry || !data.profile || !data.user || !editable) return;
     const activityName = form.activityName.trim();
     const activityDate = form.activityDate.trim();
     const venue = form.venue.trim();
-    const narrativeReport = form.narrativeReport.trim();
+    const narrativeReport = narrativePdf?.name ?? existingNarrativePdf?.fileName ?? "";
     if (!activityName || !activityDate || !venue || !narrativeReport) {
-      toast({ title: "Missing details", description: "Complete the activity name, date, venue, and narrative report.", variant: "destructive" });
+      toast({ title: "Missing details", description: "Complete the activity details and attach the narrative report PDF.", variant: "destructive" });
       return;
     }
-    if (submit && existingFiles.length + selectedFiles.length === 0) {
+    if (submit && existingProofFiles.length + selectedFiles.length === 0) {
       toast({ title: "Proof required", description: "Attach at least one supporting file before submitting the PPA.", variant: "destructive" });
       return;
     }
+    if (submit && !await confirmAction({
+      title: existing?.status === "needs_revision" ? "Resubmit this PPA for validation?" : "Submit this PPA for validation?",
+      description: "The PPA details, narrative report, and supporting proof files will be locked while the admin reviews them.",
+      confirmLabel: existing?.status === "needs_revision" ? "Resubmit PPA" : "Submit PPA",
+    })) return;
     setSaving(true);
     try {
       const now = new Date().toISOString();
@@ -676,6 +671,21 @@ export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
         });
         data.store.createYPOPOrgActivity(saved);
       }
+      if (narrativePdf) {
+        const uploadedNarrative = await uploadYpopOrgActivityFileToSupabase({
+          orgActivityId: saved.id,
+          organizationId: data.profile.id,
+          file: narrativePdf,
+        });
+        data.store.createYPOPOrgActivityFile(uploadedNarrative);
+        if (existingNarrativePdf) {
+          await deleteYpopOrgActivityFileFromSupabase(
+            existingNarrativePdf.id,
+            existingNarrativePdf.fileUrl,
+          );
+          data.store.deleteYPOPOrgActivityFile(existingNarrativePdf.id);
+        }
+      }
       for (const file of selectedFiles) {
         const uploaded = await uploadYpopOrgActivityFileToSupabase({ orgActivityId: saved.id, organizationId: data.profile.id, file });
         data.store.createYPOPOrgActivityFile(uploaded);
@@ -700,7 +710,12 @@ export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
   };
 
   const removeExistingFile = async (fileId: string, fileUrl: string) => {
-    if (!window.confirm("Remove this PPA attachment?")) return;
+    if (!await confirmAction({
+      title: "Remove PPA attachment?",
+      description: "This attachment will be permanently removed from the PPA activity.",
+      confirmLabel: "Remove File",
+      destructive: true,
+    })) return;
     try {
       await deleteYpopOrgActivityFileFromSupabase(fileId, fileUrl);
       data.store.deleteYPOPOrgActivityFile(fileId);
@@ -720,11 +735,37 @@ export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
         <label>Activity Name *<Input value={form.activityName} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, activityName: event.target.value }))} /></label>
         <label>Activity Date *<Input type="date" value={form.activityDate} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, activityDate: event.target.value }))} /></label>
         <label>Venue *<Input value={form.venue} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, venue: event.target.value }))} /></label>
-        <label>Narrative Report *<Textarea rows={6} value={form.narrativeReport} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, narrativeReport: event.target.value }))} /></label>
-        <label className="pwa-file-control"><input type="file" multiple disabled={!editable} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/*" onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))} /><span><Upload /> {selectedFiles.length ? `${selectedFiles.length} new file${selectedFiles.length === 1 ? "" : "s"} selected` : "Attach PPA proof files"}</span></label>
-        {existingFiles.length ? <ul className="pwa-ypop-file-list">{existingFiles.map((file) => <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{editable ? <button type="button" onClick={() => void removeExistingFile(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>)}</ul> : null}
+        <div className="pwa-ppa-upload-field">
+          <span className="pwa-ppa-upload-label">Narrative Report PDF *</span>
+          <label className="pwa-file-control pwa-ppa-file-control">
+            <input
+              type="file"
+              disabled={!editable}
+              accept=".pdf,application/pdf"
+              onChange={(event) => {
+                selectNarrativePdf(event.target.files?.[0] ?? null);
+                event.target.value = "";
+              }}
+            />
+            <span><Upload aria-hidden="true" />{narrativePdf?.name ?? (existingNarrativePdf ? "Replace narrative report PDF" : "Choose narrative report PDF")}</span>
+          </label>
+          <small>PDF only · Maximum 10 MB</small>
+          {existingNarrativePdf && !narrativePdf ? (
+            <button
+              type="button"
+              className="pwa-ppa-current-narrative"
+              onClick={() => void openStoredFile(existingNarrativePdf.fileUrl)}
+            >
+              <FileText aria-hidden="true" />
+              <span>{existingNarrativePdf.fileName}</span>
+            </button>
+          ) : null}
+        </div>
+        <label className="pwa-file-control pwa-ppa-file-control"><input type="file" multiple disabled={!editable} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/*" onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))} /><span><Upload aria-hidden="true" />{selectedFiles.length ? `${selectedFiles.length} new file${selectedFiles.length === 1 ? "" : "s"} selected` : "Attach PPA proof files"}</span></label>
+        {existingProofFiles.length ? <ul className="pwa-ypop-file-list">{existingProofFiles.map((file) => <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{editable ? <button type="button" onClick={() => void removeExistingFile(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>)}</ul> : null}
       </section>
-      {editable ? <div className="pwa-profile-editor-actions"><Button variant="outline" disabled={saving} onClick={() => void save(false)}>Save Draft</Button><Button disabled={saving} onClick={() => void save(true)}>{saving ? <Loader2 className="pwa-spin" /> : <Send />}{saving ? "Saving..." : existing?.status === "needs_revision" ? "Resubmit PPA" : "Submit PPA"}</Button></div> : null}
+      {editable ? <div className="pwa-profile-editor-actions"><Button variant="outline" disabled={saving} onClick={() => void save(false)}>Save Draft</Button><Button disabled={saving} onClick={() => void save(true)}>{saving ? <Loader2 className="pwa-spin" /> : <Send />}{saving ? "Saving..." : existing?.status === "needs_revision" ? "Resubmit PPA" : "Submit PPA for Validation"}</Button></div> : null}
+      {confirmationDialog}
     </div>
   );
 }

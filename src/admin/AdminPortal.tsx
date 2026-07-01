@@ -43,6 +43,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { RecentActivityList, RecentActivityPreview } from "@/components/activity/RecentActivityPreview";
+import { useConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { ExportReportDialog } from "@/components/reports/ExportReportDialog";
@@ -623,6 +624,7 @@ type RecentActivityEntry = {
 };
 
 export default function AdminPortal({ section }: { section: string }) {
+  const { confirmAction, confirmationDialog } = useConfirmActionDialog();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { state, mergeRemoteState, createTemplate, removeTemplate, createNewsRelease, removeNewsRelease, updateNewsRelease, updateTransparencyPost, updateComplianceRemark, updateTemplate, createNotification, markNotificationRead, markAllNotificationsRead, updateBudgetRequest, updateLiquidationReport, updateInquiry, updateYPOPEntry, updateYPOPEventParticipation, createYPOPOrgActivity, updateYPOPOrgActivity, createYPOPCityActivity, updateYPOPCityActivity, deleteYPOPCityActivity, createYPOPPeriod, updateYPOPPeriod, deleteYPOPPeriod } =
@@ -2023,25 +2025,30 @@ export default function AdminPortal({ section }: { section: string }) {
     (draft) => draft.decision !== "unreviewed",
   );
 
-  const confirmDiscardRegistrationReviewChanges = () =>
+  const confirmDiscardRegistrationReviewChanges = async () =>
     !hasStagedRegistrationReviewChanges ||
-    window.confirm("You have unsaved review decisions.\n\nLeave this page and discard them?");
+    await confirmAction({
+      title: "Discard unsaved review decisions?",
+      description: "You have unsaved review decisions. Leaving this page will discard them.",
+      confirmLabel: "Discard and Leave",
+      destructive: true,
+    });
 
-  const handleRegistrationSelectionChange = (nextRegistrationId: string | null) => {
+  const handleRegistrationSelectionChange = async (nextRegistrationId: string | null) => {
     if (nextRegistrationId === selectedRegistrationId) return;
-    if (!confirmDiscardRegistrationReviewChanges()) return;
+    if (!await confirmDiscardRegistrationReviewChanges()) return;
     setSelectedRegistrationId(nextRegistrationId);
   };
 
-  const handleAdminSectionNavigate = (id: string) => {
+  const handleAdminSectionNavigate = async (id: string) => {
     const nextRoute = routeMap[id] ?? routeMap.overview;
     const currentRoute = routeMap[section] ?? routeMap.overview;
     if (nextRoute === currentRoute) return;
-    if (!confirmDiscardRegistrationReviewChanges()) return;
+    if (!await confirmDiscardRegistrationReviewChanges()) return;
     navigate(nextRoute);
   };
 
-  const stageBulkRegistrationDecision = (
+  const stageBulkRegistrationDecision = async (
     fileIds: string[],
     decision: Exclude<RegistrationReviewDecision, "unreviewed">,
   ) => {
@@ -2056,19 +2063,22 @@ export default function AdminPortal({ section }: { section: string }) {
 
     const shouldConfirm = decision !== "approve" || fileIds.length > 1;
     if (shouldConfirm) {
-      const confirmCopy = [
-        `${registrationReviewDecisionLabel[decision]} ${fileIds.length} selected document${fileIds.length === 1 ? "" : "s"}?`,
-        decision === "approve"
-          ? "This will only stage approval decisions until you submit the review batch."
-          : `Shared remark: ${registrationBulkRemark.trim() || "No shared remark provided."}`,
-      ].join("\n\n");
-      if (!window.confirm(confirmCopy)) return;
+      const confirmed = await confirmAction({
+        title: `${registrationReviewDecisionLabel[decision]} ${fileIds.length} selected document${fileIds.length === 1 ? "" : "s"}?`,
+        description:
+          decision === "approve"
+            ? "This will only stage approval decisions until you submit the review batch."
+            : `Shared remark: ${registrationBulkRemark.trim() || "No shared remark provided."}`,
+        confirmLabel: `Stage ${registrationReviewDecisionLabel[decision]}`,
+        destructive: decision !== "approve",
+      });
+      if (!confirmed) return;
     }
 
     applyRegistrationBulkDecision(fileIds, decision);
   };
 
-  const stageApproveAllUnreviewedDocuments = (fileIds: string[]) => {
+  const stageApproveAllUnreviewedDocuments = async (fileIds: string[]) => {
     if (!fileIds.length) {
       toast({
         title: "No eligible documents",
@@ -2077,13 +2087,12 @@ export default function AdminPortal({ section }: { section: string }) {
       return;
     }
 
-    if (
-      !window.confirm(
-        `Approve all ${fileIds.length} eligible unreviewed document${fileIds.length === 1 ? "" : "s"}?\n\nThis will add approval decisions to the review summary.\nNothing will be submitted until you click Submit Review Decisions.`,
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirmAction({
+      title: `Approve all ${fileIds.length} eligible document${fileIds.length === 1 ? "" : "s"}?`,
+      description: "This will add approval decisions to the review summary.\nNothing will be submitted until you click Submit Review Decisions.",
+      confirmLabel: "Stage Approvals",
+    });
+    if (!confirmed) return;
 
     applyRegistrationBulkDecision(fileIds, "approve");
   };
@@ -3169,20 +3178,18 @@ export default function AdminPortal({ section }: { section: string }) {
           ],
         };
 
-        let savedOrgActivity: YPOPOrgActivity | null = null;
-        try {
-          savedOrgActivity = await adminUpdateYpopOrgActivityInSupabase(pendingAdminConfirmation.orgActivityId, patch);
-          updateYPOPOrgActivity(savedOrgActivity.id, savedOrgActivity);
-        } catch {
-          updateYPOPOrgActivity(pendingAdminConfirmation.orgActivityId, patch);
-        }
+        const savedOrgActivity = await adminUpdateYpopOrgActivityInSupabase(
+          pendingAdminConfirmation.orgActivityId,
+          patch,
+        );
+        updateYPOPOrgActivity(savedOrgActivity.id, savedOrgActivity);
 
         if (relatedEntry) {
           const semesterActivities = state.ypopCityActivities.filter((activity) => activity.semesterKey === relatedEntry.semester);
           const period = state.ypopPeriods.find((item) => item.semesterKey === relatedEntry.semester) ?? null;
           const approvedOrgActivities = [
             ...state.ypopOrgActivities.filter((item) => item.id !== pendingAdminConfirmation.orgActivityId),
-            (savedOrgActivity ?? { ...(orgActivity as YPOPOrgActivity), ...patch, id: pendingAdminConfirmation.orgActivityId, ypopEntryId: pendingAdminConfirmation.entryId, organizationId: pendingAdminConfirmation.organizationId, submittedBy: orgActivity?.submittedBy ?? "", activityName: pendingAdminConfirmation.activityName, activityDate: orgActivity?.activityDate ?? "", venue: orgActivity?.venue ?? "", narrativeReport: orgActivity?.narrativeReport ?? "", createdAt: orgActivity?.createdAt ?? now, updatedAt: now }) as YPOPOrgActivity,
+            savedOrgActivity,
           ];
           const approvedCount = getApprovedYpopOrgActivityCount(approvedOrgActivities, relatedEntry.id, relatedEntry.orgLedProjectCount ?? 0);
           const updatedScore = computeYpopScore(
@@ -3207,12 +3214,8 @@ export default function AdminPortal({ section }: { section: string }) {
             orgLedProjectCount: approvedCount,
             pointsEarned: updatedScore.totalScore,
           };
-          try {
-            const savedEntry = await adminUpdateYpopEntryInSupabase(relatedEntry.id, entryPatch);
-            updateYPOPEntry(savedEntry.id, savedEntry);
-          } catch {
-            updateYPOPEntry(relatedEntry.id, entryPatch);
-          }
+          const savedEntry = await adminUpdateYpopEntryInSupabase(relatedEntry.id, entryPatch);
+          updateYPOPEntry(savedEntry.id, savedEntry);
         }
 
         await refreshAdminState();
@@ -3629,9 +3632,10 @@ export default function AdminPortal({ section }: { section: string }) {
       }
 
       if (pending.kind === "ypop_period") {
-        try { await adminDeleteYpopPeriodFromSupabase(pending.id); } catch { /* local-only fallback */ }
+        await adminDeleteYpopPeriodFromSupabase(pending.id);
         deleteYPOPPeriod(pending.id);
-        toast({ title: "Semester deleted", description: `"${pending.title}" and its activities have been removed.` });
+        await refreshAdminState();
+        toast({ title: "Semester deleted", description: `"${pending.title}", its submissions, activities, and files have been removed.` });
         return;
       }
 
@@ -9129,15 +9133,31 @@ export default function AdminPortal({ section }: { section: string }) {
             adminRemarks: entry.adminRemarks ?? "",
           };
           const effectiveCityLedAttendance = verifiedCityLedAttendance;
-          const { cityLedEarned, cityLedMax, cityLedPercent, cityLedWeightedScore, orgLedBonus, totalScore } = computeYpopScore(
-            effectiveCityLedAttendance, semesterActivities, form.orgLedProjectCount, periodTiers
+          const cityValidationScore = computeYpopScore(
+            effectiveCityLedAttendance,
+            semesterActivities,
+            0,
+            periodTiers,
           );
+          const currentScore = computeYpopScore(
+            effectiveCityLedAttendance,
+            semesterActivities,
+            approvedOrgActivityCount,
+            periodTiers,
+          );
+          const {
+            cityLedEarned,
+            cityLedMax,
+            cityLedPercent,
+            cityLedWeightedScore,
+          } = cityValidationScore;
+          const { orgLedBonus, totalScore } = currentScore;
           const _sortedTiers = [...periodTiers].sort((a, b) => b.minProjects - a.minProjects);
           const _matchedTier = _sortedTiers.find((t) => form.orgLedProjectCount >= t.minProjects);
           const orgLedTierLabel = _matchedTier
             ? `≥ ${_matchedTier.minProjects} projects → +${_matchedTier.bonus}% bonus`
             : "0 projects → +0% bonus";
-          const qualifies = totalScore >= (entry.pointsRequired ?? YPOP_SCORE_THRESHOLD);
+          const qualifies = cityLedPercent >= (entry.pointsRequired ?? YPOP_SCORE_THRESHOLD);
           const orgLedTierLabelDisplay = orgLedTierLabel && (_matchedTier
             ? `>= ${_matchedTier.minProjects} activit${_matchedTier.minProjects === 1 ? "y" : "ies"} -> +${_matchedTier.bonus}% bonus`
             : "0 activities -> +0% bonus");
@@ -9146,12 +9166,16 @@ export default function AdminPortal({ section }: { section: string }) {
             try {
               const now = new Date().toISOString();
               const semActs = state.ypopCityActivities.filter((a) => a.semesterKey === entry.semester);
-              const { totalScore: computedScore } = computeYpopScore(effectiveCityLedAttendance, semActs, form.orgLedProjectCount, periodTiers);
+              const { cityLedPercent: computedScore } = computeYpopScore(
+                effectiveCityLedAttendance,
+                semActs,
+                0,
+                periodTiers,
+              );
               const patch = {
                 pointsEarned: computedScore,
                 status: form.status,
                 adminRemarks: form.adminRemarks,
-                orgLedProjectCount: form.orgLedProjectCount,
                 cityLedAttendance: effectiveCityLedAttendance,
                 validatedAt: now,
                 updatedAt: now,
@@ -9553,7 +9577,7 @@ export default function AdminPortal({ section }: { section: string }) {
                         setConfirmYpopValidationOpen(true);
                       }}
                     >
-                      {savingYpopValidation ? "Saving..." : "Save Validation"}
+                      {savingYpopValidation ? "Saving..." : "Save City-Led Validation"}
                     </Button>
                   ) : null}
                 </section>
@@ -9870,7 +9894,7 @@ export default function AdminPortal({ section }: { section: string }) {
                             setConfirmYpopValidationOpen(true);
                           }}
                         >
-                          {savingYpopValidation ? "Saving…" : "Save Validation"}
+                          {savingYpopValidation ? "Saving…" : "Save City-Led Validation"}
                         </Button>
                       )}
                     </CardContent>
@@ -10203,7 +10227,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       }}
                       disabled={!ypopValidationAcknowledged || savingYpopValidation}
                     >
-                      {savingYpopValidation ? "Saving…" : "Save Validation"}
+                      {savingYpopValidation ? "Saving…" : "Save City-Led Validation"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -11101,6 +11125,7 @@ export default function AdminPortal({ section }: { section: string }) {
       >
         {activeContent}
       </PortalShell>
+      {confirmationDialog}
       <Dialog open={recentActivityDialogOpen} onOpenChange={setRecentActivityDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -11289,7 +11314,7 @@ export default function AdminPortal({ section }: { section: string }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDeleteConfirmation?.kind === "ypop_period"
-                ? `Are you sure you want to delete "${pendingDeleteConfirmation.title}"? This will also remove ${pendingDeleteConfirmation.activityCount} configured activit${pendingDeleteConfirmation.activityCount !== 1 ? "ies" : "y"}. This action cannot be undone.`
+                ? `Are you sure you want to delete "${pendingDeleteConfirmation.title}"? This will also remove its organization submissions, uploaded-file records, and ${pendingDeleteConfirmation.activityCount} configured activit${pendingDeleteConfirmation.activityCount !== 1 ? "ies" : "y"}. This action cannot be undone.`
                 : pendingDeleteConfirmation?.kind === "ypop_city_activity"
                 ? `Are you sure you want to delete "${pendingDeleteConfirmation.title}"? This action cannot be undone.`
                 : pendingDeleteConfirmation
