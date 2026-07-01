@@ -25,6 +25,15 @@ function PageIntro({ icon: Icon, title, copy, action }: { icon: typeof FileText;
   return <section className="pwa-page-intro"><span><Icon aria-hidden="true" /></span><div><h2>{title}</h2><p>{copy}</p>{action}</div></section>;
 }
 
+function NewsImage({ src, title }: { src?: string | null; title: string }) {
+  const [failedSource, setFailedSource] = useState("");
+  const value = src?.trim() ?? "";
+  if (!value || failedSource === value) {
+    return <span className="pwa-news-placeholder" aria-label={`${title} image unavailable`}><Megaphone aria-hidden="true" /></span>;
+  }
+  return <img src={value} alt={`${title} preview`} referrerPolicy="no-referrer" onError={() => setFailedSource(value)} />;
+}
+
 export function PwaProfile({ data }: { data: PortalData }) {
   const profile = data.profile;
   return <div className="pwa-stack">
@@ -51,9 +60,9 @@ export function PwaNews({ data }: { data: PortalData }) {
   const { go } = usePwaNavigation();
   const selected = newsReleaseId ? data.news.find((item) => item.id === newsReleaseId) : null;
   if (selected) {
-    return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.news} label="News Releases" /><article className="pwa-card pwa-news-detail">{selected.previewImageUrl ? <img src={selected.previewImageUrl} alt="" /> : null}<StatusBadge status={selected.visibilityStatus} /><h2>{selected.title}</h2><time>{dateLabel(selected.datePosted)}</time><p>{selected.description}</p>{selected.facebookPostUrl ? <a className="pwa-primary-link" href={selected.facebookPostUrl} target="_blank" rel="noreferrer">Open Facebook Post <ExternalLink /></a> : null}</article></div>;
+    return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.news} label="News Releases" /><article className="pwa-card pwa-news-detail"><NewsImage src={selected.previewImageUrl} title={selected.title} /><StatusBadge status={selected.visibilityStatus} /><h2>{selected.title}</h2><time>{dateLabel(selected.datePosted)}</time><p>{selected.description}</p>{selected.facebookPostUrl ? <a className="pwa-primary-link" href={selected.facebookPostUrl} target="_blank" rel="noreferrer">Open Facebook Post <ExternalLink /></a> : null}</article></div>;
   }
-  return <div className="pwa-stack"><PageIntro icon={Megaphone} title="News Releases" copy="Official announcements and updates from the LYDO." action={<a className="pwa-secondary-button pwa-facebook-page-link" href={LYDO_FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label="View the official LYDO Facebook page (opens in a new tab)"><ExternalLink aria-hidden="true" />View Facebook Page</a>} /><section className="pwa-news-list">{data.news.map((item) => <button key={item.id} type="button" className="pwa-card" onClick={() => item.facebookPostUrl ? window.open(item.facebookPostUrl, "_blank", "noopener,noreferrer") : go(pwaNewsDetailRoute(item.id))}>{item.previewImageUrl ? <img src={item.previewImageUrl} alt="" /> : <span className="pwa-news-placeholder"><Megaphone /></span>}<span><strong>{item.title}</strong><small>{dateLabel(item.datePosted)}</small><p>{item.description}</p></span><ExternalLink /></button>)}</section></div>;
+  return <div className="pwa-stack"><PageIntro icon={Megaphone} title="News Releases" copy="Official announcements and updates from the LYDO." action={<a className="pwa-secondary-button pwa-facebook-page-link" href={LYDO_FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label="View the official LYDO Facebook page (opens in a new tab)"><ExternalLink aria-hidden="true" />View Facebook Page</a>} /><section className="pwa-news-list">{data.news.map((item) => <button key={item.id} type="button" className="pwa-card" onClick={() => item.facebookPostUrl ? window.open(item.facebookPostUrl, "_blank", "noopener,noreferrer") : go(pwaNewsDetailRoute(item.id))}><NewsImage src={item.previewImageUrl} title={item.title} /><span><strong>{item.title}</strong><small>{dateLabel(item.datePosted)}</small><p>{item.description}</p></span><ExternalLink /></button>)}</section></div>;
 }
 
 export function PwaCompliance({ data }: { data: PortalData }) {

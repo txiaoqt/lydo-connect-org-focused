@@ -1,4 +1,4 @@
-const CACHE_NAME = "y-trace-v10";
+const CACHE_NAME = "y-trace-v11";
 const APP_SHELL = [
   "/",
   "/app-start",
@@ -18,7 +18,9 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.allSettled(APP_SHELL.map((url) => cache.add(url)))
+    )
   );
   self.skipWaiting();
 });

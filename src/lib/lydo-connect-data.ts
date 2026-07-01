@@ -571,6 +571,7 @@ export type OrganizationProfile = {
   representativeName: string;
   address: string;
   facebookPageUrl: string;
+  profileImageUrl?: string;
   profileStatus: ProfileStatus;
   verifiedAt: string;
   internalNotes: string;

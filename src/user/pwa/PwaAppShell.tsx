@@ -10,12 +10,14 @@ import { getPwaParentRoute, PWA_ROUTES } from "./pwaRoutes";
 export function PwaAppShell({
   title,
   organizationName,
+  profileImageUrl,
   unreadCount,
   dashboard,
   children,
 }: {
   title: string;
   organizationName: string;
+  profileImageUrl?: string | null;
   unreadCount: number;
   dashboard?: boolean;
   children: ReactNode;
@@ -70,11 +72,12 @@ export function PwaAppShell({
       preferences.increaseContrast ? "pwa-high-contrast" : "",
       preferences.underlineLinks ? "pwa-underline-links" : "",
     ].filter(Boolean).join(" ")}>
-      <div className={`pwa-app-frame ${pageHasInlineBackButton ? "pwa-app-frame--headerless" : ""}`}>
+      <div className={`pwa-app-frame pwa-shell-width-${contentWidth} ${pageHasInlineBackButton ? "pwa-app-frame--headerless" : ""}`}>
         {!pageHasInlineBackButton ? (
           <PwaHeader
             title={title}
             organizationName={organizationName}
+            profileImageUrl={profileImageUrl}
             unreadCount={preferences.showNotificationBadge ? unreadCount : 0}
             mode={headerMode}
             dashboard={dashboard}
@@ -117,10 +120,13 @@ function getPwaContentWidth(pathname: string): "narrow" | "medium" | "wide" {
   ];
   if (narrowRoutes.some((route) => pathname === route)) return "narrow";
   if (
+    pathname === PWA_ROUTES.more ||
+    pathname === PWA_ROUTES.settings ||
     pathname === PWA_ROUTES.profile ||
     pathname === PWA_ROUTES.notifications ||
     pathname === PWA_ROUTES.inquiries ||
     pathname === PWA_ROUTES.activity ||
+    pathname.startsWith(`${PWA_ROUTES.ypop}/`) ||
     pathname.startsWith(`${PWA_ROUTES.profile}/`) ||
     pathname.startsWith(`${PWA_ROUTES.documents}/`) ||
     pathname.startsWith(`${PWA_ROUTES.budgets}/`) ||

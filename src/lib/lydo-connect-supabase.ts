@@ -65,6 +65,7 @@ type OrganizationProfileRow = {
   representative_name: string | null;
   address: string | null;
   facebook_page_url: string | null;
+  profile_image_url?: string | null;
   profile_status: OrganizationProfile["profileStatus"];
   verified_at: string | null;
   internal_notes: string | null;
@@ -443,6 +444,7 @@ const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfil
   representativeName: row.representative_name ?? "",
   address: row.address ?? "",
   facebookPageUrl: row.facebook_page_url ?? "",
+  profileImageUrl: row.profile_image_url ?? "",
   profileStatus: row.profile_status,
   verifiedAt: row.verified_at ?? "",
   internalNotes: row.internal_notes ?? "",
@@ -1129,6 +1131,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
     representative_name: profile.representativeName.trim() || null,
     address: profile.address.trim() || null,
     facebook_page_url: profile.facebookPageUrl.trim() || null,
+    profile_image_url: profile.profileImageUrl?.trim() || null,
     profile_status: profile.profileStatus,
     verified_at: profile.verifiedAt.trim() || null,
     internal_notes: profile.internalNotes.trim() || null,
@@ -1137,7 +1140,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
   const { data, error } = await supabase
     .from("organization_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,is_existing_organization,organization_identifier_number,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_status,verified_at,internal_notes,yorp_registered_year,yorp_renewed_year,created_at,updated_at")
+    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,is_existing_organization,organization_identifier_number,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_image_url,profile_status,verified_at,internal_notes,yorp_registered_year,yorp_renewed_year,created_at,updated_at")
     .single();
 
   if (error || !data) {
@@ -1150,6 +1153,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
         "major_classification",
         "sub_classification",
         "district",
+        "profile_image_url",
         "profile_status",
       ].some((columnName) => error.message.includes(columnName))
     ) {
@@ -1719,6 +1723,54 @@ const removeStorageObjects = async (values: string[]) => {
   }
 };
 
+const PROFILE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+export const uploadOrganizationProfileImageInSupabase = async (file: File) => {
+  const { session, organizationProfile } = await getAuthenticatedOrganizationContext();
+  if (!PROFILE_IMAGE_TYPES.has(file.type)) {
+    throw new Error("Choose a JPG, PNG, or WebP image.");
+  }
+  if (file.size <= 0 || file.size > PROFILE_IMAGE_MAX_BYTES) {
+    throw new Error("The profile image must be smaller than 5 MB.");
+  }
+
+  const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const objectPath = `${organizationProfile.id}/profile/${Date.now()}-profile.${extension}`;
+  const storageUri = buildStorageUri(ORGANIZATION_DOCUMENTS_BUCKET, objectPath);
+  const { error: uploadError } = await supabase!.storage
+    .from(ORGANIZATION_DOCUMENTS_BUCKET)
+    .upload(objectPath, file, { contentType: file.type, upsert: false });
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data, error } = await supabase!
+    .from("organization_profiles")
+    .update({ profile_image_url: storageUri })
+    .eq("id", organizationProfile.id)
+    .eq("user_id", session.user.id)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    await removeStorageObjects([storageUri]);
+    if (error?.message.includes("profile_image_url")) {
+      throw new Error("Profile images are not enabled yet. Run supabase/repair_organization_profile_image.sql, then try again.");
+    }
+    throw new Error(error?.message ?? "The profile image could not be saved.");
+  }
+
+  const previousImage = organizationProfile.profileImageUrl?.trim();
+  if (previousImage && previousImage !== storageUri) {
+    try {
+      await removeStorageObjects([previousImage]);
+    } catch {
+      // The database already points to the new image. Old-object cleanup can
+      // safely be retried by an administrator without hiding the saved image.
+    }
+  }
+  return mapOrganizationProfile(data as OrganizationProfileRow);
+};
+
 export const createBudgetRequestInSupabase = async (params: {
   budgetRequest: Omit<BudgetRequest, "id" | "createdAt" | "updatedAt" | "organizationId" | "submittedBy">;
   file?: File | null;
@@ -1868,6 +1920,12 @@ const extractPublicStoragePath = (value: string, bucket: string) => {
 export const uploadNewsReleasePreviewImageToSupabase = async (file: File) => {
   if (!supabase) throw new Error("Supabase is not configured.");
   getAuthenticatedAdminSession();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error("Choose a JPG, PNG, or WebP thumbnail image.");
+  }
+  if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+    throw new Error("The thumbnail image must be smaller than 5 MB.");
+  }
 
   const safeFileName = sanitizeFileName(file.name);
   const objectPath = `news-releases/${Date.now()}-${safeFileName}`;

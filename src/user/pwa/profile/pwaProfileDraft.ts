@@ -26,6 +26,7 @@ export const createBlankPwaOrganizationProfile = (
   representativeName: "",
   address: "",
   facebookPageUrl: "",
+  profileImageUrl: "",
   profileStatus: "incomplete",
   verifiedAt: "",
   internalNotes: "",

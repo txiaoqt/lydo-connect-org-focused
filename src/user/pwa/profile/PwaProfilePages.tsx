@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronRight, ExternalLink, Pencil } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Camera, ChevronRight, ExternalLink, Loader2, Pencil } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,12 @@ import {
   subClassificationOptions,
   type OrganizationProfile,
 } from "@/lib/lydo-connect-data";
-import { upsertOrganizationProfileInSupabase } from "@/lib/lydo-connect-supabase";
+import { uploadOrganizationProfileImageInSupabase, upsertOrganizationProfileInSupabase } from "@/lib/lydo-connect-supabase";
 import { organizationEmailPattern, philippineContactNumberPattern } from "@/lib/organization-profile-domain";
 import type { usePwaPortalData } from "../hooks/usePwaPortalData";
 import { usePwaNavigation } from "../hooks/usePwaNavigation";
 import { PwaBackButton } from "../PwaBackButton";
+import { PwaOrganizationAvatar } from "../PwaOrganizationAvatar";
 import { PWA_ROUTES } from "../pwaRoutes";
 import { createBlankPwaOrganizationProfile } from "./pwaProfileDraft";
 
@@ -76,10 +77,54 @@ function ProfileSection({ title, children }: { title: string; children: ReactNod
 function ProfileSummary({ data, preview = false }: { data: PortalData; preview?: boolean }) {
   const { go } = usePwaNavigation();
   const profile = data.profile;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const uploadProfileImage = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const saved = await uploadOrganizationProfileImageInSupabase(file);
+      data.store.upsertOrganizationProfile(saved);
+      toast({ title: "Profile picture updated", description: "Your organization image has been saved securely." });
+    } catch (error) {
+      toast({ title: "Upload failed", description: error instanceof Error ? error.message : "The profile picture could not be saved.", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <section className="pwa-card pwa-profile-summary">
       <div className="pwa-profile-identity">
-        <span className="pwa-large-avatar" aria-hidden="true">{data.organizationName.charAt(0).toUpperCase()}</span>
+        <div className="pwa-profile-photo">
+          <PwaOrganizationAvatar className="pwa-large-avatar" organizationName={data.organizationName} profileImageUrl={profile?.profileImageUrl} />
+          {!preview ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                aria-label="Choose organization profile picture"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadProfileImage(file);
+                }}
+              />
+              <button
+                type="button"
+                className="pwa-profile-photo-action"
+                disabled={uploadingImage || !profile}
+                aria-label={profile?.profileImageUrl ? "Change organization profile picture" : "Add organization profile picture"}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadingImage ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Camera aria-hidden="true" />}
+                <span>{uploadingImage ? "Uploading" : profile?.profileImageUrl ? "Change photo" : "Add photo"}</span>
+              </button>
+            </>
+          ) : null}
+        </div>
         <div>
           <h2>{data.organizationName}</h2>
           <div className="pwa-profile-status-line">

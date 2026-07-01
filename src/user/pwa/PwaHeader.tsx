@@ -1,8 +1,10 @@
 import { ArrowLeft, Bell } from "lucide-react";
+import { PwaOrganizationAvatar } from "./PwaOrganizationAvatar";
 
 export function PwaHeader({
   title,
   organizationName,
+  profileImageUrl,
   unreadCount,
   mode,
   dashboard,
@@ -12,6 +14,7 @@ export function PwaHeader({
 }: {
   title: string;
   organizationName: string;
+  profileImageUrl?: string | null;
   unreadCount: number;
   mode: "identity" | "nested";
   dashboard?: boolean;
@@ -19,8 +22,6 @@ export function PwaHeader({
   onBack: () => void;
   onNotifications: () => void;
 }) {
-  const initial = organizationName.trim().charAt(0).toUpperCase() || "Y";
-
   if (mode === "nested") {
     return (
       <header className="pwa-app-header pwa-app-header--nested">
@@ -35,7 +36,7 @@ export function PwaHeader({
   return (
     <header className="pwa-app-header">
       <button type="button" className="pwa-identity-button" onClick={onProfile} aria-label="Open organization profile">
-        <span className="pwa-avatar" aria-hidden="true">{initial}</span>
+        <PwaOrganizationAvatar className="pwa-avatar" organizationName={organizationName} profileImageUrl={profileImageUrl} />
         <span className="pwa-header-copy">
           <h1>{title}</h1>
           <span>{dashboard ? `Good ${getDayPart()}, ${organizationName || "Organization"}` : organizationName}</span>

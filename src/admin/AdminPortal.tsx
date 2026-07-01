@@ -78,6 +78,7 @@ import {
   createTransparencyPostInSupabase,
   createTemplateRecordInSupabase,
   deleteNewsReleaseInSupabase,
+  deleteNewsReleasePreviewImageFromSupabase,
   deleteTransparencyPostInSupabase,
   updateBudgetRequestInSupabase,
   deleteTemplateRecordInSupabase,
@@ -92,6 +93,7 @@ import {
   updateOrganizationProfileReviewInSupabase,
   updateTemplateRecordInSupabase,
   uploadTemplateDocumentToSupabase,
+  uploadNewsReleasePreviewImageToSupabase,
   adminCreateYpopPeriodInSupabase,
   adminUpdateYpopPeriodInSupabase,
   adminDeleteYpopPeriodFromSupabase,
@@ -649,6 +651,7 @@ export default function AdminPortal({ section }: { section: string }) {
   const [newsDescriptionDraft, setNewsDescriptionDraft] = useState("");
   const [newsFacebookPostUrlDraft, setNewsFacebookPostUrlDraft] = useState("");
   const [newsPreviewImageUrlDraft, setNewsPreviewImageUrlDraft] = useState("");
+  const [newsPreviewImageFileDraft, setNewsPreviewImageFileDraft] = useState<File | null>(null);
   const [newsSearch, setNewsSearch] = useState("");
   const [newsVisibilityFilter, setNewsVisibilityFilter] = useState<"all" | NewsRelease["visibilityStatus"]>("all");
   const [activityLogFilter, setActivityLogFilter] = useState<string>("all");
@@ -3441,6 +3444,7 @@ export default function AdminPortal({ section }: { section: string }) {
     setNewsDescriptionDraft("");
     setNewsFacebookPostUrlDraft("");
     setNewsPreviewImageUrlDraft("");
+    setNewsPreviewImageFileDraft(null);
     setNewsDatePostedDraft("");
     setNewsVisibilityDraft("draft");
   };
@@ -3476,6 +3480,7 @@ export default function AdminPortal({ section }: { section: string }) {
     setNewsDescriptionDraft(newsRelease.description);
     setNewsFacebookPostUrlDraft(newsRelease.facebookPostUrl);
     setNewsPreviewImageUrlDraft(newsRelease.previewImageUrl ?? "");
+    setNewsPreviewImageFileDraft(null);
     setNewsDatePostedDraft(newsRelease.datePosted);
     setNewsVisibilityDraft(newsRelease.visibilityStatus);
   };
@@ -3556,8 +3561,15 @@ export default function AdminPortal({ section }: { section: string }) {
     }
 
     setSavingNewsRelease(true);
+    let uploadedPreviewImageUrl = "";
     try {
-      const resolvedPreviewImageUrl = newsPreviewImageUrlDraft.trim();
+      if (newsPreviewImageFileDraft) {
+        uploadedPreviewImageUrl = await uploadNewsReleasePreviewImageToSupabase(newsPreviewImageFileDraft);
+      }
+      const resolvedPreviewImageUrl = uploadedPreviewImageUrl || newsPreviewImageUrlDraft.trim();
+      const previousPreviewImageUrl = editingNewsReleaseId
+        ? newsReleases.find((entry) => entry.id === editingNewsReleaseId)?.previewImageUrl?.trim() || ""
+        : "";
 
       if (newsModalMode === "edit" && editingNewsReleaseId) {
         const updatedNewsRelease = await updateNewsReleaseInSupabase(editingNewsReleaseId, {
@@ -3571,6 +3583,9 @@ export default function AdminPortal({ section }: { section: string }) {
         updateNewsRelease(editingNewsReleaseId, updatedNewsRelease);
         await appendAuditLog("Updated news release", "news_release", updatedNewsRelease.id, `Updated news release "${updatedNewsRelease.title}".`);
         await refreshAdminState();
+        if (uploadedPreviewImageUrl && previousPreviewImageUrl && previousPreviewImageUrl !== uploadedPreviewImageUrl) {
+          void deleteNewsReleasePreviewImageFromSupabase(previousPreviewImageUrl);
+        }
         toast({ title: "News release updated", description: `${updatedNewsRelease.title} was updated successfully.` });
       } else {
         const createdNewsRelease = await createNewsReleaseInSupabase({
@@ -3588,6 +3603,9 @@ export default function AdminPortal({ section }: { section: string }) {
       }
       resetNewsReleaseForm();
     } catch (error) {
+      if (uploadedPreviewImageUrl) {
+        void deleteNewsReleasePreviewImageFromSupabase(uploadedPreviewImageUrl);
+      }
       toast({
         title: newsModalMode === "edit" ? "Update failed" : "Create failed",
         description: error instanceof Error ? error.message : "The news release could not be saved.",
@@ -7322,7 +7340,17 @@ export default function AdminPortal({ section }: { section: string }) {
                     />
                   </div>
                   <div className="space-y-3">
-                    <label htmlFor="news-release-preview-image-url" className="text-sm font-medium">Thumbnail Image Link</label>
+                    <label htmlFor="news-release-preview-image-file" className="text-sm font-medium">Thumbnail Image</label>
+                    <Input
+                      id="news-release-preview-image-file"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => setNewsPreviewImageFileDraft(event.target.files?.[0] ?? null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Recommended: upload a JPG, PNG, or WebP image. The file is copied to Y-TRACE Storage so Facebook link restrictions do not break it.
+                    </p>
+                    <label htmlFor="news-release-preview-image-url" className="text-xs font-medium text-muted-foreground">Existing or external image URL</label>
                     <Input
                       id="news-release-preview-image-url"
                       name="newsReleasePreviewImageUrl"
@@ -7331,9 +7359,13 @@ export default function AdminPortal({ section }: { section: string }) {
                       placeholder="https://example.com/thumbnail.jpg"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Optional. Paste the public image link that should appear as the thumbnail on the organization-side News Releases cards.
+                      External URLs may expire or block image embedding. Uploading the image above is more reliable.
                     </p>
-                    {newsPreviewImageUrlDraft.trim() ? (
+                    {newsPreviewImageFileDraft ? (
+                      <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-primary">
+                        Ready to upload: <strong>{newsPreviewImageFileDraft.name}</strong>
+                      </div>
+                    ) : newsPreviewImageUrlDraft.trim() ? (
                       <div className="space-y-2 rounded-xl border border-border/70 bg-muted/10 p-3">
                         <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
                           Thumbnail Preview
@@ -7341,6 +7373,10 @@ export default function AdminPortal({ section }: { section: string }) {
                         <img
                           src={newsPreviewImageUrlDraft}
                           alt="News release thumbnail preview"
+                          referrerPolicy="no-referrer"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
                           className="h-40 w-full rounded-lg border border-border/60 object-cover"
                         />
                       </div>
@@ -10993,6 +11029,7 @@ export default function AdminPortal({ section }: { section: string }) {
     newsDescriptionDraft,
     newsFacebookPostUrlDraft,
     newsModalMode,
+    newsPreviewImageFileDraft,
     newsPreviewImageUrlDraft,
     newsReleases,
     newsTitleDraft,

@@ -6972,26 +6972,27 @@ export default function UserPortal({ section }: { section: string }) {
                             aria-label={`Open ${news.title} on Facebook`}
                           >
                             <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-border/60 bg-muted">
+                              <div className={cn("absolute inset-0 bg-gradient-to-br", fallbackAccent)} />
+                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_32%),linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[length:auto,24px_24px,24px_24px] opacity-90 transition-transform duration-300 group-hover:scale-[1.03]" />
+                              <div className="absolute inset-x-0 bottom-0 p-4">
+                                <div className="rounded-2xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
+                                  <p className="line-clamp-3 text-lg font-semibold leading-tight text-white">
+                                    {news.title}
+                                  </p>
+                                </div>
+                              </div>
                               {previewImageUrl ? (
                                 <img
                                   src={previewImageUrl}
                                   alt={`${news.title} preview`}
-                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                                  referrerPolicy="no-referrer"
+                                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}
                                 />
-                              ) : (
-                                <>
-                                  <div className={cn("absolute inset-0 bg-gradient-to-br", fallbackAccent)} />
-                                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_32%),linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[length:auto,24px_24px,24px_24px] opacity-90 transition-transform duration-300 group-hover:scale-[1.03]" />
-                                  <div className="absolute inset-x-0 bottom-0 p-4">
-                                    <div className="rounded-2xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
-                                      <p className="line-clamp-3 text-lg font-semibold leading-tight text-white">
-                                        {news.title}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                              <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
+                              ) : null}
+                              <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4">
                                 <span className="inline-flex items-center rounded-full border border-white/20 bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary shadow-sm">
                                   News Release
                                 </span>

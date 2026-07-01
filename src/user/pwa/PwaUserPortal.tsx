@@ -88,6 +88,7 @@ export default function PwaUserPortal() {
     <PwaAppShell
       title={title}
       organizationName={data.organizationName}
+      profileImageUrl={data.profile?.profileImageUrl}
       unreadCount={data.unreadCount}
       dashboard={pathname === PWA_ROUTES.home}
     >

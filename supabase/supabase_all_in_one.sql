@@ -246,6 +246,7 @@ create table if not exists public.organization_profiles (
   representative_name text,
   address text,
   facebook_page_url text,
+  profile_image_url text,
   profile_status public.profile_status not null default 'incomplete',
   verified_at timestamptz,
   internal_notes text,
@@ -268,6 +269,7 @@ alter table if exists public.organization_profiles
   add column if not exists representative_name text,
   add column if not exists address text,
   add column if not exists facebook_page_url text,
+  add column if not exists profile_image_url text,
   add column if not exists profile_status public.profile_status,
   add column if not exists verified_at timestamptz,
   add column if not exists internal_notes text;
