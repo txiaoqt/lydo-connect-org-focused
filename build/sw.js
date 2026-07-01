@@ -1,10 +1,12 @@
-const CACHE_NAME = "y-trace-v9";
+const CACHE_NAME = "y-trace-v10";
 const APP_SHELL = [
   "/",
+  "/app-start",
   "/dashboard",
   "/app",
   "/admin",
   "/signin",
+  "/signup",
   "/index.html",
   "/manifest.webmanifest",
   "/manifest-admin.webmanifest",

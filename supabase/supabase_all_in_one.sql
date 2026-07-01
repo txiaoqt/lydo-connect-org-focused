@@ -2219,17 +2219,19 @@ as $$
 declare
   default_role_id smallint;
 begin
-  insert into public.user_profiles (user_id, email, full_name, display_name)
+  insert into public.user_profiles (user_id, email, full_name, display_name, contact_number)
   values (
     new.id,
     coalesce(new.email, new.id::text || '@local.invalid'),
     coalesce(new.raw_user_meta_data ->> 'full_name', ''),
-    coalesce(new.raw_user_meta_data ->> 'display_name', '')
+    coalesce(new.raw_user_meta_data ->> 'display_name', ''),
+    nullif(trim(new.raw_user_meta_data ->> 'contact_number'), '')
   )
   on conflict (user_id) do update
     set email = excluded.email,
         full_name = excluded.full_name,
         display_name = excluded.display_name,
+        contact_number = coalesce(excluded.contact_number, user_profiles.contact_number),
         updated_at = now();
 
   select id into default_role_id from public.roles where code = 'youth' limit 1;

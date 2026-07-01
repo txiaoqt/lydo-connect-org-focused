@@ -19,6 +19,7 @@ import type { usePwaPortalData } from "../hooks/usePwaPortalData";
 import { usePwaNavigation } from "../hooks/usePwaNavigation";
 import { PwaBackButton } from "../PwaBackButton";
 import { PWA_ROUTES } from "../pwaRoutes";
+import { createBlankPwaOrganizationProfile } from "./pwaProfileDraft";
 
 type PortalData = ReturnType<typeof usePwaPortalData>;
 type ProfileTab = "overview" | "details" | "activity";
@@ -270,39 +271,15 @@ export function PwaProfilePage({ data }: { data: PortalData }) {
   );
 }
 
-const blankProfile = (data: PortalData): OrganizationProfile => ({
-  id: `draft-${data.user?.id || "organization"}`,
-  userId: data.user?.id || "",
-  organizationName: data.organizationName === "Organization" ? "" : data.organizationName,
-  organizationEmail: data.user?.email || "",
-  contactNumber: "",
-  district: data.user?.profileHints?.district || "",
-  barangay: data.user?.profileHints?.barangay || "",
-  isExistingOrganization: Boolean(data.user?.profileHints?.isExistingOrganization),
-  organizationIdentifierNumber: data.user?.profileHints?.organizationIdentifierNumber || "",
-  majorClassification: "",
-  subClassification: "",
-  advocacies: [],
-  adviserName: "",
-  representativeName: "",
-  address: "",
-  facebookPageUrl: "",
-  profileStatus: "incomplete",
-  verifiedAt: "",
-  internalNotes: "",
-  yorpRegisteredYear: null,
-  yorpRenewedYear: null,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-});
-
 function EditorField({ label, children, required }: { label: string; children: ReactNode; required?: boolean }) {
   return <label className="pwa-profile-editor-field"><span>{label}{required ? " *" : ""}</span>{children}</label>;
 }
 
 export function PwaProfileEdit({ data }: { data: PortalData }) {
   const { go } = usePwaNavigation();
-  const [draft, setDraft] = useState<OrganizationProfile>(() => data.profile ? { ...data.profile, advocacies: [...data.profile.advocacies] } : blankProfile(data));
+  const [draft, setDraft] = useState<OrganizationProfile>(() => data.profile
+    ? { ...data.profile, advocacies: [...data.profile.advocacies] }
+    : createBlankPwaOrganizationProfile(data));
   const [openSection, setOpenSection] = useState("basic");
   const [saving, setSaving] = useState(false);
 
@@ -391,7 +368,16 @@ export function PwaProfileEdit({ data }: { data: PortalData }) {
                 <div className="pwa-profile-editor-grid">
                   <EditorField label="Organization Name" required><Input value={draft.organizationName} readOnly /></EditorField>
                   <EditorField label="Organization Email" required><Input value={draft.organizationEmail} readOnly /></EditorField>
-                  <EditorField label="Contact Number" required><Input value={draft.contactNumber} readOnly /></EditorField>
+                  <EditorField label="Contact Number" required>
+                    <Input
+                      value={draft.contactNumber}
+                      onChange={(event) => setField("contactNumber", event.target.value.replace(/\D/g, "").slice(0, 11))}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={11}
+                      placeholder="09XXXXXXXXX"
+                    />
+                  </EditorField>
                 </div>
               ) : null}
               {section.id === "location" ? (

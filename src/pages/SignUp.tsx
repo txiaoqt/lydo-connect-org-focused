@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  beginPwaAuthFlow,
+  isPwaAuthFlow,
+  PWA_ENTRY_ROUTE,
+  pwaAuthRoute,
+} from "@/user/pwa/pwaAuthFlow";
 
 type BarangayOption = { id: string; name: string };
 type PasigDistrict = "District I" | "District II";
@@ -143,6 +149,8 @@ const SignUp = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const pwaFlow = isPwaAuthFlow(location.search);
   const { signUp } = useAuth();
   const useSupabaseAuth = Boolean(supabase);
 
@@ -204,6 +212,10 @@ const SignUp = () => {
       window.clearTimeout(timeoutId);
     };
   }, [email, isGmailEmail]);
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("pwa") === "1") beginPwaAuthFlow();
+  }, [location.search]);
 
   useEffect(() => {
     let active = true;
@@ -298,6 +310,7 @@ const SignUp = () => {
       barangayName: selectedBarangayName,
       isExistingOrganization,
       organizationIdentifierNumber: normalizedIdentifierNumber,
+      pwaFlow,
     });
     setIsCreating(false);
 
@@ -314,11 +327,11 @@ const SignUp = () => {
         ? "Check your email to confirm your account. The link will sign you in automatically."
         : "Your account has been created. Please sign in.",
     });
-    navigate("/signin");
+    navigate(pwaFlow ? pwaAuthRoute("/signin") : "/signin");
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10 relative overflow-hidden">
+    <div className={`${pwaFlow ? "ytrace-pwa-app pwa-public-auth-page" : ""} min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10 relative overflow-hidden`}>
       {/* Background blobs */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-180px] right-[-140px] h-[360px] w-[360px] rounded-full bg-primary/15 blur-3xl" />
@@ -328,7 +341,7 @@ const SignUp = () => {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="mb-7 text-left">
-          <Link to="/" className="inline-flex items-center gap-3 max-w-full">
+          <Link to={pwaFlow ? PWA_ENTRY_ROUTE : "/"} className="inline-flex items-center gap-3 max-w-full">
             <BrandLogo imgClassName="h-10 w-10" showText subtitle="Youth Portal" />
           </Link>
         </div>
@@ -395,7 +408,7 @@ const SignUp = () => {
                   ) : null}
                   {isGmailEmail && emailAvailability === "registered" ? (
                     <p className="text-xs text-destructive">
-                      This email is already registered. <Link to="/signin" className="font-medium underline">Sign in instead.</Link>
+                      This email is already registered. <Link to={pwaFlow ? pwaAuthRoute("/signin") : "/signin"} className="font-medium underline">Sign in instead.</Link>
                     </p>
                   ) : null}
                   {isGmailEmail && emailAvailability === "available" ? (
@@ -649,13 +662,13 @@ const SignUp = () => {
         <div className="mt-5 space-y-2.5 text-center text-sm text-muted-foreground">
           <p>
             Already have an account?{" "}
-            <Link to="/signin" className="font-medium text-primary hover:text-primary/80 transition-colors">
+            <Link to={pwaFlow ? pwaAuthRoute("/signin") : "/signin"} className="font-medium text-primary hover:text-primary/80 transition-colors">
               Sign in
             </Link>
           </p>
           <p>
-            <Link to="/" className="hover:text-foreground transition-colors">
-              ← Back to home
+            <Link to={pwaFlow ? PWA_ENTRY_ROUTE : "/"} className="hover:text-foreground transition-colors">
+              ← Back to {pwaFlow ? "welcome" : "home"}
             </Link>
           </p>
         </div>

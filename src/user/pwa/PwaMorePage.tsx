@@ -3,6 +3,7 @@ import {
   Phone, ScrollText, Settings, ShieldCheck, UserRound,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePwaNavigation } from "./hooks/usePwaNavigation";
 import { PWA_ROUTES } from "./pwaRoutes";
+import { PWA_ENTRY_ROUTE } from "./pwaAuthFlow";
 
 const groups = [
   {
@@ -57,6 +59,7 @@ const groups = [
 
 export function PwaMorePage({ onSignOut }: { onSignOut: () => Promise<void> }) {
   const { go } = usePwaNavigation();
+  const navigate = useNavigate();
   const [signOutConfirmationOpen, setSignOutConfirmationOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -65,6 +68,7 @@ export function PwaMorePage({ onSignOut }: { onSignOut: () => Promise<void> }) {
     try {
       await onSignOut();
       setSignOutConfirmationOpen(false);
+      navigate(PWA_ENTRY_ROUTE, { replace: true });
     } finally {
       setSigningOut(false);
     }

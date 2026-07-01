@@ -14,7 +14,7 @@ const eligible: InstalledUserPwaDecision = {
 };
 
 describe("shouldUseInstalledUserPwa", () => {
-  it("enables the alternate UI for an eligible installed compact user route", () => {
+  it("enables the alternate UI for an eligible installed user route", () => {
     expect(shouldUseInstalledUserPwa(eligible)).toBe(true);
   });
 
@@ -22,10 +22,13 @@ describe("shouldUseInstalledUserPwa", () => {
     ["feature flag disabled", { enabled: false }],
     ["admin deployment", { adminSurface: true }],
     ["public or admin route", { userRoute: false }],
-    ["viewport wider than 768px", { compact: false }],
     ["ordinary mobile browser", { standalone: false }],
   ])("keeps the existing website UI when %s", (_label, change) => {
     expect(shouldUseInstalledUserPwa({ ...eligible, ...change })).toBe(false);
+  });
+
+  it("does not use viewport width to disable an installed PWA", () => {
+    expect(shouldUseInstalledUserPwa({ ...eligible, compact: false })).toBe(true);
   });
 
   it("allows local development preview without standalone mode", () => {

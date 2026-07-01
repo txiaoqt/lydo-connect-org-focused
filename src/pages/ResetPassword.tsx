@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,18 @@ import BrandLogo from "@/components/BrandLogo";
 import { getPasswordResetUrl } from "@/lib/auth-redirect";
 import { parsePasswordRecoveryUrl } from "@/lib/password-recovery";
 import { supabase } from "@/lib/supabase";
+import {
+  beginPwaAuthFlow,
+  isPwaAuthFlow,
+  PWA_ENTRY_ROUTE,
+  pwaAuthRoute,
+} from "@/user/pwa/pwaAuthFlow";
 
 type ResetMode = "request" | "verifying" | "update" | "invalid" | "updated";
 
 const ResetPassword = () => {
+  const location = useLocation();
+  const pwaFlow = isPwaAuthFlow(location.search);
   const recovery = useMemo(
     () => parsePasswordRecoveryUrl(typeof window === "undefined" ? "/reset-password" : window.location.href),
     [],
@@ -24,6 +32,10 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [inlineError, setInlineError] = useState("");
+
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("pwa") === "1") beginPwaAuthFlow();
+  }, [location.search]);
 
   useEffect(() => {
     if (!supabase) {
@@ -112,7 +124,7 @@ const ResetPassword = () => {
 
     setIsLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: getPasswordResetUrl(),
+      redirectTo: getPasswordResetUrl({ pwaFlow }),
     });
     setIsLoading(false);
     if (error) {
@@ -160,7 +172,7 @@ const ResetPassword = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 text-foreground">
+    <div className={`${pwaFlow ? "ytrace-pwa-app pwa-public-auth-page" : ""} relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 text-foreground`}>
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-140px] top-[-180px] h-[360px] w-[360px] rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute bottom-[-190px] right-[-150px] h-[400px] w-[400px] rounded-full bg-primary/15 blur-3xl" />
@@ -168,7 +180,7 @@ const ResetPassword = () => {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-7 text-left">
-          <Link to="/" className="inline-flex max-w-full items-center gap-3">
+          <Link to={pwaFlow ? PWA_ENTRY_ROUTE : "/"} className="inline-flex max-w-full items-center gap-3">
             <BrandLogo imgClassName="h-10 w-10" showText subtitle="Youth Portal" />
           </Link>
         </div>
@@ -263,7 +275,7 @@ const ResetPassword = () => {
                 <h1 className="text-2xl font-heading font-bold">Password updated</h1>
                 <p className="mt-2 text-sm text-muted-foreground">Your new password is ready. Sign in again to continue.</p>
               </div>
-              <Button className="w-full font-semibold" asChild><Link to="/signin">Continue to Sign In</Link></Button>
+              <Button className="w-full font-semibold" asChild><Link to={pwaFlow ? pwaAuthRoute("/signin") : "/signin"}>Continue to Sign In</Link></Button>
             </div>
           ) : null}
 
@@ -276,8 +288,8 @@ const ResetPassword = () => {
 
         {mode !== "updated" ? (
           <div className="mt-5 space-y-2.5 text-center text-sm text-muted-foreground">
-            <p>Remember your password? <Link to="/signin" className="font-medium text-primary hover:text-primary/80">Sign in</Link></p>
-            <p><Link to="/" className="hover:text-foreground">← Back to home</Link></p>
+            <p>Remember your password? <Link to={pwaFlow ? pwaAuthRoute("/signin") : "/signin"} className="font-medium text-primary hover:text-primary/80">Sign in</Link></p>
+            <p><Link to={pwaFlow ? PWA_ENTRY_ROUTE : "/"} className="hover:text-foreground">← Back to {pwaFlow ? "welcome" : "home"}</Link></p>
           </div>
         ) : null}
       </div>

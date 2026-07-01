@@ -30,6 +30,8 @@ export const PWA_ROUTES = {
   more: "/app/more",
 } as const;
 
+export { PWA_ENTRY_ROUTE, pwaAuthRoute, pwaPublicRoute } from "./pwaAuthFlow";
+
 export const pwaDocumentDetailRoute = (documentId: string) =>
   `${PWA_ROUTES.documents}/${encodeURIComponent(documentId)}`;
 

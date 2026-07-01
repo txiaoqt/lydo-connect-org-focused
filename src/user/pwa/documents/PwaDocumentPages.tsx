@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState, type DragEvent } from "react";
+import { useId, useMemo, useRef, useState, type DragEvent } from "react";
 import JSZip from "jszip";
 import {
-  CalendarClock, ChevronRight, Download, Eye, FileArchive, FileText, Info, Loader2, Trash2, UploadCloud,
+  AlertCircle, CalendarClock, CheckCircle2, ChevronRight, Download, Eye, FileArchive, FileText, Info,
+  Loader2, MessageSquareWarning, Trash2, UploadCloud,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { StatusBadge } from "@/components/portal/StatusBadge";
@@ -161,9 +162,17 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
   const { documentId = "" } = useParams();
   const { go } = usePwaNavigation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const reuploadTriggerRef = useRef<HTMLButtonElement>(null);
+  const pickerButtonRef = useRef<HTMLButtonElement>(null);
+  const validationSequenceRef = useRef(0);
+  const replacementInputId = useId();
+  const replacementHelpId = useId();
+  const replacementErrorId = useId();
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [replacementFile, setReplacementFile] = useState<File | null>(null);
   const [replacementError, setReplacementError] = useState("");
+  const [replacementStatus, setReplacementStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
+  const [replacementAnnouncement, setReplacementAnnouncement] = useState("");
   const [replacing, setReplacing] = useState(false);
   const template = data.requiredTemplates.find((item) => item.id === documentId);
   const file = data.documentFiles.find((item) => item.documentTypeId === documentId);
@@ -192,17 +201,57 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
     if (replacing) return;
     setReplaceOpen(open);
     if (!open) {
+      validationSequenceRef.current += 1;
       setReplacementFile(null);
       setReplacementError("");
+      setReplacementStatus("idle");
       if (inputRef.current) inputRef.current.value = "";
     }
   };
 
   const selectReplacement = async (selected?: File) => {
+    const validationSequence = ++validationSequenceRef.current;
     setReplacementFile(selected ?? null);
     setReplacementError("");
-    if (!selected) return;
-    setReplacementError(await validateOrganizationDocumentFile(documentId, selected));
+    if (!selected) {
+      setReplacementStatus("idle");
+      return;
+    }
+
+    setReplacementStatus("validating");
+    setReplacementAnnouncement(`${selected.name} selected. Checking the file.`);
+    try {
+      const issue = await validateOrganizationDocumentFile(documentId, selected);
+      if (validationSequence !== validationSequenceRef.current) return;
+      setReplacementError(issue);
+      setReplacementStatus(issue ? "invalid" : "valid");
+      setReplacementAnnouncement(issue || `${selected.name} is ready to upload.`);
+    } catch {
+      if (validationSequence !== validationSequenceRef.current) return;
+      const issue = "The selected file could not be read. Choose another file.";
+      setReplacementError(issue);
+      setReplacementStatus("invalid");
+      setReplacementAnnouncement(issue);
+    }
+  };
+
+  const openReplacementPicker = () => {
+    if (replacing) return;
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.click();
+    }
+  };
+
+  const removeReplacement = () => {
+    if (replacing) return;
+    validationSequenceRef.current += 1;
+    setReplacementFile(null);
+    setReplacementError("");
+    setReplacementStatus("idle");
+    setReplacementAnnouncement("Selected file removed.");
+    if (inputRef.current) inputRef.current.value = "";
+    window.requestAnimationFrame(() => pickerButtonRef.current?.focus());
   };
 
   const submitReplacement = async () => {
@@ -218,6 +267,7 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
 
     setReplacing(true);
     setReplacementError("");
+    setReplacementAnnouncement("Uploading corrected file.");
     try {
       await replaceOrganizationDocumentFileInSupabase({
         fileId: file.id,
@@ -228,17 +278,28 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
       await data.refresh();
       setReplaceOpen(false);
       setReplacementFile(null);
+      setReplacementStatus("idle");
       if (inputRef.current) inputRef.current.value = "";
+      setReplacementAnnouncement(`${template.name} corrected file uploaded successfully.`);
       toast({
         title: "Corrected file submitted",
         description: `${template.name} is now back under admin review.`,
       });
     } catch (error) {
-      setReplacementError(error instanceof Error ? error.message : "The corrected file could not be submitted.");
+      const message = error instanceof Error ? error.message : "The corrected file could not be uploaded. Check your connection and try again.";
+      setReplacementError(message);
+      setReplacementAnnouncement(`Upload failed. ${message}`);
     } finally {
       setReplacing(false);
     }
   };
+
+  const replacementFormat = replacementFile
+    ? replacementFile.name.split(".").pop()?.toUpperCase() || replacementFile.type || "File"
+    : "";
+  const acceptedFormats = getAcceptedDocumentFormats(documentId);
+  const maximumSize = formatDocumentFileSize(DOCUMENT_UPLOAD_MAX_BYTES);
+  const replacementDescribedBy = [replacementHelpId, replacementError ? replacementErrorId : ""].filter(Boolean).join(" ");
 
   return (
     <div className="pwa-stack">
@@ -264,52 +325,136 @@ export function PwaDocumentDetail({ data }: { data: PortalData }) {
         {previousRemark ? <div><Eye /><span><small>{latestRevision ? "Previous review remark" : "Admin remark"}</small><strong>{previousRemark}</strong></span></div> : null}
       </section>
       <div className="pwa-button-stack">
-        {requiresCorrection ? <button type="button" className="pwa-primary-button" onClick={() => setReplaceOpen(true)}><UploadCloud /> Re-upload File</button> : null}
+        {requiresCorrection ? <button ref={reuploadTriggerRef} type="button" className="pwa-primary-button" onClick={() => setReplaceOpen(true)}><UploadCloud /> Re-upload File</button> : null}
         {file?.fileUrl ? <button type="button" className="pwa-secondary-button" onClick={() => void openReference(file.fileUrl)}><Eye /> View Attached File</button> : null}
         {template.templateFileUrl ? <button type="button" className="pwa-secondary-button" onClick={() => void openReference(template.templateFileUrl)}><Download /> View Template</button> : null}
         {!file || initialUploadStatuses.has(file.adminStatus) ? <button type="button" className="pwa-primary-button" onClick={() => go(PWA_ROUTES.documentsManage)}><UploadCloud /> Upload in Document Manager</button> : null}
       </div>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">{replacementAnnouncement}</p>
 
       <Dialog open={replaceOpen} onOpenChange={closeReplacement}>
-        <DialogContent className="pwa-reupload-dialog w-[calc(100vw-1.5rem)] max-w-md rounded-2xl">
-          <DialogHeader>
+        <DialogContent
+          className={`pwa-reupload-dialog w-[calc(100vw-2rem)] max-w-md rounded-2xl ${replacing ? "is-uploading" : ""}`}
+          data-uploading={replacing ? "true" : "false"}
+          onEscapeKeyDown={(event) => {
+            if (replacing) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (replacing) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (replacing) event.preventDefault();
+          }}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            window.requestAnimationFrame(() => pickerButtonRef.current?.focus());
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            reuploadTriggerRef.current?.focus();
+          }}
+        >
+          <DialogHeader className="pwa-reupload-header">
             <DialogTitle>Re-upload corrected file</DialogTitle>
             <DialogDescription>
-              Replace only the file for this requirement. The document type cannot be changed.
+              Replace the file for this requirement only. The document type cannot be changed.
             </DialogDescription>
           </DialogHeader>
           <div className="pwa-reupload-content">
-            <dl>
-              <div><dt>Document</dt><dd>{template.name}</dd></div>
-              <div><dt>Current file</dt><dd>{file?.fileName}</dd></div>
-              <div><dt>Admin remark</dt><dd>{previousRemark || "No admin remark was provided."}</dd></div>
-              <div><dt>Accepted format</dt><dd>{getAcceptedDocumentFormats(documentId)}</dd></div>
-              <div><dt>Maximum size</dt><dd>{formatDocumentFileSize(DOCUMENT_UPLOAD_MAX_BYTES)}</dd></div>
-            </dl>
-            <label className="pwa-reupload-picker">
-              <span>Corrected file</span>
-              <input
-                ref={inputRef}
-                type="file"
-                accept={getDocumentInputAccept(documentId)}
-                disabled={replacing}
-                onChange={(event) => void selectReplacement(event.target.files?.[0])}
-              />
-            </label>
-            {replacementFile ? (
-              <div className="pwa-selected-replacement">
-                <FileText aria-hidden="true" />
-                <span><strong>{replacementFile.name}</strong><small>{formatDocumentFileSize(replacementFile.size)}</small></span>
+            <section className="pwa-reupload-feedback" aria-labelledby="revision-feedback-title">
+              <MessageSquareWarning aria-hidden="true" />
+              <div>
+                <span>Revision requested</span>
+                <strong id="revision-feedback-title">Admin feedback</strong>
+                <p>{previousRemark || "No admin remark was provided."}</p>
               </div>
-            ) : null}
-            <p className="pwa-reupload-note">Submitting will replace the current file and return it to admin review.</p>
-            <p className="pwa-reupload-error" role="alert" aria-live="assertive">{replacementError}</p>
+            </section>
+
+            <dl className="pwa-reupload-metadata">
+              <div><dt>Document</dt><dd className="pwa-reupload-document-name">{template.name}</dd></div>
+              <div><dt>Current file</dt><dd title={file?.fileName}>{file?.fileName}</dd></div>
+              <div><dt>Accepted format</dt><dd>{acceptedFormats}</dd></div>
+              <div><dt>Maximum size</dt><dd>{maximumSize}</dd></div>
+            </dl>
+
+            <label htmlFor={replacementInputId} className="sr-only">
+              Select one corrected file for {template.name}
+            </label>
+            <span id={replacementHelpId} className="sr-only">
+              Select one file. Accepted format: {acceptedFormats}. Maximum size: {maximumSize}.
+            </span>
+            <input
+              ref={inputRef}
+              id={replacementInputId}
+              className="sr-only"
+              type="file"
+              tabIndex={-1}
+              accept={getDocumentInputAccept(documentId)}
+              disabled={replacing}
+              aria-invalid={replacementStatus === "invalid"}
+              aria-describedby={replacementDescribedBy}
+              onChange={(event) => void selectReplacement(event.target.files?.[0])}
+            />
+
+            {!replacementFile ? (
+              <button
+                ref={pickerButtonRef}
+                type="button"
+                className="pwa-reupload-picker"
+                disabled={replacing}
+                aria-controls={replacementInputId}
+                aria-describedby={replacementHelpId}
+                onClick={openReplacementPicker}
+              >
+                <span className="pwa-reupload-picker-icon"><UploadCloud aria-hidden="true" /></span>
+                <strong>{acceptedFormats === "PDF" ? "Choose corrected PDF" : "Choose corrected file"}</strong>
+                <span>Browse your device</span>
+                <small>{acceptedFormats} &middot; Maximum {maximumSize}</small>
+              </button>
+            ) : (
+              <section className={`pwa-selected-replacement is-${replacementStatus}`} aria-label="Selected corrected file">
+                <FileText aria-hidden="true" />
+                <div>
+                  <strong title={replacementFile.name}>{replacementFile.name}</strong>
+                  <small>{replacementFormat} &middot; {formatDocumentFileSize(replacementFile.size)}</small>
+                  <span className="pwa-reupload-validation-status">
+                    {replacementStatus === "validating" ? <Loader2 className="pwa-spin" aria-hidden="true" /> : null}
+                    {replacementStatus === "valid" ? <CheckCircle2 aria-hidden="true" /> : null}
+                    {replacementStatus === "invalid" ? <AlertCircle aria-hidden="true" /> : null}
+                    {replacementStatus === "validating"
+                      ? "Checking file..."
+                      : replacementStatus === "valid"
+                        ? "Ready to upload"
+                        : "Needs attention"}
+                  </span>
+                </div>
+                <div className="pwa-reupload-file-actions">
+                  <button type="button" disabled={replacing} aria-controls={replacementInputId} onClick={openReplacementPicker}>Change</button>
+                  <button type="button" disabled={replacing} onClick={removeReplacement}>Remove</button>
+                </div>
+              </section>
+            )}
+
+            <p id={replacementErrorId} className="pwa-reupload-error" role="alert" aria-live="assertive">
+              {replacementError}
+            </p>
+
+            <div className="pwa-reupload-note">
+              <Info aria-hidden="true" />
+              <p>Submitting will replace only this requirement&apos;s current file and return the document to Under Admin Review.</p>
+            </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <button type="button" className="pwa-secondary-button" disabled={replacing} onClick={() => closeReplacement(false)}>Cancel</button>
-            <button type="button" className="pwa-primary-button" disabled={replacing || !replacementFile || Boolean(replacementError)} onClick={() => void submitReplacement()}>
-              {replacing ? <Loader2 className="pwa-spin" /> : <UploadCloud />} {replacing ? "Submitting..." : "Submit Corrected File"}
+          <DialogFooter className="pwa-reupload-actions">
+            <button
+              type="button"
+              className="pwa-primary-button"
+              disabled={replacing || !replacementFile || replacementStatus !== "valid"}
+              onClick={() => void submitReplacement()}
+            >
+              {replacing ? <Loader2 className="pwa-spin" aria-hidden="true" /> : <UploadCloud aria-hidden="true" />}
+              {replacing ? "Uploading corrected file..." : "Submit Corrected File"}
             </button>
+            <button type="button" className="pwa-secondary-button" disabled={replacing} onClick={() => closeReplacement(false)}>Cancel</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

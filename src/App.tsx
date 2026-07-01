@@ -23,6 +23,9 @@ import { usePolicyAgreement } from "./hooks/use-policy-agreement";
 import { TermsPrivacyAgreementModal } from "./components/TermsPrivacyAgreementModal";
 import UserPortalEntry, { PwaRouteEntry } from "./user/UserPortalEntry";
 import { useInstalledUserPwa } from "./user/pwa/hooks/useInstalledUserPwa";
+import PwaInitialLoadingScreen from "./user/pwa/PwaInitialLoadingScreen";
+import { PwaEntryGate, PwaPublicResourceGate } from "./user/pwa/public/PwaPublicEntry";
+import { PWA_ENTRY_ROUTE } from "./user/pwa/pwaAuthFlow";
 import { LydoConnectProvider } from "./lib/lydo-connect-store";
 import { isSupabaseConfigured } from "./lib/supabase";
 import {
@@ -52,8 +55,8 @@ const PolicyAgreementGate = ({ children }: { children: JSX.Element }) => {
     enabled: shouldCheckPolicy,
   });
 
-  if (!isInitialized) return <FullScreenLoader />;
-  if (shouldCheckPolicy && isChecking) return <FullScreenLoader />;
+  if (!isInitialized) return usePwaUi ? <PwaInitialLoadingScreen /> : <FullScreenLoader />;
+  if (shouldCheckPolicy && isChecking) return usePwaUi ? <PwaInitialLoadingScreen /> : <FullScreenLoader />;
 
   return (
     <>
@@ -84,9 +87,10 @@ const RequireAdmin = ({ children }: { children: JSX.Element }) => {
 
 const RequireUser = ({ children }: { children: JSX.Element }) => {
   const { isInitialized, isAuthenticated, role } = useAuth();
-  if (!isInitialized) return <FullScreenLoader />;
+  const usePwaUi = useInstalledUserPwa();
+  if (!isInitialized) return usePwaUi ? <PwaInitialLoadingScreen /> : <FullScreenLoader />;
   if (role === "admin") return <Navigate to="/admin" replace />;
-  if (!isAuthenticated) return <Navigate to={USER_SIGNIN_PATH} replace />;
+  if (!isAuthenticated) return <Navigate to={usePwaUi ? PWA_ENTRY_ROUTE : USER_SIGNIN_PATH} replace />;
   return children;
 };
 
@@ -193,6 +197,12 @@ const App = () => (
                       <Route path="/terms" element={<LegalPolicy />} />
                       <Route path="/privacy" element={<LegalPolicy />} />
                       <Route path="/advocacy" element={<About />} />
+                      <Route path={PWA_ENTRY_ROUTE} element={<PwaEntryGate />} />
+                      <Route path={`${PWA_ENTRY_ROUTE}/help`} element={<PwaPublicResourceGate page="help" />} />
+                      <Route path={`${PWA_ENTRY_ROUTE}/faqs`} element={<PwaPublicResourceGate page="faqs" />} />
+                      <Route path={`${PWA_ENTRY_ROUTE}/contact`} element={<PwaPublicResourceGate page="contact" />} />
+                      <Route path={`${PWA_ENTRY_ROUTE}/privacy`} element={<PwaPublicResourceGate page="privacy" />} />
+                      <Route path={`${PWA_ENTRY_ROUTE}/terms`} element={<PwaPublicResourceGate page="terms" />} />
                       <Route path={USER_SIGNIN_PATH} element={<SignIn forcedMode={IS_USER_SURFACE ? "user" : undefined} />} />
                       <Route path="/auth/callback" element={<AuthCallback />} />
                       <Route path="/signup" element={<SignUp />} />

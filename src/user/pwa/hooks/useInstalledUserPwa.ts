@@ -17,6 +17,11 @@ const USER_PWA_ROUTES = [
   "/templates",
   "/app-more",
   "/app-inquiries",
+  "/app-start",
+  "/signin",
+  "/signup",
+  "/auth/callback",
+  "/reset-password",
   "/app",
 ];
 
@@ -40,23 +45,11 @@ export const shouldUseInstalledUserPwa = ({
   enabled &&
   !adminSurface &&
   userRoute &&
-  compact &&
   (standalone || developmentPreview);
 
 export function useInstalledUserPwa() {
   const { pathname, search } = useLocation();
   const standalone = useStandalonePwa();
-  const [compact, setCompact] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 768px)");
-    const update = () => setCompact(media.matches);
-    update();
-    media.addEventListener?.("change", update);
-    return () => media.removeEventListener?.("change", update);
-  }, []);
 
   const params = new URLSearchParams(search);
   const previewRequested = import.meta.env.DEV && params.get("pwaPreview") === "1";
@@ -78,7 +71,7 @@ export function useInstalledUserPwa() {
     enabled,
     adminSurface: IS_ADMIN_SURFACE,
     userRoute: isUserRoute,
-    compact,
+    compact: true,
     standalone,
     developmentPreview,
   });

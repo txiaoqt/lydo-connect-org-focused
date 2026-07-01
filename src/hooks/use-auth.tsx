@@ -41,6 +41,7 @@ type SignUpParams = {
   barangayName?: string;
   isExistingOrganization?: boolean;
   organizationIdentifierNumber?: string;
+  pwaFlow?: boolean;
 };
 
 type AuthContextValue = {
@@ -159,7 +160,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const [profileResp, rolesResp] = await Promise.all([
         supabaseClient!
           .from("user_profiles")
-          .select("display_name,full_name,email")
+          .select("display_name,full_name,email,contact_number")
           .eq("user_id", authUser.id)
           .maybeSingle(),
         supabaseClient!.from("user_roles").select("roles(code)").eq("user_id", authUser.id),
@@ -187,7 +188,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           (profileResp.data?.full_name as string | undefined) ??
           defaultDisplayName,
         profileHints: {
-          contactNumber: (authUser.user_metadata?.contact_number as string | undefined) ?? "",
+          contactNumber:
+            (profileResp.data?.contact_number as string | undefined) ??
+            (authUser.user_metadata?.contact_number as string | undefined) ??
+            "",
           district: (authUser.user_metadata?.district as string | undefined) ?? "",
           barangay: (authUser.user_metadata?.barangay_name as string | undefined) ?? "",
           isExistingOrganization: Boolean(authUser.user_metadata?.is_existing_organization),
@@ -318,6 +322,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     barangayName,
     isExistingOrganization,
     organizationIdentifierNumber,
+    pwaFlow,
   }: SignUpParams) => {
     if (!supabase) {
       return {
@@ -329,7 +334,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: getAuthCallbackUrl(),
+        emailRedirectTo: getAuthCallbackUrl({ pwaFlow }),
         data: {
           full_name: organizationName ?? "",
           display_name: organizationName ?? "",
