@@ -91,6 +91,7 @@ type LydoConnectContextValue = {
   removeTemplate: (id: string) => void;
   updateOrganizationProfile: (id: string, patch: UpdatePatch<OrganizationProfile>) => void;
   upsertOrganizationProfile: (profile: OrganizationProfile) => void;
+  removeOrganizationAccountFromCache: (organizationId: string) => void;
   updateDocumentSubmission: (id: string, patch: UpdatePatch<DocumentSubmission>) => void;
   updateDocumentFile: (id: string, patch: UpdatePatch<SubmissionFile>) => void;
   createBudgetRequest: (budgetRequest: BudgetRequest) => void;
@@ -818,6 +819,77 @@ export const LydoConnectProvider = ({ children }: { children: React.ReactNode })
             ypopCityActivities: period
               ? current.ypopCityActivities.filter((a) => a.semesterKey !== period.semesterKey)
               : current.ypopCityActivities,
+          };
+        }),
+      removeOrganizationAccountFromCache: (organizationId) =>
+        setState((current) => {
+          const documentSubmissionIds = new Set(
+            current.documentSubmissions
+              .filter((submission) => submission.organizationId === organizationId)
+              .map(({ id }) => id),
+          );
+          const budgetRequestIds = new Set(
+            current.budgetRequests
+              .filter((request) => request.organizationId === organizationId)
+              .map(({ id }) => id),
+          );
+          const liquidationReportIds = new Set(
+            current.liquidationReports
+              .filter((report) => report.organizationId === organizationId)
+              .map(({ id }) => id),
+          );
+
+          return {
+            ...current,
+            organizationProfiles: current.organizationProfiles.filter(({ id }) => id !== organizationId),
+            documentSubmissions: current.documentSubmissions.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            documentSubmissionFiles: current.documentSubmissionFiles.filter(
+              ({ submissionId }) => !documentSubmissionIds.has(submissionId),
+            ),
+            budgetRequests: current.budgetRequests.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            budgetRequestFiles: current.budgetRequestFiles.filter(
+              ({ budgetRequestId }) => !budgetRequestIds.has(budgetRequestId),
+            ),
+            liquidationReports: current.liquidationReports.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            liquidationReportFiles: current.liquidationReportFiles.filter(
+              ({ liquidationReportId }) => !liquidationReportIds.has(liquidationReportId),
+            ),
+            complianceRemarks: current.complianceRemarks.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            notifications: current.notifications.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            activityLogs: current.activityLogs.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            inquiries: current.inquiries.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            ypopEntries: current.ypopEntries.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            ypopFiles: current.ypopFiles.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            ypopEventParticipations: current.ypopEventParticipations.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            ypopEventFiles: current.ypopEventFiles.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            ypopOrgActivities: current.ypopOrgActivities.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
+            ypopOrgActivityFiles: current.ypopOrgActivityFiles.filter(
+              ({ organizationId: ownerId }) => ownerId !== organizationId,
+            ),
           };
         }),
     }),

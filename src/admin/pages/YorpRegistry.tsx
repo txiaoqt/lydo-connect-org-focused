@@ -1,27 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Building2,
   CalendarDays,
   ChevronRight,
   ClipboardCheck,
   Download,
   Eye,
+  Loader2,
   MapPin,
   RefreshCw,
   Search,
+  Trash2,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import "./yorp-registry.css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ExportReportDialog } from "@/components/reports/ExportReportDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PortalEmptyState, PortalMetricCard, PortalSection, PortalStatusBadge } from "@/components/portal/portal-ui";
 import { majorClassificationOptions, statusLabelMap, type OrganizationProfile } from "@/lib/lydo-connect-data";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
+import {
+  fetchOrganizationDeletionPreflight,
+  organizationDeletionConfirmationMatches,
+  permanentlyDeleteOrganizationAccount,
+  type OrganizationDeletionPreflight,
+} from "@/lib/admin-organization-deletion";
+import { loadAdminPortalSupabaseState } from "@/lib/lydo-connect-supabase";
 import {
   mapOrganizationProfileToYorpExportRow,
   yorpRegistryExportConfig,
@@ -102,7 +123,11 @@ function MobileYorpOrganizationCard({
 }
 
 export function YorpRegistryPage() {
-  const { state } = useLydoConnect();
+  const {
+    state,
+    mergeRemoteState,
+    removeOrganizationAccountFromCache,
+  } = useLydoConnect();
   const orgs = state.organizationProfiles;
 
   const [search, setSearch] = useState("");
@@ -113,6 +138,13 @@ export function YorpRegistryPage() {
   const [selectedOrg, setSelectedOrg] = useState<OrganizationProfile | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [mobileVisibleCount, setMobileVisibleCount] = useState(6);
+  const [deleteTarget, setDeleteTarget] = useState<OrganizationProfile | null>(null);
+  const [deletePreflight, setDeletePreflight] = useState<OrganizationDeletionPreflight | null>(null);
+  const [deletePreflightLoading, setDeletePreflightLoading] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteAcknowledged, setDeleteAcknowledged] = useState(false);
+  const [deletingOrganization, setDeletingOrganization] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -169,6 +201,114 @@ export function YorpRegistryPage() {
   useEffect(() => {
     setMobileVisibleCount(6);
   }, [search, yearFilter, classFilter, statusFilter, yorpFilter]);
+
+  useEffect(() => {
+    if (!deleteTarget) return;
+    let active = true;
+    setDeletePreflight(null);
+    setDeletePreflightLoading(true);
+    setDeleteError("");
+
+    void fetchOrganizationDeletionPreflight(deleteTarget.id)
+      .then((preflight) => {
+        if (active) setDeletePreflight(preflight);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setDeleteError(
+            error instanceof Error
+              ? error.message
+              : "The organization deletion summary could not be loaded.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setDeletePreflightLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [deleteTarget]);
+
+  const openDeleteDialog = (organization: OrganizationProfile) => {
+    setDeleteConfirmation("");
+    setDeleteAcknowledged(false);
+    setDeleteError("");
+    setDeleteTarget(organization);
+  };
+
+  const closeDeleteDialog = () => {
+    if (deletingOrganization) return;
+    setDeleteTarget(null);
+    setDeletePreflight(null);
+    setDeleteConfirmation("");
+    setDeleteAcknowledged(false);
+    setDeleteError("");
+  };
+
+  const retryDeletePreflight = async () => {
+    if (!deleteTarget || deletePreflightLoading) return;
+    setDeletePreflightLoading(true);
+    setDeleteError("");
+    try {
+      setDeletePreflight(await fetchOrganizationDeletionPreflight(deleteTarget.id));
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "The organization deletion summary could not be loaded.",
+      );
+    } finally {
+      setDeletePreflightLoading(false);
+    }
+  };
+
+  const confirmPermanentDeletion = async () => {
+    if (
+      !deleteTarget ||
+      !deletePreflight ||
+      !deleteAcknowledged ||
+      !organizationDeletionConfirmationMatches(deleteConfirmation, deleteTarget.organizationName) ||
+      deletingOrganization
+    ) {
+      return;
+    }
+
+    setDeletingOrganization(true);
+    setDeleteError("");
+    try {
+      const result = await permanentlyDeleteOrganizationAccount(
+        deleteTarget.id,
+        deleteConfirmation,
+      );
+      removeOrganizationAccountFromCache(deleteTarget.id);
+      setSelectedOrg(null);
+      setDeleteTarget(null);
+      setDeletePreflight(null);
+      setDeleteConfirmation("");
+      setDeleteAcknowledged(false);
+      toast({
+        title: "Organization account permanently deleted.",
+        description: `${result.counts.storageObjects} uploaded file${result.counts.storageObjects === 1 ? "" : "s"} removed.`,
+      });
+
+      try {
+        const snapshot = await loadAdminPortalSupabaseState();
+        if (snapshot) mergeRemoteState(snapshot);
+      } catch (refreshError) {
+        console.error("Failed to refresh admin state after organization deletion:", refreshError);
+      }
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "The organization account could not be deleted. Please try again.",
+      );
+    } finally {
+      setDeletingOrganization(false);
+    }
+  };
 
   const handleExport = async (format: ExportFormat) => {
     if (!exportRows.length) {
@@ -392,8 +532,12 @@ export function YorpRegistryPage() {
         )}
       </PortalSection>
 
-      <Dialog open={selectedOrg !== null} onOpenChange={(open) => { if (!open) setSelectedOrg(null); }}>
-        <DialogContent className="yorp-registry-details mobile-yorp-details-modal max-w-2xl">
+      <Dialog open={selectedOrg !== null} onOpenChange={(open) => { if (!open && !deletingOrganization) setSelectedOrg(null); }}>
+        <DialogContent
+          className="yorp-registry-details mobile-yorp-details-modal max-w-2xl"
+          onEscapeKeyDown={(event) => { if (deletingOrganization) event.preventDefault(); }}
+          onPointerDownOutside={(event) => { if (deletingOrganization) event.preventDefault(); }}
+        >
           {selectedOrg ? (
             <>
               <DialogTitle className="sr-only">{selectedOrg.organizationName || "Organization"} details</DialogTitle>
@@ -496,6 +640,9 @@ export function YorpRegistryPage() {
                 <Field label="Registered">
                   {new Date(selectedOrg.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
                 </Field>
+                <div className="col-span-2">
+                  <OrganizationDangerZone onDelete={() => openDeleteDialog(selectedOrg)} />
+                </div>
               </div>
 
               <header className="mobile-yorp-modal-header lg:hidden">
@@ -583,6 +730,7 @@ export function YorpRegistryPage() {
                       </MobileField>
                     </div>
                   </MobileDetailsSection>
+                  <OrganizationDangerZone mobile onDelete={() => openDeleteDialog(selectedOrg)} />
                 </div>
               </div>
 
@@ -700,6 +848,120 @@ export function YorpRegistryPage() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}
+      >
+        <AlertDialogContent
+          className="admin-organization-delete-dialog"
+          onEscapeKeyDown={(event) => { if (deletingOrganization) event.preventDefault(); }}
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
+          {deleteTarget ? (
+            <>
+              <AlertDialogHeader>
+                <div className="admin-organization-delete-dialog__icon" aria-hidden="true">
+                  <AlertTriangle />
+                </div>
+                <AlertDialogTitle>
+                  Permanently delete {deleteTarget.organizationName || "this organization"}?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently deletes the organization account, organization-owned records,
+                  and uploaded files. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="admin-organization-delete-dialog__summary" aria-live="polite">
+                {deletePreflightLoading ? (
+                  <div className="admin-organization-delete-dialog__loading">
+                    <Loader2 className="animate-spin" aria-hidden="true" />
+                    <span>Preparing deletion summary…</span>
+                  </div>
+                ) : deletePreflight ? (
+                  <DeletionSummary preflight={deletePreflight} />
+                ) : (
+                  <div>
+                    <p>The deletion summary is unavailable.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void retryDeletePreflight()}>
+                      Retry summary
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organization-delete-confirmation">
+                  Type the organization name to confirm
+                </Label>
+                <Input
+                  id="organization-delete-confirmation"
+                  value={deleteConfirmation}
+                  disabled={deletingOrganization}
+                  autoComplete="off"
+                  onChange={(event) => setDeleteConfirmation(event.target.value)}
+                  placeholder={deleteTarget.organizationName}
+                />
+                {deleteConfirmation &&
+                !organizationDeletionConfirmationMatches(
+                  deleteConfirmation,
+                  deleteTarget.organizationName,
+                ) ? (
+                  <p className="text-xs text-destructive" role="status">
+                    Enter the complete organization name exactly as shown.
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="admin-organization-delete-dialog__acknowledgment">
+                <Checkbox
+                  id="organization-delete-acknowledgment"
+                  checked={deleteAcknowledged}
+                  disabled={deletingOrganization}
+                  onCheckedChange={(checked) => setDeleteAcknowledged(checked === true)}
+                />
+                <Label htmlFor="organization-delete-acknowledgment">
+                  I understand that this action permanently removes the account and cannot be undone.
+                </Label>
+              </div>
+
+              {deleteError ? (
+                <div className="admin-organization-delete-dialog__error" role="alert">
+                  {deleteError}
+                </div>
+              ) : null}
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deletingOrganization} onClick={closeDeleteDialog}>
+                  Cancel
+                </AlertDialogCancel>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={
+                    deletingOrganization ||
+                    deletePreflightLoading ||
+                    !deletePreflight ||
+                    !deleteAcknowledged ||
+                    !organizationDeletionConfirmationMatches(
+                      deleteConfirmation,
+                      deleteTarget.organizationName,
+                    )
+                  }
+                  onClick={() => void confirmPermanentDeletion()}
+                >
+                  {deletingOrganization ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />Deleting organization account…</>
+                  ) : (
+                    <><Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />Permanently Delete Account</>
+                  )}
+                </Button>
+              </AlertDialogFooter>
+            </>
+          ) : null}
+        </AlertDialogContent>
+      </AlertDialog>
+
       <ExportReportDialog
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
@@ -707,6 +969,60 @@ export function YorpRegistryPage() {
         description="Export all YORP records matching the current search and filters."
         onExport={handleExport}
       />
+    </div>
+  );
+}
+
+function OrganizationDangerZone({
+  onDelete,
+  mobile = false,
+}: {
+  onDelete: () => void;
+  mobile?: boolean;
+}) {
+  return (
+    <section className={`admin-organization-danger-zone${mobile ? " is-mobile" : ""}`}>
+      <div>
+        <p className="admin-organization-danger-zone__eyebrow">Danger Zone</p>
+        <h3>Delete organization account</h3>
+        <p>
+          Permanently removes the login account, profile, submissions, financial records,
+          YPOP data, inquiries, notifications, and uploaded files.
+        </p>
+      </div>
+      <Button type="button" variant="destructive" onClick={onDelete}>
+        <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+        Delete Organization Account
+      </Button>
+    </section>
+  );
+}
+
+function DeletionSummary({ preflight }: { preflight: OrganizationDeletionPreflight }) {
+  const { counts } = preflight;
+  const rows = [
+    ["Account and organization profile", 1],
+    ["Document submissions and files", counts.documentSubmissions + counts.documentFiles],
+    ["Budget requests and attachments", counts.budgetRequests + counts.budgetFiles],
+    ["Liquidation reports and attachments", counts.liquidationReports + counts.liquidationFiles],
+    [
+      "YPOP participation, activities and files",
+      counts.ypopEntries + counts.ypopParticipations + counts.ypopActivities + counts.ypopFiles,
+    ],
+    [
+      "Inquiries, notifications and related records",
+      counts.inquiries + counts.notifications + counts.complianceRemarks + counts.activityLogs,
+    ],
+    ["Storage objects", counts.storageObjects],
+  ] as const;
+  return (
+    <div>
+      <p className="admin-organization-delete-dialog__summary-title">Deletion summary</p>
+      <ul>
+        {rows.map(([label, count]) => (
+          <li key={label}><span>{label}</span><strong>{count}</strong></li>
+        ))}
+      </ul>
     </div>
   );
 }

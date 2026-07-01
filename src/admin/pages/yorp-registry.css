@@ -1,3 +1,146 @@
+.admin-organization-danger-zone {
+  display: flex;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  background: #fff7f7;
+}
+
+.admin-organization-danger-zone > div {
+  min-width: 0;
+}
+
+.admin-organization-danger-zone__eyebrow {
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-organization-danger-zone h3 {
+  margin-top: 0.2rem;
+  color: #7f1d1d;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-organization-danger-zone p:last-child {
+  max-width: 34rem;
+  margin-top: 0.3rem;
+  color: #7f1d1d;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.admin-organization-danger-zone > button {
+  flex: 0 0 auto;
+}
+
+.admin-organization-delete-dialog {
+  width: calc(100vw - 1.5rem);
+  max-width: 34rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.admin-organization-delete-dialog__icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.25rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-organization-delete-dialog__icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.admin-organization-delete-dialog__summary {
+  padding: 0.85rem;
+  border: 1px solid var(--yt-border);
+  border-radius: 0.7rem;
+  background: var(--yt-surface-subtle);
+}
+
+.admin-organization-delete-dialog__summary-title {
+  color: var(--yt-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-organization-delete-dialog__summary ul {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.admin-organization-delete-dialog__summary li {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--yt-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.admin-organization-delete-dialog__summary li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-organization-delete-dialog__summary li strong {
+  flex: 0 0 auto;
+  color: var(--yt-text);
+}
+
+.admin-organization-delete-dialog__loading {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  color: var(--yt-text-muted);
+  font-size: 0.78rem;
+}
+
+.admin-organization-delete-dialog__loading svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.admin-organization-delete-dialog__acknowledgment {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.admin-organization-delete-dialog__acknowledgment label {
+  color: var(--yt-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.admin-organization-delete-dialog__error {
+  padding: 0.75rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.65rem;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 1023px) {
   .yorp-registry-details.mobile-yorp-details-modal {
     display: grid;
@@ -127,6 +270,27 @@
       max(16px, env(safe-area-inset-bottom))
       max(12px, env(safe-area-inset-left));
     background: var(--yt-surface-subtle);
+  }
+
+  .yorp-registry-details .admin-organization-danger-zone.is-mobile {
+    display: grid;
+    margin-top: 0;
+    padding: 14px;
+    gap: 0.85rem;
+  }
+
+  .yorp-registry-details .admin-organization-danger-zone.is-mobile > button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .admin-organization-delete-dialog [role="group"],
+  .admin-organization-delete-dialog > div:last-child {
+    width: 100%;
+  }
+
+  .admin-organization-delete-dialog button {
+    min-height: 48px;
   }
 
   .yorp-registry-details .mobile-yorp-section {
