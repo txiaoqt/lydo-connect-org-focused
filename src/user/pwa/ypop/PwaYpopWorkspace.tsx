@@ -463,9 +463,11 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           {orgActivities.map((activity) => {
             const files = state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === activity.id);
             const canEdit = ppaUnlocked && (activity.status === "draft" || activity.status === "needs_revision");
-            return <article key={activity.id}>
+            return <article key={activity.id} className="pwa-ypop-ppa-card">
+              <div className="pwa-ypop-ppa-summary">
               <div><strong>{activity.activityName}</strong><p>{formatDateTime(activity.activityDate)} · {activity.venue || "Venue not set"}</p><small>{files.length} proof file{files.length === 1 ? "" : "s"}</small></div>
-              <StatusBadge status={activity.status} />
+                <StatusBadge status={activity.status} />
+              </div>
               {activity.adminRemarks ? <p className="pwa-ypop-feedback">Admin: {activity.adminRemarks}</p> : null}
               <div className="pwa-ypop-row-actions">
                 {entry ? <Button variant="outline" onClick={() => go(pwaYpopPpaEditRoute(entry.id, activity.id))}>{canEdit ? activity.status === "needs_revision" ? "Respond to Revision" : "Manage PPA" : "View Details"}</Button> : null}

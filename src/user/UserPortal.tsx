@@ -8187,6 +8187,23 @@ Validated {validatedDate}</p>
           }
 
           const detailFiles = ypopFilesByEntryId.get(activeEntry.id) ?? [];
+          const detailFileListReadOnly = (
+            <ul className="space-y-1.5">
+              {detailFiles.map((file: YPOPFile) => (
+                <li key={file.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-muted/20 px-3 py-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-red-500/80" />
+                    <span className="truncate text-sm">{file.fileName}</span>
+                  </div>
+                  {file.fileUrl ? (
+                    <Button type="button" size="sm" variant="ghost" asChild>
+                      <a href={file.fileUrl} target="_blank" rel="noreferrer">Open</a>
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          );
           const isSubmitting = submittingYpopId === activeEntry.id;
           const isUploading = ypopUploadingId === activeEntry.id;
           const isDraftOrRevision = activeEntry.status === "draft" || activeEntry.status === "needs_revision";
@@ -8636,7 +8653,7 @@ Validated {validatedDate}</p>
                           <p className="text-[11px] leading-snug text-muted-foreground">
                             Older semester-level proof files retained for reference.
                           </p>
-                          {fileListReadOnly}
+                          {detailFileListReadOnly}
                         </CardContent>
                       </Card>
                     )}
@@ -9284,7 +9301,7 @@ Validated {validatedDate}</p>
 
                             These were attached through the older semester-level proof flow and are still retained for reference.
                           </p>
-                          {fileListReadOnly}
+                          {detailFileListReadOnly}
                         </CardContent>
                       </Card>
                     )}
