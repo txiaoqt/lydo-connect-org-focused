@@ -2,7 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-admin-session-token",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-admin-session-token",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -168,12 +169,17 @@ const addExpectedStorageReference = (
 ) => {
   const parsed = parseStorageReference(value, supabaseUrl);
   const pathSegments = parsed?.path.split("/") ?? [];
+  const containsControlCharacter = [...(parsed?.path ?? "")]
+    .some((character) => {
+      const code = character.charCodeAt(0);
+      return code <= 31 || code === 127;
+    });
   const safePath = Boolean(
     parsed &&
     parsed.path &&
     !parsed.path.startsWith("/") &&
     !parsed.path.includes("\\") &&
-    !/[\u0000-\u001f\u007f]/.test(parsed.path) &&
+    !containsControlCharacter &&
     pathSegments.every((segment) => segment && segment !== "." && segment !== ".."),
   );
   const owned = parsed &&
@@ -341,6 +347,36 @@ const removeStorageObjects = async (
   }
 };
 
+const removeAuthBlockingOrganizationRecords = async (
+  client: ReturnType<typeof createClient>,
+  organizationId: string,
+) => {
+  // These organization-owned tables were originally created with submitted_by
+  // references that do not specify ON DELETE behavior. Remove only the target
+  // organization's rows before deleting its Auth user so those constraints
+  // cannot block the canonical Auth/profile cascade.
+  for (const table of ["ypop_event_participations", "ypop_entries"]) {
+    const { error } = await client
+      .from(table)
+      .delete()
+      .eq("organization_id", organizationId);
+    if (error && !isMissingRelation(error)) {
+      console.error("Organization dependency cleanup failed", {
+        organizationId,
+        table,
+        stage: "database_pre_auth_cleanup",
+        code: error.code,
+        message: error.message,
+      });
+      throw new SafeDeletionError(
+        "The account deletion is incomplete. Retry the cleanup or contact the system administrator.",
+        502,
+        "database_pre_auth_cleanup",
+      );
+    }
+  }
+};
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -362,7 +398,6 @@ Deno.serve(async (request) => {
       action?: Action;
       organizationId?: string;
       confirmationName?: string;
-      acknowledged?: boolean;
     };
     try {
       payload = await request.json();
@@ -396,7 +431,7 @@ Deno.serve(async (request) => {
       throw new SafeDeletionError("The organization could not be loaded.", 500, "preflight");
     }
     if (!organization) {
-      if (action === "delete" && payload.acknowledged === true) {
+      if (action === "delete") {
         const { data: completedDeletion } = await client
           .from("activity_logs")
           .select("description")
@@ -473,11 +508,8 @@ Deno.serve(async (request) => {
     ) {
       throw new SafeDeletionError("The organization name does not match.", 409, "confirmation");
     }
-    if (payload.acknowledged !== true) {
-      throw new SafeDeletionError("Deletion acknowledgment is required.", 409, "confirmation");
-    }
-
     await removeStorageObjects(client, manifest.storageObjects);
+    await removeAuthBlockingOrganizationRecords(client, target.id);
 
     const { error: authDeleteError } = await client.auth.admin.deleteUser(target.user_id);
     const authUserMissing = authDeleteError &&

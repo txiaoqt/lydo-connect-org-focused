@@ -19,17 +19,21 @@ export type OrganizationDeletionCounts = {
   storageObjects: number;
 };
 
-export type OrganizationDeletionPreflight = {
-  organization: { id: string; name: string };
-  counts: OrganizationDeletionCounts;
-};
-
 export type OrganizationDeletionResult = {
   success: true;
   organizationId: string;
   counts: OrganizationDeletionCounts;
   auditRecorded: boolean;
 };
+
+export const ORGANIZATION_DELETION_CATEGORIES = [
+  "Account and organization profile",
+  "Compliance documents and uploaded files",
+  "Budget requests and attachments",
+  "Liquidation reports and attachments",
+  "YPOP participation, activities, and supporting files",
+  "Inquiries, notifications, and related organization records",
+] as const;
 
 type DeletionErrorPayload = {
   error?: string;
@@ -103,17 +107,11 @@ const invokeDeletionFunction = async <T>(
   );
 };
 
-export const fetchOrganizationDeletionPreflight = (organizationId: string) =>
-  invokeDeletionFunction<OrganizationDeletionPreflight>(
-    { action: "preflight", organizationId },
-    "The organization deletion summary could not be loaded.",
-  );
-
 export const permanentlyDeleteOrganizationAccount = (
   organizationId: string,
   confirmationName: string,
 ) =>
   invokeDeletionFunction<OrganizationDeletionResult>(
-    { action: "delete", organizationId, confirmationName, acknowledged: true },
+    { action: "delete", organizationId, confirmationName },
     "The organization account could not be deleted. Please try again.",
   );

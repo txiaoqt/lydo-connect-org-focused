@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  ORGANIZATION_DELETION_CATEGORIES,
   getOrganizationDeletionServiceError,
   normalizeOrganizationDeletionConfirmation,
   organizationDeletionConfirmationMatches,
 } from "./admin-organization-deletion";
+
+describe("organization deletion explanation", () => {
+  it("uses the fixed category list without server-derived counts", () => {
+    expect(ORGANIZATION_DELETION_CATEGORIES).toEqual([
+      "Account and organization profile",
+      "Compliance documents and uploaded files",
+      "Budget requests and attachments",
+      "Liquidation reports and attachments",
+      "YPOP participation, activities, and supporting files",
+      "Inquiries, notifications, and related organization records",
+    ]);
+  });
+});
 
 describe("organization deletion confirmation", () => {
   it("trims edges and normalizes repeated whitespace", () => {

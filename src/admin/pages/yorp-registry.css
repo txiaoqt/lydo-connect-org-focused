@@ -43,7 +43,9 @@
 
 .admin-organization-delete-dialog {
   width: calc(100vw - 1.5rem);
-  max-width: 34rem;
+  max-width: 38rem;
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
@@ -79,55 +81,33 @@
 .admin-organization-delete-dialog__summary ul {
   display: grid;
   gap: 0.45rem;
-  margin-top: 0.65rem;
+  margin: 0.65rem 0 0;
+  padding-left: 1.1rem;
+  list-style: disc;
 }
 
 .admin-organization-delete-dialog__summary li {
-  display: flex;
   min-width: 0;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
+  color: var(--yt-text-muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-organization-delete-dialog__instruction {
   color: var(--yt-text-muted);
   font-size: 0.72rem;
   line-height: 1.4;
 }
 
-.admin-organization-delete-dialog__summary li span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.admin-organization-delete-dialog__summary li strong {
-  flex: 0 0 auto;
-  color: var(--yt-text);
-}
-
-.admin-organization-delete-dialog__loading {
-  display: flex;
-  min-height: 3rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  color: var(--yt-text-muted);
+.admin-organization-delete-dialog__permanent-warning {
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid #dc2626;
+  border-radius: 0.35rem;
+  background: #fef2f2;
+  color: #991b1b;
   font-size: 0.78rem;
-}
-
-.admin-organization-delete-dialog__loading svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.admin-organization-delete-dialog__acknowledgment {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-}
-
-.admin-organization-delete-dialog__acknowledgment label {
-  color: var(--yt-text-secondary);
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.45;
 }
 
