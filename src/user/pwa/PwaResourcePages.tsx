@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import {
   Bell, Download, ExternalLink, FileText, HelpCircle, MapPin, Medal, Megaphone,
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createInquiryInSupabase, resolveSupabaseFileUrl } from "@/lib/lydo-connect-supabase";
+import { LYDO_FACEBOOK_PAGE_URL } from "@/lib/official-links";
 import { organizationEmailPattern } from "@/lib/organization-profile-domain";
 import type { usePwaPortalData } from "./hooks/usePwaPortalData";
 import { usePwaNavigation } from "./hooks/usePwaNavigation";
@@ -20,8 +21,8 @@ type PortalData = ReturnType<typeof usePwaPortalData>;
 
 const dateLabel = (value: string) => value ? new Date(value).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "Not set";
 
-function PageIntro({ icon: Icon, title, copy }: { icon: typeof FileText; title: string; copy: string }) {
-  return <section className="pwa-page-intro"><span><Icon aria-hidden="true" /></span><div><h2>{title}</h2><p>{copy}</p></div></section>;
+function PageIntro({ icon: Icon, title, copy, action }: { icon: typeof FileText; title: string; copy: string; action?: ReactNode }) {
+  return <section className="pwa-page-intro"><span><Icon aria-hidden="true" /></span><div><h2>{title}</h2><p>{copy}</p>{action}</div></section>;
 }
 
 export function PwaProfile({ data }: { data: PortalData }) {
@@ -52,7 +53,7 @@ export function PwaNews({ data }: { data: PortalData }) {
   if (selected) {
     return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.news} label="News Releases" /><article className="pwa-card pwa-news-detail">{selected.previewImageUrl ? <img src={selected.previewImageUrl} alt="" /> : null}<StatusBadge status={selected.visibilityStatus} /><h2>{selected.title}</h2><time>{dateLabel(selected.datePosted)}</time><p>{selected.description}</p>{selected.facebookPostUrl ? <a className="pwa-primary-link" href={selected.facebookPostUrl} target="_blank" rel="noreferrer">Open Facebook Post <ExternalLink /></a> : null}</article></div>;
   }
-  return <div className="pwa-stack"><PageIntro icon={Megaphone} title="News Releases" copy="Official announcements and updates from the LYDO." /><section className="pwa-news-list">{data.news.map((item) => <button key={item.id} type="button" className="pwa-card" onClick={() => item.facebookPostUrl ? window.open(item.facebookPostUrl, "_blank", "noopener,noreferrer") : go(pwaNewsDetailRoute(item.id))}>{item.previewImageUrl ? <img src={item.previewImageUrl} alt="" /> : <span className="pwa-news-placeholder"><Megaphone /></span>}<span><strong>{item.title}</strong><small>{dateLabel(item.datePosted)}</small><p>{item.description}</p></span><ExternalLink /></button>)}</section></div>;
+  return <div className="pwa-stack"><PageIntro icon={Megaphone} title="News Releases" copy="Official announcements and updates from the LYDO." action={<a className="pwa-secondary-button pwa-facebook-page-link" href={LYDO_FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer" aria-label="View the official LYDO Facebook page (opens in a new tab)"><ExternalLink aria-hidden="true" />View Facebook Page</a>} /><section className="pwa-news-list">{data.news.map((item) => <button key={item.id} type="button" className="pwa-card" onClick={() => item.facebookPostUrl ? window.open(item.facebookPostUrl, "_blank", "noopener,noreferrer") : go(pwaNewsDetailRoute(item.id))}>{item.previewImageUrl ? <img src={item.previewImageUrl} alt="" /> : <span className="pwa-news-placeholder"><Megaphone /></span>}<span><strong>{item.title}</strong><small>{dateLabel(item.datePosted)}</small><p>{item.description}</p></span><ExternalLink /></button>)}</section></div>;
 }
 
 export function PwaCompliance({ data }: { data: PortalData }) {

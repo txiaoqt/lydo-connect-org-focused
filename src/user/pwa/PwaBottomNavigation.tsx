@@ -25,6 +25,10 @@ export function PwaBottomNavigation() {
 
   return (
     <nav className="pwa-bottom-nav" aria-label="Primary app navigation">
+      <button type="button" className="pwa-nav-brand" aria-label="Open Y-TRACE Home" onClick={() => go(PWA_ROUTES.home)}>
+        <img src="/y-trace-logo.png" alt="" />
+        <span>Y-TRACE</span>
+      </button>
       <div className="pwa-bottom-nav-inner">
         {items.map((item) => {
           const isSecondaryPage = [...secondaryPaths].some(

@@ -420,7 +420,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         <button type="button" role="tab" aria-selected={eventTab === "past"} className={eventTab === "past" ? "is-active" : ""} onClick={() => setEventTab("past")}>Past</button>
       </div>
 
-      <section className="pwa-card pwa-ypop-workspace-section">
+      <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-main-section">
         <h2>Available Activities</h2>
         <div className="pwa-ypop-workspace-list">
           {availableActivities.map((activity) => {
@@ -438,7 +438,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         </div>
       </section>
 
-      <section className="pwa-card pwa-ypop-workspace-section">
+      <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-main-section">
         <h2>Joined Activities</h2>
         <input ref={eventFileInput} hidden type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadEventProof(file); }} />
         <div className="pwa-ypop-joined-list">
@@ -475,7 +475,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         </div>
       </section>
 
-      <section className="pwa-card pwa-ypop-workspace-section">
+      <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-main-section">
         <div className="pwa-section-heading"><h2>Organization-Initiated Activities</h2>{editable && entry ? <Button size="sm" variant="outline" onClick={() => go(pwaYpopPpaNewRoute(entry.id))}><Plus />Log PPA</Button> : null}</div>
         <div className="pwa-ypop-ppa-list">
           {orgActivities.map((activity) => {
@@ -496,7 +496,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
       </section>
 
       {finalized && entry ? (
-        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-final-result" aria-labelledby="ypop-final-result-title">
+        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section pwa-ypop-final-result" aria-labelledby="ypop-final-result-title">
           <h2 id="ypop-final-result-title">Final Result</h2>
           <div className={`pwa-ypop-result ${entry.status === "qualified" ? "is-qualified" : "is-not-qualified"}`}>
             {entry.status === "qualified" ? <Trophy aria-hidden="true" /> : <Medal aria-hidden="true" />}
@@ -512,7 +512,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           </div>
         </section>
       ) : (
-        <section className="pwa-card pwa-ypop-workspace-section">
+        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section">
           <h2>Qualification and Scoring</h2>
           <dl className="pwa-ypop-scoring-list">
             <div><dt>City-Led Score</dt><dd>{score.cityLedPercent}%</dd></div>
@@ -525,7 +525,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
       )}
 
       {entry ? (
-        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-submission-info" aria-labelledby="ypop-submission-info-title">
+        <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section pwa-ypop-submission-info" aria-labelledby="ypop-submission-info-title">
           <h2 id="ypop-submission-info-title">Submission Information</h2>
           <dl className="pwa-ypop-submission-metadata">
             <div><dt>Status</dt><dd><StatusBadge status={entry.status} /></dd></div>
@@ -573,7 +573,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
       ) : null}
 
       {readOnly ? (
-        <section className="pwa-ypop-readonly-note" aria-label="Finalized submission notice">
+        <section className="pwa-ypop-readonly-note pwa-ypop-side-section" aria-label="Finalized submission notice">
           <LockKeyhole aria-hidden="true" />
           <div>
             <strong>{finalized ? "Submission finalized" : period?.status === "closed" ? "Period closed" : "Submission under review"}</strong>
@@ -582,7 +582,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         </section>
       ) : null}
 
-      {entry && editable ? <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-submission-actions">
+      {entry && editable ? <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section pwa-ypop-submission-actions">
         <h2>Submission Actions</h2>
         {submissionBlockReason ? <p className="pwa-ypop-block-reason">{submissionBlockReason}</p> : null}
         <div>
@@ -591,7 +591,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         </div>
       </section> : null}
 
-      <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-recent-activity" aria-labelledby="ypop-recent-activity-title">
+      <section className="pwa-card pwa-ypop-workspace-section pwa-ypop-side-section pwa-ypop-recent-activity" aria-labelledby="ypop-recent-activity-title">
         <div className="pwa-section-heading">
           <h2 id="ypop-recent-activity-title">Recent Activity</h2>
           {activityLog.length ? <button type="button" aria-label="View all YPOP activity" onClick={() => go(PWA_ROUTES.activity)}>View all <ChevronRight aria-hidden="true" /></button> : null}

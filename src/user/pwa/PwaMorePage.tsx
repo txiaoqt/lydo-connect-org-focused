@@ -75,7 +75,7 @@ export function PwaMorePage({ onSignOut }: { onSignOut: () => Promise<void> }) {
   };
 
   return (
-    <div className="pwa-stack">
+    <div className="pwa-stack pwa-more-page">
       {groups.map((group) => (
         <section className="pwa-menu-group" key={group.label}>
           <h2 className="pwa-section-title">{group.label}</h2>

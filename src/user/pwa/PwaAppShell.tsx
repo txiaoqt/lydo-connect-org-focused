@@ -42,6 +42,7 @@ export function PwaAppShell({
     pathname.startsWith(`${PWA_ROUTES.templates}/`) ||
     pathname.startsWith(`${PWA_ROUTES.news}/`);
   const headerMode = identityHeaderRoutes.has(pathname) ? "identity" : "nested";
+  const contentWidth = getPwaContentWidth(pathname);
 
   useEffect(() => {
     document.documentElement.classList.add("ytrace-pwa-active");
@@ -65,6 +66,7 @@ export function PwaAppShell({
   return (
     <div className={[
       "ytrace-pwa-app",
+      "pwa-authenticated-app",
       preferences.increaseContrast ? "pwa-high-contrast" : "",
       preferences.underlineLinks ? "pwa-underline-links" : "",
     ].filter(Boolean).join(" ")}>
@@ -93,9 +95,37 @@ export function PwaAppShell({
             <button type="button" onClick={() => void runtime.updateApp()}>Update App</button>
           </section>
         ) : null}
-        <main className="pwa-main-content" aria-label={title}>{children}</main>
+        <main className={`pwa-main-content pwa-content--${contentWidth}`} aria-label={title}>{children}</main>
       </div>
       <PwaBottomNavigation />
     </div>
   );
+}
+
+function getPwaContentWidth(pathname: string): "narrow" | "medium" | "wide" {
+  const narrowRoutes = [
+    PWA_ROUTES.privacy,
+    PWA_ROUTES.terms,
+    PWA_ROUTES.faqs,
+    PWA_ROUTES.contact,
+    PWA_ROUTES.about,
+    PWA_ROUTES.settingsNotifications,
+    PWA_ROUTES.settingsAppearance,
+    PWA_ROUTES.settingsStorage,
+    PWA_ROUTES.settingsPreferences,
+    PWA_ROUTES.settingsAccount,
+  ];
+  if (narrowRoutes.some((route) => pathname === route)) return "narrow";
+  if (
+    pathname === PWA_ROUTES.profile ||
+    pathname === PWA_ROUTES.notifications ||
+    pathname === PWA_ROUTES.inquiries ||
+    pathname === PWA_ROUTES.activity ||
+    pathname.startsWith(`${PWA_ROUTES.profile}/`) ||
+    pathname.startsWith(`${PWA_ROUTES.documents}/`) ||
+    pathname.startsWith(`${PWA_ROUTES.budgets}/`) ||
+    pathname.startsWith(`${PWA_ROUTES.liquidations}/`) ||
+    pathname.includes("/ppa/")
+  ) return "medium";
+  return "wide";
 }

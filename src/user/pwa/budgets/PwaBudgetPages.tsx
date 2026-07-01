@@ -70,7 +70,7 @@ export function PwaBudgetList({ data }: { data: PortalData }) {
   }), [data.budgetRequests, filter]);
 
   return (
-    <div className="pwa-stack">
+    <div className="pwa-stack pwa-budget-list-page">
       <PwaEligibilityNotice data={data} />
       {data.budgetRequests.length ? (
         <div className="pwa-filter-chips" aria-label="Budget request filters">

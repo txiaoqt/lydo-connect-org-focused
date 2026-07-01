@@ -84,6 +84,7 @@ import { toast } from "@/hooks/use-toast";
 import { useLydoConnect } from "@/lib/lydo-connect-store";
 import { cn } from "@/lib/utils";
 import { resolveBudgetEligibility } from "@/lib/budget-eligibility";
+import { LYDO_FACEBOOK_PAGE_URL } from "@/lib/official-links";
 import {
   getOrganizationProfileCompletionCount,
   getOrganizationProfileCompletionTarget,
@@ -6921,7 +6922,6 @@ export default function UserPortal({ section }: { section: string }) {
         );
       }
       case "news-releases": {
-        const lydoFacebookPageUrl = "https://www.facebook.com/profile.php?id=100064071040238";
         const publishedReleases = state.newsReleases.filter((n) => n.visibilityStatus === "published");
         const isRecentRelease = (datePosted: string) => {
           const diffDays = (Date.now() - new Date(datePosted).getTime()) / (1000 * 60 * 60 * 24);
@@ -6933,7 +6933,7 @@ export default function UserPortal({ section }: { section: string }) {
             description="Official announcements and updates from LYDO. Browse the latest posts and open them directly on Facebook."
             action={
               <Button type="button" variant="outline" asChild>
-                <a href={lydoFacebookPageUrl} target="_blank" rel="noreferrer">
+                <a href={LYDO_FACEBOOK_PAGE_URL} target="_blank" rel="noreferrer">
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View Facebook Page
                 </a>

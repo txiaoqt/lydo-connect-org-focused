@@ -4,6 +4,7 @@ import { IS_ADMIN_SURFACE } from "@/lib/deployment-surface";
 import { useStandalonePwa } from "./useStandalonePwa";
 
 const USER_PWA_ROUTES = [
+  "/",
   "/dashboard",
   "/organization-profile",
   "/document-submission",
@@ -25,11 +26,13 @@ const USER_PWA_ROUTES = [
   "/app",
 ];
 
+export const isInstalledUserPwaRoute = (pathname: string) =>
+  USER_PWA_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+
 export type InstalledUserPwaDecision = {
   enabled: boolean;
   adminSurface: boolean;
   userRoute: boolean;
-  compact: boolean;
   standalone: boolean;
   developmentPreview: boolean;
 };
@@ -38,7 +41,6 @@ export const shouldUseInstalledUserPwa = ({
   enabled,
   adminSurface,
   userRoute,
-  compact,
   standalone,
   developmentPreview,
 }: InstalledUserPwaDecision) =>
@@ -65,13 +67,12 @@ export function useInstalledUserPwa() {
   }, [previewRequested]);
   const developmentPreview = previewRequested || previewSession;
   const enabled = import.meta.env.VITE_ENABLE_STANDALONE_USER_PWA_UI === "true";
-  const isUserRoute = USER_PWA_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  const isUserRoute = isInstalledUserPwaRoute(pathname);
 
   return shouldUseInstalledUserPwa({
     enabled,
     adminSurface: IS_ADMIN_SURFACE,
     userRoute: isUserRoute,
-    compact: true,
     standalone,
     developmentPreview,
   });

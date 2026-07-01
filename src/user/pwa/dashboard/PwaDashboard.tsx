@@ -124,7 +124,7 @@ export default function PwaDashboard({ data }: { data: PortalData }) {
       </section>
 
       {data.actions.length ? (
-        <section className="pwa-card">
+        <section className="pwa-card pwa-dashboard-recommendations">
           <h2 className="pwa-section-title">Recommended Next Steps</h2>
           <div className="pwa-action-grid">
             {data.actions.map((action) => {
@@ -141,7 +141,7 @@ export default function PwaDashboard({ data }: { data: PortalData }) {
         </section>
       ) : null}
 
-      <section className="pwa-card">
+      <section className="pwa-card pwa-dashboard-activity">
         <div className="pwa-section-heading">
           <h2 className="pwa-section-title">Recent Activity</h2>
           {data.activities.length > 3 ? <button type="button" onClick={() => go(PWA_ROUTES.activity)}>View all activity</button> : null}

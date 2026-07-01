@@ -102,6 +102,11 @@ const NotFoundRoute = () => {
   return <NotFound />;
 };
 
+const UserSurfaceRoot = () => {
+  const usePwaUi = useInstalledUserPwa();
+  return usePwaUi ? <Navigate to={PWA_ENTRY_ROUTE} replace /> : <Index />;
+};
+
 const ScrollToTopOnRouteChange = () => {
   const { pathname, search } = useLocation();
   useEffect(() => {
@@ -188,7 +193,7 @@ const App = () => (
                       ) : (
                         <Route path="/admin/*" element={<Navigate to="/" replace />} />
                       )}
-                      <Route path="/" element={<Index />} />
+                      <Route path="/" element={<UserSurfaceRoot />} />
                       <Route path="/public-templates" element={<PublicTemplates />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/faqs" element={<Faqs />} />

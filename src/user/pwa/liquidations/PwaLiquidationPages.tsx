@@ -33,7 +33,7 @@ export function PwaLiquidationList({ data }: { data: PortalData }) {
     data.liquidationReports.find((item) => submittableStatuses.has(item.status)) ??
     data.liquidationReports[0];
   return (
-    <div className="pwa-stack">
+    <div className="pwa-stack pwa-liquidation-list-page">
       <section className="pwa-compact-card-list">
         {data.liquidationReports.map((report) => {
           const budget = data.budgetRequests.find((item) => item.id === report.budgetRequestId);

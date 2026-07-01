@@ -21,6 +21,7 @@ import { usePwaNavigation } from "../hooks/usePwaNavigation";
 import { usePwaPreferences, type PwaPreferences } from "../hooks/usePwaPreferences";
 import { usePwaRuntimeStatus } from "../hooks/usePwaRuntimeStatus";
 import { PWA_ROUTES } from "../pwaRoutes";
+import { parseAppVersion } from "./appVersion";
 
 type PortalData = ReturnType<typeof usePwaPortalData>;
 type Icon = typeof Bell;
@@ -105,7 +106,7 @@ function PreferenceSwitch({
 export function PwaSettingsMain() {
   const { go } = usePwaNavigation();
   return (
-    <div className="pwa-stack">
+    <div className="pwa-stack pwa-settings-main-page">
       <SettingsGroup title="General">
         <SettingsRow icon={Bell} title="Notifications" detail="Browser permission and delivery status" onClick={() => go(PWA_ROUTES.settingsNotifications)} />
         <SettingsRow icon={Accessibility} title="Appearance & Accessibility" detail="Text size, motion and contrast" onClick={() => go(PWA_ROUTES.settingsAppearance)} />
@@ -309,7 +310,8 @@ export function PwaAccountSettings({ data }: { data: PortalData }) {
 
 export function PwaAboutSettings() {
   const runtime = usePwaRuntimeStatus();
-  const version = import.meta.env.VITE_APP_VERSION || "1.0.0+local";
+  const version = parseAppVersion(import.meta.env.VITE_APP_VERSION);
+  const buildLabel = version.buildDateLabel ?? (version.isLocalBuild ? "Development build" : null);
   const updateLabel = runtime.updateState === "checking"
     ? "Checking..."
     : runtime.updateState === "available"
@@ -321,8 +323,9 @@ export function PwaAboutSettings() {
           : "Up to date";
   return (
     <div className="pwa-stack">
-      <section className="pwa-card pwa-settings-metadata">
-        <div><span>Version</span><strong>{version}</strong></div>
+      <section className="pwa-card pwa-settings-metadata" aria-label="Application version and runtime information">
+        <div><span id="pwa-version-label">Version</span><strong aria-labelledby="pwa-version-label">{version.release}</strong></div>
+        {buildLabel ? <div><span id="pwa-build-label">Build</span><strong aria-labelledby="pwa-build-label">{buildLabel}</strong></div> : null}
         <div><span>Installation</span><strong>{runtime.installed ? "Installed PWA" : "Browser preview"}</strong></div>
         <div><span>Update status</span><strong>{updateLabel}</strong></div>
       </section>
