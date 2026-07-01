@@ -939,7 +939,7 @@ html.ytrace-pwa-reduce-motion .ytrace-pwa-app *, html.ytrace-pwa-reduce-motion .
 .ytrace-pwa-app .pwa-bottom-nav button.is-active svg { fill: rgb(20 85 197 / 10%); }
 
 .ytrace-pwa-app.pwa-loading-screen, .ytrace-pwa-app.pwa-error-screen { display: grid; min-height: 100dvh; place-items: center; padding: 1.25rem; text-align: center; }
-.ytrace-pwa-app .pwa-loading-mark { display: grid; width: 4rem; height: 4rem; place-items: center; margin: auto; border-radius: 1.25rem; background: var(--pwa-blue); color: white; font-size: 1.5rem; font-weight: 800; }
+.ytrace-pwa-app .pwa-loading-mark { display: block; width: 5rem; height: 5rem; margin: auto; object-fit: contain; }
 .ytrace-pwa-app.pwa-loading-screen p { color: var(--pwa-muted); }
 .ytrace-pwa-app.pwa-error-screen h1 { margin: 0; font-size: 1.2rem; }
 .ytrace-pwa-app.pwa-error-screen p { color: var(--pwa-muted); font-size: 0.82rem; }
