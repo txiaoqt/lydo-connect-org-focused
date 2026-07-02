@@ -609,6 +609,8 @@
 .ytrace-pwa-app .pwa-ypop-ppa-summary > [class*="inline-flex"] { width: auto; max-width: 45%; flex: 0 0 auto; }
 .ytrace-pwa-app .pwa-ypop-ppa-list .pwa-ypop-row-actions { margin-top: 0.75rem; }
 .ytrace-pwa-app .pwa-ypop-ppa-list .pwa-ypop-row-actions button:only-child { grid-column: 1 / -1; }
+.ytrace-pwa-app .pwa-ypop-view-all-ppas { width: 100%; min-height: 2.75rem; margin-top: 0.75rem; }
+.ytrace-pwa-app .pwa-ypop-view-all-ppas svg { width: 0.9rem; }
 .ytrace-pwa-app .pwa-ypop-scoring-list { min-width: 0; margin: 0; }
 .ytrace-pwa-app .pwa-ypop-scoring-list > div { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid #edf1f7; }
 .ytrace-pwa-app .pwa-ypop-scoring-list > div:last-child { border-bottom: 0; }
@@ -672,18 +674,42 @@
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-native-form > label:not(.pwa-file-control) { display: grid; min-width: 0; gap: 0.35rem; color: #475569; font-size: 0.68rem; font-weight: 650; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor input,
 .ytrace-pwa-app .pwa-ypop-ppa-editor textarea { min-width: 0; font-size: 0.74rem; }
-.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-field { display: grid; min-width: 0; gap: 0.35rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-field { display: grid; min-width: 0; gap: 0.55rem; padding: 0.75rem; border: 1px solid #e1e8f2; border-radius: 0.8rem; background: #f8fafc; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-label { color: #475569; font-size: 0.68rem; font-weight: 650; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-upload-field > small { color: var(--pwa-muted); font-size: 0.65rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 0.65rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading > div { min-width: 0; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading strong,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading small { display: block; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading strong { color: #334155; font-size: 0.72rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading small { margin-top: 0.15rem; color: var(--pwa-muted); font-size: 0.61rem; font-weight: 500; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading > span { flex: 0 0 auto; padding: 0.2rem 0.45rem; border-radius: 999px; background: var(--pwa-blue-soft); color: var(--pwa-blue-strong); font-size: 0.58rem; font-weight: 700; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-section-heading + .pwa-ppa-upload-label { display: none; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control { min-height: 3rem; padding: 0.65rem 0.85rem; cursor: pointer; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control:focus-within { border-color: var(--pwa-blue); outline: 2px solid rgb(36 96 167 / 28%); outline-offset: 2px; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control span { display: inline-flex; min-width: 0; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 650; line-height: 1.35; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control span svg { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; }
-.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control:has(input:disabled) { cursor: not-allowed; opacity: 0.6; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control:has(input:disabled) { display: none; }
 .ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-file-control input:disabled { cursor: not-allowed; }
-.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative { display: flex; min-width: 0; min-height: 2.75rem; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border: 1px solid var(--pwa-border); border-radius: 0.65rem; background: #fff; color: var(--pwa-blue-strong); text-align: left; }
-.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
-.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative span { min-width: 0; overflow: hidden; font-size: 0.68rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-list { display: grid; min-width: 0; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card { min-width: 0; overflow: hidden; border: 1px solid var(--pwa-border); border-radius: 0.65rem; background: #fff; color: var(--pwa-blue-strong); }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card > button:first-child { display: grid; width: 100%; min-width: 0; min-height: 3.1rem; grid-template-columns: 1.1rem minmax(0,1fr) 0.9rem; align-items: center; gap: 0.55rem; padding: 0.6rem 0.7rem; border: 0; background: transparent; color: var(--pwa-blue-strong); text-align: left; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative { border: 1px solid var(--pwa-border); border-radius: 0.65rem; background: #fff; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative svg,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card button svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative > span,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card button span { min-width: 0; overflow: hidden; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative strong,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative small,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card button strong,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card button small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative strong,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card button strong { font-size: 0.68rem; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-current-narrative small,
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card button small { margin-top: 0.15rem; color: var(--pwa-muted); font-size: 0.58rem; font-weight: 500; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; }
+.ytrace-pwa-app .pwa-ypop-ppa-editor .pwa-ppa-attachment-card > button:last-child:not(:first-child) { display: grid; width: 2.75rem; min-height: 3.1rem; place-items: center; border: 0; border-left: 1px solid #edf1f7; background: transparent; color: #b91c1c; }
 
 .ytrace-pwa-app .pwa-template-library-page,
 .ytrace-pwa-app .pwa-template-preview-page { min-width: 0; max-width: 100%; }

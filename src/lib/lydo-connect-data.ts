@@ -341,6 +341,22 @@ export function computeYpopScore(
   return { cityLedEarned, cityLedMax, cityLedPercent, cityLedWeightedScore, orgLedBonus, totalScore: Math.round(cityLedPercent + orgLedBonus) };
 }
 
+export function buildVerifiedYpopAttendance(
+  activities: YPOPCityActivity[],
+  participations: Array<Pick<YPOPEventParticipation, "activityId" | "status">>,
+  legacyAttendance: Array<{ activityId: string; attended: boolean }> = [],
+) {
+  return activities.map((activity) => {
+    const participation = participations.find((item) => item.activityId === activity.id);
+    return {
+      activityId: activity.id,
+      attended: participation
+        ? participation.status === "verified"
+        : Boolean(legacyAttendance.find((item) => item.activityId === activity.id)?.attended),
+    };
+  });
+}
+
 export function getApprovedYpopOrgActivityCount(
   activities: YPOPOrgActivity[],
   entryId: string,

@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/portal/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
+  buildVerifiedYpopAttendance,
   computeYpopScore,
   getApprovedYpopOrgActivityCount,
   YPOP_BASE_TOTAL_POINTS,
@@ -110,7 +111,8 @@ export function PwaYpopPage({ data }: { data: PortalData }) {
           );
           const orgActivities = entry ? state.ypopOrgActivities.filter((activity) => activity.ypopEntryId === entry.id) : [];
           const approvedPpas = entry ? getApprovedYpopOrgActivityCount(orgActivities, entry.id, entry.orgLedProjectCount ?? 0) : 0;
-          const score = computeYpopScore(entry?.cityLedAttendance ?? [], activities, approvedPpas, period.orgLedTiers);
+          const verifiedAttendance = buildVerifiedYpopAttendance(activities, participations, entry?.cityLedAttendance);
+          const score = computeYpopScore(verifiedAttendance, activities, approvedPpas, period.orgLedTiers);
           const proofCount =
             (entry ? state.ypopFiles.filter((file) => file.ypopEntryId === entry.id).length : 0) +
             state.ypopEventFiles.filter((file) => participations.some((participation) => participation.id === file.participationId)).length +

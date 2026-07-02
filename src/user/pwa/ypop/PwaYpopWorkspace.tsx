@@ -30,6 +30,7 @@ import { StatusBadge } from "@/components/portal/StatusBadge";
 import { useConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { toast } from "@/hooks/use-toast";
 import {
+  buildVerifiedYpopAttendance,
   computeYpopScore,
   getApprovedYpopOrgActivityCount,
   normalizeYpopCityLedPoints,
@@ -66,6 +67,7 @@ import {
   PWA_ROUTES,
   pwaYpopEntryRoute,
   pwaYpopPpaEditRoute,
+  pwaYpopPpaListRoute,
   pwaYpopPpaNewRoute,
 } from "../pwaRoutes";
 
@@ -128,16 +130,26 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   const activities = state.ypopCityActivities
     .filter((item) => item.semesterKey === semesterKey)
     .sort((left, right) => left.date.localeCompare(right.date));
+  const currentActivityForParticipation = (participation: YPOPEventParticipation) =>
+    activities.find((activity) => activity.id === participation.activityId) ?? null;
+  const currentParticipationDate = (participation: YPOPEventParticipation) =>
+    currentActivityForParticipation(participation)?.date || participation.activityDate;
   const participations = state.ypopEventParticipations.filter((item) =>
     item.organizationId === organizationId && activities.some((activity) => activity.id === item.activityId),
   );
-  const orgActivities = entry ? state.ypopOrgActivities.filter((item) => item.ypopEntryId === entry.id) : [];
+  const orgActivities = entry
+    ? state.ypopOrgActivities
+      .filter((item) => item.ypopEntryId === entry.id)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    : [];
+  const visibleOrgActivities = orgActivities.slice(0, 3);
   const editable = Boolean(entry && isYpopEntryEditable(entry) && isYpopPeriodOpen(period));
   const ppaUnlocked = Boolean(entry?.status === "qualified" && isYpopPeriodOpen(period));
   const finalized = entry?.status === "qualified" || entry?.status === "not_qualified";
   const readOnly = Boolean(entry && !editable);
   const approvedPpas = entry ? getApprovedYpopOrgActivityCount(orgActivities, entry.id, entry.orgLedProjectCount ?? 0) : 0;
-  const score = computeYpopScore(entry?.cityLedAttendance ?? [], activities, approvedPpas, period?.orgLedTiers);
+  const verifiedAttendance = buildVerifiedYpopAttendance(activities, participations, entry?.cityLedAttendance);
+  const score = computeYpopScore(verifiedAttendance, activities, approvedPpas, period?.orgLedTiers);
 
   useEffect(() => {
     setNote(entry?.submissionNote ?? "");
@@ -243,7 +255,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   };
 
   const pastJoinedWithoutProof = participations.filter((participation) =>
-    isPastYpopActivityDate(participation.activityDate) && !participation.proofSubmittedAt,
+    isPastYpopActivityDate(currentParticipationDate(participation)) && !participation.proofSubmittedAt,
   );
   const totalProofCount =
     state.ypopEventFiles.filter((file) => participations.some((participation) => participation.id === file.participationId)).length +
@@ -350,7 +362,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
   }
 
   const filteredActivities = activities.filter((activity) => eventTab === "past" ? isPastYpopActivityDate(activity.date) : !isPastYpopActivityDate(activity.date));
-  const filteredParticipations = participations.filter((participation) => eventTab === "past" ? isPastYpopActivityDate(participation.activityDate) : !isPastYpopActivityDate(participation.activityDate));
+  const filteredParticipations = participations.filter((participation) => eventTab === "past" ? isPastYpopActivityDate(currentParticipationDate(participation)) : !isPastYpopActivityDate(currentParticipationDate(participation)));
   const availableActivities = filteredActivities.filter((activity) => !participations.some((participation) => participation.activityId === activity.id));
 
   return (
@@ -406,7 +418,10 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           {filteredParticipations.map((participation) => {
             const activity = activities.find((item) => item.id === participation.activityId);
             const files = state.ypopEventFiles.filter((item) => item.participationId === participation.id);
-            const eventEnded = isPastYpopActivityDate(participation.activityDate);
+            const displayedDate = activity?.date || participation.activityDate;
+            const displayedName = activity?.name || participation.activityName;
+            const displayedVenue = activity?.venue || participation.venue;
+            const eventEnded = isPastYpopActivityDate(displayedDate);
             const canEditProof =
               editable &&
               participation.status !== "verified" &&
@@ -416,7 +431,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
             return (
               <article key={participation.id}>
                 <div className="pwa-ypop-joined-heading">
-                  <div><strong>{participation.activityName}</strong><p>{formatDateTime(participation.activityDate)}{participation.venue ? ` · ${participation.venue}` : ""}</p><small>{activity ? `${YPOP_CITY_LED_CATEGORY_LABELS[resolveYpopCityLedCategory(activity.category, activity.points)]} · ${normalizeYpopCityLedPoints(activity.points, activity.category)} points` : "Joined city-led activity"}</small></div>
+                  <div><strong>{displayedName}</strong><p>{formatDateTime(displayedDate)}{displayedVenue ? ` · ${displayedVenue}` : ""}</p><small>{activity ? `${YPOP_CITY_LED_CATEGORY_LABELS[resolveYpopCityLedCategory(activity.category, activity.points)]} · ${normalizeYpopCityLedPoints(activity.points, activity.category)} points` : "Joined city-led activity"}</small></div>
                   <StatusBadge status={participation.status} />
                 </div>
                 <div className="pwa-ypop-proof-state"><span>{eventProofLabel(participation, files.length)}</span><span>{files.length} file{files.length === 1 ? "" : "s"}</span></div>
@@ -460,7 +475,7 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           </div>
         ) : null}
         <div className="pwa-ypop-ppa-list">
-          {orgActivities.map((activity) => {
+          {visibleOrgActivities.map((activity) => {
             const files = state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === activity.id);
             const canEdit = ppaUnlocked && (activity.status === "draft" || activity.status === "needs_revision");
             return <article key={activity.id} className="pwa-ypop-ppa-card">
@@ -477,6 +492,12 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
           })}
           {!orgActivities.length ? <p className="pwa-empty-copy">No organization-initiated activities logged.</p> : null}
         </div>
+        {entry && orgActivities.length > 3 ? (
+          <Button className="pwa-ypop-view-all-ppas" variant="outline" onClick={() => go(pwaYpopPpaListRoute(entry.id))}>
+            View All Submitted PPAs
+            <ChevronRight aria-hidden="true" />
+          </Button>
+        ) : null}
       </section>
 
       {finalized && entry ? (
@@ -552,6 +573,69 @@ export function PwaYpopWorkspace({ data }: { data: PortalData }) {
         </AlertDialogContent>
       </AlertDialog>
       {confirmationDialog}
+    </div>
+  );
+}
+
+export function PwaYpopPpaList({ data }: { data: PortalData }) {
+  const { entryId } = useParams();
+  const { go } = usePwaNavigation();
+  const { state } = data.store;
+  const entry = state.ypopEntries.find(
+    (item) => item.id === entryId && item.organizationId === data.profile?.id,
+  ) ?? null;
+  const period = state.ypopPeriods.find((item) => item.semesterKey === entry?.semester) ?? null;
+  const ppas = entry
+    ? state.ypopOrgActivities
+      .filter((item) => item.ypopEntryId === entry.id)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    : [];
+
+  if (!entry) {
+    return <div className="pwa-stack"><PwaBackButton fallback={PWA_ROUTES.ypop} label="YPOP Incentive" /><section className="pwa-card pwa-empty-copy">YPOP submission not found.</section></div>;
+  }
+
+  return (
+    <div className="pwa-stack pwa-ypop-ppa-all-page">
+      <PwaBackButton fallback={pwaYpopEntryRoute(entry.id)} label={entry.semesterLabel} />
+      <section className="pwa-page-intro">
+        <span><FileText aria-hidden="true" /></span>
+        <div><h2>All PPA Submissions</h2><p>Review every organization-led activity recorded for this semester.</p></div>
+      </section>
+      <section className="pwa-card pwa-ypop-workspace-section">
+        <div className="pwa-section-heading">
+          <h2>{ppas.length} Recorded PPA{ppas.length === 1 ? "" : "s"}</h2>
+        </div>
+        <div className="pwa-ypop-ppa-list">
+          {ppas.map((activity) => {
+            const files = state.ypopOrgActivityFiles.filter((file) => file.orgActivityId === activity.id);
+            const canEdit = Boolean(
+              entry.status === "qualified"
+              && isYpopPeriodOpen(period)
+              && (activity.status === "draft" || activity.status === "needs_revision"),
+            );
+            return (
+              <article key={activity.id} className="pwa-ypop-ppa-card">
+                <div className="pwa-ypop-ppa-summary">
+                  <div>
+                    <strong>{activity.activityName}</strong>
+                    <p>{formatDateTime(activity.activityDate)} Â· {activity.venue || "Venue not set"}</p>
+                    <small>{files.length} attached file{files.length === 1 ? "" : "s"}</small>
+                  </div>
+                  <StatusBadge status={activity.status} />
+                </div>
+                {activity.adminRemarks ? <p className="pwa-ypop-feedback">Admin: {activity.adminRemarks}</p> : null}
+                <div className="pwa-ypop-row-actions">
+                  <Button variant="outline" onClick={() => go(pwaYpopPpaEditRoute(entry.id, activity.id))}>
+                    {canEdit ? activity.status === "needs_revision" ? "Respond to Revision" : "Manage PPA" : "View Details"}
+                  </Button>
+                </div>
+              </article>
+            );
+          })}
+          {!ppas.length ? <p className="pwa-empty-copy">No PPA submissions have been recorded.</p> : null}
+        </div>
+      </section>
     </div>
   );
 }
@@ -731,13 +815,17 @@ export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
   return (
     <div className="pwa-stack pwa-ypop-ppa-editor">
       <PwaBackButton fallback={pwaYpopEntryRoute(entry.id)} label={entry.semesterLabel} />
-      <section className="pwa-page-intro"><span><Plus /></span><div><h2>{existing ? "Manage PPA" : "Log PPA"}</h2><p>Create an organization-initiated activity and attach its supporting proof.</p></div></section>
+      <section className="pwa-page-intro"><span>{existing && !editable ? <FileText /> : <Plus />}</span><div><h2>{existing ? editable ? "Manage PPA" : "PPA Details" : "Log PPA"}</h2><p>{existing && !editable ? "Review the submitted activity details and attached files." : "Create an organization-initiated activity and attach its supporting proof."}</p></div></section>
       {existing?.adminRemarks ? <div className="pwa-admin-note"><strong>Admin remarks</strong><p>{existing.adminRemarks}</p></div> : null}
       <section className="pwa-card pwa-native-form">
         <label>Activity Name *<Input value={form.activityName} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, activityName: event.target.value }))} /></label>
         <label>Activity Date *<Input type="date" value={form.activityDate} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, activityDate: event.target.value }))} /></label>
         <label>Venue *<Input value={form.venue} disabled={!editable} onChange={(event) => setForm((current) => ({ ...current, venue: event.target.value }))} /></label>
         <div className="pwa-ppa-upload-field">
+          <div className="pwa-ppa-file-section-heading">
+            <div><strong>Narrative Report</strong><small>Required PDF document</small></div>
+            <span>{existingNarrativePdf || narrativePdf ? "1 file" : "Missing"}</span>
+          </div>
           <span className="pwa-ppa-upload-label">Narrative Report PDF *</span>
           <label className="pwa-file-control pwa-ppa-file-control">
             <input
@@ -759,12 +847,20 @@ export function PwaYpopPpaEditor({ data }: { data: PortalData }) {
               onClick={() => void openStoredFile(existingNarrativePdf.fileUrl)}
             >
               <FileText aria-hidden="true" />
-              <span>{existingNarrativePdf.fileName}</span>
+              <span><strong>{existingNarrativePdf.fileName}</strong><small>Current narrative report PDF</small></span>
+              <ChevronRight aria-hidden="true" />
             </button>
           ) : null}
         </div>
-        <label className="pwa-file-control pwa-ppa-file-control"><input type="file" multiple disabled={!editable} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/*" onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))} /><span><Upload aria-hidden="true" />{selectedFiles.length ? `${selectedFiles.length} new file${selectedFiles.length === 1 ? "" : "s"} selected` : "Attach PPA proof files"}</span></label>
-        {existingProofFiles.length ? <ul className="pwa-ypop-file-list">{existingProofFiles.map((file) => <li key={file.id}><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText />{file.fileName}</button>{editable ? <button type="button" onClick={() => void removeExistingFile(file.id, file.fileUrl)}><Trash2 /></button> : null}</li>)}</ul> : null}
+        <div className="pwa-ppa-upload-field">
+          <div className="pwa-ppa-file-section-heading">
+            <div><strong>Supporting Proof Files</strong><small>Photos or supporting documents</small></div>
+            <span>{existingProofFiles.length + selectedFiles.length} file{existingProofFiles.length + selectedFiles.length === 1 ? "" : "s"}</span>
+          </div>
+          <label className="pwa-file-control pwa-ppa-file-control"><input type="file" multiple disabled={!editable} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.txt,application/pdf,image/*" onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))} /><span><Upload aria-hidden="true" />{selectedFiles.length ? `${selectedFiles.length} new file${selectedFiles.length === 1 ? "" : "s"} selected` : "Attach PPA proof files"}</span></label>
+          {existingProofFiles.length ? <ul className="pwa-ppa-attachment-list">{existingProofFiles.map((file) => <li key={file.id} className="pwa-ppa-attachment-card"><button type="button" onClick={() => void openStoredFile(file.fileUrl)}><FileText aria-hidden="true" /><span><strong>{file.fileName}</strong><small>Supporting proof</small></span><ChevronRight aria-hidden="true" /></button>{editable ? <button type="button" aria-label={`Remove ${file.fileName}`} onClick={() => void removeExistingFile(file.id, file.fileUrl)}><Trash2 aria-hidden="true" /></button> : null}</li>)}</ul> : null}
+          {!existingProofFiles.length && !selectedFiles.length && !editable ? <p className="pwa-ypop-inline-empty">No supporting proof files attached.</p> : null}
+        </div>
       </section>
       {editable ? <div className="pwa-profile-editor-actions"><Button variant="outline" disabled={saving} onClick={() => void save(false)}>Save Draft</Button><Button disabled={saving} onClick={() => void save(true)}>{saving ? <Loader2 className="pwa-spin" /> : <Send />}{saving ? "Saving..." : existing?.status === "needs_revision" ? "Resubmit PPA" : "Submit PPA for Validation"}</Button></div> : null}
       {confirmationDialog}

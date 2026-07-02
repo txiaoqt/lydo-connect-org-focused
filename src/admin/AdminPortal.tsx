@@ -9131,7 +9131,9 @@ export default function AdminPortal({ section }: { section: string }) {
             return null;
           }
           const entryOrg = state.organizationProfiles.find((o) => o.id === entry.organizationId);
-          const entryFiles = state.ypopFiles.filter((f) => f.ypopEntryId === entry.id);
+          // Legacy entry-level uploads are intentionally retired from the
+          // review UI. Proof now belongs to a city-led event or a PPA.
+          const entryFiles: YPOPFile[] = [];
           const semesterActivities = state.ypopCityActivities.filter((a) => a.semesterKey === entry.semester);
           const semesterActivityIds = new Set(semesterActivities.map((activity) => activity.id));
           const orgEventParticipations = [...state.ypopEventParticipations]
@@ -9563,17 +9565,6 @@ export default function AdminPortal({ section }: { section: string }) {
                     <p className="mobile-review-empty">No proof documents were submitted for this validation period.</p>
                   )}
 
-                  {entryFiles.length ? (
-                    <div className="mobile-general-files">
-                      <h3>General Submission Files</h3>
-                      {entryFiles.map((file) => (
-                        <button key={file.id} type="button" className="mobile-proof-file" onClick={() => void openFile(file.fileUrl, file.fileName)}>
-                          <FileText className="h-4 w-4 shrink-0" />
-                          <span>{file.fileName}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
                 </section>
 
                 <section className="mobile-review-section mobile-final-decision">
@@ -10369,7 +10360,6 @@ export default function AdminPortal({ section }: { section: string }) {
                       {filteredPeriodEntries.map((entry) => {
                         const isVirtualEntry = "_isVirtual" in entry;
                         const entryOrg = state.organizationProfiles.find((o) => o.id === entry.organizationId);
-                        const entryFiles = state.ypopFiles.filter((f) => f.ypopEntryId === entry.id);
                         const joinedEventCount = participationCountByOrgId.get(entry.organizationId) ?? 0;
                         const isTerminal = entry.status === "qualified" || entry.status === "not_qualified";
                         const statusDotColor =
@@ -10391,7 +10381,6 @@ export default function AdminPortal({ section }: { section: string }) {
                                     <p className="mt-0.5 text-xs text-muted-foreground/80">
                                       {isTerminal ? `${entry.pointsEarned}%` : "Awaiting validation"}
                                       {" · "}{joinedEventCount} joined event{joinedEventCount !== 1 ? "s" : ""}
-                                      {" · "}{entryFiles.length} general file{entryFiles.length !== 1 ? "s" : ""}
                                     </p>
                                     {isVirtualEntry && (
                                       <p className="mt-1 text-[11px] text-muted-foreground">Draft review record generated from joined YPOP events.</p>

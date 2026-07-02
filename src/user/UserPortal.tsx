@@ -119,6 +119,7 @@ import {
   subClassificationOptions,
   type OrganizationProfile,
   type InquiryRecord,
+  buildVerifiedYpopAttendance,
   computeYpopScore,
   buildPublicRecordCode,
   getYpopCityLedPoints,
@@ -7641,7 +7642,11 @@ export default function UserPortal({ section }: { section: string }) {
 
         const renderJoinedYpopEventCard = (participation: YPOPEventParticipation) => {
           const files = ypopEventFilesByParticipationId.get(participation.id) ?? [];
-          const eventDate = parseYpopActivityDate(participation.activityDate);
+          const currentActivity = state.ypopCityActivities.find((activity) => activity.id === participation.activityId);
+          const displayedActivityName = currentActivity?.name || participation.activityName;
+          const displayedActivityDate = currentActivity?.date || participation.activityDate;
+          const displayedVenue = currentActivity?.venue || participation.venue;
+          const eventDate = parseYpopActivityDate(displayedActivityDate);
           const canSubmitProof = participation.status === "needs_revision" || (eventDate ? eventDate <= new Date() : false);
           const isSubmitting = submittingYpopEventParticipationId === participation.id;
           const isUploading = ypopEventUploadingId === participation.id;
@@ -7652,9 +7657,9 @@ export default function UserPortal({ section }: { section: string }) {
               <CardContent className="space-y-4 p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold">{participation.activityName}</p>
+                    <p className="font-semibold">{displayedActivityName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {participation.activityDate || "Date TBD"}{participation.venue ? ` • ${participation.venue}` : ""}
+                      {displayedActivityDate || "Date TBD"}{displayedVenue ? ` • ${displayedVenue}` : ""}
                     </p>
                   </div>
                   <PortalStatusBadge status={participation.status} />
@@ -8240,11 +8245,16 @@ Validated {validatedDate}</p>
           );
           const filteredSemesterJoinedEvents = semesterJoinedEvents.filter((participation) =>
             detailEventFilter === "past"
-              ? isPastYpopActivityDate(participation.activityDate)
-              : !isPastYpopActivityDate(participation.activityDate),
+              ? isPastYpopActivityDate(semesterActivities.find((activity) => activity.id === participation.activityId)?.date || participation.activityDate)
+              : !isPastYpopActivityDate(semesterActivities.find((activity) => activity.id === participation.activityId)?.date || participation.activityDate),
+          );
+          const verifiedAttendance = buildVerifiedYpopAttendance(
+            semesterActivities,
+            semesterJoinedEvents,
+            activeEntry.cityLedAttendance,
           );
           const verifiedCityLedIds = new Set(
-            (activeEntry.cityLedAttendance ?? []).filter((attendance) => attendance.attended).map((attendance) => attendance.activityId),
+            verifiedAttendance.filter((attendance) => attendance.attended).map((attendance) => attendance.activityId),
           );
           const approvedOrgActivityCount = getApprovedYpopOrgActivityCount(
             semesterOrgActivities,
@@ -8252,7 +8262,7 @@ Validated {validatedDate}</p>
             activeEntry.orgLedProjectCount ?? 0,
           );
           const scoreBreakdown = computeYpopScore(
-            activeEntry.cityLedAttendance ?? [],
+            verifiedAttendance,
             semesterActivities,
             approvedOrgActivityCount,
             semesterPeriod?.orgLedTiers,

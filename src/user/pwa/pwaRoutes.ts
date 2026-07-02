@@ -62,6 +62,9 @@ export const pwaYpopPeriodRoute = (periodId: string) =>
 export const pwaYpopPpaNewRoute = (entryId: string) =>
   `${pwaYpopEntryRoute(entryId)}/ppa/new`;
 
+export const pwaYpopPpaListRoute = (entryId: string) =>
+  `${pwaYpopEntryRoute(entryId)}/ppa`;
+
 export const pwaYpopPpaEditRoute = (entryId: string, activityId: string) =>
   `${pwaYpopEntryRoute(entryId)}/ppa/${encodeURIComponent(activityId)}`;
 
