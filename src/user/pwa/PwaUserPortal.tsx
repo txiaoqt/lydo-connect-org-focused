@@ -12,6 +12,7 @@ import {
   PwaTransparency,
 } from "./PwaResourcePages";
 import { PwaProfileEdit, PwaProfilePage, PwaProfilePublicPreview } from "./profile/PwaProfilePages";
+import { PwaOrganizationDirectory, PwaOrganizationDirectoryProfile } from "./profile/PwaOrganizationDirectory";
 import { PwaTemplateLibrary, PwaTemplatePreview } from "./templates/PwaTemplatePages";
 import { PwaYpopPage } from "./ypop/PwaYpopPage";
 import { PwaYpopPpaEditor, PwaYpopPpaList, PwaYpopWorkspace } from "./ypop/PwaYpopWorkspace";
@@ -109,6 +110,8 @@ export default function PwaUserPortal() {
         <Route path="profile" element={<PwaProfilePage data={data} />} />
         <Route path="profile/edit" element={<PwaProfileEdit data={data} />} />
         <Route path="profile/public" element={<PwaProfilePublicPreview data={data} />} />
+        <Route path="organizations" element={<PwaOrganizationDirectory />} />
+        <Route path="organizations/:organizationId" element={<PwaOrganizationDirectoryProfile />} />
         <Route path="ypop" element={<PwaYpopPage data={data} />} />
         <Route path="ypop/period/:periodId" element={<PwaYpopWorkspace data={data} />} />
         <Route path="ypop/:entryId/ppa/new" element={<PwaYpopPpaEditor data={data} />} />

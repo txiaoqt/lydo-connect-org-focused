@@ -21,6 +21,8 @@ import type {
   YPOPOrgActivityFile,
   YPOPPeriod,
   YPOPCityActivity,
+  PublicOrganizationActivity,
+  PublicOrganizationDirectoryItem,
 } from "./lydo-connect-data";
 import { createTemplateLocalId, legacyRemovedTemplateNames, normalizeYpopCityLedPoints, requiredDocumentTypes, resolveYpopCityLedCategory } from "./lydo-connect-data";
 import { readAdminSession } from "./admin-auth";
@@ -66,6 +68,9 @@ type OrganizationProfileRow = {
   address: string | null;
   facebook_page_url: string | null;
   profile_image_url?: string | null;
+  directory_visibility?: boolean | null;
+  directory_show_representative?: boolean | null;
+  directory_show_adviser?: boolean | null;
   profile_status: OrganizationProfile["profileStatus"];
   verified_at: string | null;
   internal_notes: string | null;
@@ -445,6 +450,9 @@ const mapOrganizationProfile = (row: OrganizationProfileRow): OrganizationProfil
   address: row.address ?? "",
   facebookPageUrl: row.facebook_page_url ?? "",
   profileImageUrl: row.profile_image_url ?? "",
+  directoryVisibility: Boolean(row.directory_visibility),
+  directoryShowRepresentative: Boolean(row.directory_show_representative),
+  directoryShowAdviser: Boolean(row.directory_show_adviser),
   profileStatus: row.profile_status,
   verifiedAt: row.verified_at ?? "",
   internalNotes: row.internal_notes ?? "",
@@ -1132,6 +1140,9 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
     address: profile.address.trim() || null,
     facebook_page_url: profile.facebookPageUrl.trim() || null,
     profile_image_url: profile.profileImageUrl?.trim() || null,
+    directory_visibility: Boolean(profile.directoryVisibility),
+    directory_show_representative: Boolean(profile.directoryShowRepresentative),
+    directory_show_adviser: Boolean(profile.directoryShowAdviser),
     profile_status: profile.profileStatus,
     verified_at: profile.verifiedAt.trim() || null,
     internal_notes: profile.internalNotes.trim() || null,
@@ -1140,7 +1151,7 @@ export const upsertOrganizationProfileInSupabase = async (profile: OrganizationP
   const { data, error } = await supabase
     .from("organization_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,is_existing_organization,organization_identifier_number,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_image_url,profile_status,verified_at,internal_notes,yorp_registered_year,yorp_renewed_year,created_at,updated_at")
+    .select("id,user_id,organization_name,organization_email,contact_number,district,barangay,is_existing_organization,organization_identifier_number,major_classification,sub_classification,advocacies,adviser_name,representative_name,address,facebook_page_url,profile_image_url,directory_visibility,directory_show_representative,directory_show_adviser,profile_status,verified_at,internal_notes,yorp_registered_year,yorp_renewed_year,created_at,updated_at")
     .single();
 
   if (error || !data) {
@@ -2951,4 +2962,73 @@ export const adminUpdateOrgYorpFieldsInSupabase = async (
     _renewed_year: renewedYear,
   });
   if (error) throw new Error(error.message);
+};
+
+type PublicOrganizationRow = {
+  organization_id: string;
+  organization_name: string;
+  profile_image_url: string | null;
+  major_classification: string | null;
+  sub_classification: string | null;
+  district: string | null;
+  barangay: string | null;
+  advocacies: string[] | null;
+  facebook_page_url: string | null;
+  verified_at: string | null;
+  yorp_registered_year: number | null;
+  representative_name: string | null;
+  adviser_name: string | null;
+};
+
+const mapPublicOrganization = (row: PublicOrganizationRow): PublicOrganizationDirectoryItem => ({
+  organizationId: row.organization_id,
+  organizationName: row.organization_name,
+  profileImageUrl: row.profile_image_url ?? "",
+  majorClassification: row.major_classification ?? "",
+  subClassification: row.sub_classification ?? "",
+  district: row.district ?? "",
+  barangay: row.barangay ?? "",
+  advocacies: row.advocacies ?? [],
+  facebookPageUrl: row.facebook_page_url ?? "",
+  verifiedAt: row.verified_at ?? "",
+  yorpRegisteredYear: row.yorp_registered_year ?? null,
+  representativeName: row.representative_name ?? "",
+  adviserName: row.adviser_name ?? "",
+});
+
+export const fetchPublicOrganizationDirectory = async (): Promise<PublicOrganizationDirectoryItem[]> => {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("search_public_organizations");
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as PublicOrganizationRow[]).map(mapPublicOrganization);
+};
+
+export const fetchPublicOrganizationProfile = async (organizationId: string): Promise<{
+  organization: PublicOrganizationDirectoryItem;
+  activities: PublicOrganizationActivity[];
+} | null> => {
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("get_public_organization_profile", {
+    _organization_id: organizationId,
+  });
+  if (error) throw new Error(error.message);
+  const row = (Array.isArray(data) ? data[0] : null) as (PublicOrganizationRow & { activities?: PublicOrganizationActivity[] | null }) | null;
+  if (!row) return null;
+  return { organization: mapPublicOrganization(row), activities: row.activities ?? [] };
+};
+
+export const updateOrganizationDirectoryPreferences = async (preferences: {
+  visible: boolean;
+  showRepresentative: boolean;
+  showAdviser: boolean;
+}): Promise<OrganizationProfile> => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { data, error } = await supabase.rpc("update_organization_directory_preferences", {
+    _visible: preferences.visible,
+    _show_representative: preferences.showRepresentative,
+    _show_adviser: preferences.showAdviser,
+  });
+  const row = Array.isArray(data) ? data[0] : null;
+  if (error || !row) throw new Error(error?.message ?? "Directory preferences could not be saved.");
+  return mapOrganizationProfile(row as OrganizationProfileRow);
 };

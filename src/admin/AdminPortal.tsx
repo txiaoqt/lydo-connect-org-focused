@@ -740,6 +740,8 @@ export default function AdminPortal({ section }: { section: string }) {
   const [ypopScoringHelpOpen, setYpopScoringHelpOpen] = useState(false);
   const [confirmYpopValidationOpen, setConfirmYpopValidationOpen] = useState(false);
   const [ypopValidationAcknowledged, setYpopValidationAcknowledged] = useState(false);
+  const [showAllYpopProofDocuments, setShowAllYpopProofDocuments] = useState(false);
+  const [showAllYpopOrgActivities, setShowAllYpopOrgActivities] = useState(false);
   const [ypopAdminView, setYpopAdminView] = useState<"periods" | "create-period" | "period-detail" | "entry-review">("periods");
   const [selectedYpopPeriodId, setSelectedYpopPeriodId] = useState<string | null>(null);
   const [createPeriodForm, setCreatePeriodForm] = useState<{ semesterLabel: string; validationDeadline: string; status: YPOPPeriodStatus }>({ semesterLabel: deriveSemesterLabelFromDate(), validationDeadline: "", status: "draft" });
@@ -760,6 +762,11 @@ export default function AdminPortal({ section }: { section: string }) {
   const [recentActivityDialogOpen, setRecentActivityDialogOpen] = useState(false);
   const [recentActivityDialogTitle, setRecentActivityDialogTitle] = useState("Recent Activity");
   const [recentActivityDialogEntries, setRecentActivityDialogEntries] = useState<RecentActivityEntry[]>([]);
+
+  useEffect(() => {
+    setShowAllYpopProofDocuments(false);
+    setShowAllYpopOrgActivities(false);
+  }, [selectedYpopId]);
 
   const profile = state.organizationProfiles[0] ?? null;
   const adminNotifications = state.notifications.filter((item) => item.userId === adminId);
@@ -9243,7 +9250,7 @@ export default function AdminPortal({ section }: { section: string }) {
           return (
             <div className="admin-ypop-validation-review-page space-y-5">
               {/* Header bar */}
-              <div className="desktop-ypop-review-context flex flex-wrap items-center justify-between gap-3">
+              <div className="desktop-ypop-review-context desktop-review-toolbar flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => { setSelectedYpopId(null); setYpopValidationForm(null); setYpopPreviewFileId(null); setYpopAdminView("period-detail"); }}
@@ -9263,9 +9270,11 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
               </div>
 
-              <div className="desktop-ypop-review-context">
+              <div className="desktop-ypop-review-context desktop-review-identity-card">
                 <h2 className="text-lg font-semibold">{entryOrg?.organizationName ?? "Unknown org"}</h2>
                 <p className="text-sm text-muted-foreground">{entry.semesterLabel}</p>
+                {entryPeriod?.validationDeadline ? <small>Validation deadline: {formatShortDate(entryPeriod.validationDeadline)}</small> : null}
+                {entry.submissionNote.trim() ? <div className="desktop-review-note"><strong>Org&apos;s Submission Note</strong><p>{entry.submissionNote}</p></div> : null}
               </div>
 
               <div className="mobile-ypop-validation-review">
@@ -9290,6 +9299,12 @@ export default function AdminPortal({ section }: { section: string }) {
                   {entryPeriod?.validationDeadline ? (
                     <small>Validation deadline: {formatShortDate(entryPeriod.validationDeadline)}</small>
                   ) : null}
+                  {entry.submissionNote.trim() ? (
+                    <div className="mobile-submission-note">
+                      <strong>Org&apos;s Submission Note</strong>
+                      <p>{entry.submissionNote}</p>
+                    </div>
+                  ) : null}
                 </section>
 
                 <section className="mobile-validation-summary mobile-review-section">
@@ -9311,6 +9326,7 @@ export default function AdminPortal({ section }: { section: string }) {
                     <div><span>City-Led</span><strong>{cityLedWeightedScore}%</strong></div>
                     <div><span>Bonus</span><strong>+{orgLedBonus}%</strong></div>
                     <div><span>Threshold</span><strong>{entry.pointsRequired ?? YPOP_SCORE_THRESHOLD}%</strong></div>
+                    <div><span>Total</span><strong>{totalScore}%</strong></div>
                   </div>
                 </section>
 
@@ -9400,6 +9416,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                       type="button"
                                       size="sm"
                                       variant="outline"
+                                      className="needs-revision-action"
                                       onClick={() => openAdminConfirmation({
                                         kind: "ypop_org_activity",
                                         action: "needs_revision",
@@ -9520,6 +9537,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                     type="button"
                                     size="sm"
                                     variant="outline"
+                                    className="needs-revision-action"
                                     disabled={isSaving}
                                     onClick={() => openAdminConfirmation({
                                       kind: "ypop_event",
@@ -9649,21 +9667,24 @@ export default function AdminPortal({ section }: { section: string }) {
                 {/* LEFT: Validation */}
                 <div className="space-y-4">
                   {entry.submissionNote.trim() && (
-                    <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                    <div className="desktop-legacy-submission-note rounded-xl border border-border/60 bg-muted/20 p-4">
                       <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Org's Submission Note</p>
                       <p className="text-sm">{entry.submissionNote}</p>
                     </div>
                   )}
 
-                  <Card className="border-border/70">
+                  <Card className="desktop-review-workflow border-border/70">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-semibold">Validation</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-5 pt-0">
+                    <CardContent className="desktop-review-workflow-content space-y-5 pt-0">
                       {/* City-Led Activities checklist */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium">City-Led Activities</p>
+                      <div className="desktop-city-led-review space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">City-Led Activities</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">Verified activities that count toward the score.</p>
+                          </div>
                           {semesterActivities.length > 0 && (
                               <span className="text-xs text-muted-foreground">
                                 {cityLedEarned} / {cityLedMax} pts ({cityLedPercent}%)
@@ -9707,7 +9728,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       </div>
 
                       {/* Organization-initiated */}
-                      <div className="space-y-2">
+                      <div className="desktop-ppa-review space-y-2">
                         <p className="text-sm font-medium">Organization-Initiated Activities</p>
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="rounded-lg border border-border/50 bg-background px-3 py-2 text-sm font-semibold tabular-nums">
@@ -9774,6 +9795,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                         type="button"
                                         size="sm"
                                         variant="outline"
+                                        className="needs-revision-action"
                                         onClick={() =>
                                           openAdminConfirmation({
                                             kind: "ypop_org_activity",
@@ -9806,7 +9828,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                           })
                                         }
                                       >
-                                        Rejected
+                                        Reject
                                       </Button>
                                       <Button
                                         type="button"
@@ -9836,7 +9858,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       </div>
 
                       {/* Score */}
-                      <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+                      <div className="desktop-validation-summary rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-semibold">Computed Score</p>
@@ -9883,7 +9905,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       </div>
 
                       {/* Outcome + Remarks */}
-                      <div className="space-y-3">
+                      <div className="desktop-final-decision-fields space-y-3">
                         <div className="space-y-2">
                           <label className="text-sm font-medium" htmlFor="ypop-status">Outcome</label>
                           <Select value={form.status} onValueChange={(v) => setYpopValidationForm({ ...form, status: v as YPOPStatus })} disabled={isTerminal || savingYpopValidation}>
@@ -9914,7 +9936,7 @@ export default function AdminPortal({ section }: { section: string }) {
                       {!isTerminal && (
                         <Button
                           type="button"
-                          className="w-full"
+                          className="desktop-save-validation w-full"
                           disabled={savingYpopValidation}
                           onClick={() => {
                             setYpopValidationAcknowledged(false);
@@ -9930,8 +9952,35 @@ export default function AdminPortal({ section }: { section: string }) {
                 </div>
 
                 {/* RIGHT: Proof Documents + History */}
-                <div className="space-y-3">
-                  <Card className="border-border/70">
+                <div className="desktop-review-support space-y-3">
+                  <Card className="desktop-summary-card border-border/70">
+                    <CardContent className="space-y-3 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">Validation Summary</p>
+                          <p className="text-xs text-muted-foreground">Current computed result</p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${qualifies ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                          {qualifies ? "Qualifies ✓" : "Does Not Qualify"}
+                        </span>
+                      </div>
+                      <div className="flex items-end gap-1">
+                        <strong className="text-3xl tabular-nums">{totalScore}</strong>
+                        <span className="mb-1 text-sm text-muted-foreground">% total</span>
+                      </div>
+                      <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+                        <div className={qualifies ? "h-full rounded-full bg-emerald-500" : "h-full rounded-full bg-amber-400"} style={{ width: `${Math.min(totalScore, 100)}%` }} />
+                        <span className="absolute top-0 h-full w-0.5 bg-foreground/40" style={{ left: `${entry.pointsRequired ?? YPOP_SCORE_THRESHOLD}%` }} />
+                      </div>
+                      <div className="desktop-summary-metrics">
+                        <div><span>City-Led</span><strong>{cityLedWeightedScore}%</strong></div>
+                        <div><span>Bonus</span><strong>+{orgLedBonus}%</strong></div>
+                        <div><span>Threshold</span><strong>{entry.pointsRequired ?? YPOP_SCORE_THRESHOLD}%</strong></div>
+                        <div><span>Total</span><strong>{totalScore}%</strong></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="desktop-proof-documents border-border/70">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-semibold">Proof Documents ({orgEventParticipations.length})</CardTitle>
                     </CardHeader>
@@ -9940,7 +9989,7 @@ export default function AdminPortal({ section }: { section: string }) {
                         <p className="text-sm text-muted-foreground">No joined YPOP events for this organization in the selected semester yet.</p>
                       ) : (
                         <Accordion type="multiple" className="w-full rounded-xl border border-border/60">
-                          {orgEventParticipations.map((participation) => {
+                          {orgEventParticipations.slice(0, showAllYpopProofDocuments ? orgEventParticipations.length : 3).map((participation) => {
                             const files = eventFilesByParticipationId.get(participation.id) ?? [];
                             const remarksDraft = ypopEventReviewRemarksById[participation.id] ?? participation.adminRemarks;
                             const isSaving = processingAdminConfirmation && pendingAdminConfirmation?.kind === "ypop_event" && pendingAdminConfirmation.participationId === participation.id;
@@ -10007,6 +10056,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                       type="button"
                                       size="sm"
                                       variant="outline"
+                                      className="needs-revision-action"
                                       disabled={isSaving}
                                       onClick={() =>
                                         openAdminConfirmation({
@@ -10043,7 +10093,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                         })
                                       }
                                     >
-                                      Rejected
+                                      Reject Proof
                                     </Button>
                                     <Button
                                       type="button"
@@ -10063,7 +10113,7 @@ export default function AdminPortal({ section }: { section: string }) {
                                         })
                                       }
                                     >
-                                      {isSaving ? "Saving..." : "Verified"}
+                                      {isSaving ? "Saving..." : "Verify Proof"}
                                     </Button>
                                   </div>
                                 </AccordionContent>
@@ -10072,6 +10122,137 @@ export default function AdminPortal({ section }: { section: string }) {
                           })}
                         </Accordion>
                       )}
+                      {orgEventParticipations.length > 3 ? (
+                        <Button type="button" variant="outline" className="w-full" onClick={() => setShowAllYpopProofDocuments((current) => !current)}>
+                          {showAllYpopProofDocuments ? "Show less" : `View all proof documents (${orgEventParticipations.length})`}
+                        </Button>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="desktop-org-activities-card border-border/70">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="text-sm font-semibold">Organization-Led Activities</CardTitle>
+                          <p className="mt-1 text-xs text-muted-foreground">Review submitted PPA details and supporting files.</p>
+                        </div>
+                        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold">{orgActivities.length}</span>
+                      </div>
+                      <div className="desktop-org-activity-summary">
+                        <div><span>Approved</span><strong>{approvedOrgActivityCount}</strong></div>
+                        <div><span>Current bonus</span><strong>+{orgLedBonus}%</strong></div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-0">
+                      {orgActivities.length === 0 ? (
+                        <p className="rounded-lg border border-dashed border-border/70 p-3 text-sm text-muted-foreground">
+                          No organization-led activities were submitted for this semester.
+                        </p>
+                      ) : (
+                        <Accordion type="multiple" className="w-full rounded-xl border border-border/60">
+                          {orgActivities.slice(0, showAllYpopOrgActivities ? orgActivities.length : 3).map((activity) => {
+                            const files = orgActivityFilesByActivityId.get(activity.id) ?? [];
+                            const remarksDraft = ypopEventReviewRemarksById[activity.id] ?? activity.adminRemarks;
+                            return (
+                              <AccordionItem key={activity.id} value={activity.id} className="border-border/60 px-4">
+                                <AccordionTrigger className="gap-3 py-4 text-left hover:no-underline">
+                                  <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-semibold">{activity.activityName}</p>
+                                      <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {activity.activityDate || "Date TBD"}{activity.venue ? ` · ${activity.venue}` : ""}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">{files.length} attached file{files.length === 1 ? "" : "s"}</p>
+                                    </div>
+                                    <PortalStatusBadge status={activity.status} />
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="space-y-4 pb-4">
+                                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Narrative Report</p>
+                                    <p className="whitespace-pre-wrap text-sm">{activity.narrativeReport || "No narrative report provided."}</p>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">Attached Files ({files.length})</p>
+                                    {files.length ? files.map((file) => (
+                                      <div key={file.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2">
+                                        <span className="min-w-0 truncate text-sm">{file.fileName}</span>
+                                        <Button type="button" size="sm" variant="outline" onClick={() => void openFile(file.fileUrl, file.fileName)}>Open</Button>
+                                      </div>
+                                    )) : <p className="text-sm text-muted-foreground">No proof files uploaded yet.</p>}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">PPA Remarks</label>
+                                    <Textarea
+                                      value={remarksDraft}
+                                      onChange={(event) => setYpopEventReviewRemarksById((current) => ({ ...current, [activity.id]: event.target.value }))}
+                                      rows={3}
+                                      className="resize-none text-sm"
+                                      placeholder="Feedback for this organization-led activity..."
+                                      disabled={isTerminal}
+                                    />
+                                  </div>
+                                  {!isTerminal ? (
+                                    <div className="desktop-org-activity-actions">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        className="needs-revision-action"
+                                        variant="outline"
+                                        onClick={() => openAdminConfirmation({
+                                          kind: "ypop_org_activity",
+                                          action: "needs_revision",
+                                          orgActivityId: activity.id,
+                                          entryId: entry.id,
+                                          organizationId: activity.organizationId,
+                                          organizationName: entryOrg?.organizationName ?? "Organization",
+                                          activityName: activity.activityName,
+                                          currentAdminRemarks: remarksDraft,
+                                        })}
+                                      >Needs Revision</Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => openAdminConfirmation({
+                                          kind: "ypop_org_activity",
+                                          action: "rejected",
+                                          orgActivityId: activity.id,
+                                          entryId: entry.id,
+                                          organizationId: activity.organizationId,
+                                          organizationName: entryOrg?.organizationName ?? "Organization",
+                                          activityName: activity.activityName,
+                                          currentAdminRemarks: remarksDraft,
+                                        })}
+                                      >Reject</Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={() => openAdminConfirmation({
+                                          kind: "ypop_org_activity",
+                                          action: "approved",
+                                          orgActivityId: activity.id,
+                                          entryId: entry.id,
+                                          organizationId: activity.organizationId,
+                                          organizationName: entryOrg?.organizationName ?? "Organization",
+                                          activityName: activity.activityName,
+                                          currentAdminRemarks: remarksDraft,
+                                        })}
+                                      >Approve PPA</Button>
+                                    </div>
+                                  ) : null}
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
+                      )}
+                      {orgActivities.length > 3 ? (
+                        <Button type="button" variant="outline" className="w-full" onClick={() => setShowAllYpopOrgActivities((current) => !current)}>
+                          {showAllYpopOrgActivities ? "Show less" : `View all organization-led activities (${orgActivities.length})`}
+                        </Button>
+                      ) : null}
                     </CardContent>
                   </Card>
 
@@ -11078,6 +11259,8 @@ export default function AdminPortal({ section }: { section: string }) {
     ypopValidationForm,
     setYpopValidationForm,
     savingYpopValidation,
+    showAllYpopProofDocuments,
+    showAllYpopOrgActivities,
     ypopAdminView,
     setYpopAdminView,
     selectedYpopPeriodId,

@@ -4,6 +4,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "@/components/portal/StatusBadge";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -13,7 +14,7 @@ import {
   subClassificationOptions,
   type OrganizationProfile,
 } from "@/lib/lydo-connect-data";
-import { uploadOrganizationProfileImageInSupabase, upsertOrganizationProfileInSupabase } from "@/lib/lydo-connect-supabase";
+import { updateOrganizationDirectoryPreferences, uploadOrganizationProfileImageInSupabase, upsertOrganizationProfileInSupabase } from "@/lib/lydo-connect-supabase";
 import { organizationEmailPattern, philippineContactNumberPattern } from "@/lib/organization-profile-domain";
 import type { usePwaPortalData } from "../hooks/usePwaPortalData";
 import { usePwaNavigation } from "../hooks/usePwaNavigation";
@@ -129,18 +130,18 @@ function ProfileSummary({ data, preview = false }: { data: PortalData; preview?:
           <h2>{data.organizationName}</h2>
           <div className="pwa-profile-status-line">
             <StatusBadge status={profile?.profileStatus ?? "incomplete"} />
-            <span>{data.profilePercent}% complete</span>
+            {!preview ? <span>{data.profilePercent}% complete</span> : null}
           </div>
           <p>{classificationLabel(profile)}</p>
           <p>{locationLabel(profile)}</p>
         </div>
       </div>
-      <div className="pwa-profile-completeness">
+      {!preview ? <div className="pwa-profile-completeness">
         <div><span>Profile completeness</span><strong>{data.profilePercent}%</strong></div>
         <div className="pwa-profile-progress" role="progressbar" aria-label="Profile completeness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={data.profilePercent}>
           <span style={{ width: `${data.profilePercent}%` }} />
         </div>
-      </div>
+      </div> : null}
       {!preview ? (
         <div className="pwa-profile-actions">
           <Button onClick={() => go(PWA_ROUTES.profileEdit)}><Pencil aria-hidden="true" />Edit Profile</Button>
@@ -246,9 +247,10 @@ function ProfileDetails({ data }: { data: PortalData }) {
 }
 
 function CityLedActivityList({ data }: { data: PortalData }) {
-  return data.cityLedParticipations.slice(0, 3).length ? (
+  const verifiedActivities = data.cityLedParticipations.filter((item) => item.status === "verified");
+  return verifiedActivities.slice(0, 3).length ? (
     <div className="pwa-profile-activity-list">
-      {data.cityLedParticipations.slice(0, 3).map((item) => (
+      {verifiedActivities.slice(0, 3).map((item) => (
         <article key={item.id}>
           <div>
             <strong>{item.activityName}</strong>
@@ -476,14 +478,45 @@ export function PwaProfileEdit({ data }: { data: PortalData }) {
 
 export function PwaProfilePublicPreview({ data }: { data: PortalData }) {
   const profile = data.profile;
+  const [savingVisibility, setSavingVisibility] = useState(false);
+  const savePreferences = async (patch: Partial<{
+    visible: boolean;
+    showRepresentative: boolean;
+    showAdviser: boolean;
+  }>) => {
+    if (!profile) return;
+    setSavingVisibility(true);
+    try {
+      const saved = await updateOrganizationDirectoryPreferences({
+        visible: patch.visible ?? Boolean(profile.directoryVisibility),
+        showRepresentative: patch.showRepresentative ?? Boolean(profile.directoryShowRepresentative),
+        showAdviser: patch.showAdviser ?? Boolean(profile.directoryShowAdviser),
+      });
+      data.store.upsertOrganizationProfile(saved);
+      toast({ title: "Directory preferences updated" });
+    } catch (error) {
+      toast({ title: "Unable to update directory visibility", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingVisibility(false);
+    }
+  };
   return (
     <div className="pwa-stack pwa-profile-public">
       <PwaBackButton fallback={PWA_ROUTES.profile} label="Organization Profile" />
       <ProfileSummary data={data} preview />
+      <ProfileSection title="Organization Directory Visibility">
+        {profile?.profileStatus === "verified" ? (
+          <div className="pwa-directory-preferences">
+            <label><span><strong>Visible in Organization Directory</strong><small>Other signed-in organizations can discover this public profile.</small></span><Switch disabled={savingVisibility} checked={Boolean(profile.directoryVisibility)} onCheckedChange={(checked) => void savePreferences({ visible: checked })} /></label>
+            <label><span><strong>Show representative name</strong><small>Optional personal information.</small></span><Switch disabled={savingVisibility || !profile.directoryVisibility} checked={Boolean(profile.directoryShowRepresentative)} onCheckedChange={(checked) => void savePreferences({ showRepresentative: checked })} /></label>
+            <label><span><strong>Show adviser name</strong><small>Optional personal information.</small></span><Switch disabled={savingVisibility || !profile.directoryVisibility} checked={Boolean(profile.directoryShowAdviser)} onCheckedChange={(checked) => void savePreferences({ showAdviser: checked })} /></label>
+          </div>
+        ) : <p className="pwa-profile-empty">Directory visibility becomes available after organization verification.</p>}
+      </ProfileSection>
       <ProfileSection title="Public Organization Information">
         <dl className="pwa-profile-fields">
-          <ProfileField label="Representative" value={displayValue(profile?.representativeName)} />
-          <ProfileField label="Adviser" value={displayValue(profile?.adviserName)} />
+          {profile?.directoryShowRepresentative ? <ProfileField label="Representative" value={displayValue(profile.representativeName)} /> : null}
+          {profile?.directoryShowAdviser ? <ProfileField label="Adviser" value={displayValue(profile.adviserName)} /> : null}
           <ProfileField label="Classification" value={classificationLabel(profile)} />
           <ProfileField label="Location" value={locationLabel(profile)} />
           <ProfileField label="Facebook Page" value={profile?.facebookPageUrl ? "Open Facebook Page" : "Not provided"} link={profile?.facebookPageUrl || undefined} />

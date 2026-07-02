@@ -10,6 +10,7 @@ import {
   pwaDocumentDetailRoute,
   pwaLiquidationManageRoute,
   pwaNewsDetailRoute,
+  pwaOrganizationRoute,
   pwaTemplateDetailRoute,
   pwaYpopEntryRoute,
   pwaYpopPpaNewRoute,
@@ -21,6 +22,7 @@ describe("PWA routes", () => {
     expect(pwaBudgetDetailRoute("budget")).toBe("/app/budgets/budget");
     expect(pwaLiquidationManageRoute("report")).toBe("/app/liquidations/report/manage");
     expect(pwaNewsDetailRoute("news")).toBe("/app/news/news");
+    expect(pwaOrganizationRoute("org 1")).toBe("/app/organizations/org%201");
     expect(pwaTemplateDetailRoute("template 1")).toBe("/app/templates/template%201");
     expect(pwaYpopEntryRoute("entry 1")).toBe("/app/ypop/entry%201");
     expect(pwaYpopPpaNewRoute("entry")).toBe("/app/ypop/entry/ppa/new");
@@ -37,6 +39,7 @@ describe("PWA routes", () => {
   it("provides PWA-only detail fallbacks", () => {
     expect(getPwaParentRoute(PWA_ROUTES.profileEdit)).toBe(PWA_ROUTES.profile);
     expect(getPwaParentRoute(PWA_ROUTES.profilePublic)).toBe(PWA_ROUTES.profile);
+    expect(getPwaParentRoute("/app/organizations/org-1")).toBe(PWA_ROUTES.organizations);
     expect(getPwaParentRoute("/app/templates/template-1")).toBe(PWA_ROUTES.templates);
     expect(getPwaParentRoute("/app/ypop/entry-1/ppa/new")).toBe(PWA_ROUTES.ypop);
     expect(getPwaParentRoute("/app/documents/manage")).toBe(PWA_ROUTES.documents);

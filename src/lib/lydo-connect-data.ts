@@ -588,6 +588,9 @@ export type OrganizationProfile = {
   address: string;
   facebookPageUrl: string;
   profileImageUrl?: string;
+  directoryVisibility?: boolean;
+  directoryShowRepresentative?: boolean;
+  directoryShowAdviser?: boolean;
   profileStatus: ProfileStatus;
   verifiedAt: string;
   internalNotes: string;
@@ -772,6 +775,30 @@ export type ActivityLog = {
   relatedId: string;
   description: string;
   createdAt: string;
+};
+
+export type PublicOrganizationDirectoryItem = {
+  organizationId: string;
+  organizationName: string;
+  profileImageUrl: string;
+  majorClassification: string;
+  subClassification: string;
+  district: string;
+  barangay: string;
+  advocacies: string[];
+  facebookPageUrl: string;
+  verifiedAt: string;
+  yorpRegisteredYear: number | null;
+  representativeName: string;
+  adviserName: string;
+};
+
+export type PublicOrganizationActivity = {
+  id: string;
+  name: string;
+  date: string;
+  venue: string;
+  kind: "city_led" | "organization_led";
 };
 
 export type InquiryRecord = {

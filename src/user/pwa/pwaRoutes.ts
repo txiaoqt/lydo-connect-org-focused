@@ -10,6 +10,7 @@ export const PWA_ROUTES = {
   profile: "/app/profile",
   profileEdit: "/app/profile/edit",
   profilePublic: "/app/profile/public",
+  organizations: "/app/organizations",
   ypop: "/app/ypop",
   templates: "/app/templates",
   news: "/app/news",
@@ -49,6 +50,9 @@ export const pwaLiquidationManageRoute = (reportId: string) =>
 
 export const pwaNewsDetailRoute = (newsId: string) =>
   `${PWA_ROUTES.news}/${encodeURIComponent(newsId)}`;
+
+export const pwaOrganizationRoute = (organizationId: string) =>
+  `${PWA_ROUTES.organizations}/${encodeURIComponent(organizationId)}`;
 
 export const pwaTemplateDetailRoute = (templateId: string) =>
   `${PWA_ROUTES.templates}/${encodeURIComponent(templateId)}`;
@@ -94,7 +98,9 @@ export function getPwaEquivalentRoute(pathname: string) {
 }
 
 export function getPwaParentRoute(pathname: string) {
+  if (pathname === PWA_ROUTES.organizations) return PWA_ROUTES.more;
   if (pathname.startsWith(`${PWA_ROUTES.profile}/`)) return PWA_ROUTES.profile;
+  if (pathname.startsWith(`${PWA_ROUTES.organizations}/`)) return PWA_ROUTES.organizations;
   if (pathname.startsWith(`${PWA_ROUTES.documents}/`)) return PWA_ROUTES.documents;
   if (pathname.startsWith(`${PWA_ROUTES.budgets}/`)) return PWA_ROUTES.budgets;
   if (pathname.startsWith(`${PWA_ROUTES.liquidations}/`)) return PWA_ROUTES.liquidations;
@@ -118,6 +124,8 @@ export function getPwaPageTitle(pathname: string) {
   if (pathname.startsWith(PWA_ROUTES.activity)) return "Activity";
   if (pathname === PWA_ROUTES.profileEdit) return "Edit Profile";
   if (pathname === PWA_ROUTES.profilePublic) return "Public Profile";
+  if (pathname === PWA_ROUTES.organizations) return "Organizations";
+  if (pathname.startsWith(`${PWA_ROUTES.organizations}/`)) return "Organization Profile";
   if (pathname.startsWith(PWA_ROUTES.profile)) return "Organization Profile";
   if (pathname.includes("/ppa/") && pathname.startsWith(PWA_ROUTES.ypop)) return "Log PPA";
   if (pathname.startsWith(PWA_ROUTES.ypop)) return "YPOP Incentive";

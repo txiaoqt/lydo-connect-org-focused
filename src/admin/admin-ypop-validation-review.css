@@ -2,6 +2,169 @@
   display: none;
 }
 
+.admin-ypop-validation-review-page .desktop-summary-card {
+  display: none;
+}
+
+.admin-ypop-validation-review-page .desktop-review-identity-card > small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--yt-text-muted);
+  font-size: 0.75rem;
+}
+
+.admin-ypop-validation-review-page .desktop-review-note {
+  margin-top: 0.875rem;
+  padding: 0.625rem 0.75rem;
+  border-left: 3px solid var(--yt-primary);
+  border-radius: 0.5rem;
+  background: var(--yt-primary-soft);
+}
+
+.admin-ypop-validation-review-page .desktop-review-note strong {
+  color: var(--yt-text-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-ypop-validation-review-page .desktop-review-note p {
+  margin-top: 0.2rem;
+  font-size: 0.8125rem;
+}
+
+@media (min-width: 1024px) {
+  .admin-ypop-validation-review-page .desktop-legacy-submission-note {
+    display: none;
+  }
+
+  .admin-ypop-validation-review-page .desktop-ppa-review {
+    display: none;
+  }
+
+  .admin-ypop-validation-review-page .desktop-org-activity-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-org-activity-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--yt-border);
+    border-radius: 0.625rem;
+    background: var(--yt-surface-subtle);
+  }
+
+  .admin-ypop-validation-review-page .desktop-org-activity-summary span {
+    color: var(--yt-text-muted);
+    font-size: 0.6875rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-org-activity-summary strong {
+    font-size: 0.875rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-org-activity-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+}
+
+.admin-ypop-validation-review-page .needs-revision-action {
+  border-color: var(--yt-warning-border);
+  background: var(--yt-warning-bg);
+  color: var(--yt-warning-text);
+}
+
+.admin-ypop-validation-review-page .needs-revision-action:hover {
+  background: color-mix(in srgb, var(--yt-warning-bg) 75%, var(--yt-warning-border));
+  color: var(--yt-warning-text);
+}
+
+@media (min-width: 1280px) {
+  .admin-ypop-validation-review-page .desktop-review-toolbar {
+    margin-bottom: -0.25rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-review-identity-card {
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--yt-border);
+    border-radius: 0.875rem;
+    background: var(--yt-surface);
+    box-shadow: var(--yt-shadow-sm);
+  }
+
+  .admin-ypop-validation-review-page .desktop-review-identity-card h2 {
+    font-size: 1.125rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-ypop-validation-review {
+    grid-template-columns: minmax(0, 1.35fr) minmax(19rem, 0.85fr);
+    align-items: start;
+  }
+
+  .admin-ypop-validation-review-page .desktop-review-workflow > div:first-child {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--yt-border);
+  }
+
+  .admin-ypop-validation-review-page .desktop-validation-summary {
+    display: none;
+  }
+
+  .admin-ypop-validation-review-page .desktop-review-support {
+    position: sticky;
+    top: 1rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-summary-card {
+    display: block;
+    border-color: color-mix(in srgb, var(--yt-primary) 24%, var(--yt-border));
+  }
+
+  .admin-ypop-validation-review-page .desktop-summary-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-summary-metrics > div {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.625rem;
+    border: 1px solid var(--yt-border);
+    border-radius: 0.625rem;
+    background: var(--yt-surface-subtle);
+  }
+
+  .admin-ypop-validation-review-page .desktop-summary-metrics span {
+    color: var(--yt-text-muted);
+    font-size: 0.6875rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-summary-metrics strong {
+    font-size: 0.9375rem;
+  }
+
+  .admin-ypop-validation-review-page .desktop-city-led-review,
+  .admin-ypop-validation-review-page .desktop-ppa-review,
+  .admin-ypop-validation-review-page .desktop-final-decision-fields {
+    padding: 0.25rem 0;
+  }
+
+  .admin-ypop-validation-review-page .desktop-final-decision-fields {
+    padding-top: 1rem;
+    border-top: 1px solid var(--yt-border);
+  }
+}
+
 @media (max-width: 1023px) {
   .admin-ypop-validation-review-page {
     --mobile-page-gap: 0.75rem;
@@ -31,6 +194,42 @@
     max-width: 100%;
     gap: var(--mobile-page-gap);
   }
+
+  .admin-ypop-validation-review-page .mobile-review-context { order: 1; }
+  .admin-ypop-validation-review-page .mobile-validation-summary { order: 2; }
+  .admin-ypop-validation-review-page .mobile-activity-validation { display: contents; }
+  .admin-ypop-validation-review-page .mobile-activity-validation > .mobile-section-heading {
+    order: 3;
+    margin: 0;
+    padding: var(--mobile-card-padding) var(--mobile-card-padding) 0.75rem;
+    border: 1px solid var(--border-default);
+    border-bottom: 0;
+    border-radius: 0.875rem 0.875rem 0 0;
+    background: var(--yt-surface);
+  }
+  .admin-ypop-validation-review-page .mobile-activity-validation > .mobile-activity-options,
+  .admin-ypop-validation-review-page .mobile-activity-validation > .mobile-review-empty {
+    order: 3;
+    margin: calc(var(--mobile-page-gap) * -1) 0 0;
+    padding: 0 var(--mobile-card-padding) var(--mobile-card-padding);
+    border: 1px solid var(--border-default);
+    border-top: 0;
+    border-radius: 0 0 0.875rem 0.875rem;
+    background: var(--yt-surface);
+    box-shadow: var(--yt-shadow-sm);
+  }
+  .admin-ypop-validation-review-page .mobile-proof-documents { order: 4; }
+  .admin-ypop-validation-review-page .mobile-org-activities {
+    order: 5;
+    margin: 0;
+    padding: var(--mobile-card-padding);
+    border: 1px solid var(--border-default);
+    border-radius: 0.875rem;
+    background: var(--yt-surface);
+    box-shadow: var(--yt-shadow-sm);
+  }
+  .admin-ypop-validation-review-page .mobile-final-decision { order: 6; border-color: var(--yt-border-strong); }
+  .admin-ypop-validation-review-page .mobile-review-activity { order: 7; }
 
   .admin-ypop-validation-review-page .mobile-review-section {
     min-width: 0;
@@ -73,6 +272,27 @@
     margin-top: 0.1875rem;
     color: var(--text-secondary);
     font-size: 0.75rem;
+  }
+
+  .admin-ypop-validation-review-page .mobile-submission-note {
+    margin-top: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-left: 3px solid var(--primary-blue);
+    border-radius: 0.5rem;
+    background: var(--primary-soft);
+  }
+
+  .admin-ypop-validation-review-page .mobile-submission-note strong {
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .admin-ypop-validation-review-page .mobile-submission-note p {
+    margin-top: 0.25rem;
+    color: var(--text-primary);
+    line-height: 1.35;
   }
 
   .admin-ypop-validation-review-page .summary-heading,
@@ -154,7 +374,7 @@
 
   .admin-ypop-validation-review-page .summary-metrics {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.5rem;
     margin-top: 0.75rem;
   }
@@ -246,9 +466,7 @@
   }
 
   .admin-ypop-validation-review-page .mobile-org-activities {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-default);
+    min-width: 0;
   }
 
   .admin-ypop-validation-review-page .org-activity-summary {
@@ -271,7 +489,7 @@
 
   .admin-ypop-validation-review-page .mobile-org-activity-row {
     min-width: 0;
-    padding: 0.75rem;
+    padding: 0.875rem;
     border: 1px solid var(--border-default);
     border-radius: 0.625rem;
   }
@@ -446,6 +664,7 @@
   .admin-ypop-validation-review-page .mobile-final-decision {
     display: grid;
     gap: 0.875rem;
+    padding-bottom: max(var(--mobile-card-padding), env(safe-area-inset-bottom));
   }
 
   .admin-ypop-validation-review-page .mobile-final-decision > div {
