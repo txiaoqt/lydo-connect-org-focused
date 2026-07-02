@@ -7147,7 +7147,7 @@ export default function AdminPortal({ section }: { section: string }) {
             >
               {newsReleases.length ? (
                 <div className="space-y-3">
-                  <div className="grid gap-2 lg:gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="admin-news-toolbar grid gap-2 lg:grid-cols-[minmax(0,1fr)_200px] lg:gap-3">
                     <Input
                       className="lg:hidden"
                       value={newsSearch}
@@ -7182,7 +7182,7 @@ export default function AdminPortal({ section }: { section: string }) {
                           news.visibilityStatus === "published"
                             ? "bg-emerald-500"
                             : news.visibilityStatus === "hidden"
-                            ? "bg-rose-500"
+                            ? "bg-slate-400"
                             : "bg-amber-400";
                         const formattedDate = news.datePosted
                           ? new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" }).format(new Date(news.datePosted))
@@ -7200,7 +7200,7 @@ export default function AdminPortal({ section }: { section: string }) {
                               <div className="news-card-header flex items-start justify-between gap-3">
                                 <div className="flex min-w-0 items-start gap-2">
                                   <span className={`news-status-dot mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotColor}`} />
-                                  <p className="news-card-title break-words font-semibold leading-snug text-foreground">{news.title}</p>
+                                  <p className="news-card-title break-words font-semibold leading-snug text-foreground" title={news.title}>{news.title}</p>
                                 </div>
                                 <div className="shrink-0">
                                   <PortalStatusBadge status={news.visibilityStatus} />
@@ -7208,7 +7208,10 @@ export default function AdminPortal({ section }: { section: string }) {
                               </div>
                               <p className="news-card-description line-clamp-3 pl-4 text-sm leading-relaxed text-muted-foreground">{news.description}</p>
                               <div className="news-card-metadata space-y-0.5 pl-4">
-                                <p className="hidden text-xs text-muted-foreground lg:block">Posted {formattedDate}</p>
+                                <p className="news-meta-item hidden text-xs text-muted-foreground lg:flex">
+                                  <span className="news-meta-label">Posted</span>
+                                  <span>{formattedDate}</span>
+                                </p>
                                 <p className="text-xs text-muted-foreground lg:hidden">
                                   Posted {formattedDate}
                                   {news.facebookPostUrl ? (
@@ -7220,13 +7223,24 @@ export default function AdminPortal({ section }: { section: string }) {
                                     </>
                                   ) : null}
                                 </p>
-                                {news.facebookPostUrl && (
-                                  <p className="hidden max-w-full break-all text-xs text-muted-foreground/70 lg:block">{news.facebookPostUrl}</p>
-                                )}
+                                <p className="news-meta-item hidden text-xs text-muted-foreground/70 lg:flex">
+                                  <span className="news-meta-label">Facebook</span>
+                                  {news.facebookPostUrl ? (
+                                    <a href={news.facebookPostUrl} target="_blank" rel="noopener noreferrer" title={news.facebookPostUrl}>
+                                      Open Facebook Post <span aria-hidden="true">↗</span>
+                                    </a>
+                                  ) : <span>Link not added</span>}
+                                </p>
                                 {news.previewImageUrl ? (
-                                  <p className="hidden max-w-full text-xs text-muted-foreground/70 lg:block">Thumbnail uploaded and ready for public preview.</p>
+                                  <p className="news-meta-item hidden max-w-full text-xs text-muted-foreground/70 lg:flex">
+                                    <span className="news-meta-label">Thumbnail</span>
+                                    <span>Uploaded and ready for public preview</span>
+                                  </p>
                                 ) : (
-                                  <p className="hidden max-w-full text-xs text-muted-foreground/70 lg:block">No thumbnail link added yet.</p>
+                                  <p className="news-meta-item hidden max-w-full text-xs text-muted-foreground/70 lg:flex">
+                                    <span className="news-meta-label">Thumbnail</span>
+                                    <span>Not uploaded</span>
+                                  </p>
                                 )}
                               </div>
                               <div className="news-card-actions mt-auto flex flex-col gap-2 pt-1 lg:flex-row lg:items-center lg:justify-between">
@@ -8404,7 +8418,7 @@ export default function AdminPortal({ section }: { section: string }) {
               action={
                 <Button
                   type="button"
-                  className="w-full sm:w-auto"
+                  className="admin-news-header-add w-full sm:w-auto lg:hidden"
                   onClick={() => {
                     setTemplateModalMode("create");
                     setEditingTemplateId(null);

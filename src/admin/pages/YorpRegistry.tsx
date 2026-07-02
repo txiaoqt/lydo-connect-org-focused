@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Download,
   Eye,
+  ExternalLink,
   Loader2,
   MapPin,
   RefreshCw,
@@ -67,6 +68,15 @@ const isYorpRenewed = (org: OrganizationProfile) =>
 
 const renderOrFallback = (value?: string | null) =>
   value && value.trim().length ? value : "Not available";
+
+const desktopDetailValue = (value?: string | null) =>
+  value && value.trim().length ? value : "Not provided";
+
+const organizationInitial = (name?: string | null) =>
+  name?.trim().charAt(0).toUpperCase() || "O";
+
+const canRenderProfileImage = (url?: string | null) =>
+  Boolean(url && /^(https?:|blob:|data:)/i.test(url));
 
 function MobileYorpOrganizationCard({
   organization,
@@ -483,7 +493,87 @@ export function YorpRegistryPage() {
           {selectedOrg ? (
             <>
               <DialogTitle className="sr-only">{selectedOrg.organizationName || "Organization"} details</DialogTitle>
-              <DialogHeader className="hidden lg:block">
+              <div className="desktop-yorp-details hidden lg:flex">
+                <header className="desktop-yorp-summary">
+                  <div className="desktop-yorp-avatar" aria-hidden="true">
+                    {canRenderProfileImage(selectedOrg.profileImageUrl) ? (
+                      <img src={selectedOrg.profileImageUrl} alt="" />
+                    ) : organizationInitial(selectedOrg.organizationName)}
+                  </div>
+                  <div className="desktop-yorp-summary__copy">
+                    <div className="desktop-yorp-summary__title-row">
+                      <h2>{selectedOrg.organizationName || "Organization"}</h2>
+                      <PortalStatusBadge status={selectedOrg.profileStatus} />
+                    </div>
+                    <p>{[selectedOrg.district, selectedOrg.barangay].filter(Boolean).join(" · ") || "Location not provided"}</p>
+                    <p>{[selectedOrg.majorClassification, selectedOrg.subClassification].filter(Boolean).join(" · ") || "Classification not provided"}</p>
+                  </div>
+                </header>
+
+                <div className="desktop-yorp-details__scroll">
+                  <DesktopDetailsSection title="Registration" icon={ClipboardCheck}>
+                    <div className="desktop-yorp-field-grid desktop-yorp-field-grid--three">
+                      <DesktopField label="Registration No." value={selectedOrg.organizationIdentifierNumber} mono />
+                      <DesktopField label="YORP Registration Year" value={selectedOrg.yorpRegisteredYear?.toString()} />
+                      <DesktopField label="YORP Renewed Year" value={selectedOrg.yorpRenewedYear?.toString()} />
+                      <DesktopField label="Registered" value={new Date(selectedOrg.createdAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })} />
+                      <DesktopField label="Verified" value={selectedOrg.verifiedAt ? new Date(selectedOrg.verifiedAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : null} />
+                    </div>
+                  </DesktopDetailsSection>
+
+                  <DesktopDetailsSection title="Organization & Leadership" icon={Users}>
+                    <div className="desktop-yorp-field-grid">
+                      <DesktopField label="Major Classification" value={selectedOrg.majorClassification} />
+                      <DesktopField label="Sub-classification" value={selectedOrg.subClassification} />
+                      <DesktopField label="Representative" value={selectedOrg.representativeName} />
+                      <DesktopField label="Adviser" value={selectedOrg.adviserName} />
+                      <div className="desktop-yorp-field desktop-yorp-field--full">
+                        <p className="desktop-yorp-field__label">Advocacies</p>
+                        {selectedOrg.advocacies.length > 0 ? (
+                          <div className="desktop-yorp-advocacies">
+                            {selectedOrg.advocacies.map((advocacy) => <Badge key={advocacy} variant="outline">{advocacy}</Badge>)}
+                          </div>
+                        ) : <p className="desktop-yorp-field__missing">Not provided</p>}
+                      </div>
+                    </div>
+                  </DesktopDetailsSection>
+
+                  <DesktopDetailsSection title="Contact & Location" icon={MapPin}>
+                    <div className="desktop-yorp-field-grid">
+                      <DesktopField label="Contact Number" value={selectedOrg.contactNumber} />
+                      <DesktopField label="Email" value={selectedOrg.organizationEmail} />
+                      <DesktopField label="District" value={selectedOrg.district} />
+                      <DesktopField label="Barangay" value={selectedOrg.barangay} />
+                      <DesktopField className="desktop-yorp-field--full" label="Address" value={selectedOrg.address} />
+                      <div className="desktop-yorp-field desktop-yorp-field--full">
+                        <p className="desktop-yorp-field__label">Facebook Page</p>
+                        {selectedOrg.facebookPageUrl ? (
+                          <a
+                            className="desktop-yorp-facebook"
+                            href={selectedOrg.facebookPageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Visit ${selectedOrg.organizationName || "organization"} Facebook page (opens in a new tab)`}
+                          >
+                            <ExternalLink aria-hidden="true" />
+                            Visit Facebook Page
+                          </a>
+                        ) : <p className="desktop-yorp-field__missing">Not provided</p>}
+                      </div>
+                    </div>
+                  </DesktopDetailsSection>
+
+                  {selectedOrg.internalNotes ? (
+                    <DesktopDetailsSection title="Internal Notes">
+                      <p className="desktop-yorp-notes">{selectedOrg.internalNotes}</p>
+                    </DesktopDetailsSection>
+                  ) : null}
+
+                  <OrganizationDangerZone onDelete={() => openDeleteDialog(selectedOrg)} />
+                </div>
+              </div>
+
+              <DialogHeader className="hidden">
                 <h2 className="text-lg font-semibold leading-none tracking-tight">{selectedOrg.organizationName || "Organization"}</h2>
                 {(selectedOrg.barangay || selectedOrg.majorClassification) && (
                   <p className="text-sm text-muted-foreground">
@@ -492,7 +582,7 @@ export function YorpRegistryPage() {
                 )}
               </DialogHeader>
 
-              <div className="hidden grid-cols-1 gap-x-8 gap-y-4 pt-1 lg:grid lg:grid-cols-2">
+              <div className="hidden">
                 <Field label="Status">
                   <PortalStatusBadge status={selectedOrg.profileStatus} />
                 </Field>
@@ -918,6 +1008,48 @@ export function YorpRegistryPage() {
         description="Export all YORP records matching the current search and filters."
         onExport={handleExport}
       />
+    </div>
+  );
+}
+
+function DesktopDetailsSection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon?: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="desktop-yorp-section">
+      <div className="desktop-yorp-section__heading">
+        {Icon ? <Icon aria-hidden="true" /> : null}
+        <h3>{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function DesktopField({
+  label,
+  value,
+  mono = false,
+  className = "",
+}: {
+  label: string;
+  value?: string | null;
+  mono?: boolean;
+  className?: string;
+}) {
+  const missing = !value?.trim();
+  return (
+    <div className={`desktop-yorp-field ${className}`}>
+      <p className="desktop-yorp-field__label">{label}</p>
+      <p className={`${missing ? "desktop-yorp-field__missing" : ""}${mono && !missing ? " font-mono" : ""}`}>
+        {desktopDetailValue(value)}
+      </p>
     </div>
   );
 }
